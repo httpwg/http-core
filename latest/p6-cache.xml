@@ -214,48 +214,100 @@
 </note>
 </front>
 <middle>
-<section title="Introduction" anchor="introduction">
+<section title="Introduction" anchor="caching">
 <t>
-   This document will define aspects of HTTP related to caching response
-   messages.  Right now it only includes the extracted relevant sections
-   of <xref target="RFC2616" x:fmt="none">RFC 2616</xref> without edit.
+   HTTP is typically used for distributed information systems, where
+   performance can be improved by the use of response caches. The
+   HTTP/1.1 protocol includes a number of elements intended to make
+   caching work as well as possible. Because these elements are
+   inextricable from other aspects of the protocol, and because they
+   interact with each other, it is useful to describe the basic caching
+   design of HTTP separately from the detailed descriptions of methods,
+   headers, response codes, etc.  This document defines aspects of HTTP
+   related to caching response messages.
 </t>
 
-<section title="Requirements" anchor="intro.requirements">
+<section title="Purpose" anchor="intro.purpose">
+<iref item="cache"/>
 <t>
-   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
-   document are to be interpreted as described in <xref target="RFC2119"/>.
+   An HTTP <x:dfn>cache</x:dfn> is a local store of response messages
+   and the subsystem that controls its message storage, retrieval, and
+   deletion. A cache stores cacheable responses in order to reduce the
+   response time and network bandwidth consumption on future, equivalent
+   requests. Any client or server may include a cache, though a cache
+   cannot be used by a server that is acting as a tunnel.
 </t>
 <t>
-   An implementation is not compliant if it fails to satisfy one or more
-   of the &MUST; or &REQUIRED; level requirements for the protocols it
-   implements. An implementation that satisfies all the &MUST; or &REQUIRED;
-   level and all the &SHOULD; level requirements for its protocols is said
-   to be "unconditionally compliant"; one that satisfies all the &MUST;
-   level requirements but not all the &SHOULD; level requirements for its
-   protocols is said to be "conditionally compliant."
+   Caching would be useless if it did not significantly improve
+   performance. The goal of caching in HTTP/1.1 is to eliminate the need
+   to send requests in many cases, and to eliminate the need to send
+   full responses in many other cases. The former reduces the number of
+   network round-trips required for many operations; we use an
+   "expiration" mechanism for this purpose (see <xref target="expiration.model"/>). The
+   latter reduces network bandwidth requirements; we use a "validation"
+   mechanism for this purpose (see <xref target="validation.model"/>).
+</t>
+<iref item="semantically transparent"/>
+<t>
+   A cache behaves in a "<x:dfn>semantically transparent</x:dfn>" manner, with
+   respect to a particular response, when its use affects neither the
+   requesting client nor the origin server, except to improve
+   performance. When a cache is semantically transparent, the client
+   receives exactly the same response (except for hop-by-hop headers)
+   that it would have received had its request been handled directly
+   by the origin server.
+</t>
+<t>
+   In an ideal world, all interactions with an HTTP cache would be
+   semantically transparent.  However, for some resources, semantic
+   transparency is not always necessary and can be effectively traded
+   for the sake of bandwidth scaling, disconnected operation, and
+   high availability.  HTTP/1.1 allows origin servers, caches,
+   and clients to explicitly reduce transparency when necessary.
+   However, because non-transparent operation may confuse non-expert
+   users and might be incompatible with certain server applications
+   (such as those for ordering merchandise), the protocol requires that
+   transparency be relaxed
+  <list style="symbols">
+     <t>only by an explicit protocol-level request when relaxed by
+        client or origin server</t>
+
+     <t>only with an explicit warning to the end user when relaxed by
+        cache or client</t>
+  </list>
+</t>
+<t>
+   Therefore, HTTP/1.1 provides these important elements:
+  <list style="numbers">
+      <t>Protocol features that provide full semantic transparency when
+         this is required by all parties.</t>
+
+      <t>Protocol features that allow an origin server or user agent to
+         explicitly request and control non-transparent operation.</t>
+
+      <t>Protocol features that allow a cache to attach warnings to
+         responses that do not preserve the requested approximation of
+         semantic transparency.</t>
+  </list>
+</t>
+<t>
+   A basic principle is that it must be possible for the clients to
+   detect any potential relaxation of semantic transparency.
+  <list><t>
+      <x:h>Note:</x:h> The server, cache, or client implementor might be faced with
+      design decisions not explicitly discussed in this specification.
+      If a decision might affect semantic transparency, the implementor
+      ought to err on the side of maintaining transparency unless a
+      careful and complete analysis shows significant benefits in
+      breaking transparency.
+    </t></list>
 </t>
 </section>
 
 <section title="Terminology" anchor="intro.terminology">
 <t>
    This specification uses a number of terms to refer to the roles
-   played by participants in, and objects of, the HTTP communication.
-</t>
-<t>
-  <iref item="cache"/>
-  <x:dfn>cache</x:dfn>
-  <list>
-    <t>
-      A program's local store of response messages and the subsystem
-      that controls its message storage, retrieval, and deletion. A
-      cache stores cacheable responses in order to reduce the response
-      time and network bandwidth consumption on future, equivalent
-      requests. Any client or server may include a cache, though a cache
-      cannot be used by a server that is acting as a tunnel.
-    </t>
-  </list>
+   played by participants in, and objects of, HTTP caching.
 </t>
 <t>
   <iref item="cacheable"/>
@@ -263,9 +315,8 @@
   <list>
     <t>
       A response is cacheable if a cache is allowed to store a copy of
-      the response message for use in answering subsequent requests. The
-      rules for determining the cacheability of HTTP responses are
-      defined in <xref target="caching"/>. Even if a resource is cacheable, there may
+      the response message for use in answering subsequent requests.
+      Even if a resource is cacheable, there may
       be additional constraints on whether a cache can use the cached
       copy for a particular request.
     </t>
@@ -343,21 +394,6 @@
   </list>
 </t>
 <t>
-  <iref item="semantically transparent"/>
-  <x:dfn>semantically transparent</x:dfn>
-  <list>
-    <t>
-      A cache behaves in a "semantically transparent" manner, with
-      respect to a particular response, when its use affects neither the
-      requesting client nor the origin server, except to improve
-      performance. When a cache is semantically transparent, the client
-      receives exactly the same response (except for hop-by-hop headers)
-      that it would have received had its request been handled directly
-      by the origin server.
-    </t>
-  </list>
-</t>
-<t>
   <iref item="validator"/>
   <x:dfn>validator</x:dfn>
   <list>
@@ -370,84 +406,25 @@
 </t>
 </section>
 
-<section title="Delta Seconds" anchor="delta.seconds">
+<section title="Requirements" anchor="intro.requirements">
 <t>
-   Some HTTP header fields allow a time value to be specified as an
-   integer number of seconds, represented in decimal, after the time
-   that the message was received.
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in <xref target="RFC2119"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="delta-seconds"/>
-  delta-seconds  = 1*DIGIT
-</artwork></figure>
+<t>
+   An implementation is not compliant if it fails to satisfy one or more
+   of the &MUST; or &REQUIRED; level requirements for the protocols it
+   implements. An implementation that satisfies all the &MUST; or &REQUIRED;
+   level and all the &SHOULD; level requirements for its protocols is said
+   to be "unconditionally compliant"; one that satisfies all the &MUST;
+   level requirements but not all the &SHOULD; level requirements for its
+   protocols is said to be "conditionally compliant."
+</t>
 </section>
 </section>
 
-<section title="Caching in HTTP" anchor="caching">
 <section title="Overview" anchor="caching.overview">
-<t>
-   HTTP is typically used for distributed information systems, where
-   performance can be improved by the use of response caches. The
-   HTTP/1.1 protocol includes a number of elements intended to make
-   caching work as well as possible. Because these elements are
-   inextricable from other aspects of the protocol, and because they
-   interact with each other, it is useful to describe the basic caching
-   design of HTTP separately from the detailed descriptions of methods,
-   headers, response codes, etc.
-</t>
-<t>
-   Caching would be useless if it did not significantly improve
-   performance. The goal of caching in HTTP/1.1 is to eliminate the need
-   to send requests in many cases, and to eliminate the need to send
-   full responses in many other cases. The former reduces the number of
-   network round-trips required for many operations; we use an
-   "expiration" mechanism for this purpose (see <xref target="expiration.model"/>). The
-   latter reduces network bandwidth requirements; we use a "validation"
-   mechanism for this purpose (see <xref target="validation.model"/>).
-</t>
-<t>
-   Requirements for performance, availability, and disconnected
-   operation require us to be able to relax the goal of semantic
-   transparency. The HTTP/1.1 protocol allows origin servers, caches,
-   and clients to explicitly reduce transparency when necessary.
-   However, because non-transparent operation may confuse non-expert
-   users, and might be incompatible with certain server applications
-   (such as those for ordering merchandise), the protocol requires that
-   transparency be relaxed
-  <list style="symbols">
-     <t>only by an explicit protocol-level request when relaxed by
-        client or origin server</t>
-
-     <t>only with an explicit warning to the end user when relaxed by
-        cache or client</t>
-  </list>
-</t>
-<t>
-   Therefore, the HTTP/1.1 protocol provides these important elements:
-  <list style="numbers">
-      <t>Protocol features that provide full semantic transparency when
-         this is required by all parties.</t>
-
-      <t>Protocol features that allow an origin server or user agent to
-         explicitly request and control non-transparent operation.</t>
-
-      <t>Protocol features that allow a cache to attach warnings to
-         responses that do not preserve the requested approximation of
-         semantic transparency.</t>
-  </list>
-</t>
-<t>
-   A basic principle is that it must be possible for the clients to
-   detect any potential relaxation of semantic transparency.
-  <list><t>
-      <x:h>Note:</x:h> The server, cache, or client implementor might be faced with
-      design decisions not explicitly discussed in this specification.
-      If a decision might affect semantic transparency, the implementor
-      ought to err on the side of maintaining transparency unless a
-      careful and complete analysis shows significant benefits in
-      breaking transparency.
-    </t></list>
-</t>
-
 <section title="Cache Correctness" anchor="cache.correctness">
 <t>
    A correct cache &MUST; respond to a request with the most up-to-date
@@ -1531,7 +1508,6 @@
   </t></list>
 </t>
 </section>
-</section>
 
 <section title="Header Field Definitions" anchor="header.fields">
 <t>
@@ -1561,6 +1537,9 @@
       Age values are non-negative decimal integers, representing time in
       seconds.
 </t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="delta-seconds"/>
+  delta-seconds  = 1*DIGIT
+</artwork></figure>
 <t>
       If a cache receives a value larger than the largest positive
       integer it can represent, or if any of its age calculations
