@@ -15,15 +15,13 @@
   <!ENTITY ID-MONTH "February">
   <!ENTITY ID-YEAR "2008">
   <!ENTITY messaging                   "<xref target='Part1' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY conditional                 "<xref target='Part4' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY combining-byte-ranges       "<xref target='Part5' x:rel='#combining.byte.ranges' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-length               "<xref target='Part3' x:rel='#entity.length' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY entity-header-fields        "<xref target='Part4' x:rel='#header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY entity-tags                 "<xref target='Part4' x:rel='#entity.tags' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY full-date                   "<xref target='Part1' x:rel='#full.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-authorization        "<xref target='Part7' x:rel='#header.authorization' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-connection           "<xref target='Part1' x:rel='#header.connection' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-date                 "<xref target='Part1' x:rel='#header.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY weak-and-strong-validators  "<xref target='Part4' x:rel='#weak.and.strong.validators' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY message-headers             "<xref target='Part1' x:rel='#message.headers' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY message-length              "<xref target='Part1' x:rel='#message.length' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY safe-methods                "<xref target='Part2' x:rel='#safe.methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -961,84 +959,23 @@
    response to a client's request, it first has to check with the origin
    server (or possibly an intermediate cache with a fresh response) to
    see if its cached entry is still usable. We call this "validating"
-   the cache entry. Since we do not want to have to pay the overhead of
-   retransmitting the full response if the cached entry is good, and we
-   do not want to pay the overhead of an extra round trip if the cached
-   entry is invalid, HTTP/1.1 supports the use of
-   conditional methods.
+   the cache entry.
 </t>
 <t>
-   The key protocol features for supporting conditional methods are
-   those concerned with "cache validators." When an origin server
-   generates a full response, it attaches some sort of validator to it,
-   which is kept with the cache entry. When a client (user agent or
-   proxy cache) makes a conditional request for a resource for which it
-   has a cache entry, it includes the associated validator in the
-   request.
+   HTTP's conditional request mechanism, defined in &conditional;, is
+   used to avoid retransmitting the response payload when the cached entry
+   is valid.  When a cached response includes one or more "cache validators,"
+   such as the field values of an ETag or Last-Modified header field, then
+   a validating GET request &SHOULD; be made conditional to those field values.
+   The server checks the conditional request's validator against the current
+   state of the requested resource and, if they match, the server responds
+   with a 304 (Not Modified) status code to indicate that the cached response
+   can be refreshed and reused without retransmitting the response payload.
+   If the validator does not match the current state of the requested
+   resource, then the server returns a full response, including payload,
+   so that the request can be satisfied and the cache entry supplanted
+   without the need for an additional network round-trip.
 </t>
-<t>
-   The server then checks that validator against the current validator
-   for the entity, and, if they match (see &weak-and-strong-validators;), it responds
-   with a special status code (usually, 304 (Not Modified)) and no
-   entity-body. Otherwise, it returns a full response (including
-   entity-body). Thus, we avoid transmitting the full response if the
-   validator matches, and we avoid an extra round trip if it does not
-   match.
-</t>
-<t>
-   In HTTP/1.1, a conditional request looks exactly the same as a normal
-   request for the same resource, except that it carries a special
-   header (which includes the validator) that implicitly turns the
-   method (usually, GET) into a conditional.
-</t>
-<t>
-   The protocol includes both positive and negative senses of cache-validating
-   conditions. That is, it is possible to request either that
-   a method be performed if and only if a validator matches or if and
-   only if no validators match.
-  <list><t>
-      <x:h>Note:</x:h> a response that lacks a validator may still be cached, and
-      served from cache until it expires, unless this is explicitly
-      prohibited by a cache-control directive. However, a cache cannot
-      do a conditional retrieval if it does not have a validator for the
-      entity, which means it will not be refreshable after it expires.
-  </t></list>
-</t>
-
-<section title="Last-Modified Dates" anchor="last-modified.dates">
-<t>
-   The Last-Modified entity-header field value is often used as a cache
-   validator. In simple terms, a cache entry is considered to be valid
-   if the entity has not been modified since the Last-Modified value.
-</t>
-</section>
-
-<section title="Entity Tag Cache Validators" anchor="entity.tag.cache.validators">
-<t>
-   The ETag response-header field value, an entity tag, provides for an
-   "opaque" cache validator. This might allow more reliable validation
-   in situations where it is inconvenient to store modification dates,
-   where the one-second resolution of HTTP date values is not
-   sufficient, or where the origin server wishes to avoid certain
-   paradoxes that might arise from the use of modification dates.
-</t>
-<t>
-   Entity Tags are described in &entity-tags;. The headers used with entity
-   tags are described in &entity-header-fields;.
-</t>
-</section>
-
-<section title="Non-validating Conditionals" anchor="non-validating.conditionals">
-<t>
-   The principle behind entity tags is that only the service author
-   knows the semantics of a resource well enough to select an
-   appropriate cache validation mechanism, and the specification of any
-   validator comparison function more complex than byte-equality would
-   open up a can of worms. Thus, comparisons of any other headers
-   (except Last-Modified, for compatibility with HTTP/1.0) are never
-   used for purposes of validating a cache entry.
-</t>
-</section>
 </section>
 
 <section title="Response Cacheability" anchor="response.cacheability">

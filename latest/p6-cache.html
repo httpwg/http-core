@@ -511,12 +511,7 @@ li.indline1 {
                <li class="tocline1">3.6&nbsp;&nbsp;&nbsp;<a href="#disambiguating.multiple.responses">Disambiguating Multiple Responses</a></li>
             </ul>
          </li>
-         <li class="tocline0">4.&nbsp;&nbsp;&nbsp;<a href="#validation.model">Validation Model</a><ul class="toc">
-               <li class="tocline1">4.1&nbsp;&nbsp;&nbsp;<a href="#last-modified.dates">Last-Modified Dates</a></li>
-               <li class="tocline1">4.2&nbsp;&nbsp;&nbsp;<a href="#entity.tag.cache.validators">Entity Tag Cache Validators</a></li>
-               <li class="tocline1">4.3&nbsp;&nbsp;&nbsp;<a href="#non-validating.conditionals">Non-validating Conditionals</a></li>
-            </ul>
-         </li>
+         <li class="tocline0">4.&nbsp;&nbsp;&nbsp;<a href="#validation.model">Validation Model</a></li>
          <li class="tocline0">5.&nbsp;&nbsp;&nbsp;<a href="#response.cacheability">Response Cacheability</a></li>
          <li class="tocline0">6.&nbsp;&nbsp;&nbsp;<a href="#constructing.responses.from.caches">Constructing Responses From Caches</a><ul class="toc">
                <li class="tocline1">6.1&nbsp;&nbsp;&nbsp;<a href="#end-to-end.and.hop-by-hop.headers">End-to-end and Hop-by-hop Headers</a></li>
@@ -932,48 +927,14 @@ li.indline1 {
       <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a>&nbsp;<a id="validation.model" href="#validation.model">Validation Model</a></h1>
       <p id="rfc.section.4.p.1">When a cache has a stale entry that it would like to use as a response to a client's request, it first has to check with the
          origin server (or possibly an intermediate cache with a fresh response) to see if its cached entry is still usable. We call
-         this "validating" the cache entry. Since we do not want to have to pay the overhead of retransmitting the full response if
-         the cached entry is good, and we do not want to pay the overhead of an extra round trip if the cached entry is invalid, HTTP/1.1
-         supports the use of conditional methods.
+         this "validating" the cache entry.
       </p>
-      <p id="rfc.section.4.p.2">The key protocol features for supporting conditional methods are those concerned with "cache validators." When an origin server
-         generates a full response, it attaches some sort of validator to it, which is kept with the cache entry. When a client (user
-         agent or proxy cache) makes a conditional request for a resource for which it has a cache entry, it includes the associated
-         validator in the request.
-      </p>
-      <p id="rfc.section.4.p.3">The server then checks that validator against the current validator for the entity, and, if they match (see <a href="p4-conditional.html#weak.and.strong.validators" title="Weak and Strong Validators">Section 4</a> of <a href="#Part4" id="rfc.xref.Part4.1"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>), it responds with a special status code (usually, 304 (Not Modified)) and no entity-body. Otherwise, it returns a full response
-         (including entity-body). Thus, we avoid transmitting the full response if the validator matches, and we avoid an extra round
-         trip if it does not match.
-      </p>
-      <p id="rfc.section.4.p.4">In HTTP/1.1, a conditional request looks exactly the same as a normal request for the same resource, except that it carries
-         a special header (which includes the validator) that implicitly turns the method (usually, GET) into a conditional.
-      </p>
-      <p id="rfc.section.4.p.5">The protocol includes both positive and negative senses of cache-validating conditions. That is, it is possible to request
-         either that a method be performed if and only if a validator matches or if and only if no validators match. 
-      </p>
-      <dl class="empty">
-         <dd> <b>Note:</b> a response that lacks a validator may still be cached, and served from cache until it expires, unless this is explicitly prohibited
-            by a cache-control directive. However, a cache cannot do a conditional retrieval if it does not have a validator for the entity,
-            which means it will not be refreshable after it expires.
-         </dd>
-      </dl>
-      <h2 id="rfc.section.4.1"><a href="#rfc.section.4.1">4.1</a>&nbsp;<a id="last-modified.dates" href="#last-modified.dates">Last-Modified Dates</a></h2>
-      <p id="rfc.section.4.1.p.1">The Last-Modified entity-header field value is often used as a cache validator. In simple terms, a cache entry is considered
-         to be valid if the entity has not been modified since the Last-Modified value.
-      </p>
-      <h2 id="rfc.section.4.2"><a href="#rfc.section.4.2">4.2</a>&nbsp;<a id="entity.tag.cache.validators" href="#entity.tag.cache.validators">Entity Tag Cache Validators</a></h2>
-      <p id="rfc.section.4.2.p.1">The ETag response-header field value, an entity tag, provides for an "opaque" cache validator. This might allow more reliable
-         validation in situations where it is inconvenient to store modification dates, where the one-second resolution of HTTP date
-         values is not sufficient, or where the origin server wishes to avoid certain paradoxes that might arise from the use of modification
-         dates.
-      </p>
-      <p id="rfc.section.4.2.p.2">Entity Tags are described in <a href="p4-conditional.html#entity.tags" title="Entity Tags">Section 2</a> of <a href="#Part4" id="rfc.xref.Part4.2"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>. The headers used with entity tags are described in <a href="p4-conditional.html#header.fields" title="Header Field Definitions">Section 6</a> of <a href="#Part4" id="rfc.xref.Part4.3"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>.
-      </p>
-      <h2 id="rfc.section.4.3"><a href="#rfc.section.4.3">4.3</a>&nbsp;<a id="non-validating.conditionals" href="#non-validating.conditionals">Non-validating Conditionals</a></h2>
-      <p id="rfc.section.4.3.p.1">The principle behind entity tags is that only the service author knows the semantics of a resource well enough to select an
-         appropriate cache validation mechanism, and the specification of any validator comparison function more complex than byte-equality
-         would open up a can of worms. Thus, comparisons of any other headers (except Last-Modified, for compatibility with HTTP/1.0)
-         are never used for purposes of validating a cache entry.
+      <p id="rfc.section.4.p.2">HTTP's conditional request mechanism, defined in <a href="#Part4" id="rfc.xref.Part4.1"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>, is used to avoid retransmitting the response payload when the cached entry is valid. When a cached response includes one
+         or more "cache validators," such as the field values of an ETag or Last-Modified header field, then a validating GET request <em class="bcp14">SHOULD</em> be made conditional to those field values. The server checks the conditional request's validator against the current state
+         of the requested resource and, if they match, the server responds with a 304 (Not Modified) status code to indicate that the
+         cached response can be refreshed and reused without retransmitting the response payload. If the validator does not match the
+         current state of the requested resource, then the server returns a full response, including payload, so that the request can
+         be satisfied and the cache entry supplanted without the need for an additional network round-trip.
       </p>
       <h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a>&nbsp;<a id="response.cacheability" href="#response.cacheability">Response Cacheability</a></h1>
       <p id="rfc.section.5.p.1">Unless specifically constrained by a cache-control (<a href="#header.cache-control" id="rfc.xref.header.cache-control.6" title="Cache-Control">Section&nbsp;15.2</a>) directive, a caching system <em class="bcp14">MAY</em> always store a successful response (see <a href="#errors.or.incomplete.response.cache.behavior" title="Errors or Incomplete Response Cache Behavior">Section&nbsp;9</a>) as a cache entry, <em class="bcp14">MAY</em> return it without validation if it is fresh, and <em class="bcp14">MAY</em> return it after successful validation. If there is neither a cache validator nor an explicit expiration time associated with
@@ -2050,12 +2011,7 @@ li.indline1 {
                         <li class="indline1"><em>Section 4.1</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part3.2">7</a></li>
                      </ul>
                   </li>
-                  <li class="indline1"><em>Part4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.1">4</a>, <a class="iref" href="#rfc.xref.Part4.2">4.2</a>, <a class="iref" href="#rfc.xref.Part4.3">4.2</a>, <a class="iref" href="#Part4"><b>19.1</b></a><ul class="ind">
-                        <li class="indline1"><em>Section 2</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.2">4.2</a></li>
-                        <li class="indline1"><em>Section 4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.1">4</a></li>
-                        <li class="indline1"><em>Section 6</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.3">4.2</a></li>
-                     </ul>
-                  </li>
+                  <li class="indline1"><em>Part4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.1">4</a>, <a class="iref" href="#Part4"><b>19.1</b></a></li>
                   <li class="indline1"><em>Part5</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part5.1">6.3</a>, <a class="iref" href="#rfc.xref.Part5.2">9</a>, <a class="iref" href="#Part5"><b>19.1</b></a>, <a class="iref" href="#rfc.xref.Part5.3">A.1</a><ul class="ind">
                         <li class="indline1"><em>Section 4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part5.1">6.3</a>, <a class="iref" href="#rfc.xref.Part5.2">9</a></li>
                      </ul>
