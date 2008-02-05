@@ -44,3 +44,17 @@ clean:
 %.txt: %.redxml
 	$(xml2rfc) $< $@
 
+%.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
+	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@
+
+outlineALL.html:	p1-messaging.xhtml \
+	p2-semantics.xhtml \
+	p3-payload.xhtml \
+	p4-conditional.xhtml \
+	p5-range.xhtml \
+	p6-cache.xhtml \
+	p7-auth.xhtml \
+	extractOutline.xslt
+	$(saxon) extractOutline.xslt extractOutline.xslt > $@
+ 
+
