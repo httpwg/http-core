@@ -56,5 +56,7 @@ outlineALL.html:	p1-messaging.xhtml \
 	p7-auth.xhtml \
 	extractOutline.xslt
 	$(saxon) extractOutline.xslt extractOutline.xslt > $@
- 
+	rm p*.xhtml
+
+
 
