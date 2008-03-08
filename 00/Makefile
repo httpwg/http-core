@@ -1,6 +1,6 @@
-xml2rfc = "$(HOME)/bin/xml2rfc-1.33pre4/xml2rfc.tcl"
+xml2rfc = "$(HOME)/bin/xml2rfc-1.33/xml2rfc.tcl"
 saxpath = "$(HOME)/java/saxon-8-9-j/saxon8.jar"
-saxon = java -classpath $(saxpath) net.sf.saxon.Transform -novw
+saxon = java -classpath $(saxpath) net.sf.saxon.Transform -novw -l
 
 stylesheet = ../myxml2rfc.xslt
 reduction  = ../../rfc2629xslt/clean-for-DTD.xslt
