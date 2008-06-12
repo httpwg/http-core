@@ -12,7 +12,7 @@
   <xsl:text>&#10;</xsl:text>
   <t>
     The HTTP Status Code Registry located at <eref target="http://www.iana.org/assignments/http-status-codes"/>
-    should be updated with the registrations below (see <xref target="RFC2817" x:sec="7.1" x:fmt=","/>).
+    should be updated with the registrations below:
   </t>
   <texttable>
     <ttcol>Value</ttcol>
