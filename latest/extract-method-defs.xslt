@@ -1,5 +1,6 @@
 <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                xmlns:x="http://purl.org/net/xml2rfc/ext"
+               xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
                version="1.0"
 >
 
@@ -16,6 +17,7 @@
   </t>
   <texttable align="left">
     <ttcol>Method</ttcol>
+    <ttcol>Safe</ttcol>
     <ttcol>Reference</ttcol>
     <xsl:apply-templates select="//section[iref/@item='Methods']">
       <xsl:sort select="iref[@item='Methods']/@subitem"/>
@@ -28,9 +30,19 @@
 </xsl:template>
 
 <xsl:template match="section">
+
   <xsl:variable name="text" select="iref[@item='Methods']/@subitem"/>
+
+  <xsl:variable name="safe" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
+    <xsl:choose>
+      <xsl:when test="rdf:Description/p2:safe='yes'">yes</xsl:when>
+      <xsl:otherwise>no</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+
   <xsl:text>&#10;</xsl:text>
   <c><xsl:value-of select="$text"/></c>
+  <c><xsl:value-of select="$safe"/></c>
   <c><xref target="{@anchor}"/></c>
 </xsl:template>
 
