@@ -29,8 +29,16 @@ TARGETS = p1-messaging.html \
           p6-cache.txt \
           p7-auth.txt \
           p8-cookies.txt \
+          p1-messaging.iana-headers.xml \
+          p2-semantics.iana-headers.xml \
           p2-semantics.iana-methods.xml	\
-          p2-semantics.iana-status-codes.xml	
+          p2-semantics.iana-status-codes.xml \
+          p3-payload.iana-headers.xml \
+          p4-conditional.iana-headers.xml \
+          p5-range.iana-headers.xml \
+          p6-cache.iana-headers.xml \
+          p7-auth.iana-headers.xml
+
 
 all: $(TARGETS)
 
@@ -48,6 +56,9 @@ clean:
 
 %.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
 	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@
+
+%.iana-headers.xml: %.xml extract-header-defs.xslt
+	$(saxon) $< extract-header-defs.xslt > $@
 
 %.iana-methods.xml: %.xml extract-method-defs.xslt
 	$(saxon) $< extract-method-defs.xslt > $@
