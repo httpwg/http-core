@@ -28,14 +28,51 @@
   <xsl:comment>(END)</xsl:comment>
   <xsl:text>&#10;</xsl:text>
   
-    <!-- check against current version -->
+  <!-- check against current version -->
   <xsl:variable name="oldtable" select="//texttable[@anchor='iana.header.registration.table']" />
 
-  <xsl:if test="string($table//ttcol | $table//c) != string($oldtable//ttcol | $oldtable//c)">
-    <xsl:message>WARNING: table contained inside source document needs to be updated!</xsl:message>
+  <xsl:variable name="s">
+    <xsl:apply-templates select="$table//texttable" mode="tostring"/>
+  </xsl:variable>
+  
+  <xsl:variable name="s1">
+    <xsl:apply-templates select="$oldtable" mode="tostring"/>
+  </xsl:variable>
+
+  <xsl:if test="$s != $s1">
+    <xsl:message>WARNING: table contained inside source document needs to be updated</xsl:message>
+    <xsl:message><xsl:value-of select="$s"/></xsl:message>
+    <xsl:message><xsl:value-of select="$s1"/></xsl:message>
   </xsl:if>
 
 </xsl:template>
+
+<xsl:template match="*" mode="tostring">
+  <xsl:text>&lt;</xsl:text>
+  <xsl:value-of select="name()"/>
+  <xsl:for-each select="@*">
+    <xsl:sort select="name()"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="name()"/>
+    <xsl:text>=</xsl:text>
+    <xsl:value-of select="."/>
+  </xsl:for-each>
+  <xsl:text>&gt;</xsl:text>
+  
+  <xsl:apply-templates select="node()" mode="tostring"/>
+  
+  <xsl:text>&lt;/</xsl:text>
+  <xsl:value-of select="name()"/>
+  <xsl:text>&gt;</xsl:text>
+
+</xsl:template>
+
+<xsl:template match="text()" mode="tostring">
+  <xsl:value-of select="."/>
+</xsl:template>
+
+<xsl:template match="texttable/text()" mode="tostring"/>
+<xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
 
 <xsl:template match="section">
   <xsl:text>&#10;</xsl:text>
@@ -44,7 +81,7 @@
   <c>
     <xsl:choose>
       <xsl:when test="ancestor::middle">standard</xsl:when>
-      <xsl:otherwise>&#160;</xsl:otherwise>
+      <xsl:otherwise></xsl:otherwise>
     </xsl:choose>
   </c>
   <c><xref target="{@anchor}"/></c>
