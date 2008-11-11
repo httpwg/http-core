@@ -228,65 +228,39 @@
 <section title="Introduction" anchor="introduction">
 <t>
    The Hypertext Transfer Protocol (HTTP) is an application-level
-   protocol for distributed, collaborative, hypermedia information
-   systems. HTTP has been in use by the World-Wide Web global
-   information initiative since 1990. The first version of HTTP, commonly
-   referred to as HTTP/0.9, was a simple protocol for raw data transfer
-   across the Internet with only a single method and no metadata.
-   HTTP/1.0, as defined by <xref target="RFC1945"/>, improved
-   the protocol by allowing messages to be in the format of MIME-like
-   messages, containing metadata about the data transferred and
-   modifiers on the request/response semantics. However, HTTP/1.0 did
-   not sufficiently take into consideration the effects of hierarchical
-   proxies, caching, the need for persistent connections, or name-based
-   virtual hosts. In addition, the proliferation of incompletely-implemented
-   applications calling themselves "HTTP/1.0" necessitated a
-   protocol version change in order for two communicating applications
-   to determine each other's true capabilities.
+   request/response protocol that uses extensible semantics and MIME-like
+   message payloads for flexible interaction with network-based hypermedia
+   information systems. HTTP relies upon the Uniform Resource Identifier (URI)
+   standard <xref target="RFC3986"/> to indicate resource targets for
+   interaction and to identify other resources.
+   Messages are passed in a format similar to that used by Internet mail
+   <xref target="RFC5322"/> and the Multipurpose Internet Mail Extensions
+   (MIME) <xref target="RFC2045"/> (see &diff2045entity; for the differences
+   between HTTP and MIME messages).
 </t>
 <t>
-   This document is Part 1 of the seven-part specification that defines
-   the protocol referred to as "HTTP/1.1", obsoleting <xref target="RFC2616"/>.
-   HTTP/1.1 remains compatible with HTTP/1.0 by including more stringent
-   requirements that enable reliable implementations and adding only
-   those new features that will either be safely ignored by an HTTP/1.0
-   recipient or only sent when communicating with a party advertising
-   compliance with HTTP/1.1.
-   Part 1 defines those aspects of HTTP/1.1 related to overall network
-   operation, message framing, interaction with transport protocols, and
-   URI schemes.
+   HTTP is also designed for use as a generic protocol for translating
+   communication to and from other Internet information systems, such as
+   USENET news services via NNTP <xref target="RFC3977"/>,
+   file services via FTP <xref target="RFC959"/>,
+   Gopher <xref target="RFC1436"/>, and WAIS <xref target="WAIS"/>.
+   HTTP proxies and gateways provide access to alternative information
+   services by translating their diverse protocols into a hypermedia
+   format that can be viewed and manipulated by clients in the same way
+   as HTTP services.
 </t>
 <t>
-   This document is currently disorganized in order to minimize the changes
-   between drafts and enable reviewers to see the smaller errata changes.
-   The next draft will reorganize the sections to better reflect the content.
-   In particular, the sections will be organized according to the typical
-   process of deciding when to use HTTP (URI schemes), overall network operation,
-   connection management, message framing, and generic message parsing.
-   The current mess reflects how widely dispersed these topics and associated
-   requirements had become in <xref target="RFC2616"/>.
+   This document is Part 1 of the seven-part specification of HTTP,
+   defining the protocol referred to as "HTTP/1.1" and obsoleting
+   <xref target="RFC2616"/>.
+   Part 1 defines how clients determine when to use HTTP, the URI schemes
+   specific to HTTP-based resources, overall network operation with
+   transport protocol connection management, and HTTP message framing.
+   Our goal is to define all of the mechanisms necessary for HTTP message
+   handling that are independent of message semantics, thereby defining the
+   complete set of requirements for an HTTP message relay or generic
+   message parser.
 </t>
-
-<section title="Purpose" anchor="intro.purpose">
-<t>
-   Practical information systems require more functionality than simple
-   retrieval, including search, front-end update, and annotation. HTTP
-   allows an open-ended set of methods and headers that indicate the
-   purpose of a request <xref target="RFC2324"/>. It builds on the discipline of reference
-   provided by the Uniform Resource Identifier (URI) <xref target="RFC1630"/>, as a location
-   (URL) <xref target="RFC1738"/> or name (URN) <xref target="RFC1737"/>, for indicating the resource to which a
-   method is to be applied. Messages are passed in a format similar to
-   that used by Internet mail <xref target="RFC5322"/> as defined by the Multipurpose
-   Internet Mail Extensions (MIME) <xref target="RFC2045"/>.
-</t>
-<t>
-   HTTP is also used as a generic protocol for communication between
-   user agents and proxies/gateways to other Internet systems, including
-   those supported by the SMTP <xref target="RFC2821"/>, NNTP <xref target="RFC3977"/>, FTP <xref target="RFC959"/>, Gopher <xref target="RFC1436"/>,
-   and WAIS <xref target="WAIS"/> protocols. In this way, HTTP allows basic hypermedia
-   access to resources available from diverse applications.
-</t>
-</section>
 
 <section title="Requirements" anchor="intro.requirements">
 <t>
@@ -543,46 +517,40 @@
 
 <section title="Uniform Resource Identifiers" anchor="uri">
 <t>
-   URIs have been known by many names: WWW addresses, Universal Document
-   Identifiers, Universal Resource Identifiers <xref target="RFC1630"/>, and finally the
-   combination of Uniform Resource Locators (URL) <xref target="RFC1738"/> and Names (URN)
-   <xref target="RFC1737"/>. As far as HTTP is concerned, Uniform Resource Identifiers are
-   simply formatted strings which identify--via name, location, or any
-   other characteristic--a resource.
+   Uniform Resource Identifiers (URIs) <xref target="RFC3986"/> are used in HTTP
+   to indicate the target of a request and to identify additional resources related
+   to that resource, the request, or the response. Each protocol element in HTTP
+   that allows a URI reference will indicate in its ABNF whether the element allows
+   only a URI in absolute form, any relative reference, or some limited subset of
+   the URI-reference grammar. Unless otherwise indicated, relative URI references
+   are to be parsed relative to the URI corresponding to the request target
+   (the base URI).
 </t>
-
-<section title="General Syntax" anchor="general.syntax">
-  <x:anchor-alias value="absoluteURI"/>
+  <x:anchor-alias value="URI-reference"/>
+  <x:anchor-alias value="absolute-URI"/>
   <x:anchor-alias value="authority"/>
   <x:anchor-alias value="fragment"/>
+  <x:anchor-alias value="path-abempty"/>
   <x:anchor-alias value="path-absolute"/>
   <x:anchor-alias value="port"/>
   <x:anchor-alias value="query"/>
-  <x:anchor-alias value="relativeURI"/>
   <x:anchor-alias value="uri-host"/>
 <t>
-   URIs in HTTP can be represented in absolute form or relative to some
-   known base URI <xref target="RFC1808"/>, depending upon the context of their use. The two
-   forms are differentiated by the fact that absolute URIs always begin
-   with a scheme name followed by a colon. For definitive information on
-   URL syntax and semantics, see "Uniform Resource Identifiers (URI):
-   Generic Syntax and Semantics," <xref target="RFC2396"/> (which replaces <xref target="RFC1738"/>
-   and <xref target="RFC1808"/>). This specification adopts the
-   definitions of "URI-reference", "absoluteURI", "fragment", "relativeURI", "port",
-   "host", "abs_path", "query", and "authority" from that specification:
+   This specification adopts the definitions of "URI-reference", "absolute-URI", "fragment", "port",
+   "host", "path-abempty", "path-absolute", "query", and "authority" from <xref target="RFC3986"/>:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="absoluteURI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="path-absolute"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="relativeURI"/><iref primary="true" item="Grammar" subitem="uri-host"/>
-  <x:ref>absoluteURI</x:ref>   = &lt;absoluteURI, defined in <xref target="RFC2396" x:fmt="," x:sec="3"/>>
-  <x:ref>authority</x:ref>     = &lt;authority, defined in <xref target="RFC2396" x:fmt="," x:sec="3.2"/>>
-  <x:ref>fragment</x:ref>      = &lt;fragment, defined in <xref target="RFC2396" x:fmt="," x:sec="4.1"/>>
-  <x:ref>path-absolute</x:ref> = &lt;abs_path, defined in <xref target="RFC2396" x:fmt="," x:sec="3"/>>
-  <x:ref>port</x:ref>          = &lt;port, defined in <xref target="RFC2396" x:fmt="," x:sec="3.2.2"/>>
-  <x:ref>query</x:ref>         = &lt;query, defined in <xref target="RFC2396" x:fmt="," x:sec="3.4"/>>
-  <x:ref>relativeURI</x:ref>   = &lt;relativeURI, defined in <xref target="RFC2396" x:fmt="," x:sec="5"/>>
-  <x:ref>uri-host</x:ref>      = &lt;host, defined in <xref target="RFC2396" x:fmt="," x:sec="3.2.2"/>>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="URI-reference"/><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="path-absolute"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="uri-host"/>
+  <x:ref>absolute-URI</x:ref>   = &lt;absolute-URI, defined in <xref target="RFC3986" x:fmt="," x:sec="4.3"/>>
+  <x:ref>authority</x:ref>     = &lt;authority, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2"/>>
+  <x:ref>fragment</x:ref>      = &lt;fragment, defined in <xref target="RFC3986" x:fmt="," x:sec="3.5"/>>
+  <x:ref>path-abempty</x:ref>  = &lt;path-abempty, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>>
+  <x:ref>path-absolute</x:ref> = &lt;path-absolute, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>>
+  <x:ref>port</x:ref>          = &lt;port, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>>
+  <x:ref>query</x:ref>         = &lt;query, defined in <xref target="RFC3986" x:fmt="," x:sec="3.4"/>>
+  <x:ref>uri-host</x:ref>      = &lt;host, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>>
 </artwork></figure>
 <t>
-   HTTP does not place any a priori limit on the length of
+   HTTP does not place an a priori limit on the length of
    a URI. Servers &MUST; be able to handle the URI of any resource they
    serve, and &SHOULD; be able to handle URIs of unbounded length if they
    provide GET-based forms that could generate such URIs. A server
@@ -598,20 +566,18 @@
     </t>
   </list>
 </t>
-</section>
 
-<section title="http URL" anchor="http.url">
-  <x:anchor-alias value="http-URL"/>
+<section title="http URI scheme" anchor="http.uri">
+  <x:anchor-alias value="http-URI"/>
   <iref item="http URI scheme" primary="true"/>
   <iref item="URI scheme" subitem="http" primary="true"/>
 <t>
    The "http" scheme is used to locate network resources via the HTTP
-   protocol. This section defines the scheme-specific syntax and
-   semantics for http URLs.
+   protocol. This section defines the syntax and semantics for identifiers
+   using the http or https URI schemes.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URL"/>
-  <x:ref>http-URL</x:ref> = "http:" "//" <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ]
-             [ <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ]]
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URI"/>
+  <x:ref>http-URI</x:ref> = "http:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
 </artwork></figure>
 <t>
    If the port is empty or not given, port 80 is assumed. The semantics
@@ -648,7 +614,7 @@
 </t>
 <t>
    Characters other than those in the "reserved" set (see
-   <xref target="RFC2396" x:fmt="," x:sec="2.2"/>) are equivalent to their
+   <xref target="RFC3986" x:fmt="," x:sec="2.2"/>) are equivalent to their
    ""%" <x:ref>HEXDIG</x:ref> <x:ref>HEXDIG</x:ref>" encoding.
 </t>
 <t>
@@ -671,8 +637,7 @@
    connection with a server. The server responds with a status line,
    including the message's protocol version and a success or error code,
    followed by a MIME-like message containing server information, entity
-   metainformation, and possible entity-body content. The relationship
-   between HTTP and MIME is described in &diff2045entity;.
+   metainformation, and possible entity-body content.
 </t>
 <t>
    Most HTTP communication is initiated by a user agent and consists of
@@ -1480,7 +1445,7 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Request-URI"/>
   <x:ref>Request-URI</x:ref>    = "*"
-                 / <x:ref>absoluteURI</x:ref>
+                 / <x:ref>absolute-URI</x:ref>
                  / ( <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ] )
                  / <x:ref>authority</x:ref>
 </artwork></figure>
@@ -1495,11 +1460,11 @@
     OPTIONS * HTTP/1.1
 </artwork></figure>
 <t>
-   The absoluteURI form is &REQUIRED; when the request is being made to a
+   The absolute-URI form is &REQUIRED; when the request is being made to a
    proxy. The proxy is requested to forward the request or service it
    from a valid cache, and return the response. Note that the proxy &MAY;
    forward the request on to another proxy or directly to the server
-   specified by the absoluteURI. In order to avoid request loops, a
+   specified by the absolute-URI. In order to avoid request loops, a
    proxy &MUST; be able to recognize all of its server names, including
    any aliases, local variations, and the numeric IP address. An example
    Request-Line would be:
@@ -1508,8 +1473,8 @@
     GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
 </artwork></figure>
 <t>
-   To allow for transition to absoluteURIs in all requests in future
-   versions of HTTP, all HTTP/1.1 servers &MUST; accept the absoluteURI
+   To allow for transition to absolute-URIs in all requests in future
+   versions of HTTP, all HTTP/1.1 servers &MUST; accept the absolute-URI
    form in requests, even though HTTP/1.1 clients will only generate
    them in requests to proxies.
 </t>
@@ -1519,7 +1484,7 @@
 <t>
    The most common form of Request-URI is that used to identify a
    resource on an origin server or gateway. In this case the absolute
-   path of the URI &MUST; be transmitted (see <xref target="general.syntax"/>, path-absolute) as
+   path of the URI &MUST; be transmitted (see <xref target="http.uri"/>, path-absolute) as
    the Request-URI, and the network location of the URI (authority) &MUST;
    be transmitted in a Host header field. For example, a client wishing
    to retrieve the resource above directly from the origin server would
@@ -1537,9 +1502,9 @@
 </t>
 <t>
    The Request-URI is transmitted in the format specified in 
-   <xref target="general.syntax"/>. If the Request-URI is encoded using the
+   <xref target="http.uri"/>. If the Request-URI is encoded using the
    "% <x:ref>HEXDIG</x:ref> <x:ref>HEXDIG</x:ref>" encoding
-   (<xref target="RFC2396" x:fmt="," x:sec="2.4.1"/>), the origin server
+   (<xref target="RFC3986" x:fmt="," x:sec="2.4"/>), the origin server
    &MUST; decode the Request-URI in order to
    properly interpret the request. Servers &SHOULD; respond to invalid
    Request-URIs with an appropriate status code.
@@ -1579,10 +1544,10 @@
    names) &MUST; use the following rules for determining the requested
    resource on an HTTP/1.1 request:
   <list style="numbers">
-    <t>If Request-URI is an absoluteURI, the host is part of the
+    <t>If Request-URI is an absolute-URI, the host is part of the
      Request-URI. Any Host header field value in the request &MUST; be
      ignored.</t>
-    <t>If the Request-URI is not an absoluteURI, and the request includes
+    <t>If the Request-URI is not an absolute-URI, and the request includes
      a Host header field, the host is determined by the Host header
      field value.</t>
     <t>If the host as determined by rule 1 or 2 is not a valid host on
@@ -2269,15 +2234,15 @@
 <t>
    The Host request-header field specifies the Internet host and port
    number of the resource being requested, as obtained from the original
-   URI given by the user or referring resource (generally an HTTP URL,
-   as described in <xref target="http.url"/>). The Host field value &MUST; represent
+   URI given by the user or referring resource (generally an http URI,
+   as described in <xref target="http.uri"/>). The Host field value &MUST; represent
    the naming authority of the origin server or gateway given by the
    original URL. This allows the origin server or gateway to
    differentiate between internally-ambiguous URLs, such as the root "/"
    URL of a server for multiple host names on a single IP address.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Host"/>
-  <x:ref>Host</x:ref> = "Host" ":" <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="http.url"/>
+  <x:ref>Host</x:ref> = "Host" ":" <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="http.uri"/>
 </artwork></figure>
 <t>
    A "host" without any trailing port information implies the default
@@ -2690,7 +2655,7 @@
 <t>
    The entry for the "http" URI Scheme in the registry located at
    <eref target="http://www.iana.org/assignments/uri-schemes.html"/>
-   should be updated to point to <xref target="http.url"/> of this document
+   should be updated to point to <xref target="http.uri"/> of this document
    (see <xref target="RFC4395"/>).
 </t>
 </section>
@@ -2989,14 +2954,6 @@
 
 <section title="Acknowledgments" anchor="ack">
 <t>
-   This specification makes heavy use of the augmented BNF and generic
-   constructs defined by David H. Crocker for <xref target="RFC5234"/>. Similarly, it
-   reuses many of the definitions provided by Nathaniel Borenstein and
-   Ned Freed for MIME <xref target="RFC2045"/>. We hope that their inclusion in this
-   specification will help reduce past confusion over the relationship
-   between HTTP and Internet mail message formats.
-</t>
-<t>
    HTTP has evolved considerably over the years. It has
    benefited from a large and active developer community--the many
    people who have participated on the www-talk mailing list--and it is
@@ -3044,6 +3001,14 @@
    Frystyk implemented RFC 2068 early, and we wish to thank them for the
    discovery of many of the problems that this document attempts to
    rectify.
+</t>
+<t>
+   This specification makes heavy use of the augmented BNF and generic
+   constructs defined by David H. Crocker for <xref target="RFC5234"/>. Similarly, it
+   reuses many of the definitions provided by Nathaniel Borenstein and
+   Ned Freed for MIME <xref target="RFC2045"/>. We hope that their inclusion in this
+   specification will help reduce past confusion over the relationship
+   between HTTP and Internet mail message formats.
 </t>
 </section>
 
@@ -3318,24 +3283,34 @@
   <seriesInfo name="RFC" value="2119"/>
 </reference>
 
-<reference anchor="RFC2396">
-  <front>
-    <title abbrev="URI Generic Syntax">Uniform Resource Identifiers (URI): Generic Syntax</title>
-    <author initials="T." surname="Berners-Lee" fullname="Tim Berners-Lee">
-      <organization abbrev="MIT/LCS">World Wide Web Consortium</organization>
-      <address><email>timbl@w3.org</email></address>
-    </author>
-    <author initials="R.T." surname="Fielding" fullname="Roy T. Fielding">
-      <organization abbrev="U.C. Irvine">Department of Information and Computer Science</organization>
-      <address><email>fielding@ics.uci.edu</email></address>
-    </author>
-    <author initials="L." surname="Masinter" fullname="Larry Masinter">
-      <organization abbrev="Xerox Corporation">Xerox PARC</organization>
-      <address><email>masinter@parc.xerox.com</email></address>
-    </author>
-    <date month="August" year="1998"/>
-  </front>
-  <seriesInfo name="RFC" value="2396"/>
+<reference anchor="RFC3986">
+ <front>
+  <title abbrev='URI Generic Syntax'>Uniform Resource Identifier (URI): Generic Syntax</title>
+  <author initials='T.' surname='Berners-Lee' fullname='Tim Berners-Lee'>
+    <organization abbrev="W3C/MIT">World Wide Web Consortium</organization>
+    <address>
+       <email>timbl@w3.org</email>
+       <uri>http://www.w3.org/People/Berners-Lee/</uri>
+    </address>
+  </author>
+  <author initials='R.' surname='Fielding' fullname='Roy T. Fielding'>
+    <organization abbrev="Day Software">Day Software</organization>
+    <address>
+      <email>fielding@gbiv.com</email>
+      <uri>http://roy.gbiv.com/</uri>
+    </address>
+  </author>
+  <author initials='L.' surname='Masinter' fullname='Larry Masinter'>
+    <organization abbrev="Adobe Systems">Adobe Systems Incorporated</organization>
+    <address>
+      <email>LMM@acm.org</email>
+      <uri>http://larry.masinter.net/</uri>
+    </address>
+  </author>
+  <date month='January' year='2005'></date>
+ </front>
+ <seriesInfo name="RFC" value="3986"/>
+ <seriesInfo name="STD" value="66"/>
 </reference>
 
 <reference anchor="USASCII">
@@ -3475,66 +3450,6 @@
   <seriesInfo name="RFC" value="1436"/>
 </reference>
 
-<reference anchor="RFC1630">
-  <front>
-    <title abbrev="URIs in WWW">Universal Resource Identifiers in WWW: A Unifying Syntax for the Expression of Names and Addresses of Objects on the Network as used in the World-Wide Web</title>
-    <author initials="T." surname="Berners-Lee" fullname="Tim Berners-Lee">
-      <organization>CERN, World-Wide Web project</organization>
-      <address><email>timbl@info.cern.ch</email></address>
-    </author>
-    <date month="June" year="1994"/>
-  </front>
-  <seriesInfo name="RFC" value="1630"/>
-</reference>
-
-<reference anchor="RFC1737">
-  <front>
-    <title abbrev="Requirements for Uniform Resource Names">Functional Requirements for Uniform Resource Names</title>
-    <author initials="L." surname="Masinter" fullname="Larry Masinter">
-      <organization>Xerox Palo Alto Research Center</organization>
-      <address><email>masinter@parc.xerox.com</email></address>
-    </author>
-    <author initials="K." surname="Sollins" fullname="Karen Sollins">
-      <organization>MIT Laboratory for Computer Science</organization>
-      <address><email>sollins@lcs.mit.edu</email></address>
-    </author>
-    <date month="December" year="1994"/>
-  </front>
-  <seriesInfo name="RFC" value="1737"/>
-</reference>
-
-<reference anchor="RFC1738">
-  <front>
-    <title>Uniform Resource Locators (URL)</title>
-    <author initials="T." surname="Berners-Lee" fullname="Tim Berners-Lee">
-      <organization>CERN, World-Wide Web project</organization>
-      <address><email>timbl@info.cern.ch</email></address>
-    </author>
-    <author initials="L." surname="Masinter" fullname="Larry Masinter">
-      <organization>Xerox PARC</organization>
-      <address><email>masinter@parc.xerox.com</email></address>
-    </author>
-    <author initials="M." surname="McCahill" fullname="Mark McCahill">
-      <organization>University of Minnesota, Computer and Information Services</organization>
-      <address><email>mpm@boombox.micro.umn.edu</email></address>
-    </author>
-    <date month="December" year="1994"/>
-  </front>
-  <seriesInfo name="RFC" value="1738"/>
-</reference>
-
-<reference anchor="RFC1808">
-  <front>
-    <title>Relative Uniform Resource Locators</title>
-    <author initials="R." surname="Fielding" fullname="Roy T. Fielding">
-      <organization>University of California Irvine, Department of Information and Computer Science</organization>
-      <address><email>fielding@ics.uci.edu</email></address>
-    </author>
-    <date month="June" year="1995"/>
-  </front>
-  <seriesInfo name="RFC" value="1808"/>
-</reference>
-
 <reference anchor="RFC1900">
   <front>
     <title>Renumbering Needs Work</title>
@@ -3639,18 +3554,6 @@
   <seriesInfo name="RFC" value="2145"/>
 </reference>
 
-<reference anchor="RFC2324">
-  <front>
-    <title abbrev="HTCPCP/1.0">Hyper Text Coffee Pot Control Protocol (HTCPCP/1.0)</title>
-    <author initials="L." surname="Masinter" fullname="Larry Masinter">
-      <organization>Xerox Palo Alto Research Center</organization>
-      <address><email>masinter@parc.xerox.com</email></address>
-    </author>
-    <date month="April" day="1" year="1998"/>
-  </front>
-  <seriesInfo name="RFC" value="2324"/>
-</reference>
-
 <reference anchor="RFC2616">
   <front>
     <title>Hypertext Transfer Protocol -- HTTP/1.1</title>
@@ -3697,18 +3600,6 @@
     <date year='2000' month='May' />
   </front>
   <seriesInfo name='RFC' value='2818' />
-</reference>
-
-<reference anchor="RFC2821">
-  <front>
-    <title>Simple Mail Transfer Protocol</title>
-    <author initials="J." surname="Klensin" fullname="J. Klensin">
-      <organization>AT&amp;T Laboratories</organization>
-      <address><email>klensin@research.att.com</email></address>
-    </author>
-    <date year="2001" month="April"/>
-  </front>
-  <seriesInfo name="RFC" value="2821"/>
 </reference>
 
 <reference anchor='RFC2965'>
@@ -3959,6 +3850,28 @@
 
 <section title="Compatibility with Previous Versions" anchor="compatibility">
 <t>
+   HTTP has been in use by the World-Wide Web global information initiative
+   since 1990. The first version of HTTP, later referred to as HTTP/0.9,
+   was a simple protocol for hypertext data transfer across the Internet
+   with only a single method and no metadata.
+   HTTP/1.0, as defined by <xref target="RFC1945"/>, added a range of request
+   methods and MIME-like messaging that could include metadata about the data
+   transferred and modifiers on the request/response semantics. However,
+   HTTP/1.0 did not sufficiently take into consideration the effects of
+   hierarchical proxies, caching, the need for persistent connections, or
+   name-based virtual hosts. The proliferation of incompletely-implemented
+   applications calling themselves "HTTP/1.0" further necessitated a
+   protocol version change in order for two communicating applications
+   to determine each other's true capabilities.
+</t>
+<t>
+   HTTP/1.1 remains compatible with HTTP/1.0 by including more stringent
+   requirements that enable reliable implementations, adding only
+   those new features that will either be safely ignored by an HTTP/1.0
+   recipient or only sent when communicating with a party advertising
+   compliance with HTTP/1.1.
+</t>
+<t>
    It is beyond the scope of a protocol specification to mandate
    compliance with previous versions. HTTP/1.1 was deliberately
    designed, however, to make supporting previous versions easy. It is
@@ -4125,8 +4038,8 @@
   (<xref target="chunked.transfer.encoding"/>)
 </t>
 <t>
-  Fix BNF to add query, as the abs_path production in
-  <xref x:sec="3" x:fmt="of" target="RFC2396"/> doesn't define it.
+  Update use of abs_path production from RFC1808 to the path-absolute + query
+  components of RFC3986.
   (<xref target="request-uri"/>)
 </t>
 <t>
@@ -4280,12 +4193,11 @@
     </t>
     <t>
       Avoid underscore character in rule names ("http_URL" ->
-      "http-URL", "abs_path" -> "path-absolute").
+      "http-URI", "abs_path" -> "path-absolute").
     </t>
     <t>
-      Add rules for terms imported from URI spec ("absoluteURI", "authority",
-      "path-absolute", "port", "query", "relativeURI", "host) -- these will
-      have to be updated when switching over to RFC3986. 
+      Add rules for terms imported from URI spec ("absolute-URI", "authority",
+      "path-abempty", "path-absolute", "uri-host", "port", "query"). 
     </t>
     <t>
       Synchronize core rules with RFC5234 (this includes a change to CHAR
