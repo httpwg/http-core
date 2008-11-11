@@ -305,7 +305,7 @@
 </t>
 </section>
 
-<section title="Syntax Notation" anchor="syntax.notation">
+<section title="Syntax Notation" anchor="notation">
 <t>
    This specification uses the Augmented Backus-Naur Form (ABNF) notation
    of <xref target="RFC5234"/>, including its core ABNF syntax rules:
@@ -313,122 +313,43 @@
    DQUOTE (double quote), HEXDIG (hexadecimal digits), LF (line feed),
    and SP (space).
 </t>
-</section>
-</section>
-
-<section title="When to use HTTP" anchor="when">
-
-<section title="Overall Operation" anchor="intro.overall.operation">
-<t>
-   HTTP is a request/response protocol. A client sends a
-   request to the server in the form of a request method, URI, and
-   protocol version, followed by a MIME-like message containing request
-   modifiers, client information, and possible body content over a
-   connection with a server. The server responds with a status line,
-   including the message's protocol version and a success or error code,
-   followed by a MIME-like message containing server information, entity
-   metainformation, and possible entity-body content. The relationship
-   between HTTP and MIME is described in &diff2045entity;.
+<t anchor="core.rules">
+  <x:anchor-alias value="OCTET"/>
+  <x:anchor-alias value="CHAR"/>
+  <x:anchor-alias value="ALPHA"/>
+  <x:anchor-alias value="DIGIT"/>
+  <x:anchor-alias value="CTL"/>
+  <x:anchor-alias value="CR"/>
+  <x:anchor-alias value="LF"/>
+  <x:anchor-alias value="SP"/>
+  <x:anchor-alias value="HTAB"/>
+  <x:anchor-alias value="DQUOTE"/>
+   The following rules are used throughout this specification to
+   describe basic parsing constructs. The US-ASCII coded character set
+   is defined by ANSI X3.4-1986 <xref target="USASCII"/>.
 </t>
-<t>
-   Most HTTP communication is initiated by a user agent and consists of
-   a request to be applied to a resource on some origin server. In the
-   simplest case, this may be accomplished via a single connection (v)
-   between the user agent (UA) and the origin server (O).
-</t>
-<figure><artwork type="drawing">
-       request chain ------------------------&gt;
-    UA -------------------v------------------- O
-       &lt;----------------------- response chain
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OCTET"/><iref primary="true" item="Grammar" subitem="CHAR"/><iref primary="true" item="Grammar" subitem="ALPHA"/><iref primary="true" item="Grammar" subitem="DIGIT"/><iref primary="true" item="Grammar" subitem="CTL"/><iref primary="true" item="Grammar" subitem="CR"/><iref primary="true" item="Grammar" subitem="LF"/><iref primary="true" item="Grammar" subitem="SP"/><iref primary="true" item="Grammar" subitem="HTAB"/><iref primary="true" item="Grammar" subitem="DQUOTE"/>
+  <x:ref>OCTET</x:ref>          = %x00-FF
+                   ; any 8-bit sequence of data
+  <x:ref>CHAR</x:ref>           = %x01-7F
+                   ; any US-ASCII character, excluding NUL
+  <x:ref>ALPHA</x:ref>          = %x41-5A / %x61-7A
+                   ; A-Z / a-z
+  <x:ref>DIGIT</x:ref>          = %x30-39
+                   ; any US-ASCII digit "0".."9"
+  <x:ref>CTL</x:ref>            = %x00-1F / %x7F
+                   ; (octets 0 - 31) and DEL (127)
+  <x:ref>CR</x:ref>             = %x0D
+                   ; US-ASCII CR, carriage return (13)
+  <x:ref>LF</x:ref>             = %x0A
+                   ; US-ASCII LF, linefeed (10)
+  <x:ref>SP</x:ref>             = %x20
+                   ; US-ASCII SP, space (32)
+  <x:ref>HTAB</x:ref>           = %x09
+                   ; US-ASCII HT, horizontal-tab (9)
+  <x:ref>DQUOTE</x:ref>         = %x22
+                   ; US-ASCII double-quote mark (34)
 </artwork></figure>
-<t>
-   A more complicated situation occurs when one or more intermediaries
-   are present in the request/response chain. There are three common
-   forms of intermediary: proxy, gateway, and tunnel. A proxy is a
-   forwarding agent, receiving requests for a URI in its absolute form,
-   rewriting all or part of the message, and forwarding the reformatted
-   request toward the server identified by the URI. A gateway is a
-   receiving agent, acting as a layer above some other server(s) and, if
-   necessary, translating the requests to the underlying server's
-   protocol. A tunnel acts as a relay point between two connections
-   without changing the messages; tunnels are used when the
-   communication needs to pass through an intermediary (such as a
-   firewall) even when the intermediary cannot understand the contents
-   of the messages.
-</t>
-<figure><artwork type="drawing">
-       request chain --------------------------------------&gt;
-    UA -----v----- A -----v----- B -----v----- C -----v----- O
-       &lt;------------------------------------- response chain
-</artwork></figure>
-<t>
-   The figure above shows three intermediaries (A, B, and C) between the
-   user agent and origin server. A request or response message that
-   travels the whole chain will pass through four separate connections.
-   This distinction is important because some HTTP communication options
-   may apply only to the connection with the nearest, non-tunnel
-   neighbor, only to the end-points of the chain, or to all connections
-   along the chain. Although the diagram is linear, each participant may
-   be engaged in multiple, simultaneous communications. For example, B
-   may be receiving requests from many clients other than A, and/or
-   forwarding requests to servers other than C, at the same time that it
-   is handling A's request.
-</t>
-<t>
-   Any party to the communication which is not acting as a tunnel may
-   employ an internal cache for handling requests. The effect of a cache
-   is that the request/response chain is shortened if one of the
-   participants along the chain has a cached response applicable to that
-   request. The following illustrates the resulting chain if B has a
-   cached copy of an earlier response from O (via C) for a request which
-   has not been cached by UA or A.
-</t>
-<figure><artwork type="drawing">
-          request chain ----------&gt;
-       UA -----v----- A -----v----- B - - - - - - C - - - - - - O
-          &lt;--------- response chain
-</artwork></figure>
-<t>
-   Not all responses are usefully cacheable, and some requests may
-   contain modifiers which place special requirements on cache behavior.
-   HTTP requirements for cache behavior and cacheable responses are
-   defined in &caching;.
-</t>
-<t>
-   In fact, there are a wide variety of architectures and configurations
-   of caches and proxies currently being experimented with or deployed
-   across the World Wide Web. These systems include national hierarchies
-   of proxy caches to save transoceanic bandwidth, systems that
-   broadcast or multicast cache entries, organizations that distribute
-   subsets of cached data via CD-ROM, and so on. HTTP systems are used
-   in corporate intranets over high-bandwidth links, and for access via
-   PDAs with low-power radio links and intermittent connectivity. The
-   goal of HTTP/1.1 is to support the wide diversity of configurations
-   already deployed while introducing protocol constructs that meet the
-   needs of those who build web applications that require high
-   reliability and, failing that, at least reliable indications of
-   failure.
-</t>
-<t>
-   HTTP communication usually takes place over TCP/IP connections. The
-   default port is TCP 80 (<eref target="http://www.iana.org/assignments/port-numbers"/>), but other ports can be used. This does
-   not preclude HTTP from being implemented on top of any other protocol
-   on the Internet, or on other networks. HTTP only presumes a reliable
-   transport; any protocol that provides such guarantees can be used;
-   the mapping of the HTTP/1.1 request and response structures onto the
-   transport data units of the protocol in question is outside the scope
-   of this specification.
-</t>
-<t>
-   In HTTP/1.0, most implementations used a new connection for each
-   request/response exchange. In HTTP/1.1, a connection may be used for
-   one or more request/response exchanges, although connections may be
-   closed for a variety of reasons (see <xref target="persistent.connections"/>).
-</t>
-</section>
-</section>
-
-<section title="Notational Conventions and Generic Grammar" anchor="notation">
 
 <section title="Augmented BNF" anchor="notation.abnf">
 <t>
@@ -482,43 +403,6 @@
 </section>
 
 <section title="Basic Rules" anchor="basic.rules">
-<t anchor="core.rules">
-  <x:anchor-alias value="OCTET"/>
-  <x:anchor-alias value="CHAR"/>
-  <x:anchor-alias value="ALPHA"/>
-  <x:anchor-alias value="DIGIT"/>
-  <x:anchor-alias value="CTL"/>
-  <x:anchor-alias value="CR"/>
-  <x:anchor-alias value="LF"/>
-  <x:anchor-alias value="SP"/>
-  <x:anchor-alias value="HTAB"/>
-  <x:anchor-alias value="DQUOTE"/>
-   The following rules are used throughout this specification to
-   describe basic parsing constructs. The US-ASCII coded character set
-   is defined by ANSI X3.4-1986 <xref target="USASCII"/>.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OCTET"/><iref primary="true" item="Grammar" subitem="CHAR"/><iref primary="true" item="Grammar" subitem="ALPHA"/><iref primary="true" item="Grammar" subitem="DIGIT"/><iref primary="true" item="Grammar" subitem="CTL"/><iref primary="true" item="Grammar" subitem="CR"/><iref primary="true" item="Grammar" subitem="LF"/><iref primary="true" item="Grammar" subitem="SP"/><iref primary="true" item="Grammar" subitem="HTAB"/><iref primary="true" item="Grammar" subitem="DQUOTE"/>
-  <x:ref>OCTET</x:ref>          = %x00-FF
-                   ; any 8-bit sequence of data
-  <x:ref>CHAR</x:ref>           = %x01-7F
-                   ; any US-ASCII character, excluding NUL
-  <x:ref>ALPHA</x:ref>          = %x41-5A / %x61-7A
-                   ; A-Z / a-z
-  <x:ref>DIGIT</x:ref>          = %x30-39
-                   ; any US-ASCII digit "0".."9"
-  <x:ref>CTL</x:ref>            = %x00-1F / %x7F
-                   ; (octets 0 - 31) and DEL (127)
-  <x:ref>CR</x:ref>             = %x0D
-                   ; US-ASCII CR, carriage return (13)
-  <x:ref>LF</x:ref>             = %x0A
-                   ; US-ASCII LF, linefeed (10)
-  <x:ref>SP</x:ref>             = %x20
-                   ; US-ASCII SP, space (32)
-  <x:ref>HTAB</x:ref>           = %x09
-                   ; US-ASCII HT, horizontal-tab (9)
-  <x:ref>DQUOTE</x:ref>         = %x22
-                   ; US-ASCII double-quote mark (34)
-</artwork></figure>
 <t anchor="rule.CRLF">
   <x:anchor-alias value="CRLF"/>
    HTTP/1.1 defines the sequence CR LF as the end-of-line marker for all
@@ -653,81 +537,9 @@
 </section>
 
 </section>
-
-<section title="Protocol Parameters" anchor="protocol.parameters">
-
-<section title="HTTP Version" anchor="http.version">
-  <x:anchor-alias value="HTTP-Version"/>
-  <x:anchor-alias value="HTTP-Prot-Name"/>
-<t>
-   HTTP uses a "&lt;major&gt;.&lt;minor&gt;" numbering scheme to indicate versions
-   of the protocol. The protocol versioning policy is intended to allow
-   the sender to indicate the format of a message and its capacity for
-   understanding further HTTP communication, rather than the features
-   obtained via that communication. No change is made to the version
-   number for the addition of message components which do not affect
-   communication behavior or which only add to extensible field values.
-   The &lt;minor&gt; number is incremented when the changes made to the
-   protocol add features which do not change the general message parsing
-   algorithm, but which may add to the message semantics and imply
-   additional capabilities of the sender. The &lt;major&gt; number is
-   incremented when the format of a message within the protocol is
-   changed. See <xref target="RFC2145"/> for a fuller explanation.
-</t>
-<t>
-   The version of an HTTP message is indicated by an HTTP-Version field
-   in the first line of the message. HTTP-Version is case-sensitive.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-Version"/><iref primary="true" item="Grammar" subitem="HTTP-Prot-Name"/>
-  <x:ref>HTTP-Version</x:ref>   = <x:ref>HTTP-Prot-Name</x:ref> "/" 1*<x:ref>DIGIT</x:ref> "." 1*<x:ref>DIGIT</x:ref>
-  <x:ref>HTTP-Prot-Name</x:ref> = <x:abnf-char-sequence>"HTTP"</x:abnf-char-sequence> ; "HTTP", case-sensitive 
-</artwork></figure>
-<t>
-   Note that the major and minor numbers &MUST; be treated as separate
-   integers and that each &MAY; be incremented higher than a single digit.
-   Thus, HTTP/2.4 is a lower version than HTTP/2.13, which in turn is
-   lower than HTTP/12.3. Leading zeros &MUST; be ignored by recipients and
-   &MUST-NOT; be sent.
-</t>
-<t>
-   An application that sends a request or response message that includes
-   HTTP-Version of "HTTP/1.1" &MUST; be at least conditionally compliant
-   with this specification. Applications that are at least conditionally
-   compliant with this specification &SHOULD; use an HTTP-Version of
-   "HTTP/1.1" in their messages, and &MUST; do so for any message that is
-   not compatible with HTTP/1.0. For more details on when to send
-   specific HTTP-Version values, see <xref target="RFC2145"/>.
-</t>
-<t>
-   The HTTP version of an application is the highest HTTP version for
-   which the application is at least conditionally compliant.
-</t>
-<t>
-   Proxy and gateway applications need to be careful when forwarding
-   messages in protocol versions different from that of the application.
-   Since the protocol version indicates the protocol capability of the
-   sender, a proxy/gateway &MUST-NOT; send a message with a version
-   indicator which is greater than its actual version. If a higher
-   version request is received, the proxy/gateway &MUST; either downgrade
-   the request version, or respond with an error, or switch to tunnel
-   behavior.
-</t>
-<t>
-   Due to interoperability problems with HTTP/1.0 proxies discovered
-   since the publication of <xref target="RFC2068"/>, caching proxies &MUST;, gateways
-   &MAY;, and tunnels &MUST-NOT; upgrade the request to the highest version
-   they support. The proxy/gateway's response to that request &MUST; be in
-   the same major version as the request.
-</t>
-<t>
-  <list>
-    <t>
-      <x:h>Note:</x:h> Converting between versions of HTTP may involve modification
-      of header fields required or forbidden by the versions involved.
-    </t>
-  </list>
-</t>
 </section>
+
+<section title="When to use HTTP" anchor="when">
 
 <section title="Uniform Resource Identifiers" anchor="uri">
 <t>
@@ -848,6 +660,191 @@
    http://EXAMPLE.com:/%7esmith/home.html
 </artwork></figure>
 </section>
+</section>
+
+<section title="Overall Operation" anchor="intro.overall.operation">
+<t>
+   HTTP is a request/response protocol. A client sends a
+   request to the server in the form of a request method, URI, and
+   protocol version, followed by a MIME-like message containing request
+   modifiers, client information, and possible body content over a
+   connection with a server. The server responds with a status line,
+   including the message's protocol version and a success or error code,
+   followed by a MIME-like message containing server information, entity
+   metainformation, and possible entity-body content. The relationship
+   between HTTP and MIME is described in &diff2045entity;.
+</t>
+<t>
+   Most HTTP communication is initiated by a user agent and consists of
+   a request to be applied to a resource on some origin server. In the
+   simplest case, this may be accomplished via a single connection (v)
+   between the user agent (UA) and the origin server (O).
+</t>
+<figure><artwork type="drawing">
+       request chain ------------------------&gt;
+    UA -------------------v------------------- O
+       &lt;----------------------- response chain
+</artwork></figure>
+<t>
+   A more complicated situation occurs when one or more intermediaries
+   are present in the request/response chain. There are three common
+   forms of intermediary: proxy, gateway, and tunnel. A proxy is a
+   forwarding agent, receiving requests for a URI in its absolute form,
+   rewriting all or part of the message, and forwarding the reformatted
+   request toward the server identified by the URI. A gateway is a
+   receiving agent, acting as a layer above some other server(s) and, if
+   necessary, translating the requests to the underlying server's
+   protocol. A tunnel acts as a relay point between two connections
+   without changing the messages; tunnels are used when the
+   communication needs to pass through an intermediary (such as a
+   firewall) even when the intermediary cannot understand the contents
+   of the messages.
+</t>
+<figure><artwork type="drawing">
+       request chain --------------------------------------&gt;
+    UA -----v----- A -----v----- B -----v----- C -----v----- O
+       &lt;------------------------------------- response chain
+</artwork></figure>
+<t>
+   The figure above shows three intermediaries (A, B, and C) between the
+   user agent and origin server. A request or response message that
+   travels the whole chain will pass through four separate connections.
+   This distinction is important because some HTTP communication options
+   may apply only to the connection with the nearest, non-tunnel
+   neighbor, only to the end-points of the chain, or to all connections
+   along the chain. Although the diagram is linear, each participant may
+   be engaged in multiple, simultaneous communications. For example, B
+   may be receiving requests from many clients other than A, and/or
+   forwarding requests to servers other than C, at the same time that it
+   is handling A's request.
+</t>
+<t>
+   Any party to the communication which is not acting as a tunnel may
+   employ an internal cache for handling requests. The effect of a cache
+   is that the request/response chain is shortened if one of the
+   participants along the chain has a cached response applicable to that
+   request. The following illustrates the resulting chain if B has a
+   cached copy of an earlier response from O (via C) for a request which
+   has not been cached by UA or A.
+</t>
+<figure><artwork type="drawing">
+          request chain ----------&gt;
+       UA -----v----- A -----v----- B - - - - - - C - - - - - - O
+          &lt;--------- response chain
+</artwork></figure>
+<t>
+   Not all responses are usefully cacheable, and some requests may
+   contain modifiers which place special requirements on cache behavior.
+   HTTP requirements for cache behavior and cacheable responses are
+   defined in &caching;.
+</t>
+<t>
+   In fact, there are a wide variety of architectures and configurations
+   of caches and proxies currently being experimented with or deployed
+   across the World Wide Web. These systems include national hierarchies
+   of proxy caches to save transoceanic bandwidth, systems that
+   broadcast or multicast cache entries, organizations that distribute
+   subsets of cached data via CD-ROM, and so on. HTTP systems are used
+   in corporate intranets over high-bandwidth links, and for access via
+   PDAs with low-power radio links and intermittent connectivity. The
+   goal of HTTP/1.1 is to support the wide diversity of configurations
+   already deployed while introducing protocol constructs that meet the
+   needs of those who build web applications that require high
+   reliability and, failing that, at least reliable indications of
+   failure.
+</t>
+<t>
+   HTTP communication usually takes place over TCP/IP connections. The
+   default port is TCP 80 (<eref target="http://www.iana.org/assignments/port-numbers"/>), but other ports can be used. This does
+   not preclude HTTP from being implemented on top of any other protocol
+   on the Internet, or on other networks. HTTP only presumes a reliable
+   transport; any protocol that provides such guarantees can be used;
+   the mapping of the HTTP/1.1 request and response structures onto the
+   transport data units of the protocol in question is outside the scope
+   of this specification.
+</t>
+<t>
+   In HTTP/1.0, most implementations used a new connection for each
+   request/response exchange. In HTTP/1.1, a connection may be used for
+   one or more request/response exchanges, although connections may be
+   closed for a variety of reasons (see <xref target="persistent.connections"/>).
+</t>
+</section>
+</section>
+
+<section title="Protocol Parameters" anchor="protocol.parameters">
+
+<section title="HTTP Version" anchor="http.version">
+  <x:anchor-alias value="HTTP-Version"/>
+  <x:anchor-alias value="HTTP-Prot-Name"/>
+<t>
+   HTTP uses a "&lt;major&gt;.&lt;minor&gt;" numbering scheme to indicate versions
+   of the protocol. The protocol versioning policy is intended to allow
+   the sender to indicate the format of a message and its capacity for
+   understanding further HTTP communication, rather than the features
+   obtained via that communication. No change is made to the version
+   number for the addition of message components which do not affect
+   communication behavior or which only add to extensible field values.
+   The &lt;minor&gt; number is incremented when the changes made to the
+   protocol add features which do not change the general message parsing
+   algorithm, but which may add to the message semantics and imply
+   additional capabilities of the sender. The &lt;major&gt; number is
+   incremented when the format of a message within the protocol is
+   changed. See <xref target="RFC2145"/> for a fuller explanation.
+</t>
+<t>
+   The version of an HTTP message is indicated by an HTTP-Version field
+   in the first line of the message. HTTP-Version is case-sensitive.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-Version"/><iref primary="true" item="Grammar" subitem="HTTP-Prot-Name"/>
+  <x:ref>HTTP-Version</x:ref>   = <x:ref>HTTP-Prot-Name</x:ref> "/" 1*<x:ref>DIGIT</x:ref> "." 1*<x:ref>DIGIT</x:ref>
+  <x:ref>HTTP-Prot-Name</x:ref> = <x:abnf-char-sequence>"HTTP"</x:abnf-char-sequence> ; "HTTP", case-sensitive 
+</artwork></figure>
+<t>
+   Note that the major and minor numbers &MUST; be treated as separate
+   integers and that each &MAY; be incremented higher than a single digit.
+   Thus, HTTP/2.4 is a lower version than HTTP/2.13, which in turn is
+   lower than HTTP/12.3. Leading zeros &MUST; be ignored by recipients and
+   &MUST-NOT; be sent.
+</t>
+<t>
+   An application that sends a request or response message that includes
+   HTTP-Version of "HTTP/1.1" &MUST; be at least conditionally compliant
+   with this specification. Applications that are at least conditionally
+   compliant with this specification &SHOULD; use an HTTP-Version of
+   "HTTP/1.1" in their messages, and &MUST; do so for any message that is
+   not compatible with HTTP/1.0. For more details on when to send
+   specific HTTP-Version values, see <xref target="RFC2145"/>.
+</t>
+<t>
+   The HTTP version of an application is the highest HTTP version for
+   which the application is at least conditionally compliant.
+</t>
+<t>
+   Proxy and gateway applications need to be careful when forwarding
+   messages in protocol versions different from that of the application.
+   Since the protocol version indicates the protocol capability of the
+   sender, a proxy/gateway &MUST-NOT; send a message with a version
+   indicator which is greater than its actual version. If a higher
+   version request is received, the proxy/gateway &MUST; either downgrade
+   the request version, or respond with an error, or switch to tunnel
+   behavior.
+</t>
+<t>
+   Due to interoperability problems with HTTP/1.0 proxies discovered
+   since the publication of <xref target="RFC2068"/>, caching proxies &MUST;, gateways
+   &MAY;, and tunnels &MUST-NOT; upgrade the request to the highest version
+   they support. The proxy/gateway's response to that request &MUST; be in
+   the same major version as the request.
+</t>
+<t>
+  <list>
+    <t>
+      <x:h>Note:</x:h> Converting between versions of HTTP may involve modification
+      of header fields required or forbidden by the versions involved.
+    </t>
+  </list>
+</t>
 </section>
 
 <section title="Date/Time Formats" anchor="date.time.formats">
