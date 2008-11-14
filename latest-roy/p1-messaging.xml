@@ -516,27 +516,25 @@
 
 <section title="HTTP architecture" anchor="architecture">
 <t>
-   Nevertheless, HTTP was created with a specific architecture in mind, the
-   World Wide Web, and has evolved over time to support the scalability needs
-   of a worldwide hypertext system. Much of that architecture is reflected in
-   the terminology used to define HTTP. This section describes the larger
-   architecture surrounding expected usage of HTTP that is used by this
-   specification to define HTTP.
+   HTTP was created with a specific architecture in mind, the World Wide Web,
+   and has evolved over time to support the scalability needs of a worldwide
+   hypertext system. Much of that architecture is reflected in the terminology
+   and syntax productions used to define HTTP.
 </t>
 
 <section title="Uniform Resource Identifiers" anchor="uri">
 <t>
-   Uniform Resource Identifiers (URIs) <xref target="RFC3986"/> are used in HTTP
-   to indicate the target of a request and to identify additional resources related
-   to that resource, the request, or the response. Each protocol element in HTTP
-   that allows a URI reference will indicate in its ABNF whether the element allows
-   only a URI in absolute form, any relative reference, or some limited subset of
-   the URI-reference grammar. Unless otherwise indicated, relative URI references
-   are to be parsed relative to the URI corresponding to the request target
-   (the base URI).
+   Uniform Resource Identifiers (URIs) <xref target="RFC3986"/> are used
+   throughout HTTP as the means for identifying resources. URI references
+   are used to target requests, redirect responses, and define relationships.
+   HTTP does not limit what a resource may be; it merely defines an interface
+   that can be used to interact with a resource via HTTP. More information on
+   the scope of URIs and resources can be found in <xref target="RFC3986"/>.
 </t>
+  <x:anchor-alias value="URI"/>
   <x:anchor-alias value="URI-reference"/>
   <x:anchor-alias value="absolute-URI"/>
+  <x:anchor-alias value="relative-part"/>
   <x:anchor-alias value="authority"/>
   <x:anchor-alias value="fragment"/>
   <x:anchor-alias value="path-abempty"/>
@@ -544,12 +542,19 @@
   <x:anchor-alias value="port"/>
   <x:anchor-alias value="query"/>
   <x:anchor-alias value="uri-host"/>
+  <x:anchor-alias value="partial-URI"/>
 <t>
-   This specification adopts the definitions of "URI-reference", "absolute-URI", "fragment", "port",
-   "host", "path-abempty", "path-absolute", "query", and "authority" from <xref target="RFC3986"/>:
+   This specification adopts the definitions of "URI-reference",
+   "absolute-URI", "relative-part", "fragment", "port", "host",
+   "path-abempty", "path-absolute", "query", and "authority" from
+   <xref target="RFC3986"/>. In addition, we define a partial-URI rule for
+   protocol elements that allow a relative URI without a fragment.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="URI-reference"/><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="path-absolute"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="uri-host"/>
-  <x:ref>absolute-URI</x:ref>   = &lt;absolute-URI, defined in <xref target="RFC3986" x:fmt="," x:sec="4.3"/>>
+  <x:ref>URI</x:ref>           = &lt;URI, defined in <xref target="RFC3986" x:fmt="," x:sec="3"/>>
+  <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in <xref target="RFC3986" x:fmt="," x:sec="4.1"/>>
+  <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, defined in <xref target="RFC3986" x:fmt="," x:sec="4.3"/>>
+  <x:ref>relative-part</x:ref> = &lt;relative-part, defined in <xref target="RFC3986" x:fmt="," x:sec="4.2"/>>
   <x:ref>authority</x:ref>     = &lt;authority, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2"/>>
   <x:ref>fragment</x:ref>      = &lt;fragment, defined in <xref target="RFC3986" x:fmt="," x:sec="3.5"/>>
   <x:ref>path-abempty</x:ref>  = &lt;path-abempty, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>>
@@ -557,23 +562,16 @@
   <x:ref>port</x:ref>          = &lt;port, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>>
   <x:ref>query</x:ref>         = &lt;query, defined in <xref target="RFC3986" x:fmt="," x:sec="3.4"/>>
   <x:ref>uri-host</x:ref>      = &lt;host, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>>
+  
+  <x:ref>partial-URI</x:ref>   = relative-part [ "?" query ]
 </artwork></figure>
 <t>
-   HTTP does not place an a priori limit on the length of
-   a URI. Servers &MUST; be able to handle the URI of any resource they
-   serve, and &SHOULD; be able to handle URIs of unbounded length if they
-   provide GET-based forms that could generate such URIs. A server
-   &SHOULD; return 414 (Request-URI Too Long) status if a URI is longer
-   than the server can handle (see &status-414;).
-</t>
-<t>
-  <list>
-    <t>
-      <x:h>Note:</x:h> Servers ought to be cautious about depending on URI lengths
-      above 255 bytes, because some older client or proxy
-      implementations might not properly support these lengths.
-    </t>
-  </list>
+   Each protocol element in HTTP that allows a URI reference will indicate in
+   its ABNF production whether the element allows only a URI in absolute form
+   (absolute-URI), any relative reference (relative-ref), or some other subset
+   of the URI-reference grammar. Unless otherwise indicated, URI references
+   are parsed relative to the request target (the default base URI for both
+   the request and its corresponding response).
 </t>
 
 <section title="http URI scheme" anchor="http.uri">
@@ -591,11 +589,11 @@
 <t>
    If the port is empty or not given, port 80 is assumed. The semantics
    are that the identified resource is located at the server listening
-   for TCP connections on that port of that host, and the Request-URI
-   for the resource is path-absolute (<xref target="request-uri"/>). The use of IP addresses
+   for TCP connections on that port of that host, and the request-target
+   for the resource is path-absolute (<xref target="request-target"/>). The use of IP addresses
    in URLs &SHOULD; be avoided whenever possible (see <xref target="RFC1900"/>). If
    the path-absolute is not present in the URL, it &MUST; be given as "/" when
-   used as a Request-URI for a resource (<xref target="request-uri"/>). If a proxy
+   used as a request-target for a resource (<xref target="request-target"/>). If a proxy
    receives a host name which is not a fully qualified domain name, it
    &MAY; add its domain to the host name it received. If a proxy receives
    a fully qualified domain name, the proxy &MUST-NOT; change the host
@@ -1454,39 +1452,39 @@
   <x:anchor-alias value="Request-Line"/>
 <t>
    The Request-Line begins with a method token, followed by the
-   Request-URI and the protocol version, and ending with CRLF. The
+   request-target and the protocol version, and ending with CRLF. The
    elements are separated by SP characters. No CR or LF is allowed
    except in the final CRLF sequence.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Request-Line"/>
-  <x:ref>Request-Line</x:ref>   = <x:ref>Method</x:ref> <x:ref>SP</x:ref> <x:ref>Request-URI</x:ref> <x:ref>SP</x:ref> <x:ref>HTTP-Version</x:ref> <x:ref>CRLF</x:ref>
+  <x:ref>Request-Line</x:ref>   = <x:ref>Method</x:ref> <x:ref>SP</x:ref> <x:ref>request-target</x:ref> <x:ref>SP</x:ref> <x:ref>HTTP-Version</x:ref> <x:ref>CRLF</x:ref>
 </artwork></figure>
 
 <section title="Method" anchor="method">
   <x:anchor-alias value="Method"/>
 <t>
    The Method  token indicates the method to be performed on the
-   resource identified by the Request-URI. The method is case-sensitive.
+   resource identified by the request-target. The method is case-sensitive.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Method"/><iref primary="true" item="Grammar" subitem="extension-method"/>
   <x:ref>Method</x:ref>         = <x:ref>token</x:ref>
 </artwork></figure>
 </section>
 
-<section title="Request-URI" anchor="request-uri">
-  <x:anchor-alias value="Request-URI"/>
+<section title="request-target" anchor="request-target">
+  <x:anchor-alias value="request-target"/>
 <t>
-   The Request-URI is a Uniform Resource Identifier (<xref target="uri"/>) and
+   The request-target is a Uniform Resource Identifier (<xref target="uri"/>) and
    identifies the resource upon which to apply the request.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Request-URI"/>
-  <x:ref>Request-URI</x:ref>    = "*"
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/>
+  <x:ref>request-target</x:ref>    = "*"
                  / <x:ref>absolute-URI</x:ref>
                  / ( <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ] )
                  / <x:ref>authority</x:ref>
 </artwork></figure>
 <t>
-   The four options for Request-URI are dependent on the nature of the
+   The four options for request-target are dependent on the nature of the
    request. The asterisk "*" means that the request does not apply to a
    particular resource, but to the server itself, and is only allowed
    when the method used does not necessarily apply to a resource. One
@@ -1518,10 +1516,10 @@
    The authority form is only used by the CONNECT method (&CONNECT;).
 </t>
 <t>
-   The most common form of Request-URI is that used to identify a
+   The most common form of request-target is that used to identify a
    resource on an origin server or gateway. In this case the absolute
    path of the URI &MUST; be transmitted (see <xref target="http.uri"/>, path-absolute) as
-   the Request-URI, and the network location of the URI (authority) &MUST;
+   the request-target, and the network location of the URI (authority) &MUST;
    be transmitted in a Host header field. For example, a client wishing
    to retrieve the resource above directly from the origin server would
    create a TCP connection to port 80 of the host "www.example.org" and send
@@ -1537,17 +1535,17 @@
    given as "/" (the server root).
 </t>
 <t>
-   The Request-URI is transmitted in the format specified in 
-   <xref target="http.uri"/>. If the Request-URI is encoded using the
+   The request-target is transmitted in the format specified in 
+   <xref target="http.uri"/>. If the request-target is encoded using the
    "% <x:ref>HEXDIG</x:ref> <x:ref>HEXDIG</x:ref>" encoding
    (<xref target="RFC3986" x:fmt="," x:sec="2.4"/>), the origin server
-   &MUST; decode the Request-URI in order to
+   &MUST; decode the request-target in order to
    properly interpret the request. Servers &SHOULD; respond to invalid
-   Request-URIs with an appropriate status code.
+   request-targets with an appropriate status code.
 </t>
 <t>
    A transparent proxy &MUST-NOT; rewrite the "path-absolute" part of the
-   received Request-URI when forwarding it to the next inbound server,
+   received request-target when forwarding it to the next inbound server,
    except as noted above to replace a null path-absolute with "/".
 </t>
 <t>
@@ -1556,8 +1554,20 @@
       meaning of the request when the origin server is improperly using
       a non-reserved URI character for a reserved purpose.  Implementors
       should be aware that some pre-HTTP/1.1 proxies have been known to
-      rewrite the Request-URI.
+      rewrite the request-target.
   </t></list>
+</t>
+<t>
+   HTTP does not place a pre-defined limit on the length of a request-target.
+   A server &MUST; be prepared to receive URIs of unbounded length and
+   respond with the 414 (URI too long) status if the received
+   request-target would be longer than the server wishes to handle
+   (see &status-414;).
+</t>
+<t>
+   Various ad-hoc limitations on request-target length are found in practice.
+   It is &RECOMMENDED; that all HTTP senders and recipients support
+   request-target lengths of 8000 or more OCTETs.
 </t>
 </section>
 </section>
@@ -1565,7 +1575,7 @@
 <section title="The Resource Identified by a Request" anchor="the.resource.identified.by.a.request">
 <t>
    The exact resource identified by an Internet request is determined by
-   examining both the Request-URI and the Host header field.
+   examining both the request-target and the Host header field.
 </t>
 <t>
    An origin server that does not allow resources to differ by the
@@ -1580,10 +1590,10 @@
    names) &MUST; use the following rules for determining the requested
    resource on an HTTP/1.1 request:
   <list style="numbers">
-    <t>If Request-URI is an absolute-URI, the host is part of the
-     Request-URI. Any Host header field value in the request &MUST; be
+    <t>If request-target is an absolute-URI, the host is part of the
+     request-target. Any Host header field value in the request &MUST; be
      ignored.</t>
-    <t>If the Request-URI is not an absolute-URI, and the request includes
+    <t>If the request-target is not an absolute-URI, and the request includes
      a Host header field, the host is determined by the Host header
      field value.</t>
     <t>If the host as determined by rule 1 or 2 is not a valid host on
@@ -2894,7 +2904,7 @@
    delivered to HTTP clients. For example, UNIX, Microsoft Windows, and
    other operating systems use ".." as a path component to indicate a
    directory level above the current one. On such a system, an HTTP
-   server &MUST; disallow any such construct in the Request-URI if it
+   server &MUST; disallow any such construct in the request-target if it
    would otherwise allow access to a resource outside those intended to
    be accessible via the HTTP server. Similarly, files intended for
    reference only internally to the server (such as access control
@@ -3951,7 +3961,7 @@
 <t>
    The requirements that clients and servers support the Host request-header,
    report an error if the Host request-header (<xref target="header.host"/>) is
-   missing from an HTTP/1.1 request, and accept absolute URIs (<xref target="request-uri"/>)
+   missing from an HTTP/1.1 request, and accept absolute URIs (<xref target="request-target"/>)
    are among the most important changes defined by this
    specification.
 </t>
@@ -4076,7 +4086,7 @@
 <t>
   Update use of abs_path production from RFC1808 to the path-absolute + query
   components of RFC3986.
-  (<xref target="request-uri"/>)
+  (<xref target="request-target"/>)
 </t>
 <t>
   Clarify exactly when close connection options must be sent.
