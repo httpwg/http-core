@@ -220,7 +220,7 @@
     <eref target="http://tools.ietf.org/wg/httpbis/"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.04"/>.
+    The changes in this draft are summarized in <xref target="changes.since.05"/>.
   </t>
 </note>
 </front>
@@ -352,10 +352,10 @@
     A construct "#" is defined, similar to "*", for defining lists of
     elements. The full form is "&lt;n&gt;#&lt;m&gt;element" indicating at least
     &lt;n&gt; and at most &lt;m&gt; elements, each separated by one or more commas
-    (",") and &OPTIONAL; linear white space (LWS). This makes the usual
+    (",") and &OPTIONAL; linear white space (OWS). This makes the usual
     form of lists very easy; a rule such as
     <figure><artwork type="example">
- ( *<x:ref>LWS</x:ref> element *( *<x:ref>LWS</x:ref> "," *<x:ref>LWS</x:ref> element ))</artwork></figure>
+ ( *<x:ref>OWS</x:ref> element *( *<x:ref>OWS</x:ref> "," *<x:ref>OWS</x:ref> element ))</artwork></figure>
   </t>
   <t>
     can be shown as
@@ -391,21 +391,51 @@
 
 <section title="Basic Rules" anchor="basic.rules">
 <t anchor="rule.CRLF">
-   HTTP/1.1 defines the sequence CRLF as the end-of-line marker for all
+  <x:anchor-alias value="CRLF"/>
+   HTTP/1.1 defines the sequence CR LF as the end-of-line marker for all
    protocol elements except the entity-body (see <xref target="tolerant.applications"/> for
    tolerant applications). The end-of-line marker within an entity-body
    is defined by its associated media type, as described in &media-types;.
 </t>
 <t anchor="rule.LWS">
-  <x:anchor-alias value="LWS"/>
-   HTTP/1.1 header field values can be folded onto multiple lines if the
-   continuation line begins with a space or horizontal tab. All linear
-   white space, including folding, has the same semantics as SP. A
-   recipient &MAY; replace any linear white space with a single SP before
+   All linear white space (LWS) in header field-values has the same semantics as SP. A
+   recipient &MAY; replace any such linear white space with a single SP before
    interpreting the field value or forwarding the message downstream.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="LWS"/>
-  <x:ref>LWS</x:ref>            = [<x:ref>CRLF</x:ref>] 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
+<t>
+   Historically, HTTP/1.1 header field values allow linear white space folding across 
+   multiple lines. However, this specification deprecates its use; senders &MUST-NOT; 
+   produce messages that include LWS folding (i.e., use the obs-fold rule), except
+   within the message/http media type (<xref target="internet.media.type.message.http"/>). 
+   Receivers &SHOULD; still parse folded linear white space.
+</t>
+<t>
+   This specification uses three rules to denote the use of linear white space;
+   BWS ("Bad" White Space), OWS (Optional White Space), and RWS (Required White Space).
+</t>
+<t>
+   "Bad" white space is allowed by the BNF, but senders &SHOULD-NOT; produce it in messages.
+   Receivers &MUST; accept it in incoming messages.
+</t>
+<t>
+   Required white space is used when at least one linear white space character
+   is required to separate field tokens. In all such cases, a single SP character
+   &SHOULD; be used.
+</t>
+<t anchor="rule.whitespace">
+  <x:anchor-alias value="BWS"/>
+  <x:anchor-alias value="OWS"/>
+  <x:anchor-alias value="RWS"/>
+  <x:anchor-alias value="obs-fold"/>
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
+  <x:ref>OWS</x:ref>            = *( [ obs-fold ] <x:ref>WSP</x:ref> )
+                 ; "optional" white space
+  <x:ref>RWS</x:ref>            = 1*( [ obs-fold ] <x:ref>WSP</x:ref> )
+                 ; "required" white space
+  <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
+                 ; "bad" white space
+  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref>
 </artwork></figure>
 <t anchor="rule.TEXT">
   <x:anchor-alias value="TEXT"/>
@@ -416,8 +446,8 @@
    <xref target="RFC2047"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TEXT"/>
-  <x:ref>TEXT</x:ref>           = %x20-7E / %x80-FF / <x:ref>LWS</x:ref>
-                 ; any <x:ref>OCTET</x:ref> except <x:ref>CTL</x:ref>s, but including <x:ref>LWS</x:ref>
+  <x:ref>TEXT</x:ref>           = %x20-7E / %x80-FF / <x:ref>OWS</x:ref>
+                 ; any <x:ref>OCTET</x:ref> except <x:ref>CTL</x:ref>s, but including <x:ref>OWS</x:ref>
 </artwork></figure>
 <t>
    A CRLF is allowed in the definition of TEXT only as part of a header
@@ -427,22 +457,15 @@
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
-  <x:anchor-alias value="separators"/>
    Many HTTP/1.1 header field values consist of words separated by LWS
    or special characters. These special characters &MUST; be in a quoted
    string to be used within a parameter value (as defined in
    <xref target="transfer.codings"/>).
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/><iref primary="true" item="Grammar" subitem="separators"/>
-  <x:ref>separators</x:ref>     = "(" / ")" / "&lt;" / "&gt;" / "@"
-                 / "," / ";" / ":" / "\" / <x:ref>DQUOTE</x:ref>
-                 / "/" / "[" / "]" / "?" / "="
-                 / "{" / "}" / <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref>
-                 
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
   <x:ref>tchar</x:ref>          = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*"
                  / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~" 
                  / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
-                 ; any <x:ref>CHAR</x:ref> except <x:ref>CTL</x:ref>s or <x:ref>separators</x:ref>
                  
   <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
 </artwork></figure>
@@ -466,7 +489,7 @@
    double-quote marks.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/>
-  <x:ref>quoted-string</x:ref>  = ( <x:ref>DQUOTE</x:ref> *(<x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref> )
+  <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *(<x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
   <x:ref>qdtext</x:ref>         = &lt;any <x:ref>TEXT</x:ref> excluding <x:ref>DQUOTE</x:ref> and "\">
 </artwork></figure>
 <t anchor="rule.quoted-pair">
@@ -866,14 +889,14 @@
    for the representation of date/time stamps:
 </t>
 <figure><artwork type="example">
-   Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
+   Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 1123
    Sunday, 06-Nov-94 08:49:37 GMT ; obsolete RFC 850 format
    Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </artwork></figure>
 <t>
    The first format is preferred as an Internet standard and represents
-   a fixed-length subset of that defined by <xref target="RFC1123"/> (an update to
-   <xref target="RFC822"/>). The other formats are described here only for
+   a fixed-length subset of that defined by <xref target="RFC1123"/>. The
+   other formats are described here only for
    compatibility with obsolete implementations.
    HTTP/1.1 clients and servers that parse the date value &MUST; accept
    all three formats (for compatibility with HTTP/1.0), though they &MUST;
@@ -971,7 +994,7 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="transfer-coding"/><iref primary="true" item="Grammar" subitem="transfer-extension"/>
   <x:ref>transfer-coding</x:ref>         = "chunked" / <x:ref>transfer-extension</x:ref>
-  <x:ref>transfer-extension</x:ref>      = <x:ref>token</x:ref> *( ";" <x:ref>parameter</x:ref> )
+  <x:ref>transfer-extension</x:ref>      = <x:ref>token</x:ref> *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
 </artwork></figure>
 <t anchor="rule.parameter">
   <x:anchor-alias value="attribute"/>
@@ -980,7 +1003,7 @@
    Parameters are in  the form of attribute/value pairs.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="attribute"/><iref primary="true" item="Grammar" subitem="value"/>
-  <x:ref>parameter</x:ref>               = <x:ref>attribute</x:ref> "=" <x:ref>value</x:ref>
+  <x:ref>parameter</x:ref>               = <x:ref>attribute</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> <x:ref>value</x:ref>
   <x:ref>attribute</x:ref>               = <x:ref>token</x:ref>
   <x:ref>value</x:ref>                   = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
 </artwork></figure>
@@ -1028,7 +1051,7 @@
   <x:anchor-alias value="chunk"/>
   <x:anchor-alias value="Chunked-Body"/>
   <x:anchor-alias value="chunk-data"/>
-  <x:anchor-alias value="chunk-extension"/>
+  <x:anchor-alias value="chunk-ext"/>
   <x:anchor-alias value="chunk-ext-name"/>
   <x:anchor-alias value="chunk-ext-val"/>
   <x:anchor-alias value="chunk-size"/>
@@ -1042,18 +1065,19 @@
    information necessary for the recipient to verify that it has
    received the full message.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Chunked-Body"/><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-extension"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="true" item="Grammar" subitem="trailer-part"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Chunked-Body"/><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="true" item="Grammar" subitem="trailer-part"/>
   <x:ref>Chunked-Body</x:ref>   = *<x:ref>chunk</x:ref>
                    <x:ref>last-chunk</x:ref>
                    <x:ref>trailer-part</x:ref>
                    <x:ref>CRLF</x:ref>
   
-  <x:ref>chunk</x:ref>          = <x:ref>chunk-size</x:ref> [ <x:ref>chunk-extension</x:ref> ] <x:ref>CRLF</x:ref>
+  <x:ref>chunk</x:ref>          = <x:ref>chunk-size</x:ref> *WSP [ <x:ref>chunk-ext</x:ref> ] <x:ref>CRLF</x:ref>
                    <x:ref>chunk-data</x:ref> <x:ref>CRLF</x:ref>
   <x:ref>chunk-size</x:ref>     = 1*<x:ref>HEXDIG</x:ref>
-  <x:ref>last-chunk</x:ref>     = 1*("0") [ <x:ref>chunk-extension</x:ref> ] <x:ref>CRLF</x:ref>
+  <x:ref>last-chunk</x:ref>     = 1*("0") *WSP [ <x:ref>chunk-ext</x:ref> ] <x:ref>CRLF</x:ref>
   
-  <x:ref>chunk-extension</x:ref>= *( ";" <x:ref>chunk-ext-name</x:ref> [ "=" <x:ref>chunk-ext-val</x:ref> ] )
+  <x:ref>chunk-ext</x:ref>      = *( ";" *WSP <x:ref>chunk-ext-name</x:ref>
+                      [ "=" <x:ref>chunk-ext-val</x:ref> ] *WSP )
   <x:ref>chunk-ext-name</x:ref> = <x:ref>token</x:ref>
   <x:ref>chunk-ext-val</x:ref>  = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
   <x:ref>chunk-data</x:ref>     = 1*<x:ref>OCTET</x:ref> ; a sequence of chunk-size octets
@@ -1099,25 +1123,25 @@
    can be represented in pseudo-code as:
 </t>
 <figure><artwork type="code">
-    length := 0
-    read chunk-size, chunk-extension (if any) and CRLF
-    while (chunk-size &gt; 0) {
-       read chunk-data and CRLF
-       append chunk-data to entity-body
-       length := length + chunk-size
-       read chunk-size and CRLF
-    }
-    read entity-header
-    while (entity-header not empty) {
-       append entity-header to existing header fields
-       read entity-header
-    }
-    Content-Length := length
-    Remove "chunked" from Transfer-Encoding
+  length := 0
+  read chunk-size, chunk-ext (if any) and CRLF
+  while (chunk-size &gt; 0) {
+     read chunk-data and CRLF
+     append chunk-data to entity-body
+     length := length + chunk-size
+     read chunk-size and CRLF
+  }
+  read entity-header
+  while (entity-header not empty) {
+     append entity-header to existing header fields
+     read entity-header
+  }
+  Content-Length := length
+  Remove "chunked" from Transfer-Encoding
 </artwork></figure>
 <t>
    All HTTP/1.1 applications &MUST; be able to receive and decode the
-   "chunked" transfer-coding, and &MUST; ignore chunk-extension extensions
+   "chunked" transfer-coding, and &MUST; ignore chunk-ext extensions
    they do not understand.
 </t>
 </section>
@@ -1221,12 +1245,12 @@
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="message-header"/><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-content"/>
   <x:ref>message-header</x:ref> = <x:ref>field-name</x:ref> ":" [ <x:ref>field-value</x:ref> ]
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
-  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>LWS</x:ref> )
+  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>OWS</x:ref> )
   <x:ref>field-content</x:ref>  = &lt;field content&gt;
-                   ; the <x:ref>OCTET</x:ref>s making up the field-value
-                   ; and consisting of either *<x:ref>TEXT</x:ref> or combinations
-                   ; of <x:ref>token</x:ref>, <x:ref>separators</x:ref>, and <x:ref>quoted-string</x:ref>
 </artwork></figure>
+<t>
+  <cref>whitespace between field-name and colon is an error and MUST NOT be accepted</cref>
+</t>
 <t>
    The field-content does not include any leading or trailing LWS:
    linear white space occurring before the first non-whitespace
@@ -2100,17 +2124,19 @@
   <iref primary="true" item="Headers" subitem="Connection" x:for-anchor=""/>
   <x:anchor-alias value="Connection"/>
   <x:anchor-alias value="connection-token"/>
+  <x:anchor-alias value="Connection-v"/>
 <t>
-   The Connection general-header field allows the sender to specify
+   The general-header field "Connection" allows the sender to specify
    options that are desired for that particular connection and &MUST-NOT;
    be communicated by proxies over further connections.
 </t>
 <t>
-   The Connection header has the following grammar:
+   The Connection header's value has the following grammar:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-token"/>
-  <x:ref>Connection</x:ref> = "Connection" ":" 1#(<x:ref>connection-token</x:ref>)
-  <x:ref>connection-token</x:ref>  = <x:ref>token</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="Connection-v"/><iref primary="true" item="Grammar" subitem="connection-token"/>
+  <x:ref>Connection</x:ref>       = "Connection" ":" <x:ref>OWS</x:ref> <x:ref>Connection-v</x:ref>
+  <x:ref>Connection-v</x:ref>     = 1#<x:ref>connection-token</x:ref>
+  <x:ref>connection-token</x:ref> = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
    HTTP/1.1 proxies &MUST; parse the Connection header field before a
@@ -2132,7 +2158,7 @@
    response. For example,
 </t>
 <figure><artwork type="example">
-    Connection: close
+  Connection: close
 </artwork></figure>
 <t>
    in either the request or the response header fields indicates that
@@ -2161,20 +2187,22 @@
   <iref primary="true" item="Content-Length header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="Content-Length" x:for-anchor=""/>
   <x:anchor-alias value="Content-Length"/>
+  <x:anchor-alias value="Content-Length-v"/>
 <t>
-   The Content-Length entity-header field indicates the size of the
+   The entity-header field "Content-Length" indicates the size of the
    entity-body, in decimal number of OCTETs, sent to the recipient or,
    in the case of the HEAD method, the size of the entity-body that
    would have been sent had the request been a GET.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/>
-  <x:ref>Content-Length</x:ref>    = "Content-Length" ":" 1*<x:ref>DIGIT</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/><iref primary="true" item="Grammar" subitem="Content-Length-v"/>
+  <x:ref>Content-Length</x:ref>   = "Content-Length" ":" <x:ref>OWS</x:ref> 1*<x:ref>Content-Length-v</x:ref>
+  <x:ref>Content-Length-v</x:ref> = 1*<x:ref>DIGIT</x:ref>
 </artwork></figure>
 <t>
    An example is
 </t>
 <figure><artwork type="example">
-    Content-Length: 3495
+  Content-Length: 3495
 </artwork></figure>
 <t>
    Applications &SHOULD; use this field to indicate the transfer-length of
@@ -2199,21 +2227,23 @@
   <iref primary="true" item="Date header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="Date" x:for-anchor=""/>
   <x:anchor-alias value="Date"/>
+  <x:anchor-alias value="Date-v"/>
 <t>
-   The Date general-header field represents the date and time at which
+   The general-header field "Date" represents the date and time at which
    the message was originated, having the same semantics as orig-date in
    <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>. The field value is an
    HTTP-date, as described in <xref target="full.date"/>;
    it &MUST; be sent in rfc1123-date format.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Date"/>
-  <x:ref>Date</x:ref>  = "Date" ":" <x:ref>HTTP-date</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Date"/><iref primary="true" item="Grammar" subitem="Date-v"/>
+  <x:ref>Date</x:ref>   = "Date" ":" <x:ref>OWS</x:ref> <x:ref>Date-v</x:ref>
+  <x:ref>Date-v</x:ref> = <x:ref>HTTP-date</x:ref>
 </artwork></figure>
 <t>
    An example is
 </t>
 <figure><artwork type="example">
-    Date: Tue, 15 Nov 1994 08:12:31 GMT
+  Date: Tue, 15 Nov 1994 08:12:31 GMT
 </artwork></figure>
 <t>
    Origin servers &MUST; include a Date header field in all responses,
@@ -2277,8 +2307,9 @@
   <iref primary="true" item="Host header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="Host" x:for-anchor=""/>
   <x:anchor-alias value="Host"/>
+  <x:anchor-alias value="Host-v"/>
 <t>
-   The Host request-header field specifies the Internet host and port
+   The request-header field "Host" specifies the Internet host and port
    number of the resource being requested, as obtained from the original
    URI given by the user or referring resource (generally an http URI,
    as described in <xref target="http.uri"/>). The Host field value &MUST; represent
@@ -2287,8 +2318,9 @@
    differentiate between internally-ambiguous URLs, such as the root "/"
    URL of a server for multiple host names on a single IP address.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Host"/>
-  <x:ref>Host</x:ref> = "Host" ":" <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="http.uri"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Host"/><iref primary="true" item="Grammar" subitem="Host-v"/>
+  <x:ref>Host</x:ref>   = "Host" ":" <x:ref>OWS</x:ref> <x:ref>Host-v</x:ref>
+  <x:ref>Host-v</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="http.uri"/>
 </artwork></figure>
 <t>
    A "host" without any trailing port information implies the default
@@ -2297,8 +2329,8 @@
    &lt;http://www.example.org/pub/WWW/&gt; would properly include:
 </t>
 <figure><artwork type="example">
-    GET /pub/WWW/ HTTP/1.1
-    Host: www.example.org
+  GET /pub/WWW/ HTTP/1.1
+  Host: www.example.org
 </artwork></figure>
 <t>
    A client &MUST; include a Host header field in all HTTP/1.1 request
@@ -2322,17 +2354,19 @@
   <iref primary="true" item="TE header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="TE" x:for-anchor=""/>
   <x:anchor-alias value="TE"/>
+  <x:anchor-alias value="TE-v"/>
   <x:anchor-alias value="t-codings"/>
 <t>
-   The TE request-header field indicates what extension transfer-codings
+   The request-header field "TE" indicates what extension transfer-codings
    it is willing to accept in the response and whether or not it is
    willing to accept trailer fields in a chunked transfer-coding. Its
    value may consist of the keyword "trailers" and/or a comma-separated
    list of extension transfer-coding names with optional accept
    parameters (as described in <xref target="transfer.codings"/>).
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/>
-  <x:ref>TE</x:ref>        = "TE" ":" #( <x:ref>t-codings</x:ref> )
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="TE-v"/><iref primary="true" item="Grammar" subitem="t-codings"/>
+  <x:ref>TE</x:ref>        = "TE" ":" <x:ref>OWS</x:ref> <x:ref>TE-v</x:ref>
+  <x:ref>TE-v</x:ref>      = #<x:ref>t-codings</x:ref>
   <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-extension</x:ref> [ <x:ref>accept-params</x:ref> ] )
 </artwork></figure>
 <t>
@@ -2346,9 +2380,9 @@
    Examples of its use are:
 </t>
 <figure><artwork type="example">
-    TE: deflate
-    TE:
-    TE: trailers, deflate;q=0.5
+  TE: deflate
+  TE:
+  TE: trailers, deflate;q=0.5
 </artwork></figure>
 <t>
    The TE header field only applies to the immediate connection.
@@ -2398,13 +2432,15 @@
   <iref primary="true" item="Trailer header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="Trailer" x:for-anchor=""/>
   <x:anchor-alias value="Trailer"/>
+  <x:anchor-alias value="Trailer-v"/>
 <t>
-   The Trailer general field value indicates that the given set of
+   The general field "Trailer" indicates that the given set of
    header fields is present in the trailer of a message encoded with
    chunked transfer-coding.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
-  <x:ref>Trailer</x:ref>  = "Trailer" ":" 1#<x:ref>field-name</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="true" item="Grammar" subitem="Trailer-v"/>
+  <x:ref>Trailer</x:ref>   = "Trailer" ":" <x:ref>OWS</x:ref> <x:ref>Trailer-v</x:ref>
+  <x:ref>Trailer-v</x:ref> = 1#<x:ref>field-name</x:ref>
 </artwork></figure>
 <t>
    An HTTP/1.1 message &SHOULD; include a Trailer header field in a
@@ -2432,15 +2468,18 @@
   <iref primary="true" item="Transfer-Encoding header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="Transfer-Encoding" x:for-anchor=""/>
   <x:anchor-alias value="Transfer-Encoding"/>
+  <x:anchor-alias value="Transfer-Encoding-v"/>
 <t>
-   The Transfer-Encoding general-header field indicates what (if any)
+   The general-header "Transfer-Encoding" field indicates what (if any)
    type of transformation has been applied to the message body in order
    to safely transfer it between the sender and the recipient. This
    differs from the content-coding in that the transfer-coding is a
    property of the message, not of the entity.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
-  <x:ref>Transfer-Encoding</x:ref>       = "Transfer-Encoding" ":" 1#<x:ref>transfer-coding</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/><iref primary="true" item="Grammar" subitem="Transfer-Encoding-v"/>
+  <x:ref>Transfer-Encoding</x:ref>   = "Transfer-Encoding" ":" <x:ref>OWS</x:ref>
+                        <x:ref>Transfer-Encoding-v</x:ref>
+  <x:ref>Transfer-Encoding-v</x:ref> = 1#<x:ref>transfer-coding</x:ref>
 </artwork></figure>
 <t>
    Transfer-codings are defined in <xref target="transfer.codings"/>. An example is:
@@ -2464,21 +2503,23 @@
   <iref primary="true" item="Upgrade header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="Upgrade" x:for-anchor=""/>
   <x:anchor-alias value="Upgrade"/>
+  <x:anchor-alias value="Upgrade-v"/>
 <t>
-   The Upgrade general-header allows the client to specify what
+   The general-header "Upgrade" allows the client to specify what
    additional communication protocols it supports and would like to use
    if the server finds it appropriate to switch protocols. The server
    &MUST; use the Upgrade header field within a 101 (Switching Protocols)
    response to indicate which protocol(s) are being switched.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Upgrade"/>
-  <x:ref>Upgrade</x:ref>        = "Upgrade" ":" 1#<x:ref>product</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Upgrade"/><iref primary="true" item="Grammar" subitem="Upgrade-v"/>
+  <x:ref>Upgrade</x:ref>   = "Upgrade" ":" <x:ref>OWS</x:ref> <x:ref>Upgrade-v</x:ref>
+  <x:ref>Upgrade-v</x:ref> = 1#<x:ref>product</x:ref>
 </artwork></figure>
 <t>
    For example,
 </t>
 <figure><artwork type="example">
-    Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11
+  Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11
 </artwork></figure>
 <t>
    The Upgrade header field is intended to provide a simple mechanism
@@ -2533,8 +2574,9 @@
   <x:anchor-alias value="received-by"/>
   <x:anchor-alias value="received-protocol"/>
   <x:anchor-alias value="Via"/>
+  <x:anchor-alias value="Via-v"/>
 <t>
-   The Via general-header field &MUST; be used by gateways and proxies to
+   The general-header field "Via" &MUST; be used by gateways and proxies to
    indicate the intermediate protocols and recipients between the user
    agent and the server on requests, and between the origin server and
    the client on responses. It is analogous to the "Received" field defined in
@@ -2542,8 +2584,10 @@
    avoiding request loops, and identifying the protocol capabilities of
    all senders along the request/response chain.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
-  <x:ref>Via</x:ref> =  "Via" ":" 1#( <x:ref>received-protocol</x:ref> <x:ref>received-by</x:ref> [ <x:ref>comment</x:ref> ] )
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="Via-v"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
+  <x:ref>Via</x:ref>               = "Via" ":" <x:ref>OWS</x:ref> <x:ref>Via-v</x:ref>
+  <x:ref>Via-v</x:ref>             = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref>
+                          [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
   <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
   <x:ref>protocol-name</x:ref>     = <x:ref>token</x:ref>
   <x:ref>protocol-version</x:ref>  = <x:ref>token</x:ref>
@@ -2588,7 +2632,7 @@
    Via header field:
 </t>
 <figure><artwork type="example">
-    Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
+  Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
 </artwork></figure>
 <t>
    Proxies and gateways used as a portal through a network firewall
@@ -2605,13 +2649,13 @@
    a single such entry. For example,
 </t>
 <figure><artwork type="example">
-    Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
+  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
 </artwork></figure>
 <t>
         could be collapsed to
 </t>
 <figure><artwork type="example">
-    Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
+  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
 </artwork></figure>
 <t>
    Applications &SHOULD-NOT;  combine multiple entries unless they are all
@@ -3411,19 +3455,6 @@
   <seriesInfo name="Computer Networks and ISDN Systems" value="v. 28, pp. 25-35"/>
 </reference>
 
-<reference anchor="RFC822">
-  <front>
-    <title abbrev="Standard for ARPA Internet Text Messages">Standard for the format of ARPA Internet text messages</title>
-    <author initials="D.H." surname="Crocker" fullname="David H. Crocker">
-      <organization>University of Delaware, Dept. of Electrical Engineering</organization>
-      <address><email>DCrocker@UDel-Relay</email></address>
-    </author>
-    <date month="August" day="13" year="1982"/>
-  </front>
-  <seriesInfo name="STD" value="11"/>
-  <seriesInfo name="RFC" value="822"/>
-</reference>
-
 <reference anchor="RFC959">
   <front>
     <title abbrev="File Transfer Protocol">File Transfer Protocol</title>
@@ -3884,16 +3915,6 @@
 </t>
 </section>
 
-<section title="Conversion of Date Formats" anchor="conversion.of.date.formats">
-<t>
-   HTTP/1.1 uses a restricted set of date formats (<xref target="full.date"/>) to
-   simplify the process of date comparison. Proxies and gateways from
-   other protocols &SHOULD; ensure that any Date header field present in a
-   message conforms to one of the HTTP/1.1 formats and rewrite the date
-   if necessary.
-</t>
-</section>
-
 <section title="Compatibility with Previous Versions" anchor="compatibility">
 <t>
    HTTP has been in use by the World-Wide Web global information initiative
@@ -4064,6 +4085,9 @@
 
 <section title="Changes from RFC 2616" anchor="changes.from.rfc.2616">
 <t>
+  Rules about implicit linear white space between certain grammar productions
+  have been removed; now it's only allowed when specifically pointed out
+  in the ABNF.
   The CHAR rule does not allow the NUL character anymore (this affects
   the comment and quoted-string rules).  Furthermore, the quoted-pair
   rule does not allow escaping NUL, CR or LF anymore.
@@ -4488,11 +4512,12 @@
     </t>
     <t>
       Avoid underscore character in rule names ("http_URL" ->
-      "http-URI", "abs_path" -> "path-absolute").
+      "http-URL", "abs_path" -> "path-absolute").
     </t>
     <t>
-      Add rules for terms imported from URI spec ("absolute-URI", "authority",
-      "path-abempty", "path-absolute", "uri-host", "port", "query"). 
+      Add rules for terms imported from URI spec ("absoluteURI", "authority",
+      "path-absolute", "port", "query", "relativeURI", "host) -- these will
+      have to be updated when switching over to RFC3986.
     </t>
     <t>
       Synchronize core rules with RFC5234 (this includes a change to CHAR
@@ -4599,6 +4624,10 @@
   Closed issues:
   <list style="symbols"> 
     <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/34"/>:
+      "Out-of-date reference for URIs"
+    </t>
+    <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/132"/>:
       "RFC 2822 is updated by RFC 5322"
     </t>
@@ -4612,6 +4641,33 @@
     </t>
     <t>
       Get rid of RFC822 dependency; use RFC5234 plus extensions instead.
+    </t>
+    <t>
+      Only reference RFC 5234's core rules.
+    </t>
+    <t>
+      Introduce new ABNF rules for "bad" whitespace ("BWS"), optional
+      whitespace ("OWS") and required whitespace ("RWS").
+    </t>
+    <t>
+      Rewrite ABNFs to spell out whitespace rules, factor out
+      header value format definitions.
+    </t>
+  </list>
+</t>
+</section>
+
+<section title="Since draft-ietf-httpbis-p1-messaging-05" anchor="changes.since.05">
+<t>
+  Closed issues:
+  <list style="symbols"> 
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/118"/>:
+      "Join "Differences Between HTTP Entities and RFC 2045 Entities"?"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/134"/>:
+      "RFC822 reference left in discussion of date formats"
     </t>
   </list>
 </t>
