@@ -12,7 +12,6 @@ TARGETS = p1-messaging.html \
           p5-range.html \
           p6-cache.html \
           p7-auth.html \
-          p8-cookies.html \
           p1-messaging.redxml \
           p2-semantics.redxml \
           p3-payload.redxml \
@@ -20,7 +19,6 @@ TARGETS = p1-messaging.html \
           p5-range.redxml \
           p6-cache.redxml \
           p7-auth.redxml \
-          p8-cookies.redxml \
           p1-messaging.txt \
           p2-semantics.txt \
           p3-payload.txt \
@@ -28,7 +26,13 @@ TARGETS = p1-messaging.html \
           p5-range.txt \
           p6-cache.txt \
           p7-auth.txt \
-          p8-cookies.txt \
+          p1-messaging.abnf \
+          p2-semantics.abnf \
+          p3-payload.abnf \
+          p4-conditional.abnf \
+          p5-range.abnf \
+          p6-cache.abnf \
+          p7-auth.abnf \
           p1-messaging.iana-headers \
           p2-semantics.iana-headers \
           p2-semantics.iana-methods	\
@@ -53,6 +57,9 @@ clean:
 
 %.txt: %.redxml
 	$(xml2rfc) $< $@
+
+%.abnf: %.xml ../../rfc2629xslt/extract-artwork.xslt
+	$(saxon) $< ../../rfc2629xslt/extract-artwork.xslt type="abnf2616" >$@
 
 %.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
 	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@
