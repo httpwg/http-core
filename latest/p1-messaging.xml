@@ -303,40 +303,38 @@
 
 <section title="Syntax Notation" anchor="notation">
 <iref primary="true" item="Grammar" subitem="ALPHA"/>
-<iref primary="true" item="Grammar" subitem="CHAR"/>
 <iref primary="true" item="Grammar" subitem="CR"/>
 <iref primary="true" item="Grammar" subitem="CRLF"/>
 <iref primary="true" item="Grammar" subitem="CTL"/>
 <iref primary="true" item="Grammar" subitem="DIGIT"/>
 <iref primary="true" item="Grammar" subitem="DQUOTE"/>
 <iref primary="true" item="Grammar" subitem="HEXDIG"/>
-<iref primary="true" item="Grammar" subitem="HTAB"/>
 <iref primary="true" item="Grammar" subitem="LF"/>
 <iref primary="true" item="Grammar" subitem="OCTET"/>
 <iref primary="true" item="Grammar" subitem="SP"/>
+<iref primary="true" item="Grammar" subitem="VCHAR"/>
 <iref primary="true" item="Grammar" subitem="WSP"/>
 <t anchor="core.rules">
   <x:anchor-alias value="ALPHA"/>
-  <x:anchor-alias value="CHAR"/>
   <x:anchor-alias value="CTL"/>
   <x:anchor-alias value="CR"/>
   <x:anchor-alias value="CRLF"/>
   <x:anchor-alias value="DIGIT"/>
   <x:anchor-alias value="DQUOTE"/>
   <x:anchor-alias value="HEXDIG"/>
-  <x:anchor-alias value="HTAB"/>
   <x:anchor-alias value="LF"/>
   <x:anchor-alias value="OCTET"/>
   <x:anchor-alias value="SP"/>
+  <x:anchor-alias value="VCHAR"/>
   <x:anchor-alias value="WSP"/>
    This specification uses the Augmented Backus-Naur Form (ABNF) notation
    of <xref target="RFC5234"/>.  The following core rules are included by
    reference, as defined in <xref target="RFC5234" x:fmt="," x:sec="B.1"/>:
-   ALPHA (letters), CHAR (any <xref target="USASCII"/> character,
-   excluding NUL), CR (carriage return), CRLF (CR LF), CTL (controls),
+   ALPHA (letters), CR (carriage return), CRLF (CR LF), CTL (controls),
    DIGIT (decimal 0-9), DQUOTE (double quote),
-   HEXDIG (hexadecimal 0-9/A-F/a-f), HTAB (horizontal tab),
-   LF (line feed), OCTET (any 8-bit sequence of data), SP (space)
+   HEXDIG (hexadecimal 0-9/A-F/a-f), LF (line feed),
+   OCTET (any 8-bit sequence of data), SP (space),
+   VCHAR (any visible <xref target="USASCII"/> character),
    and WSP (white space).
 </t>
 
@@ -387,29 +385,29 @@
    is defined by its associated media type, as described in &media-types;.
 </t>
 <t anchor="rule.LWS">
-   All linear white space (LWS) in header field-values has the same semantics as SP. A
-   recipient &MAY; replace any such linear white space with a single SP before
+   This specification uses three rules to denote the use of linear
+   whitespace: OWS (optional whitespace), RWS (required whitespace), and
+   BWS ("bad" whitespace). 
+</t>
+<t>
+   The OWS rule is used where zero or more linear white space characters may
+   appear. OWS &SHOULD; either not be produced or be produced as a single SP
+   character. Multiple OWS characters that occur within field-content &SHOULD;
+   be replaced with a single SP before interpreting the field value or
+   forwarding the message downstream.
+</t>
+<t>
+   RWS is used when at least one linear white space character is required to
+   separate field tokens. RWS &SHOULD; be produced as a single SP character.
+   Multiple RWS characters that occur within field-content &SHOULD; be
+   replaced with a single SP before interpreting the field value or
+   forwarding the message downstream.
+</t>
+<t>
+   BWS is used where the grammar allows optional whitespace for historical
+   reasons but senders &SHOULD-NOT; produce it in messages. HTTP/1.1
+   recipients &MUST; accept such bad optional whitespace and remove it before
    interpreting the field value or forwarding the message downstream.
-</t>
-<t>
-   Historically, HTTP/1.1 header field values allow linear white space folding across 
-   multiple lines. However, this specification deprecates its use; senders &MUST-NOT; 
-   produce messages that include LWS folding (i.e., use the obs-fold rule), except
-   within the message/http media type (<xref target="internet.media.type.message.http"/>). 
-   Receivers &SHOULD; still parse folded linear white space.
-</t>
-<t>
-   This specification uses three rules to denote the use of linear white space;
-   BWS ("Bad" White Space), OWS (Optional White Space), and RWS (Required White Space).
-</t>
-<t>
-   "Bad" white space is allowed by the BNF, but senders &SHOULD-NOT; produce it in messages.
-   Receivers &MUST; accept it in incoming messages.
-</t>
-<t>
-   Required white space is used when at least one linear white space character
-   is required to separate field tokens. In all such cases, a single SP character
-   &SHOULD; be used.
 </t>
 <t anchor="rule.whitespace">
   <x:anchor-alias value="BWS"/>
@@ -426,27 +424,10 @@
                  ; "bad" white space
   <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref>
 </artwork></figure>
-<t anchor="rule.TEXT">
-  <x:anchor-alias value="TEXT"/>
-   The TEXT rule is only used for descriptive field contents and values
-   that are not intended to be interpreted by the message parser. Words
-   of *TEXT &MAY; contain characters from character sets other than ISO-8859-1
-   <xref target="ISO-8859-1"/> only when encoded according to the rules of
-   <xref target="RFC2047"/>.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TEXT"/>
-  <x:ref>TEXT</x:ref>           = %x20-7E / %x80-FF / <x:ref>OWS</x:ref>
-                 ; any <x:ref>OCTET</x:ref> except <x:ref>CTL</x:ref>s, but including <x:ref>OWS</x:ref>
-</artwork></figure>
-<t>
-   A CRLF is allowed in the definition of TEXT only as part of a header
-   field continuation. It is expected that the folding LWS will be
-   replaced with a single SP before interpretation of the TEXT value.
-</t>
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
-   Many HTTP/1.1 header field values consist of words separated by LWS
+   Many HTTP/1.1 header field values consist of words separated by whitespace
    or special characters. These special characters &MUST; be in a quoted
    string to be used within a parameter value (as defined in
    <xref target="transfer.codings"/>).
@@ -458,28 +439,17 @@
                  
   <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
 </artwork></figure>
-<t anchor="rule.comment">
-  <x:anchor-alias value="comment"/>
-  <x:anchor-alias value="ctext"/>
-   Comments can be included in some HTTP header fields by surrounding
-   the comment text with parentheses. Comments are only allowed in
-   fields containing "comment" as part of their field value definition.
-   In all other fields, parentheses are considered part of the field
-   value.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
-  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
-  <x:ref>ctext</x:ref>          = &lt;any <x:ref>TEXT</x:ref> excluding "(" and ")"&gt;
-</artwork></figure>
 <t anchor="rule.quoted-string">
   <x:anchor-alias value="quoted-string"/>
   <x:anchor-alias value="qdtext"/>
+  <x:anchor-alias value="obs-text"/>
    A string of text is parsed as a single word if it is quoted using
    double-quote marks.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
   <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *(<x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
-  <x:ref>qdtext</x:ref>         = &lt;any <x:ref>TEXT</x:ref> excluding <x:ref>DQUOTE</x:ref> and "\">
+  <x:ref>qdtext</x:ref>         = *( <x:ref>OWS</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref> )
+  <x:ref>obs-text</x:ref>       = %x80-FF
 </artwork></figure>
 <t anchor="rule.quoted-pair">
   <x:anchor-alias value="quoted-pair"/>
@@ -563,17 +533,17 @@
    protocol elements that allow a relative URI without a fragment.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="URI-reference"/><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="path-absolute"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="uri-host"/>
-  <x:ref>URI</x:ref>           = &lt;URI, defined in <xref target="RFC3986" x:fmt="," x:sec="3"/>>
-  <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in <xref target="RFC3986" x:fmt="," x:sec="4.1"/>>
-  <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, defined in <xref target="RFC3986" x:fmt="," x:sec="4.3"/>>
-  <x:ref>relative-part</x:ref> = &lt;relative-part, defined in <xref target="RFC3986" x:fmt="," x:sec="4.2"/>>
-  <x:ref>authority</x:ref>     = &lt;authority, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2"/>>
-  <x:ref>fragment</x:ref>      = &lt;fragment, defined in <xref target="RFC3986" x:fmt="," x:sec="3.5"/>>
-  <x:ref>path-abempty</x:ref>  = &lt;path-abempty, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>>
-  <x:ref>path-absolute</x:ref> = &lt;path-absolute, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>>
-  <x:ref>port</x:ref>          = &lt;port, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>>
-  <x:ref>query</x:ref>         = &lt;query, defined in <xref target="RFC3986" x:fmt="," x:sec="3.4"/>>
-  <x:ref>uri-host</x:ref>      = &lt;host, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>>
+  <x:ref>URI</x:ref>           = &lt;URI, defined in <xref target="RFC3986" x:fmt="," x:sec="3"/>&gt;
+  <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
+  <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, defined in <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
+  <x:ref>relative-part</x:ref> = &lt;relative-part, defined in <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
+  <x:ref>authority</x:ref>     = &lt;authority, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2"/>&gt;
+  <x:ref>fragment</x:ref>      = &lt;fragment, defined in <xref target="RFC3986" x:fmt="," x:sec="3.5"/>&gt;
+  <x:ref>path-abempty</x:ref>  = &lt;path-abempty, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
+  <x:ref>path-absolute</x:ref> = &lt;path-absolute, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
+  <x:ref>port</x:ref>          = &lt;port, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
+  <x:ref>query</x:ref>         = &lt;query, defined in <xref target="RFC3986" x:fmt="," x:sec="3.4"/>&gt;
+  <x:ref>uri-host</x:ref>      = &lt;host, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>&gt;
   
   <x:ref>partial-URI</x:ref>   = relative-part [ "?" query ]
 </artwork></figure>
@@ -905,7 +875,7 @@
    first two formats by the inclusion of "GMT" as the three-letter
    abbreviation for time zone, and &MUST; be assumed when reading the
    asctime format. HTTP-date is case sensitive and &MUST-NOT; include
-   additional LWS beyond that specifically included as SP in the
+   additional whitespace beyond that specifically included as SP in the
    grammar.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-date"/><iref primary="true" item="Grammar" subitem="rfc1123-date"/><iref primary="true" item="Grammar" subitem="obsolete-date"/><iref primary="true" item="Grammar" subitem="rfc850-date"/><iref primary="true" item="Grammar" subitem="asctime-date"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="date2"/><iref primary="true" item="Grammar" subitem="date3"/><iref primary="true" item="Grammar" subitem="time"/><iref primary="true" item="Grammar" subitem="wkday"/><iref primary="true" item="Grammar" subitem="weekday"/><iref primary="true" item="Grammar" subitem="month"/>
@@ -1210,6 +1180,15 @@
    BNF, an HTTP/1.1 client &MUST-NOT; preface or follow a request with an
    extra CRLF.
 </t>
+<t>
+   Whitespace (WSP) &MUST-NOT; be sent between the start-line and the first
+   header field. The presence of whitespace might be an attempt to trick a
+   noncompliant implementation of HTTP into ignoring that field or processing
+   the next line as a new request, either of which may result in security
+   issues when implementations within the request chain interpret the
+   same message differently. HTTP/1.1 servers &MUST; reject such a message
+   with a 400 (Bad Request) response.
+</t>
 </section>
 
 <section title="Message Headers" anchor="message.headers">
@@ -1218,38 +1197,66 @@
   <x:anchor-alias value="field-value"/>
   <x:anchor-alias value="message-header"/>
 <t>
-   HTTP header fields, which include general-header (<xref target="general.header.fields"/>),
-   request-header (&request-header-fields;), response-header (&response-header-fields;), and
-   entity-header (&entity-header-fields;) fields, follow the same generic format as
-   that given in <xref target="RFC5322" x:fmt="of" x:sec="2.1"/>. Each header field consists
-   of a name followed by a colon (":") and the field value. Field names
-   are case-insensitive. The field value &MAY; be preceded by any amount
-   of LWS, though a single SP is preferred. Header fields can be
-   extended over multiple lines by preceding each extra line with at
-   least one SP or HTAB. Applications ought to follow "common form", where
-   one is known or indicated, when generating HTTP constructs, since
-   there might exist some implementations that fail to accept anything
-   beyond the common forms.
+   HTTP header fields follow the same general format as Internet messages in
+   <xref target="RFC5322" x:fmt="of" x:sec="2.1"/>. Each header field consists
+   of a name followed by a colon (":"), optional whitespace, and the field
+   value. Field names are case-insensitive.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="message-header"/><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-content"/>
-  <x:ref>message-header</x:ref> = <x:ref>field-name</x:ref> ":" [ <x:ref>field-value</x:ref> ]
+  <x:ref>message-header</x:ref> = <x:ref>field-name</x:ref> ":" OWS [ <x:ref>field-value</x:ref> ] OWS
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
   <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>OWS</x:ref> )
-  <x:ref>field-content</x:ref>  = &lt;field content&gt;
+  <x:ref>field-content</x:ref>  = *( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
 </artwork></figure>
 <t>
-  <cref>whitespace between field-name and colon is an error and MUST NOT be accepted</cref>
+   Historically, HTTP has allowed field-content with text in the ISO-8859-1
+   <xref target="ISO-8859-1"/> character encoding (allowing other character sets
+   through use of <xref target="RFC2047"/> encoding). In practice, most HTTP
+   header field-values use only a subset of the US-ASCII charset
+   <xref target="USASCII"/>. Newly defined header fields &SHOULD; constrain
+   their field-values to US-ASCII characters. Recipients &SHOULD; treat other
+   (obs-text) octets in field-content as opaque data.
 </t>
 <t>
-   The field-content does not include any leading or trailing LWS:
-   linear white space occurring before the first non-whitespace
-   character of the field-value or after the last non-whitespace
-   character of the field-value. Such leading or trailing LWS &MAY; be
-   removed without changing the semantics of the field value. Any LWS
-   that occurs between field-content &MAY; be replaced with a single SP
-   before interpreting the field value or forwarding the message
-   downstream.
+   No whitespace is allowed between the header field-name and colon. For
+   security reasons, any request message received containing such whitespace
+   &MUST; be rejected with a response code of 400 (Bad Request) and any such
+   whitespace in a response message &MUST; be removed.
 </t>
+<t>
+   The field value &MAY; be preceded by optional white space; a single SP is
+   preferred. The field-value does not include any leading or trailing white
+   space: OWS occurring before the first non-whitespace character of the
+   field-value or after the last non-whitespace character of the field-value
+   is ignored and &MAY; be removed without changing the meaning of the header
+   field.
+</t>
+<t>
+   Historically, HTTP header field values could be extended over multiple
+   lines by preceding each extra line with at least one space or horizontal
+   tab character (line folding). This specification deprecates such line
+   folding except within the message/http media type
+   (<xref target="internet.media.type.message.http"/>).
+   HTTP/1.1 senders &MUST-NOT; produce messages that include line folding
+   (i.e., that contain any field-content that matches the obs-fold rule) unless
+   the message is intended for packaging within the message/http media type.
+   HTTP/1.1 recipients &SHOULD; accept line folding and replace any embedded
+   obs-fold whitespace with a single SP prior to interpreting the field value
+   or forwarding the message downstream.
+</t>
+<t anchor="rule.comment">
+  <x:anchor-alias value="comment"/>
+  <x:anchor-alias value="ctext"/>
+   Comments can be included in some HTTP header fields by surrounding
+   the comment text with parentheses. Comments are only allowed in
+   fields containing "comment" as part of their field value definition.
+   In all other fields, parentheses are considered part of the field
+   value.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
+  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
+  <x:ref>ctext</x:ref>          = *( <x:ref>OWS</x:ref> / %x21-27 / %x2A-7E / <x:ref>obs-text</x:ref> )
+</artwork></figure>
 <t>
    The order in which header fields with differing field names are
    received is not significant. However, it is "good practice" to send
@@ -1691,7 +1698,7 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Code"/><iref primary="true" item="Grammar" subitem="extension-code"/><iref primary="true" item="Grammar" subitem="Reason-Phrase"/>
   <x:ref>Status-Code</x:ref>    = 3<x:ref>DIGIT</x:ref>
-  <x:ref>Reason-Phrase</x:ref>  = *&lt;<x:ref>TEXT</x:ref>, excluding <x:ref>CR</x:ref>, <x:ref>LF</x:ref>&gt;
+  <x:ref>Reason-Phrase</x:ref>  = *( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
 </artwork></figure>
 </section>
 </section>
@@ -3864,7 +3871,7 @@
 <t>
    Clients &SHOULD; be tolerant in parsing the Status-Line and servers
    tolerant when parsing the Request-Line. In particular, they &SHOULD;
-   accept any amount of SP or HTAB characters between fields, even though
+   accept any amount of WSP characters between fields, even though
    only a single SP is required.
 </t>
 <t>
@@ -4076,10 +4083,8 @@
 <t>
   Rules about implicit linear white space between certain grammar productions
   have been removed; now it's only allowed when specifically pointed out
-  in the ABNF.
-  The CHAR rule does not allow the NUL character anymore (this affects
-  the comment and quoted-string rules).  Furthermore, the quoted-pair
-  rule does not allow escaping NUL, CR or LF anymore.
+  in the ABNF. The NUL character is no longer allowed in comment and quoted-string
+  text. The quoted-pair rule no longer allows escaping NUL, CR or LF.
   (<xref target="basic.rules"/>)
 </t>
 <t>
@@ -4462,7 +4467,7 @@
       Update media type registrations to use RFC4288 template.
     </t>
     <t>
-      Use names of RFC4234 core rules DQUOTE and HTAB,
+      Use names of RFC4234 core rules DQUOTE and WSP,
       fix broken ABNF for chunk-data
       (work in progress on <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/36"/>)
     </t>
@@ -4509,8 +4514,7 @@
       have to be updated when switching over to RFC3986.
     </t>
     <t>
-      Synchronize core rules with RFC5234 (this includes a change to CHAR
-      which now excludes NUL).
+      Synchronize core rules with RFC5234.
     </t>
     <t>
       Get rid of prose rules that span multiple lines.
