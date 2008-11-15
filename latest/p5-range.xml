@@ -251,6 +251,7 @@
 </section>
 
 <section title="Notational Conventions and Generic Grammar" anchor="notation">
+  <x:anchor-alias value="CHAR"/>
   <x:anchor-alias value="DIGIT"/>
   <x:anchor-alias value="SP"/>
   <x:anchor-alias value="token"/>
@@ -260,6 +261,7 @@
   the core rules defined in &basic-rules;:
 </t>
 <figure><artwork type="abnf2616">
+  <x:ref>CHAR</x:ref>       = &lt;CHAR, defined in &basic-rules;&gt;
   <x:ref>DIGIT</x:ref>      = &lt;DIGIT, defined in &basic-rules;&gt;
   <x:ref>SP</x:ref>         = &lt;SP, defined in &basic-rules;&gt;
 </artwork></figure>
@@ -297,12 +299,15 @@
   <x:ref>other-range-unit</x:ref> = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
-   The only range unit defined by HTTP/1.1 is "bytes". HTTP/1.1
-   implementations &MAY; ignore ranges specified using other units.
+  HTTP/1.1 has been designed to allow implementations of applications
+  that do not depend on knowledge of ranges. The only range unit defined
+  by HTTP/1.1 is "bytes".
 </t>
 <t>
-   HTTP/1.1 has been designed to allow implementations of applications
-   that do not depend on knowledge of ranges.
+  If a range unit is not understood in a request, a server &MUST; ignore
+  the whole Range header (<xref target="header.range" />).
+  If a range unit is not understood in a response, an intermediary 
+  &SHOULD; pass the response to the client; a client &MUST; fail.
 </t>
 </section>
 
@@ -354,7 +359,9 @@
 </t>
 <t>
    A cache that does not support the Range and Content-Range headers
-   &MUST-NOT; cache 206 (Partial Content) responses.
+   &MUST-NOT; cache 206 (Partial Content) responses. Furthermore,
+   if a response uses a range unit that is not understood by the cache,
+   then it &MUST-NOT; be cached either. 
 </t>
 </section>
 
@@ -379,13 +386,13 @@
 </section>
 </section>
 
-<section title="Combining Byte Ranges" anchor="combining.byte.ranges">
+<section title="Combining Ranges" anchor="combining.byte.ranges">
 <t>
-   A response might transfer only a subrange of the bytes of an entity-body,
-   either because the request included one or more Range
-   specifications, or because a connection was broken prematurely. After
-   several such transfers, a cache might have received several ranges of
-   the same entity-body.
+   A response might transfer only a subrange of an entity-body, either 
+   the request included one or more Range specifications, or because 
+   a connection was broken prematurely.
+   After several such transfers, a cache might have received several 
+   ranges of the same entity-body.
 </t>
 <t>
    If a cache has a stored non-empty set of subranges for an entity, and
@@ -439,7 +446,7 @@
   Accept-Ranges: bytes
 </artwork></figure>
 <t>
-      but are not required to do so. Clients &MAY; generate byte-range
+      but are not required to do so. Clients &MAY; generate range
       requests without having received this header for the resource
       involved. Range units are defined in <xref target="range.units"/>.
 </t>
@@ -464,6 +471,8 @@
   <x:anchor-alias value="Content-Range-v"/>
   <x:anchor-alias value="content-range-spec"/>
   <x:anchor-alias value="instance-length"/>
+  <x:anchor-alias value="other-content-range-spec"/>
+  <x:anchor-alias value="other-range-resp-spec"/>
 <t>
    The entity-header "Content-Range" is sent with a partial entity-body to
    specify where in the full entity-body the partial body should be
@@ -474,6 +483,7 @@
   <x:ref>Content-Range-v</x:ref> = <x:ref>content-range-spec</x:ref>
   
   <x:ref>content-range-spec</x:ref>      = <x:ref>byte-content-range-spec</x:ref>
+                              / <x:ref>other-content-range-spec</x:ref>
   <x:ref>byte-content-range-spec</x:ref> = <x:ref>bytes-unit</x:ref> <x:ref>SP</x:ref>
                             <x:ref>byte-range-resp-spec</x:ref> "/"
                             ( <x:ref>instance-length</x:ref> / "*" )
@@ -482,6 +492,10 @@
                           / "*"
                           
   <x:ref>instance-length</x:ref>         = 1*<x:ref>DIGIT</x:ref>
+  
+  <x:ref>other-content-range-spec</x:ref> = <x:ref>other-range-unit</x:ref> <x:ref>SP</x:ref>
+                             <x:ref>other-range-resp-spec</x:ref>
+  <x:ref>other-range-resp-spec</x:ref>    = *<x:ref>CHAR</x:ref>
 </artwork></figure>
 <t>
    The header &SHOULD; indicate the total length of the full entity-body,
@@ -503,6 +517,7 @@
    &MUST; ignore it and any content transferred along with it.
 </t>
 <t>
+   In the case of a byte range request:
    A server sending a response with status code 416 (Requested range not
    satisfiable) &SHOULD; include a Content-Range field with a byte-range-resp-spec
    of "*". The instance-length specifies the current length of
@@ -567,7 +582,7 @@
    multiple ranges, whose result is a single range, &MAY; be sent as a
    multipart/byteranges media type with one part. A client that cannot
    decode a multipart/byteranges message &MUST-NOT; ask for multiple
-   byte-ranges in a single request.
+   ranges in a single request.
 </t>
 <t>
    When a client requests multiple byte-ranges in one request, the
@@ -662,11 +677,12 @@
   <x:anchor-alias value="ranges-specifier"/>
   <x:anchor-alias value="suffix-byte-range-spec"/>
   <x:anchor-alias value="suffix-length"/>
+  <x:anchor-alias value="other-ranges-specifier"/>
+
    A byte range operation &MAY; specify a single range of bytes, or a set
    of ranges within a single entity.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-range-set"/><iref primary="true" item="Grammar" subitem="byte-range-spec"/><iref primary="true" item="Grammar" subitem="first-byte-pos"/><iref primary="true" item="Grammar" subitem="last-byte-pos"/>
-  <x:ref>ranges-specifier</x:ref> = <x:ref>byte-ranges-specifier</x:ref>
   <x:ref>byte-ranges-specifier</x:ref> = <x:ref>bytes-unit</x:ref> "=" <x:ref>byte-range-set</x:ref>
   <x:ref>byte-range-set</x:ref>  = 1#( <x:ref>byte-range-spec</x:ref> / <x:ref>suffix-byte-range-spec</x:ref> )
   <x:ref>byte-range-spec</x:ref> = <x:ref>first-byte-pos</x:ref> "-" [<x:ref>last-byte-pos</x:ref>]
@@ -752,9 +768,11 @@
    the entire entity, using the Range request header, which applies to
    the entity returned as the result of the request:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/><iref primary="true" item="Grammar" subitem="Range-v"/>
-  <x:ref>Range</x:ref>   = "Range" ":" <x:ref>OWS</x:ref> <x:ref>Range-v</x:ref>
-  <x:ref>Range-v</x:ref> = <x:ref>ranges-specifier</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/>
+  <x:ref>Range</x:ref> = "Range" ":" <x:ref>ranges-specifier</x:ref>
+  <x:ref>ranges-specifier</x:ref>       = <x:ref>byte-ranges-specifier</x:ref>
+                           / <x:ref>other-ranges-specifier</x:ref>
+  <x:ref>other-ranges-specifier</x:ref> = 1*<x:ref>CHAR</x:ref>
 </artwork></figure>
 <t>
    A server &MAY; ignore the Range header. However, HTTP/1.1 origin
@@ -1399,6 +1417,12 @@
 
 <section title="Since draft-ietf-httpbis-p5-range-05" anchor="changes.since.05">
 <t>
+  Ongoing work on Custom Ranges (<eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/85"/>):
+  <list style="symbols"> 
+    <t>
+      Remove bias in favor of byte ranges; allow custom ranges in ABNF.
+    </t>
+  </list>
 </t>
 </section>
 
