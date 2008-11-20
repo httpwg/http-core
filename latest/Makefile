@@ -33,6 +33,13 @@ TARGETS = p1-messaging.html \
           p5-range.abnf \
           p6-cache.abnf \
           p7-auth.abnf \
+          p1-messaging.parsed-abnf \
+          p2-semantics.parsed-abnf \
+          p3-payload.parsed-abnf \
+          p4-conditional.parsed-abnf \
+          p5-range.parsed-abnf \
+          p6-cache.parsed-abnf \
+          p7-auth.parsed-abnf \
           p1-messaging.iana-headers \
           p2-semantics.iana-headers \
           p2-semantics.iana-methods	\
@@ -60,6 +67,12 @@ clean:
 
 %.abnf: %.xml ../../rfc2629xslt/extract-artwork.xslt
 	$(saxon) $< ../../rfc2629xslt/extract-artwork.xslt type="abnf2616" >$@
+
+%.parsed-abnf: %.abnf
+	../../abnfparser/bap/bap -l 69 < $< >$@
+
+p1-messaging.parsed-abnf: p1-messaging.abnf
+	../../abnfparser/bap/bap -i ../../abnfparser/bap/core.abnf -l 69  < $< >$@
 
 %.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
 	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@
