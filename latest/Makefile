@@ -41,6 +41,13 @@ TARGETS = p1-messaging.html \
           p5-range.parsed-abnf \
           p6-cache.parsed-abnf \
           p7-auth.parsed-abnf \
+          p1-messaging.abnf.xml \
+          p2-semantics.abnf.xml \
+          p3-payload.abnf.xml \
+          p4-conditional.abnf.xml \
+          p5-range.abnf.xml \
+          p6-cache.abnf.xml \
+          p7-auth.abnf.xml \
           p1-messaging.iana-headers \
           p2-semantics.iana-headers \
           p2-semantics.iana-methods	\
@@ -74,6 +81,9 @@ clean:
 
 p1-messaging.parsed-abnf: p1-messaging.abnf
 	$(bap)/bap -i $(bap)/core.abnf < $< | sort | $(bap)/bap  -i $(bap)/core.abnf -l 69 >$@
+
+%.abnf.xml: %.parsed-abnf
+	$(saxon) $(basename $<).xml abnf2xml2rfc.xslt abnf="$<" >$@
 
 %.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
 	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@
