@@ -4,6 +4,7 @@ saxon = java -classpath $(saxpath) net.sf.saxon.Transform -novw -l
 
 stylesheet = ../myxml2rfc.xslt
 reduction  = ../../rfc2629xslt/clean-for-DTD.xslt
+bap  = ../../abnfparser/bap
 
 TARGETS = p1-messaging.html \
           p2-semantics.html \
@@ -69,10 +70,10 @@ clean:
 	$(saxon) $< ../../rfc2629xslt/extract-artwork.xslt type="abnf2616" >$@
 
 %.parsed-abnf: %.abnf
-	../../abnfparser/bap/bap -l 69 < $< >$@
+	$(bap)/bap < $< | sort | $(bap)/bap -l 69 >$@
 
 p1-messaging.parsed-abnf: p1-messaging.abnf
-	../../abnfparser/bap/bap -i ../../abnfparser/bap/core.abnf -l 69  < $< >$@
+	$(bap)/bap -i $(bap)/core.abnf < $< | sort | $(bap)/bap  -i $(bap)/core.abnf -l 69 >$@
 
 %.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
 	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@
