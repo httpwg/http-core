@@ -7,16 +7,23 @@
 <xsl:param name="abnf"/>  
   
 <xsl:template match="/">
-  <section title="Collected ABNF" anchor="collected.abnf">
+  <xsl:variable name="collected" select="unparsed-text($abnf)"/>
 
+  <section title="Collected ABNF" anchor="collected.abnf">  
 <figure>
   <artwork type="abnf" name="{$abnf}">
-    <xsl:text>&#10;</xsl:text>
-    <xsl:value-of select="unparsed-text($abnf)"/>
+    <xsl:value-of select="$collected"/>
   </artwork>
 </figure>  
-
   </section>
+
+  <!-- check whether it's up2date... -->
+  
+  <xsl:if test="not(//section[@anchor='collected.abnf']) or //section[@anchor='collected.abnf']//artwork != $collected">
+    <xsl:message>WARNING: appendix contained inside source document needs to be updated</xsl:message>
+<!--    <xsl:message>A: <xsl:value-of select="//section[@anchor='collected.abnf']//artwork"/></xsl:message>
+    <xsl:message>B: <xsl:value-of select="$collected"/></xsl:message>-->
+  </xsl:if>
 </xsl:template>
   
   
