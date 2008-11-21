@@ -12,16 +12,17 @@
   <section title="Collected ABNF" anchor="collected.abnf">  
 <figure>
   <artwork type="abnf" name="{$abnf}">
-    <xsl:value-of select="$collected"/>
+    <xsl:text>&#10;</xsl:text>
+    <xsl:value-of select="translate($collected,'&#13;','')"/>
   </artwork>
 </figure>  
   </section>
 
-  <!-- check whether it's up2date... -->
+  <!-- check whether it's up-to-date... -->
   
-  <xsl:if test="not(//section[@anchor='collected.abnf']) or //section[@anchor='collected.abnf']//artwork != $collected">
+  <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space(//section[@anchor='collected.abnf']//artwork) != normalize-space($collected)">
     <xsl:message>WARNING: appendix contained inside source document needs to be updated</xsl:message>
-<!--    <xsl:message>A: <xsl:value-of select="//section[@anchor='collected.abnf']//artwork"/></xsl:message>
+    <!--<xsl:message>A: <xsl:value-of select="//section[@anchor='collected.abnf']//artwork"/></xsl:message>
     <xsl:message>B: <xsl:value-of select="$collected"/></xsl:message>-->
   </xsl:if>
 </xsl:template>
