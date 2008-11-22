@@ -23,7 +23,7 @@
         <xsl:for-each select="$lines">
           <xsl:variable name="lineno" select="position()"/>
           <xsl:variable name="sc1" select="substring(.,1,1)"/>
-          <xsl:variable name="sc0" select="substring($lines[$lineno - 1],1,1)"/>
+          <xsl:variable name="sc0" select="x:laststartchar($lines, $lineno - 1)"/>
           <xsl:if test="$sc1!=' ' and $sc0!=' ' and $sc1!=$sc0">
             <xsl:text>&#10;</xsl:text>
           </xsl:if>
@@ -60,6 +60,20 @@
     <xsl:message>B: <xsl:value-of select="$collected"/></xsl:message>-->
   </xsl:if>
 </xsl:template>
+
+<xsl:function name="x:laststartchar">
+  <xsl:param name="lines"/>
+  <xsl:param name="position"/>
+  
+  <xsl:choose>
+    <xsl:when test="' '!=substring($lines[$position],1,1)">
+      <xsl:value-of select="substring($lines[$position],1,1)"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="x:laststartchar($lines, $position - 1)"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:function>
   
   
 </xsl:transform>
