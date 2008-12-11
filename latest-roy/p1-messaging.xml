@@ -12,7 +12,7 @@
   <!ENTITY SHOULD "<bcp14 xmlns='http://purl.org/net/xml2rfc/ext'>SHOULD</bcp14>">
   <!ENTITY SHOULD-NOT "<bcp14 xmlns='http://purl.org/net/xml2rfc/ext'>SHOULD NOT</bcp14>">
   <!ENTITY ID-VERSION "latest">
-  <!ENTITY ID-MONTH "November">
+  <!ENTITY ID-MONTH "December">
   <!ENTITY ID-YEAR "2008">
   <!ENTITY caching                "<xref target='Part6' x:rel='#caching' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY payload                "<xref target='Part3' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -303,90 +303,80 @@
 
 <section title="Syntax Notation" anchor="notation">
 <iref primary="true" item="Grammar" subitem="ALPHA"/>
-<iref primary="true" item="Grammar" subitem="CHAR"/>
 <iref primary="true" item="Grammar" subitem="CR"/>
 <iref primary="true" item="Grammar" subitem="CRLF"/>
 <iref primary="true" item="Grammar" subitem="CTL"/>
 <iref primary="true" item="Grammar" subitem="DIGIT"/>
 <iref primary="true" item="Grammar" subitem="DQUOTE"/>
 <iref primary="true" item="Grammar" subitem="HEXDIG"/>
-<iref primary="true" item="Grammar" subitem="HTAB"/>
 <iref primary="true" item="Grammar" subitem="LF"/>
 <iref primary="true" item="Grammar" subitem="OCTET"/>
 <iref primary="true" item="Grammar" subitem="SP"/>
+<iref primary="true" item="Grammar" subitem="VCHAR"/>
 <iref primary="true" item="Grammar" subitem="WSP"/>
 <t anchor="core.rules">
   <x:anchor-alias value="ALPHA"/>
-  <x:anchor-alias value="CHAR"/>
   <x:anchor-alias value="CTL"/>
   <x:anchor-alias value="CR"/>
   <x:anchor-alias value="CRLF"/>
   <x:anchor-alias value="DIGIT"/>
   <x:anchor-alias value="DQUOTE"/>
   <x:anchor-alias value="HEXDIG"/>
-  <x:anchor-alias value="HTAB"/>
   <x:anchor-alias value="LF"/>
   <x:anchor-alias value="OCTET"/>
   <x:anchor-alias value="SP"/>
+  <x:anchor-alias value="VCHAR"/>
   <x:anchor-alias value="WSP"/>
    This specification uses the Augmented Backus-Naur Form (ABNF) notation
    of <xref target="RFC5234"/>.  The following core rules are included by
    reference, as defined in <xref target="RFC5234" x:fmt="," x:sec="B.1"/>:
-   ALPHA (letters), CHAR (any <xref target="USASCII"/> character,
-   excluding NUL), CR (carriage return), CRLF (CR LF), CTL (controls),
+   ALPHA (letters), CR (carriage return), CRLF (CR LF), CTL (controls),
    DIGIT (decimal 0-9), DQUOTE (double quote),
-   HEXDIG (hexadecimal 0-9/A-F/a-f), HTAB (horizontal tab),
-   LF (line feed), OCTET (any 8-bit sequence of data), SP (space)
-   and WSP (white space).
+   HEXDIG (hexadecimal 0-9/A-F/a-f), LF (line feed),
+   OCTET (any 8-bit sequence of data), SP (space),
+   VCHAR (any visible <xref target="USASCII"/> character),
+   and WSP (whitespace).
 </t>
 
-<section title="ABNF Extensions" anchor="notation.abnf">
-<t>
-   Two extensions to the ABNF rules of <xref target="RFC5234"/> are used to
-   improve readability.<cref>The current plan is to remove these extensions prior
-   to the last call draft.</cref>
-</t>
-
-<section title="#rule">
+<section title="ABNF Extension: #rule" anchor="notation.abnf">
+  <t>
+    One extension to the ABNF rules of <xref target="RFC5234"/> is used to
+    improve readability.
+  </t>
   <t>
     A construct "#" is defined, similar to "*", for defining lists of
     elements. The full form is "&lt;n&gt;#&lt;m&gt;element" indicating at least
-    &lt;n&gt; and at most &lt;m&gt; elements, each separated by one or more commas
-    (",") and &OPTIONAL; linear white space (OWS). This makes the usual
-    form of lists very easy; a rule such as
-    <figure><artwork type="example">
- ( *<x:ref>OWS</x:ref> element *( *<x:ref>OWS</x:ref> "," *<x:ref>OWS</x:ref> element ))</artwork></figure>
+    &lt;n&gt; and at most &lt;m&gt; elements, each separated by a single comma
+    (",") and optional whitespace (OWS).   
   </t>
+  <figure><preamble>
+    Thus,
+</preamble><artwork type="example">
+  1#element =&gt; element *( OWS "," OWS element )
+</artwork></figure>
+  <figure><preamble>
+    and:
+</preamble><artwork type="example">
+  #element =&gt; [ 1#element ]
+</artwork></figure>
+  <figure><preamble>
+    and for n &gt;= 1 and m &gt; 1:
+</preamble><artwork type="example">
+  &lt;n&gt;#&lt;m&gt;element =&gt; element &lt;n-1&gt;*&lt;m-1&gt;( OWS "," OWS element )
+</artwork></figure>
   <t>
-    can be shown as
-    <figure><artwork type="example">
- 1#element</artwork></figure>
+    For compatibility with legacy list rules, recipients &SHOULD; accept empty
+    list elements. In other words, consumers would follow the list productions:
   </t>
-  <t>
-    Wherever this construct is used, null elements are allowed, but do
-    not contribute to the count of elements present. That is,
-    "(element), , (element) " is permitted, but counts as only two
-    elements. Therefore, where at least one element is required, at
-    least one non-null element &MUST; be present. Default values are 0
-    and infinity so that "#element" allows any number, including zero;
-    "1#element" requires at least one; and "1#2element" allows one or
-    two.
-  </t>
-</section>
+<figure><artwork type="example">
+#element =&gt; [ ( "," / element ) *( OWS "," [ OWS element ] ) ]
 
-<section title="implied *LWS" anchor="implied.LWS">
-  <iref item="implied *LWS" primary="true"/>
-    <t>
-      The grammar described by this specification is word-based. Except
-      where noted otherwise, linear white space (LWS) can be included
-      between any two adjacent words (token or quoted-string), and
-      between adjacent words and separators, without changing the
-      interpretation of a field. At least one delimiter (LWS and/or
-      separators) &MUST; exist between any two tokens (for the definition
-      of "token" below), since they would otherwise be interpreted as a
-      single token.
-    </t>
-</section>
+1#element =&gt; *( "," OWS ) element *( OWS "," [ OWS element ] )
+</artwork></figure>  
+<t>
+  <xref target="collected.abnf"/> shows the collected ABNF, with the list rules
+  expanded as explained above.
+</t>
 </section>
 
 <section title="Basic Rules" anchor="basic.rules">
@@ -398,29 +388,29 @@
    is defined by its associated media type, as described in &media-types;.
 </t>
 <t anchor="rule.LWS">
-   All linear white space (LWS) in header field-values has the same semantics as SP. A
-   recipient &MAY; replace any such linear white space with a single SP before
+   This specification uses three rules to denote the use of linear
+   whitespace: OWS (optional whitespace), RWS (required whitespace), and
+   BWS ("bad" whitespace). 
+</t>
+<t>
+   The OWS rule is used where zero or more linear whitespace characters may
+   appear. OWS &SHOULD; either not be produced or be produced as a single SP
+   character. Multiple OWS characters that occur within field-content &SHOULD;
+   be replaced with a single SP before interpreting the field value or
+   forwarding the message downstream.
+</t>
+<t>
+   RWS is used when at least one linear whitespace character is required to
+   separate field tokens. RWS &SHOULD; be produced as a single SP character.
+   Multiple RWS characters that occur within field-content &SHOULD; be
+   replaced with a single SP before interpreting the field value or
+   forwarding the message downstream.
+</t>
+<t>
+   BWS is used where the grammar allows optional whitespace for historical
+   reasons but senders &SHOULD-NOT; produce it in messages. HTTP/1.1
+   recipients &MUST; accept such bad optional whitespace and remove it before
    interpreting the field value or forwarding the message downstream.
-</t>
-<t>
-   Historically, HTTP/1.1 header field values allow linear white space folding across 
-   multiple lines. However, this specification deprecates its use; senders &MUST-NOT; 
-   produce messages that include LWS folding (i.e., use the obs-fold rule), except
-   within the message/http media type (<xref target="internet.media.type.message.http"/>). 
-   Receivers &SHOULD; still parse folded linear white space.
-</t>
-<t>
-   This specification uses three rules to denote the use of linear white space;
-   BWS ("Bad" White Space), OWS (Optional White Space), and RWS (Required White Space).
-</t>
-<t>
-   "Bad" white space is allowed by the BNF, but senders &SHOULD-NOT; produce it in messages.
-   Receivers &MUST; accept it in incoming messages.
-</t>
-<t>
-   Required white space is used when at least one linear white space character
-   is required to separate field tokens. In all such cases, a single SP character
-   &SHOULD; be used.
 </t>
 <t anchor="rule.whitespace">
   <x:anchor-alias value="BWS"/>
@@ -430,34 +420,18 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
   <x:ref>OWS</x:ref>            = *( [ obs-fold ] <x:ref>WSP</x:ref> )
-                 ; "optional" white space
+                 ; "optional" whitespace
   <x:ref>RWS</x:ref>            = 1*( [ obs-fold ] <x:ref>WSP</x:ref> )
-                 ; "required" white space
+                 ; "required" whitespace
   <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
-                 ; "bad" white space
+                 ; "bad" whitespace
   <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref>
+                 ; see <xref target="message.headers"/>
 </artwork></figure>
-<t anchor="rule.TEXT">
-  <x:anchor-alias value="TEXT"/>
-   The TEXT rule is only used for descriptive field contents and values
-   that are not intended to be interpreted by the message parser. Words
-   of *TEXT &MAY; contain characters from character sets other than ISO-8859-1
-   <xref target="ISO-8859-1"/> only when encoded according to the rules of
-   <xref target="RFC2047"/>.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TEXT"/>
-  <x:ref>TEXT</x:ref>           = %x20-7E / %x80-FF / <x:ref>OWS</x:ref>
-                 ; any <x:ref>OCTET</x:ref> except <x:ref>CTL</x:ref>s, but including <x:ref>OWS</x:ref>
-</artwork></figure>
-<t>
-   A CRLF is allowed in the definition of TEXT only as part of a header
-   field continuation. It is expected that the folding LWS will be
-   replaced with a single SP before interpretation of the TEXT value.
-</t>
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
-   Many HTTP/1.1 header field values consist of words separated by LWS
+   Many HTTP/1.1 header field values consist of words separated by whitespace
    or special characters. These special characters &MUST; be in a quoted
    string to be used within a parameter value (as defined in
    <xref target="transfer.codings"/>).
@@ -469,28 +443,17 @@
                  
   <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
 </artwork></figure>
-<t anchor="rule.comment">
-  <x:anchor-alias value="comment"/>
-  <x:anchor-alias value="ctext"/>
-   Comments can be included in some HTTP header fields by surrounding
-   the comment text with parentheses. Comments are only allowed in
-   fields containing "comment" as part of their field value definition.
-   In all other fields, parentheses are considered part of the field
-   value.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
-  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
-  <x:ref>ctext</x:ref>          = &lt;any <x:ref>TEXT</x:ref> excluding "(" and ")"&gt;
-</artwork></figure>
 <t anchor="rule.quoted-string">
   <x:anchor-alias value="quoted-string"/>
   <x:anchor-alias value="qdtext"/>
+  <x:anchor-alias value="obs-text"/>
    A string of text is parsed as a single word if it is quoted using
    double-quote marks.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/>
-  <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *(<x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
-  <x:ref>qdtext</x:ref>         = &lt;any <x:ref>TEXT</x:ref> excluding <x:ref>DQUOTE</x:ref> and "\">
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
+  <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
+  <x:ref>qdtext</x:ref>         = *( <x:ref>OWS</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref> )
+  <x:ref>obs-text</x:ref>       = %x80-FF
 </artwork></figure>
 <t anchor="rule.quoted-pair">
   <x:anchor-alias value="quoted-pair"/>
@@ -574,17 +537,17 @@
    protocol elements that allow a relative URI without a fragment.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="URI-reference"/><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="path-absolute"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="uri-host"/>
-  <x:ref>URI</x:ref>           = &lt;URI, defined in <xref target="RFC3986" x:fmt="," x:sec="3"/>>
-  <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in <xref target="RFC3986" x:fmt="," x:sec="4.1"/>>
-  <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, defined in <xref target="RFC3986" x:fmt="," x:sec="4.3"/>>
-  <x:ref>relative-part</x:ref> = &lt;relative-part, defined in <xref target="RFC3986" x:fmt="," x:sec="4.2"/>>
-  <x:ref>authority</x:ref>     = &lt;authority, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2"/>>
-  <x:ref>fragment</x:ref>      = &lt;fragment, defined in <xref target="RFC3986" x:fmt="," x:sec="3.5"/>>
-  <x:ref>path-abempty</x:ref>  = &lt;path-abempty, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>>
-  <x:ref>path-absolute</x:ref> = &lt;path-absolute, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>>
-  <x:ref>port</x:ref>          = &lt;port, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>>
-  <x:ref>query</x:ref>         = &lt;query, defined in <xref target="RFC3986" x:fmt="," x:sec="3.4"/>>
-  <x:ref>uri-host</x:ref>      = &lt;host, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>>
+  <x:ref>URI</x:ref>           = &lt;URI, defined in <xref target="RFC3986" x:fmt="," x:sec="3"/>&gt;
+  <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
+  <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, defined in <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
+  <x:ref>relative-part</x:ref> = &lt;relative-part, defined in <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
+  <x:ref>authority</x:ref>     = &lt;authority, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2"/>&gt;
+  <x:ref>fragment</x:ref>      = &lt;fragment, defined in <xref target="RFC3986" x:fmt="," x:sec="3.5"/>&gt;
+  <x:ref>path-abempty</x:ref>  = &lt;path-abempty, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
+  <x:ref>path-absolute</x:ref> = &lt;path-absolute, defined in <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
+  <x:ref>port</x:ref>          = &lt;port, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
+  <x:ref>query</x:ref>         = &lt;query, defined in <xref target="RFC3986" x:fmt="," x:sec="3.4"/>&gt;
+  <x:ref>uri-host</x:ref>      = &lt;host, defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>&gt;
   
   <x:ref>partial-URI</x:ref>   = relative-part [ "?" query ]
 </artwork></figure>
@@ -773,23 +736,23 @@
 
 <section title="Use of HTTP for proxy communication" anchor="http.proxy">
 <t>
-   Configured to use HTTP to proxy HTTP or other protocols.
+   <cref>TBD: Configured to use HTTP to proxy HTTP or other protocols.</cref>
 </t>
 </section>
 <section title="Interception of HTTP for access control" anchor="http.intercept">
 <t>
-   Interception of HTTP traffic for initiating access control.
+   <cref>TBD: Interception of HTTP traffic for initiating access control.</cref>
 </t>
 </section>
 <section title="Use of HTTP by other protocols" anchor="http.others">
 <t>
-   Profiles of HTTP defined by other protocol.
-   Extensions of HTTP like WebDAV.
+   <cref>TBD: Profiles of HTTP defined by other protocol.
+   Extensions of HTTP like WebDAV.</cref>
 </t>
 </section>
 <section title="Use of HTTP by media type specification" anchor="http.media">
 <t>
-   Instructions on composing HTTP requests via hypertext formats.
+   <cref>TBD: Instructions on composing HTTP requests via hypertext formats.</cref>
 </t>
 </section>
 </section>
@@ -916,7 +879,7 @@
    first two formats by the inclusion of "GMT" as the three-letter
    abbreviation for time zone, and &MUST; be assumed when reading the
    asctime format. HTTP-date is case sensitive and &MUST-NOT; include
-   additional LWS beyond that specifically included as SP in the
+   additional whitespace beyond that specifically included as SP in the
    grammar.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-date"/><iref primary="true" item="Grammar" subitem="rfc1123-date"/><iref primary="true" item="Grammar" subitem="obsolete-date"/><iref primary="true" item="Grammar" subitem="rfc850-date"/><iref primary="true" item="Grammar" subitem="asctime-date"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="date2"/><iref primary="true" item="Grammar" subitem="date3"/><iref primary="true" item="Grammar" subitem="time"/><iref primary="true" item="Grammar" subitem="wkday"/><iref primary="true" item="Grammar" subitem="weekday"/><iref primary="true" item="Grammar" subitem="month"/>
@@ -1081,7 +1044,7 @@
   <x:ref>chunk-ext-name</x:ref> = <x:ref>token</x:ref>
   <x:ref>chunk-ext-val</x:ref>  = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
   <x:ref>chunk-data</x:ref>     = 1*<x:ref>OCTET</x:ref> ; a sequence of chunk-size octets
-  <x:ref>trailer-part</x:ref>   = *(<x:ref>entity-header</x:ref> <x:ref>CRLF</x:ref>)
+  <x:ref>trailer-part</x:ref>   = *( <x:ref>entity-header</x:ref> <x:ref>CRLF</x:ref> )
 </artwork></figure>
 <t>
    The chunk-size field is a string of hex digits indicating the size of
@@ -1154,7 +1117,7 @@
    Product tokens are used to allow communicating applications to
    identify themselves by software name and version. Most fields using
    product tokens also allow sub-products which form a significant part
-   of the application to be listed, separated by white space. By
+   of the application to be listed, separated by whitespace. By
    convention, the products are listed in order of their significance
    for identifying the application.
 </t>
@@ -1204,7 +1167,7 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="generic-message"/><iref primary="true" item="Grammar" subitem="start-line"/>
   <x:ref>generic-message</x:ref> = <x:ref>start-line</x:ref>
-                    *(<x:ref>message-header</x:ref> <x:ref>CRLF</x:ref>)
+                    *( <x:ref>message-header</x:ref> <x:ref>CRLF</x:ref> )
                     <x:ref>CRLF</x:ref>
                     [ <x:ref>message-body</x:ref> ]
   <x:ref>start-line</x:ref>      = <x:ref>Request-Line</x:ref> / <x:ref>Status-Line</x:ref>
@@ -1221,6 +1184,15 @@
    BNF, an HTTP/1.1 client &MUST-NOT; preface or follow a request with an
    extra CRLF.
 </t>
+<t>
+   Whitespace (WSP) &MUST-NOT; be sent between the start-line and the first
+   header field. The presence of whitespace might be an attempt to trick a
+   noncompliant implementation of HTTP into ignoring that field or processing
+   the next line as a new request, either of which may result in security
+   issues when implementations within the request chain interpret the
+   same message differently. HTTP/1.1 servers &MUST; reject such a message
+   with a 400 (Bad Request) response.
+</t>
 </section>
 
 <section title="Message Headers" anchor="message.headers">
@@ -1229,38 +1201,66 @@
   <x:anchor-alias value="field-value"/>
   <x:anchor-alias value="message-header"/>
 <t>
-   HTTP header fields, which include general-header (<xref target="general.header.fields"/>),
-   request-header (&request-header-fields;), response-header (&response-header-fields;), and
-   entity-header (&entity-header-fields;) fields, follow the same generic format as
-   that given in <xref target="RFC5322" x:fmt="of" x:sec="2.1"/>. Each header field consists
-   of a name followed by a colon (":") and the field value. Field names
-   are case-insensitive. The field value &MAY; be preceded by any amount
-   of LWS, though a single SP is preferred. Header fields can be
-   extended over multiple lines by preceding each extra line with at
-   least one SP or HTAB. Applications ought to follow "common form", where
-   one is known or indicated, when generating HTTP constructs, since
-   there might exist some implementations that fail to accept anything
-   beyond the common forms.
+   HTTP header fields follow the same general format as Internet messages in
+   <xref target="RFC5322" x:fmt="of" x:sec="2.1"/>. Each header field consists
+   of a name followed by a colon (":"), optional whitespace, and the field
+   value. Field names are case-insensitive.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="message-header"/><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-content"/>
-  <x:ref>message-header</x:ref> = <x:ref>field-name</x:ref> ":" [ <x:ref>field-value</x:ref> ]
+  <x:ref>message-header</x:ref> = <x:ref>field-name</x:ref> ":" OWS [ <x:ref>field-value</x:ref> ] OWS
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
   <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>OWS</x:ref> )
-  <x:ref>field-content</x:ref>  = &lt;field content&gt;
+  <x:ref>field-content</x:ref>  = *( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
 </artwork></figure>
 <t>
-  <cref>whitespace between field-name and colon is an error and MUST NOT be accepted</cref>
+   Historically, HTTP has allowed field-content with text in the ISO-8859-1
+   <xref target="ISO-8859-1"/> character encoding (allowing other character sets
+   through use of <xref target="RFC2047"/> encoding). In practice, most HTTP
+   header field-values use only a subset of the US-ASCII charset
+   <xref target="USASCII"/>. Newly defined header fields &SHOULD; constrain
+   their field-values to US-ASCII characters. Recipients &SHOULD; treat other
+   (obs-text) octets in field-content as opaque data.
 </t>
 <t>
-   The field-content does not include any leading or trailing LWS:
-   linear white space occurring before the first non-whitespace
-   character of the field-value or after the last non-whitespace
-   character of the field-value. Such leading or trailing LWS &MAY; be
-   removed without changing the semantics of the field value. Any LWS
-   that occurs between field-content &MAY; be replaced with a single SP
-   before interpreting the field value or forwarding the message
-   downstream.
+   No whitespace is allowed between the header field-name and colon. For
+   security reasons, any request message received containing such whitespace
+   &MUST; be rejected with a response code of 400 (Bad Request) and any such
+   whitespace in a response message &MUST; be removed.
 </t>
+<t>
+   The field value &MAY; be preceded by optional whitespace; a single SP is
+   preferred. The field-value does not include any leading or trailing white
+   space: OWS occurring before the first non-whitespace character of the
+   field-value or after the last non-whitespace character of the field-value
+   is ignored and &MAY; be removed without changing the meaning of the header
+   field.
+</t>
+<t>
+   Historically, HTTP header field values could be extended over multiple
+   lines by preceding each extra line with at least one space or horizontal
+   tab character (line folding). This specification deprecates such line
+   folding except within the message/http media type
+   (<xref target="internet.media.type.message.http"/>).
+   HTTP/1.1 senders &MUST-NOT; produce messages that include line folding
+   (i.e., that contain any field-content that matches the obs-fold rule) unless
+   the message is intended for packaging within the message/http media type.
+   HTTP/1.1 recipients &SHOULD; accept line folding and replace any embedded
+   obs-fold whitespace with a single SP prior to interpreting the field value
+   or forwarding the message downstream.
+</t>
+<t anchor="rule.comment">
+  <x:anchor-alias value="comment"/>
+  <x:anchor-alias value="ctext"/>
+   Comments can be included in some HTTP header fields by surrounding
+   the comment text with parentheses. Comments are only allowed in
+   fields containing "comment" as part of their field value definition.
+   In all other fields, parentheses are considered part of the field
+   value.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
+  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
+  <x:ref>ctext</x:ref>          = *( <x:ref>OWS</x:ref> / %x21-27 / %x2A-7E / <x:ref>obs-text</x:ref> )
+</artwork></figure>
 <t>
    The order in which header fields with differing field names are
    received is not significant. However, it is "good practice" to send
@@ -1467,7 +1467,7 @@
   <x:ref>Request</x:ref>       = <x:ref>Request-Line</x:ref>              ; <xref target="request-line"/>
                   *(( <x:ref>general-header</x:ref>        ; <xref target="general.header.fields"/>
                    / <x:ref>request-header</x:ref>         ; &request-header-fields;
-                   / <x:ref>entity-header</x:ref> ) <x:ref>CRLF</x:ref>)  ; &entity-header-fields;
+                   / <x:ref>entity-header</x:ref> ) <x:ref>CRLF</x:ref> )  ; &entity-header-fields;
                   <x:ref>CRLF</x:ref>
                   [ <x:ref>message-body</x:ref> ]          ; <xref target="message.body"/>
 </artwork></figure>
@@ -1502,7 +1502,7 @@
    identifies the resource upon which to apply the request.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/>
-  <x:ref>request-target</x:ref>    = "*"
+  <x:ref>request-target</x:ref> = "*"
                  / <x:ref>absolute-URI</x:ref>
                  / ( <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ] )
                  / <x:ref>authority</x:ref>
@@ -1515,7 +1515,7 @@
    example would be
 </t>
 <figure><artwork type="example">
-    OPTIONS * HTTP/1.1
+  OPTIONS * HTTP/1.1
 </artwork></figure>
 <t>
    The absolute-URI form is &REQUIRED; when the request is being made to a
@@ -1528,7 +1528,7 @@
    Request-Line would be:
 </t>
 <figure><artwork type="example">
-    GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
+  GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
 </artwork></figure>
 <t>
    To allow for transition to absolute-URIs in all requests in future
@@ -1550,14 +1550,35 @@
    the lines:
 </t>
 <figure><artwork type="example">
-    GET /pub/WWW/TheProject.html HTTP/1.1
-    Host: www.example.org
+  GET /pub/WWW/TheProject.html HTTP/1.1
+  Host: www.example.org
 </artwork></figure>
 <t>
    followed by the remainder of the Request. Note that the absolute path
    cannot be empty; if none is present in the original URI, it &MUST; be
    given as "/" (the server root).
 </t>
+<t>
+   If a proxy receives a request without any path in the request-target and
+   the method specified is capable of supporting the asterisk form of
+   request-target, then the last proxy on the request chain &MUST; forward the
+   request with "*" as the final request-target.
+</t>
+<figure><preamble>   
+   For example, the request
+</preamble><artwork type="example">
+  OPTIONS http://www.example.org:8001 HTTP/1.1
+</artwork></figure>
+<figure><preamble>   
+  would be forwarded by the proxy as
+</preamble><artwork type="example">
+  OPTIONS * HTTP/1.1
+  Host: www.example.org:8001
+</artwork>
+<postamble>
+   after connecting to port 8001 of host "www.example.org".
+</postamble>
+</figure>
 <t>
    The request-target is transmitted in the format specified in 
    <xref target="http.uri"/>. If the request-target is encoded using the
@@ -1584,7 +1605,7 @@
 <t>
    HTTP does not place a pre-defined limit on the length of a request-target.
    A server &MUST; be prepared to receive URIs of unbounded length and
-   respond with the 414 (URI too long) status if the received
+   respond with the 414 (Request-target too Long) status if the received
    request-target would be longer than the server wishes to handle
    (see &status-414;).
 </t>
@@ -1645,7 +1666,7 @@
   <x:ref>Response</x:ref>      = <x:ref>Status-Line</x:ref>               ; <xref target="status-line"/>
                   *(( <x:ref>general-header</x:ref>        ; <xref target="general.header.fields"/>
                    / <x:ref>response-header</x:ref>        ; &response-header-fields;
-                   / <x:ref>entity-header</x:ref> ) <x:ref>CRLF</x:ref>)  ; &entity-header-fields;
+                   / <x:ref>entity-header</x:ref> ) <x:ref>CRLF</x:ref> )  ; &entity-header-fields;
                   <x:ref>CRLF</x:ref>
                   [ <x:ref>message-body</x:ref> ]          ; <xref target="message.body"/>
 </artwork></figure>
@@ -1702,7 +1723,7 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Code"/><iref primary="true" item="Grammar" subitem="extension-code"/><iref primary="true" item="Grammar" subitem="Reason-Phrase"/>
   <x:ref>Status-Code</x:ref>    = 3<x:ref>DIGIT</x:ref>
-  <x:ref>Reason-Phrase</x:ref>  = *&lt;<x:ref>TEXT</x:ref>, excluding <x:ref>CR</x:ref>, <x:ref>LF</x:ref>&gt;
+  <x:ref>Reason-Phrase</x:ref>  = *( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
 </artwork></figure>
 </section>
 </section>
@@ -3348,18 +3369,6 @@
   <seriesInfo name="RFC" value="2045"/>
 </reference>
 
-<reference anchor="RFC2047">
-  <front>
-    <title abbrev="Message Header Extensions">MIME (Multipurpose Internet Mail Extensions) Part Three: Message Header Extensions for Non-ASCII Text</title>
-    <author initials="K." surname="Moore" fullname="Keith Moore">
-      <organization>University of Tennessee</organization>
-      <address><email>moore@cs.utk.edu</email></address>
-    </author>
-    <date month="November" year="1996"/>
-  </front>
-  <seriesInfo name="RFC" value="2047"/>
-</reference>
-
 <reference anchor="RFC2119">
   <front>
     <title>Key words for use in RFCs to Indicate Requirement Levels</title>
@@ -3561,6 +3570,18 @@
     <date month="May" year="1996"/>
   </front>
   <seriesInfo name="RFC" value="1945"/>
+</reference>
+
+<reference anchor="RFC2047">
+  <front>
+    <title abbrev="Message Header Extensions">MIME (Multipurpose Internet Mail Extensions) Part Three: Message Header Extensions for Non-ASCII Text</title>
+    <author initials="K." surname="Moore" fullname="Keith Moore">
+      <organization>University of Tennessee</organization>
+      <address><email>moore@cs.utk.edu</email></address>
+    </author>
+    <date month="November" year="1996"/>
+  </front>
+  <seriesInfo name="RFC" value="2047"/>
 </reference>
 
 <reference anchor="RFC2068">
@@ -3875,7 +3896,7 @@
 <t>
    Clients &SHOULD; be tolerant in parsing the Status-Line and servers
    tolerant when parsing the Request-Line. In particular, they &SHOULD;
-   accept any amount of SP or HTAB characters between fields, even though
+   accept any amount of WSP characters between fields, even though
    only a single SP is required.
 </t>
 <t>
@@ -4085,12 +4106,16 @@
 
 <section title="Changes from RFC 2616" anchor="changes.from.rfc.2616">
 <t>
-  Rules about implicit linear white space between certain grammar productions
+  Empty list elements in list productions have been deprecated.
+  (<xref target="notation.abnf"/>)
+</t>
+<t>
+  Rules about implicit linear whitespace between certain grammar productions
   have been removed; now it's only allowed when specifically pointed out
-  in the ABNF.
-  The CHAR rule does not allow the NUL character anymore (this affects
-  the comment and quoted-string rules).  Furthermore, the quoted-pair
-  rule does not allow escaping NUL, CR or LF anymore.
+  in the ABNF. The NUL character is no longer allowed in comment and quoted-string
+  text. The quoted-pair rule no longer allows escaping NUL, CR or LF.
+  Non-ASCII content in header fields and reason phrase has been obsoleted and
+  made opaque (the TEXT rule was removed)
   (<xref target="basic.rules"/>)
 </t>
 <t>
@@ -4106,6 +4131,10 @@
   Clarification that the chunk length does not include
   the count of the octets in the chunk header and trailer.
   (<xref target="chunked.transfer.encoding"/>)
+</t>
+<t>
+  Require that invalid whitespace around field-names be rejected.
+  (<xref target="message.headers"/>)
 </t>
 <t>
   Update use of abs_path production from RFC1808 to the path-absolute + query
@@ -4125,76 +4154,50 @@
    played by participants in, and objects of, the HTTP communication.
 </t>
 <t>
+  <iref item="cache"/>
+  <x:dfn>cache</x:dfn>
+  <list>
+    <t>
+      A program's local store of response messages and the subsystem
+      that controls its message storage, retrieval, and deletion. A
+      cache stores cacheable responses in order to reduce the response
+      time and network bandwidth consumption on future, equivalent
+      requests. Any client or server may include a cache, though a cache
+      cannot be used by a server that is acting as a tunnel.
+    </t>
+  </list>
+</t>
+<t>
+  <iref item="cacheable"/>
+  <x:dfn>cacheable</x:dfn>
+  <list>
+    <t>
+      A response is cacheable if a cache is allowed to store a copy of
+      the response message for use in answering subsequent requests. The
+      rules for determining the cacheability of HTTP responses are
+      defined in &caching;. Even if a resource is cacheable, there may
+      be additional constraints on whether a cache can use the cached
+      copy for a particular request.
+    </t>
+  </list>
+</t>
+<t>
+  <iref item="client"/>
+  <x:dfn>client</x:dfn>
+  <list>
+    <t>
+      A program that establishes connections for the purpose of sending
+      requests.
+    </t>
+  </list>
+</t>
+<t>
   <iref item="connection"/>
   <x:dfn>connection</x:dfn>
   <list>
     <t>
       A transport layer virtual circuit established between two programs
       for the purpose of communication.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="message"/>
-  <x:dfn>message</x:dfn>
-  <list>
-    <t>
-      The basic unit of HTTP communication, consisting of a structured
-      sequence of octets matching the syntax defined in <xref target="http.message"/> and
-      transmitted via the connection.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="request"/>
-  <x:dfn>request</x:dfn>
-  <list>
-    <t>
-      An HTTP request message, as defined in <xref target="request"/>.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="response"/>
-  <x:dfn>response</x:dfn>
-  <list>
-    <t>
-      An HTTP response message, as defined in <xref target="response"/>.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="resource"/>
-  <x:dfn>resource</x:dfn>
-  <list>
-    <t>
-      A network data object or service that can be identified by a URI,
-      as defined in <xref target="uri"/>. Resources may be available in multiple
-      representations (e.g. multiple languages, data formats, size, and
-      resolutions) or vary in other ways.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="entity"/>
-  <x:dfn>entity</x:dfn>
-  <list>
-    <t>
-      The information transferred as the payload of a request or
-      response. An entity consists of metainformation in the form of
-      entity-header fields and content in the form of an entity-body, as
-      described in &entity;.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="representation"/>
-  <x:dfn>representation</x:dfn>
-  <list>
-    <t>
-      An entity included with a response that is subject to content
-      negotiation, as described in &content.negotiation;. There may exist multiple
-      representations associated with a particular response status.
     </t>
   </list>
 </t>
@@ -4211,51 +4214,49 @@
   </list>
 </t>
 <t>
-  <iref item="variant"/>
-  <x:dfn>variant</x:dfn>
+  <iref item="entity"/>
+  <x:dfn>entity</x:dfn>
   <list>
     <t>
-      A resource may have one, or more than one, representation(s)
-      associated with it at any given instant. Each of these
-      representations is termed a `variant'.  Use of the term `variant'
-      does not necessarily imply that the resource is subject to content
-      negotiation.
+      The information transferred as the payload of a request or
+      response. An entity consists of metainformation in the form of
+      entity-header fields and content in the form of an entity-body, as
+      described in &entity;.
     </t>
   </list>
 </t>
 <t>
-  <iref item="client"/>
-  <x:dfn>client</x:dfn>
+  <iref item="gateway"/>
+  <x:dfn>gateway</x:dfn>
   <list>
     <t>
-      A program that establishes connections for the purpose of sending
-      requests.
+      A server which acts as an intermediary for some other server.
+      Unlike a proxy, a gateway receives requests as if it were the
+      origin server for the requested resource; the requesting client
+      may not be aware that it is communicating with a gateway.
     </t>
   </list>
 </t>
 <t>
-  <iref item="user agent"/>
-  <x:dfn>user agent</x:dfn>
+  <iref item="inbound"/>
+  <iref item="outbound"/>
+  <x:dfn>inbound</x:dfn>/<x:dfn>outbound</x:dfn>
   <list>
     <t>
-      The client which initiates a request. These are often browsers,
-      editors, spiders (web-traversing robots), or other end user tools.
+      Inbound and outbound refer to the request and response paths for
+      messages: "inbound" means "traveling toward the origin server",
+      and "outbound" means "traveling toward the user agent"
     </t>
   </list>
 </t>
 <t>
-  <iref item="server"/>
-  <x:dfn>server</x:dfn>
+  <iref item="message"/>
+  <x:dfn>message</x:dfn>
   <list>
     <t>
-      An application program that accepts connections in order to
-      service requests by sending back responses. Any given program may
-      be capable of being both a client and a server; our use of these
-      terms refers only to the role being performed by the program for a
-      particular connection, rather than to the program's capabilities
-      in general. Likewise, any server may act as an origin server,
-      proxy, gateway, or tunnel, switching behavior based on the nature
-      of each request.
+      The basic unit of HTTP communication, consisting of a structured
+      sequence of octets matching the syntax defined in <xref target="http.message"/> and
+      transmitted via the connection.
     </t>
   </list>
 </t>
@@ -4291,14 +4292,59 @@
   </list>
 </t>
 <t>
-  <iref item="gateway"/>
-  <x:dfn>gateway</x:dfn>
+  <iref item="request"/>
+  <x:dfn>request</x:dfn>
   <list>
     <t>
-      A server which acts as an intermediary for some other server.
-      Unlike a proxy, a gateway receives requests as if it were the
-      origin server for the requested resource; the requesting client
-      may not be aware that it is communicating with a gateway.
+      An HTTP request message, as defined in <xref target="request"/>.
+    </t>
+  </list>
+</t>
+<t>
+  <iref item="resource"/>
+  <x:dfn>resource</x:dfn>
+  <list>
+    <t>
+      A network data object or service that can be identified by a URI,
+      as defined in <xref target="uri"/>. Resources may be available in multiple
+      representations (e.g. multiple languages, data formats, size, and
+      resolutions) or vary in other ways.
+    </t>
+  </list>
+</t>
+<t>
+  <iref item="response"/>
+  <x:dfn>response</x:dfn>
+  <list>
+    <t>
+      An HTTP response message, as defined in <xref target="response"/>.
+    </t>
+  </list>
+</t>
+<t>
+  <iref item="representation"/>
+  <x:dfn>representation</x:dfn>
+  <list>
+    <t>
+      An entity included with a response that is subject to content
+      negotiation, as described in &content.negotiation;. There may exist multiple
+      representations associated with a particular response status.
+    </t>
+  </list>
+</t>
+<t>
+  <iref item="server"/>
+  <x:dfn>server</x:dfn>
+  <list>
+    <t>
+      An application program that accepts connections in order to
+      service requests by sending back responses. Any given program may
+      be capable of being both a client and a server; our use of these
+      terms refers only to the role being performed by the program for a
+      particular connection, rather than to the program's capabilities
+      in general. Likewise, any server may act as an origin server,
+      proxy, gateway, or tunnel, switching behavior based on the nature
+      of each request.
     </t>
   </list>
 </t>
@@ -4316,34 +4362,6 @@
   </list>
 </t>
 <t>
-  <iref item="cache"/>
-  <x:dfn>cache</x:dfn>
-  <list>
-    <t>
-      A program's local store of response messages and the subsystem
-      that controls its message storage, retrieval, and deletion. A
-      cache stores cacheable responses in order to reduce the response
-      time and network bandwidth consumption on future, equivalent
-      requests. Any client or server may include a cache, though a cache
-      cannot be used by a server that is acting as a tunnel.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="cacheable"/>
-  <x:dfn>cacheable</x:dfn>
-  <list>
-    <t>
-      A response is cacheable if a cache is allowed to store a copy of
-      the response message for use in answering subsequent requests. The
-      rules for determining the cacheability of HTTP responses are
-      defined in &caching;. Even if a resource is cacheable, there may
-      be additional constraints on whether a cache can use the cached
-      copy for a particular request.
-    </t>
-  </list>
-</t>
-<t>
   <iref item="upstream"/>
   <iref item="downstream"/>
   <x:dfn>upstream</x:dfn>/<x:dfn>downstream</x:dfn>
@@ -4355,17 +4373,225 @@
   </list>
 </t>
 <t>
-  <iref item="inbound"/>
-  <iref item="outbound"/>
-  <x:dfn>inbound</x:dfn>/<x:dfn>outbound</x:dfn>
+  <iref item="user agent"/>
+  <x:dfn>user agent</x:dfn>
   <list>
     <t>
-      Inbound and outbound refer to the request and response paths for
-      messages: "inbound" means "traveling toward the origin server",
-      and "outbound" means "traveling toward the user agent"
+      The client which initiates a request. These are often browsers,
+      editors, spiders (web-traversing robots), or other end user tools.
     </t>
   </list>
 </t>
+<t>
+  <iref item="variant"/>
+  <x:dfn>variant</x:dfn>
+  <list>
+    <t>
+      A resource may have one, or more than one, representation(s)
+      associated with it at any given instant. Each of these
+      representations is termed a `variant'.  Use of the term `variant'
+      does not necessarily imply that the resource is subject to content
+      negotiation.
+    </t>
+  </list>
+</t>
+</section>
+
+<section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf">
+<figure>
+<artwork type="abnf" name="p1-messaging.parsed-abnf">
+<x:ref>BWS</x:ref> = OWS
+
+<x:ref>Cache-Control</x:ref> = &lt;Cache-Control, defined in [Part6], Section 15.4&gt;
+<x:ref>Chunked-Body</x:ref> = *chunk last-chunk trailer-part CRLF
+<x:ref>Connection</x:ref> = "Connection:" OWS Connection-v
+<x:ref>Connection-v</x:ref> = *( "," OWS ) connection-token *( OWS "," [ OWS
+ connection-token ] )
+<x:ref>Content-Length</x:ref> = "Content-Length:" OWS 1*Content-Length-v
+<x:ref>Content-Length-v</x:ref> = 1*DIGIT
+
+<x:ref>Date</x:ref> = "Date:" OWS Date-v
+<x:ref>Date-v</x:ref> = HTTP-date
+
+GMT = %x47.4D.54
+
+<x:ref>HTTP-Prot-Name</x:ref> = %x48.54.54.50
+<x:ref>HTTP-Version</x:ref> = HTTP-Prot-Name "/" 1*DIGIT "." 1*DIGIT
+<x:ref>HTTP-date</x:ref> = rfc1123-date / obsolete-date
+<x:ref>HTTP-message</x:ref> = Request / Response
+<x:ref>Host</x:ref> = "Host:" OWS Host-v
+<x:ref>Host-v</x:ref> = uri-host [ ":" port ]
+
+<x:ref>Method</x:ref> = token
+
+<x:ref>OWS</x:ref> = *( [ obs-fold ] WSP )
+
+<x:ref>Pragma</x:ref> = &lt;Pragma, defined in [Part6], Section 15.4&gt;
+
+<x:ref>RWS</x:ref> = 1*( [ obs-fold ] WSP )
+<x:ref>Reason-Phrase</x:ref> = *( WSP / VCHAR / obs-text )
+<x:ref>Request</x:ref> = Request-Line *( ( general-header / request-header /
+ entity-header ) CRLF ) CRLF [ message-body ]
+<x:ref>Request-Line</x:ref> = Method SP request-target SP HTTP-Version CRLF
+<x:ref>Response</x:ref> = Status-Line *( ( general-header / response-header /
+ entity-header ) CRLF ) CRLF [ message-body ]
+
+<x:ref>Status-Code</x:ref> = 3DIGIT
+<x:ref>Status-Line</x:ref> = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
+
+<x:ref>TE</x:ref> = "TE:" OWS TE-v
+<x:ref>TE-v</x:ref> = [ ( "," / t-codings ) *( OWS "," [ OWS t-codings ] ) ]
+<x:ref>Trailer</x:ref> = "Trailer:" OWS Trailer-v
+<x:ref>Trailer-v</x:ref> = *( "," OWS ) field-name *( OWS "," [ OWS field-name ] )
+<x:ref>Transfer-Encoding</x:ref> = "Transfer-Encoding:" OWS Transfer-Encoding-v
+<x:ref>Transfer-Encoding-v</x:ref> = *( "," OWS ) transfer-coding *( OWS "," [ OWS
+ transfer-coding ] )
+
+<x:ref>URI</x:ref> = &lt;URI, defined in [RFC3986], Section 3&gt;
+<x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in [RFC3986], Section 4.1&gt;
+<x:ref>Upgrade</x:ref> = "Upgrade:" OWS Upgrade-v
+<x:ref>Upgrade-v</x:ref> = *( "," OWS ) product *( OWS "," [ OWS product ] )
+
+<x:ref>Via</x:ref> = "Via:" OWS Via-v
+<x:ref>Via-v</x:ref> = *( "," OWS ) received-protocol RWS received-by [ RWS comment
+ ] *( OWS "," [ OWS received-protocol RWS received-by [ RWS comment ]
+ ] )
+
+<x:ref>Warning</x:ref> = &lt;Warning, defined in [Part6], Section 15.6&gt;
+
+<x:ref>absolute-URI</x:ref> = &lt;absolute-URI, defined in [RFC3986], Section 4.3&gt;
+<x:ref>accept-params</x:ref> = &lt;accept-params, defined in [Part3], Section 5.1&gt;
+<x:ref>asctime-date</x:ref> = wkday SP date3 SP time SP 4DIGIT
+<x:ref>attribute</x:ref> = token
+<x:ref>authority</x:ref> = &lt;authority, defined in [RFC3986], Section 3.2&gt;
+
+<x:ref>chunk</x:ref> = chunk-size *WSP [ chunk-ext ] CRLF chunk-data CRLF
+<x:ref>chunk-data</x:ref> = 1*OCTET
+<x:ref>chunk-ext</x:ref> = *( ";" *WSP chunk-ext-name [ "=" chunk-ext-val ] *WSP )
+<x:ref>chunk-ext-name</x:ref> = token
+<x:ref>chunk-ext-val</x:ref> = token / quoted-string
+<x:ref>chunk-size</x:ref> = 1*HEXDIG
+<x:ref>comment</x:ref> = "(" *( ctext / quoted-pair / comment ) ")"
+<x:ref>connection-token</x:ref> = token
+<x:ref>ctext</x:ref> = *( OWS / %x21-27 / %x2A-7E / obs-text )
+
+<x:ref>date1</x:ref> = 2DIGIT SP month SP 4DIGIT
+<x:ref>date2</x:ref> = 2DIGIT "-" month "-" 2DIGIT
+<x:ref>date3</x:ref> = month SP ( 2DIGIT / ( SP DIGIT ) )
+
+<x:ref>entity-body</x:ref> = &lt;entity-body, defined in [Part3], Section 3.2&gt;
+<x:ref>entity-header</x:ref> = &lt;entity-header, defined in [Part3], Section 3.1&gt;
+
+<x:ref>field-content</x:ref> = *( WSP / VCHAR / obs-text )
+<x:ref>field-name</x:ref> = token
+<x:ref>field-value</x:ref> = *( field-content / OWS )
+<x:ref>fragment</x:ref> = &lt;fragment, defined in [RFC3986], Section 3.5&gt;
+
+<x:ref>general-header</x:ref> = Cache-Control / Connection / Date / Pragma / Trailer
+ / Transfer-Encoding / Upgrade / Via / Warning
+<x:ref>generic-message</x:ref> = start-line *( message-header CRLF ) CRLF [
+ message-body ]
+
+<x:ref>http-URI</x:ref> = "http://" authority path-abempty [ "?" query ]
+
+l-Fri = %x46.72.69.64.61.79
+l-Mon = %x4D.6F.6E.64.61.79
+l-Sat = %x53.61.74.75.72.64.61.79
+l-Sun = %x53.75.6E.64.61.79
+l-Thu = %x54.68.75.72.73.64.61.79
+l-Tue = %x54.75.65.73.64.61.79
+l-Wed = %x57.65.64.6E.65.73.64.61.79
+<x:ref>last-chunk</x:ref> = 1*"0" *WSP [ chunk-ext ] CRLF
+
+<x:ref>message-body</x:ref> = entity-body / &lt;entity-body encoded as per
+ Transfer-Encoding&gt;
+<x:ref>message-header</x:ref> = field-name ":" OWS [ field-value ] OWS
+<x:ref>month</x:ref> = s-Jan / s-Feb / s-Mar / s-Apr / s-May / s-Jun / s-Jul / s-Aug
+ / s-Sep / s-Oct / s-Nov / s-Dec
+
+<x:ref>obs-fold</x:ref> = CRLF
+<x:ref>obs-text</x:ref> = %x80-FF
+<x:ref>obsolete-date</x:ref> = rfc850-date / asctime-date
+
+<x:ref>parameter</x:ref> = attribute BWS "=" BWS value
+<x:ref>partial-URI</x:ref> = relative-part [ "?" query ]
+<x:ref>path-abempty</x:ref> = &lt;path-abempty, defined in [RFC3986], Section 3.3&gt;
+<x:ref>path-absolute</x:ref> = &lt;path-absolute, defined in [RFC3986], Section 3.3&gt;
+<x:ref>port</x:ref> = &lt;port, defined in [RFC3986], Section 3.2.3&gt;
+<x:ref>product</x:ref> = token [ "/" product-version ]
+<x:ref>product-version</x:ref> = token
+<x:ref>protocol-name</x:ref> = token
+<x:ref>protocol-version</x:ref> = token
+<x:ref>pseudonym</x:ref> = token
+
+<x:ref>qdtext</x:ref> = *( OWS / "!" / %x23-5B / %x5D-7E / obs-text )
+<x:ref>query</x:ref> = &lt;query, defined in [RFC3986], Section 3.4&gt;
+<x:ref>quoted-pair</x:ref> = "\" quoted-text
+<x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+<x:ref>quoted-text</x:ref> = %x01-09 / %x0B-0C / %x0E-FF
+
+<x:ref>received-by</x:ref> = ( uri-host [ ":" port ] ) / pseudonym
+<x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
+<x:ref>relative-part</x:ref> = &lt;relative-part, defined in [RFC3986], Section 4.2&gt;
+<x:ref>request-header</x:ref> = &lt;request-header, defined in [Part2], Section 3&gt;
+<x:ref>request-target</x:ref> = "*" / absolute-URI / ( path-absolute [ "?" query ] )
+ / authority
+<x:ref>response-header</x:ref> = &lt;response-header, defined in [Part2], Section 5&gt;
+<x:ref>rfc1123-date</x:ref> = wkday "," SP date1 SP time SP GMT
+<x:ref>rfc850-date</x:ref> = weekday "," SP date2 SP time SP GMT
+
+s-Apr = %x41.70.72
+s-Aug = %x41.75.67
+s-Dec = %x44.65.63
+s-Feb = %x46.65.62
+s-Fri = %x46.72.69
+s-Jan = %x4A.61.6E
+s-Jul = %x4A.75.6C
+s-Jun = %x4A.75.6E
+s-Mar = %x4D.61.72
+s-May = %x4D.61.79
+s-Mon = %x4D.6F.6E
+s-Nov = %x4E.6F.76
+s-Oct = %x4F.63.74
+s-Sat = %x53.61.74
+s-Sep = %x53.65.70
+s-Sun = %x53.75.6E
+s-Thu = %x54.68.75
+s-Tue = %x54.75.65
+s-Wed = %x57.65.64
+<x:ref>start-line</x:ref> = Request-Line / Status-Line
+
+<x:ref>t-codings</x:ref> = "trailers" / ( transfer-extension [ accept-params ] )
+<x:ref>tchar</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "." /
+ "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+<x:ref>time</x:ref> = 2DIGIT ":" 2DIGIT ":" 2DIGIT
+<x:ref>token</x:ref> = 1*tchar
+<x:ref>trailer-part</x:ref> = *( entity-header CRLF )
+<x:ref>transfer-coding</x:ref> = "chunked" / transfer-extension
+<x:ref>transfer-extension</x:ref> = token *( OWS ";" OWS parameter )
+
+<x:ref>uri-host</x:ref> = &lt;host, defined in [RFC3986], Section 3.2.2&gt;
+
+<x:ref>value</x:ref> = token / quoted-string
+
+<x:ref>weekday</x:ref> = l-Mon / l-Tue / l-Wed / l-Thu / l-Fri / l-Sat / l-Sun
+<x:ref>wkday</x:ref> = s-Mon / s-Tue / s-Wed / s-Thu / s-Fri / s-Sat / s-Sun
+
+; Chunked-Body defined but not used
+; Content-Length defined but not used
+; HTTP-message defined but not used
+; Host defined but not used
+; TE defined but not used
+; URI defined but not used
+; URI-reference defined but not used
+; fragment defined but not used
+; generic-message defined but not used
+; http-URI defined but not used
+; partial-URI defined but not used
+
+
+</artwork>
+</figure>
 </section>
 
 <section title="Change Log (to be removed by RFC Editor before publication)" anchor="change.log">
@@ -4473,7 +4699,7 @@
       Update media type registrations to use RFC4288 template.
     </t>
     <t>
-      Use names of RFC4234 core rules DQUOTE and HTAB,
+      Use names of RFC4234 core rules DQUOTE and WSP,
       fix broken ABNF for chunk-data
       (work in progress on <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/36"/>)
     </t>
@@ -4520,8 +4746,7 @@
       have to be updated when switching over to RFC3986.
     </t>
     <t>
-      Synchronize core rules with RFC5234 (this includes a change to CHAR
-      which now excludes NUL).
+      Synchronize core rules with RFC5234.
     </t>
     <t>
       Get rid of prose rules that span multiple lines.
@@ -4662,12 +4887,63 @@
   Closed issues:
   <list style="symbols"> 
     <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/30"/>:
+      "Header LWS"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/52"/>:
+      "Sort 1.3 Terminology"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/63"/>:
+      "RFC2047 encoded words"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/74"/>:
+      "Character Encodings in TEXT"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/77"/>:
+      "Line Folding"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/83"/>:
+      "OPTIONS * and proxies"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/94"/>:
+      "Reason-Phrase BNF"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/111"/>:
+      "Use of TEXT"
+    </t>
+    <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/118"/>:
       "Join "Differences Between HTTP Entities and RFC 2045 Entities"?"
     </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/134"/>:
       "RFC822 reference left in discussion of date formats"
+    </t>
+  </list>
+</t>
+<t>
+  Ongoing work on ABNF conversion (<eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/36"/>):
+  <list style="symbols"> 
+    <t>
+      Rewrite definition of list rules, deprecate empty list elements.
+    </t>
+    <t>
+      Add appendix containing collected and expanded ABNF.
+    </t>
+  </list>
+</t>
+<t>
+  Other changes:
+  <list style="symbols"> 
+    <t>
+      Rewrite introduction; add mostly new Architecture Section.
     </t>
   </list>
 </t>

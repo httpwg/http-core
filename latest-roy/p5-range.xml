@@ -12,8 +12,9 @@
   <!ENTITY SHOULD "<bcp14 xmlns='http://purl.org/net/xml2rfc/ext'>SHOULD</bcp14>">
   <!ENTITY SHOULD-NOT "<bcp14 xmlns='http://purl.org/net/xml2rfc/ext'>SHOULD NOT</bcp14>">
   <!ENTITY ID-VERSION "latest">
-  <!ENTITY ID-MONTH "November">
+  <!ENTITY ID-MONTH "December">
   <!ENTITY ID-YEAR "2008">
+  <!ENTITY notation                   "<xref target='Part1' x:rel='#notation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY notation-abnf              "<xref target='Part1' x:rel='#notation.abnf' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY basic-rules                "<xref target='Part1' x:rel='#basic.rules' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY full-date                  "<xref target='Part1' x:rel='#full.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -199,7 +200,7 @@
     <eref target="http://tools.ietf.org/wg/httpbis/"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.04"/>.
+    The changes in this draft are summarized in <xref target="changes.since.05"/>.
   </t>
 </note>
 </front>
@@ -248,29 +249,45 @@
    protocols is said to be "conditionally compliant."
 </t>
 </section>
-</section>
 
-<section title="Notational Conventions and Generic Grammar" anchor="notation">
+<section title="Syntax Notation" anchor="notation">
+  <x:anchor-alias value="ALPHA"/>
   <x:anchor-alias value="CHAR"/>
+  <x:anchor-alias value="CR"/>
   <x:anchor-alias value="DIGIT"/>
+  <x:anchor-alias value="LF"/>
+  <x:anchor-alias value="OCTET"/>
   <x:anchor-alias value="SP"/>
-  <x:anchor-alias value="token"/>
+  <x:anchor-alias value="VCHAR"/>
+  <x:anchor-alias value="WSP"/>
 <t>
-  This specification uses the ABNF syntax defined in &notation-abnf; and
-  the core rules defined in &basic-rules;:
-  <cref anchor="abnf.dep">ABNF syntax and basic rules will be adopted from RFC 5234, see
-  <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/36"/>.</cref>
+  This specification uses the ABNF syntax defined in &notation;.
+  The following core rules are included by
+  reference, as defined in <xref target="RFC5234" x:fmt="," x:sec="B.1"/>:
+  ALPHA (letters), CR (carriage return), CRLF (CR LF), CTL (controls),
+  DIGIT (decimal 0-9), DQUOTE (double quote),
+  HEXDIG (hexadecimal 0-9/A-F/a-f), LF (line feed),
+  OCTET (any 8-bit sequence of data), SP (space),
+  VCHAR (any visible USASCII character),
+  and WSP (whitespace).
+</t>
+
+<section title="Core Rules" anchor="core.rules">
+  <x:anchor-alias value="token"/>
+  <x:anchor-alias value="OWS"/>
+<t>
+  The core rules below are defined in &basic-rules;:
 </t>
 <figure><artwork type="abnf2616">
-  <x:ref>DIGIT</x:ref>      = &lt;DIGIT, defined in &basic-rules;&gt;
-  <x:ref>SP</x:ref>         = &lt;SP, defined in &basic-rules;&gt;
-</artwork></figure>
-<figure><artwork type="abnf2616">
   <x:ref>token</x:ref>      = &lt;token, defined in &basic-rules;&gt;
+  <x:ref>OWS</x:ref>        = &lt;OWS, defined in &basic-rules;&gt;
 </artwork></figure>
-<t anchor="abnf.dependencies">
+</section>
+
+<section title="ABNF Rules defined in other Parts of the Specification" anchor="abnf.dependencies">
   <x:anchor-alias value="entity-tag"/>
   <x:anchor-alias value="HTTP-date"/>
+<t>
   The ABNF rules below are defined in other parts: 
 </t>
 <figure><!--Part1--><artwork type="abnf2616">
@@ -280,6 +297,11 @@
   <x:ref>entity-tag</x:ref> = &lt;entity-tag, defined in &entity-tags;&gt;
 </artwork></figure>
 </section>
+
+</section>
+
+</section>
+
 
 <section title="Range Units" anchor="range.units">
   <x:anchor-alias value="bytes-unit"/>
@@ -357,8 +379,10 @@
    see <xref target="combining.byte.ranges"/>.
 </t>
 <t>
-   A cache that does not support the Range and Content-Range headers or
-   the range unit &MUST-NOT; cache 206 (Partial Content) responses.
+   A cache that does not support the Range and Content-Range headers
+   &MUST-NOT; cache 206 (Partial Content) responses. Furthermore,
+   if a response uses a range unit that is not understood by the cache,
+   then it &MUST-NOT; be cached either. 
 </t>
 </section>
 
@@ -385,11 +409,11 @@
 
 <section title="Combining Ranges" anchor="combining.byte.ranges">
 <t>
-  A response might transfer only a subrange of an entity-body, either 
-  the request included one or more Range specifications, or because 
-  a connection was broken prematurely.
-  After several such transfers, a cache might have received several 
-  ranges of the same entity-body.
+   A response might transfer only a subrange of an entity-body, either 
+   the request included one or more Range specifications, or because 
+   a connection was broken prematurely.
+   After several such transfers, a cache might have received several 
+   ranges of the same entity-body.
 </t>
 <t>
    If a cache has a stored non-empty set of subranges for an entity, and
@@ -425,32 +449,34 @@
   <iref primary="true" item="Accept-Ranges header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="Accept-Ranges" x:for-anchor=""/>
   <x:anchor-alias value="Accept-Ranges"/>
+  <x:anchor-alias value="Accept-Ranges-v"/>
   <x:anchor-alias value="acceptable-ranges"/>
 <t>
-      The Accept-Ranges response-header field allows the server to
+      The response-header "Accept-Ranges" field allows the server to
       indicate its acceptance of range requests for a resource:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Ranges"/><iref primary="true" item="Grammar" subitem="acceptable-ranges"/>
-  <x:ref>Accept-Ranges</x:ref>     = "Accept-Ranges" ":" <x:ref>acceptable-ranges</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Ranges"/><iref primary="true" item="Grammar" subitem="Accept-Ranges-v"/><iref primary="true" item="Grammar" subitem="acceptable-ranges"/>
+  <x:ref>Accept-Ranges</x:ref>     = "Accept-Ranges" ":" <x:ref>OWS</x:ref> <x:ref>Accept-Ranges-v</x:ref>
+  <x:ref>Accept-Ranges-v</x:ref>   = <x:ref>acceptable-ranges</x:ref>
   <x:ref>acceptable-ranges</x:ref> = 1#<x:ref>range-unit</x:ref> / "none"
 </artwork></figure>
 <t>
       Origin servers that accept byte-range requests &MAY; send
 </t>
 <figure><artwork type="example">
-       Accept-Ranges: bytes
+  Accept-Ranges: bytes
 </artwork></figure>
 <t>
-  but are not required to do so. Clients &MAY; generate range
-  requests without having received this header for the resource
-  involved. Range units are defined in <xref target="range.units"/>.
+      but are not required to do so. Clients &MAY; generate range
+      requests without having received this header for the resource
+      involved. Range units are defined in <xref target="range.units"/>.
 </t>
 <t>
       Servers that do not accept any kind of range request for a
       resource &MAY; send
 </t>
 <figure><artwork type="example">
-       Accept-Ranges: none
+  Accept-Ranges: none
 </artwork></figure>
 <t>
       to advise the client not to attempt a range request.
@@ -463,28 +489,30 @@
   <x:anchor-alias value="byte-content-range-spec"/>
   <x:anchor-alias value="byte-range-resp-spec"/>
   <x:anchor-alias value="Content-Range"/>
+  <x:anchor-alias value="Content-Range-v"/>
   <x:anchor-alias value="content-range-spec"/>
   <x:anchor-alias value="instance-length"/>
   <x:anchor-alias value="other-content-range-spec"/>
   <x:anchor-alias value="other-range-resp-spec"/>
 <t>
-   The Content-Range entity-header is sent with a partial entity-body to
+   The entity-header "Content-Range" is sent with a partial entity-body to
    specify where in the full entity-body the partial body should be
    applied. Range units are defined in <xref target="range.units"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="content-range-spec"/><iref primary="true" item="Grammar" subitem="byte-content-range-spec"/><iref primary="true" item="Grammar" subitem="byte-range-resp-spec"/><iref primary="true" item="Grammar" subitem="instance-length"/>
-  <x:ref>Content-Range</x:ref> = "Content-Range" ":" <x:ref>content-range-spec</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="Content-Range-v"/><iref primary="true" item="Grammar" subitem="content-range-spec"/><iref primary="true" item="Grammar" subitem="byte-content-range-spec"/><iref primary="true" item="Grammar" subitem="byte-range-resp-spec"/><iref primary="true" item="Grammar" subitem="instance-length"/>
+  <x:ref>Content-Range</x:ref> = "Content-Range" ":" <x:ref>OWS</x:ref> <x:ref>Content-Range-v</x:ref>
+  <x:ref>Content-Range-v</x:ref> = <x:ref>content-range-spec</x:ref>
   
-  <x:ref>content-range-spec</x:ref>       = <x:ref>byte-content-range-spec</x:ref> 
-                             / <x:ref>other-content-range-spec</x:ref>
-  <x:ref>byte-content-range-spec</x:ref>  = <x:ref>bytes-unit</x:ref> <x:ref>SP</x:ref>
-                             <x:ref>byte-range-resp-spec</x:ref> "/"
-                             ( <x:ref>instance-length</x:ref> / "*" )
+  <x:ref>content-range-spec</x:ref>      = <x:ref>byte-content-range-spec</x:ref>
+                          / <x:ref>other-content-range-spec</x:ref>
+  <x:ref>byte-content-range-spec</x:ref> = <x:ref>bytes-unit</x:ref> <x:ref>SP</x:ref>
+                            <x:ref>byte-range-resp-spec</x:ref> "/"
+                            ( <x:ref>instance-length</x:ref> / "*" )
   
-  <x:ref>byte-range-resp-spec</x:ref>     = (<x:ref>first-byte-pos</x:ref> "-" <x:ref>last-byte-pos</x:ref>)
-                             / "*"
+  <x:ref>byte-range-resp-spec</x:ref>    = (<x:ref>first-byte-pos</x:ref> "-" <x:ref>last-byte-pos</x:ref>)
+                          / "*"
                           
-  <x:ref>instance-length</x:ref>          = 1*<x:ref>DIGIT</x:ref>
+  <x:ref>instance-length</x:ref>         = 1*<x:ref>DIGIT</x:ref>
   
   <x:ref>other-content-range-spec</x:ref> = <x:ref>other-range-unit</x:ref> <x:ref>SP</x:ref>
                              <x:ref>other-range-resp-spec</x:ref>
@@ -510,12 +538,12 @@
    &MUST; ignore it and any content transferred along with it.
 </t>
 <t>
-  In the case of a byte range request: A server sending a response with 
-  status code 416 (Requested range not satisfiable) &SHOULD; include a 
-  Content-Range field with a byte-range-resp-spec of "*". 
-  The instance-length specifies the current length of the selected resource. 
-  A response with status code 206 (Partial Content) &MUST-NOT; include a 
-  Content-Range field with a byte-range-resp-spec of "*".
+   In the case of a byte range request:
+   A server sending a response with status code 416 (Requested range not
+   satisfiable) &SHOULD; include a Content-Range field with a byte-range-resp-spec
+   of "*". The instance-length specifies the current length of
+   the selected resource. A response with status code 206 (Partial
+   Content) &MUST-NOT; include a Content-Range field with a byte-range-resp-spec of "*".
 </t>
 <t>
    Examples of byte-content-range-spec values, assuming that the entity
@@ -555,12 +583,12 @@
    showing the number of bytes actually transferred. For example,
 </t>
 <figure><artwork type="example">
-    HTTP/1.1 206 Partial Content
-    Date: Wed, 15 Nov 1995 06:25:24 GMT
-    Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
-    Content-Range: bytes 21010-47021/47022
-    Content-Length: 26012
-    Content-Type: image/gif
+  HTTP/1.1 206 Partial Content
+  Date: Wed, 15 Nov 1995 06:25:24 GMT
+  Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
+  Content-Range: bytes 21010-47021/47022
+  Content-Length: 26012
+  Content-Type: image/gif
 </artwork></figure>
 <t>
    When an HTTP message includes the content of multiple ranges (for
@@ -608,6 +636,7 @@
   <iref primary="true" item="If-Range header" x:for-anchor=""/>
   <iref primary="true" item="Headers" subitem="If-Range" x:for-anchor=""/>
   <x:anchor-alias value="If-Range"/>
+  <x:anchor-alias value="If-Range-v"/>
 <t>
    If a client has a partial copy of an entity in its cache, and wishes
    to have an up-to-date copy of the entire entity in its cache, it
@@ -618,13 +647,14 @@
    entity-body.
 </t>
 <t>
-   The If-Range header allows a client to "short-circuit" the second
+   The request header "If-Range" allows a client to "short-circuit" the second
    request. Informally, its meaning is `if the entity is unchanged, send
    me the part(s) that I am missing; otherwise, send me the entire new
    entity'.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Range"/>
-  <x:ref>If-Range</x:ref> = "If-Range" ":" ( <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref> )
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Range"/><iref primary="true" item="Grammar" subitem="If-Range-v"/>
+  <x:ref>If-Range</x:ref>   = "If-Range" ":" <x:ref>OWS</x:ref> <x:ref>If-Range-v</x:ref>
+  <x:ref>If-Range-v</x:ref> = <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref>
 </artwork></figure>
 <t>
    If the client has no entity tag for an entity, but does have a Last-Modified
@@ -676,7 +706,7 @@
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-range-set"/><iref primary="true" item="Grammar" subitem="byte-range-spec"/><iref primary="true" item="Grammar" subitem="first-byte-pos"/><iref primary="true" item="Grammar" subitem="last-byte-pos"/>
   <x:ref>byte-ranges-specifier</x:ref> = <x:ref>bytes-unit</x:ref> "=" <x:ref>byte-range-set</x:ref>
   <x:ref>byte-range-set</x:ref>  = 1#( <x:ref>byte-range-spec</x:ref> / <x:ref>suffix-byte-range-spec</x:ref> )
-  <x:ref>byte-range-spec</x:ref> = <x:ref>first-byte-pos</x:ref> "-" [<x:ref>last-byte-pos</x:ref>]
+  <x:ref>byte-range-spec</x:ref> = <x:ref>first-byte-pos</x:ref> "-" [ <x:ref>last-byte-pos</x:ref> ]
   <x:ref>first-byte-pos</x:ref>  = 1*<x:ref>DIGIT</x:ref>
   <x:ref>last-byte-pos</x:ref>   = 1*<x:ref>DIGIT</x:ref>
 </artwork></figure>
@@ -705,7 +735,7 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="suffix-byte-range-spec"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
   <x:ref>suffix-byte-range-spec</x:ref> = "-" <x:ref>suffix-length</x:ref>
-  <x:ref>suffix-length</x:ref>          = 1*<x:ref>DIGIT</x:ref>
+  <x:ref>suffix-length</x:ref> = 1*<x:ref>DIGIT</x:ref>
 </artwork></figure>
 <t>
    A suffix-byte-range-spec is used to specify the suffix of the
@@ -752,6 +782,7 @@
 
 <section title="Range Retrieval Requests" anchor="range.retrieval.requests">
   <x:anchor-alias value="Range"/>
+  <x:anchor-alias value="Range-v"/>
 <t>
    HTTP retrieval requests using conditional or unconditional GET
    methods &MAY; request one or more sub-ranges of the entity, instead of
@@ -759,9 +790,9 @@
    the entity returned as the result of the request:
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/>
-  <x:ref>Range</x:ref> = "Range" ":" <x:ref>ranges-specifier</x:ref>
-  <x:ref>ranges-specifier</x:ref>       = <x:ref>byte-ranges-specifier</x:ref>
-                           / <x:ref>other-ranges-specifier</x:ref>
+  <x:ref>Range</x:ref>   = "Range" ":" <x:ref>OWS</x:ref> <x:ref>Range-v</x:ref>
+  <x:ref>Range-v</x:ref> = <x:ref>byte-ranges-specifier</x:ref>
+          / <x:ref>other-ranges-specifier</x:ref>
   <x:ref>other-ranges-specifier</x:ref> = 1*<x:ref>CHAR</x:ref>
 </artwork></figure>
 <t>
@@ -1078,6 +1109,38 @@
   <seriesInfo name="RFC" value="2119"/>
 </reference>
 
+<reference anchor="RFC5234">
+  <front>
+    <title abbrev="ABNF for Syntax Specifications">Augmented BNF for Syntax Specifications: ABNF</title>
+    <author initials="D." surname="Crocker" fullname="Dave Crocker" role="editor">
+      <organization>Brandenburg InternetWorking</organization>
+      <address>
+      <postal>
+      <street>675 Spruce Dr.</street>
+      <city>Sunnyvale</city>
+      <region>CA</region>
+      <code>94086</code>
+      <country>US</country></postal>
+      <phone>+1.408.246.8253</phone>
+      <email>dcrocker@bbiw.net</email></address>  
+    </author>
+    <author initials="P." surname="Overell" fullname="Paul Overell">
+      <organization>THUS plc.</organization>
+      <address>
+      <postal>
+      <street>1/2 Berkeley Square</street>
+      <street>99 Berkely Street</street>
+      <city>Glasgow</city>
+      <code>G3 7HR</code>
+      <country>UK</country></postal>
+      <email>paul.overell@thus.net</email></address>
+    </author>
+    <date month="January" year="2008"/>
+  </front>
+  <seriesInfo name="STD" value="68"/>
+  <seriesInfo name="RFC" value="5234"/>
+</reference>
+
 </references>
 
 <references title="Informative References">
@@ -1229,22 +1292,22 @@
 <figure><preamble>
    For example:
 </preamble><artwork type="example">
-   HTTP/1.1 206 Partial Content
-   Date: Wed, 15 Nov 1995 06:25:24 GMT
-   Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
-   Content-type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
-
-   --THIS_STRING_SEPARATES
-   Content-type: application/pdf
-   Content-range: bytes 500-999/8000
-
-   ...the first range...
-   --THIS_STRING_SEPARATES
-   Content-type: application/pdf
-   Content-range: bytes 7000-7999/8000
-
-   ...the second range
-   --THIS_STRING_SEPARATES--
+  HTTP/1.1 206 Partial Content
+  Date: Wed, 15 Nov 1995 06:25:24 GMT
+  Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
+  Content-type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+  
+  --THIS_STRING_SEPARATES
+  Content-type: application/pdf
+  Content-range: bytes 500-999/8000
+  
+  ...the first range...
+  --THIS_STRING_SEPARATES
+  Content-type: application/pdf
+  Content-range: bytes 7000-7999/8000
+  
+  ...the second range
+  --THIS_STRING_SEPARATES--
 </artwork></figure>
 <t>
       Notes:
@@ -1310,6 +1373,72 @@
 </section>
 
 </section>
+
+<section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf">
+<figure>
+<artwork type="abnf" name="p5-range.parsed-abnf">
+<x:ref>Accept-Ranges</x:ref> = "Accept-Ranges:" OWS Accept-Ranges-v
+<x:ref>Accept-Ranges-v</x:ref> = acceptable-ranges
+
+<x:ref>Content-Range</x:ref> = "Content-Range:" OWS Content-Range-v
+<x:ref>Content-Range-v</x:ref> = content-range-spec
+
+<x:ref>HTTP-date</x:ref> = &lt;HTTP-date, defined in [Part1], Section 3.2.1&gt;
+
+<x:ref>If-Range</x:ref> = "If-Range:" OWS If-Range-v
+<x:ref>If-Range-v</x:ref> = entity-tag / HTTP-date
+
+<x:ref>OWS</x:ref> = &lt;OWS, defined in [Part1], Section 1.2.2&gt;
+
+<x:ref>Range</x:ref> = "Range:" OWS Range-v
+<x:ref>Range-v</x:ref> = byte-ranges-specifier / other-ranges-specifier
+
+<x:ref>acceptable-ranges</x:ref> = ( *( "," OWS ) range-unit *( OWS "," [ OWS
+ range-unit ] ) ) / "none"
+
+<x:ref>byte-content-range-spec</x:ref> = bytes-unit SP byte-range-resp-spec "/" (
+ instance-length / "*" )
+<x:ref>byte-range-resp-spec</x:ref> = ( first-byte-pos "-" last-byte-pos ) / "*"
+<x:ref>byte-range-set</x:ref> = ( *( "," OWS ) byte-range-spec ) / (
+ suffix-byte-range-spec *( OWS "," [ ( OWS byte-range-spec ) /
+ suffix-byte-range-spec ] ) )
+<x:ref>byte-range-spec</x:ref> = first-byte-pos "-" [ last-byte-pos ]
+<x:ref>byte-ranges-specifier</x:ref> = bytes-unit "=" byte-range-set
+<x:ref>bytes-unit</x:ref> = "bytes"
+
+<x:ref>content-range-spec</x:ref> = byte-content-range-spec /
+ other-content-range-spec
+
+<x:ref>entity-tag</x:ref> = &lt;entity-tag, defined in [Part4], Section 2&gt;
+
+<x:ref>first-byte-pos</x:ref> = 1*DIGIT
+
+<x:ref>instance-length</x:ref> = 1*DIGIT
+
+<x:ref>last-byte-pos</x:ref> = 1*DIGIT
+
+<x:ref>other-content-range-spec</x:ref> = other-range-unit SP other-range-resp-spec
+<x:ref>other-range-resp-spec</x:ref> = *CHAR
+<x:ref>other-range-unit</x:ref> = token
+<x:ref>other-ranges-specifier</x:ref> = 1*CHAR
+
+<x:ref>range-unit</x:ref> = bytes-unit / other-range-unit
+
+<x:ref>suffix-byte-range-spec</x:ref> = "-" suffix-length
+<x:ref>suffix-length</x:ref> = 1*DIGIT
+
+<x:ref>token</x:ref> = &lt;token, defined in [Part1], Section 1.2.2&gt;
+
+; Accept-Ranges defined but not used
+; Content-Range defined but not used
+; If-Range defined but not used
+; Range defined but not used
+
+
+</artwork>
+</figure>
+</section>
+
 
 <section title="Change Log (to be removed by RFC Editor before publication)" anchor="change.log">
 
@@ -1392,6 +1521,33 @@
   <list style="symbols"> 
     <t>
       Use "/" instead of "|" for alternatives.
+    </t>
+    <t>
+      Introduce new ABNF rules for "bad" whitespace ("BWS"), optional
+      whitespace ("OWS") and required whitespace ("RWS").
+    </t>
+    <t>
+      Rewrite ABNFs to spell out whitespace rules, factor out
+      header value format definitions.
+    </t>
+  </list>
+</t>
+</section>
+
+<section title="Since draft-ietf-httpbis-p5-range-05" anchor="changes.since.05">
+<t>
+  Ongoing work on Custom Ranges (<eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/85"/>):
+  <list style="symbols"> 
+    <t>
+      Remove bias in favor of byte ranges; allow custom ranges in ABNF.
+    </t>
+  </list>
+</t>
+<t>
+  Ongoing work on ABNF conversion (<eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/36"/>):
+  <list style="symbols"> 
+    <t>
+      Add appendix containing collected and expanded ABNF, reorganize ABNF introduction.
     </t>
   </list>
 </t>
