@@ -1,4 +1,4 @@
-xml2rfc = "$(HOME)/bin/xml2rfc-1.33/xml2rfc.tcl"
+xml2rfc = "../../xml2rfc/xml2rfc.tcl"
 saxpath = "$(HOME)/java/saxon-8-9-j/saxon8.jar"
 saxon = java -classpath $(saxpath) net.sf.saxon.Transform -novw -l
 
