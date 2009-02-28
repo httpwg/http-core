@@ -24,13 +24,11 @@
   <!ENTITY entity                 "<xref target='Part3' x:rel='#entity' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-body            "<xref target='Part3' x:rel='#entity.body' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-header-fields   "<xref target='Part3' x:rel='#entity.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY header-accept          "<xref target='Part3' x:rel='#header.accept' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-cache-control   "<xref target='Part6' x:rel='#header.cache-control' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-expect          "<xref target='Part2' x:rel='#header.expect' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-pragma          "<xref target='Part6' x:rel='#header.pragma' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-warning         "<xref target='Part6' x:rel='#header.warning' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY idempotent-methods     "<xref target='Part2' x:rel='#idempotent.methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY qvalue                 "<xref target='Part3' x:rel='#quality.values' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY request-header-fields  "<xref target='Part2' x:rel='#request.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY response-header-fields "<xref target='Part2' x:rel='#response.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY method                 "<xref target='Part2' x:rel='#method' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -473,7 +471,6 @@
 <section title="ABNF Rules defined in other Parts of the Specification" anchor="abnf.dependencies">
   <x:anchor-alias value="request-header"/>
   <x:anchor-alias value="response-header"/>
-  <x:anchor-alias value="accept-params"/>
   <x:anchor-alias value="entity-body"/>
   <x:anchor-alias value="entity-header"/>
   <x:anchor-alias value="Cache-Control"/>
@@ -487,7 +484,6 @@
   <x:ref>response-header</x:ref> = &lt;response-header, defined in &response-header-fields;&gt;
 </artwork></figure>
 <figure><!-- Part3--><artwork type="abnf2616">
-  <x:ref>accept-params</x:ref>   = &lt;accept-params, defined in &header-accept;&gt;
   <x:ref>entity-body</x:ref>     = &lt;entity-body, defined in &entity-body;&gt;
   <x:ref>entity-header</x:ref>   = &lt;entity-header, defined in &entity-header-fields;&gt;
 </artwork></figure>
@@ -1144,6 +1140,32 @@
    the same product &SHOULD; only differ in the product-version portion of
    the product value).
 </t>
+</section>
+
+<section title="Quality Values" anchor="quality.values">
+  <x:anchor-alias value="qvalue"/>
+<t>
+   Both transfer codings (TE request header, <xref target="header.te"/>)
+   and content negotiation (&content.negotiation;) use short "floating point"
+   numbers to indicate the relative importance ("weight") of various
+   negotiable parameters.  A weight is normalized to a real number in
+   the range 0 through 1, where 0 is the minimum and 1 the maximum
+   value. If a parameter has a quality value of 0, then content with
+   this parameter is `not acceptable' for the client. HTTP/1.1
+   applications &MUST-NOT; generate more than three digits after the
+   decimal point. User configuration of these values &SHOULD; also be
+   limited in this fashion.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="qvalue"/>
+  <x:ref>qvalue</x:ref>         = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
+                 / ( "1" [ "." 0*3("0") ] )
+</artwork></figure>
+<x:note>
+  <t>
+     <x:h>Note:</x:h> "Quality values" is a misnomer, since these values merely represent
+     relative degradation in desired quality.
+  </t>
+</x:note>
 </section>
 
 </section>
@@ -2380,6 +2402,8 @@
   <x:anchor-alias value="TE"/>
   <x:anchor-alias value="TE-v"/>
   <x:anchor-alias value="t-codings"/>
+  <x:anchor-alias value="te-params"/>
+  <x:anchor-alias value="te-ext"/>
 <t>
    The request-header field "TE" indicates what extension transfer-codings
    it is willing to accept in the response and whether or not it is
@@ -2388,10 +2412,12 @@
    list of extension transfer-coding names with optional accept
    parameters (as described in <xref target="transfer.codings"/>).
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="TE-v"/><iref primary="true" item="Grammar" subitem="t-codings"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="TE-v"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="te-params"/><iref primary="true" item="Grammar" subitem="te-ext"/>
   <x:ref>TE</x:ref>        = "TE" ":" <x:ref>OWS</x:ref> <x:ref>TE-v</x:ref>
   <x:ref>TE-v</x:ref>      = #<x:ref>t-codings</x:ref>
-  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-extension</x:ref> [ <x:ref>accept-params</x:ref> ] )
+  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-extension</x:ref> [ <x:ref>te-params</x:ref> ] )
+  <x:ref>te-params</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> *( <x:ref>te-ext</x:ref> )
+  <x:ref>te-ext</x:ref>    = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) ]
 </artwork></figure>
 <t>
    The presence of the keyword "trailers" indicates that the client is
@@ -2434,7 +2460,7 @@
     <x:lt>
       <t>If the transfer-coding being tested is one of the transfer-codings
          listed in the TE field, then it is acceptable unless it
-         is accompanied by a qvalue of 0. (As defined in &qvalue;, a
+         is accompanied by a qvalue of 0. (As defined in <xref target="quality.values"/>, a
          qvalue of 0 means "not acceptable.")</t>
     </x:lt>
     <x:lt>
@@ -2447,7 +2473,7 @@
 </t>
 <t>
    If the TE field-value is empty or if no TE field is present, the only
-   transfer-coding  is "chunked". A message with no transfer-coding is
+   transfer-coding is "chunked". A message with no transfer-coding is
    always acceptable.
 </t>
 </section>
@@ -4093,6 +4119,10 @@
    implementations (<xref target="http.version"/>)
 </t>
 <t>
+   Quality Values of zero should indicate that "I don't want something"
+   to allow clients to refuse a representation. (<xref target="quality.values"/>)
+</t>
+<t>
    Transfer-coding had significant problems, particularly with
    interactions with chunked encoding. The solution is that transfer-codings
    become as full fledged as content-codings. This involves
@@ -4463,7 +4493,6 @@ GMT = %x47.4D.54
 <x:ref>Warning</x:ref> = &lt;Warning, defined in [Part6], Section 15.6&gt;
 
 <x:ref>absolute-URI</x:ref> = &lt;absolute-URI, defined in [RFC3986], Section 4.3&gt;
-<x:ref>accept-params</x:ref> = &lt;accept-params, defined in [Part3], Section 5.1&gt;
 <x:ref>asctime-date</x:ref> = wkday SP date3 SP time SP 4DIGIT
 <x:ref>attribute</x:ref> = token
 <x:ref>authority</x:ref> = &lt;authority, defined in [RFC3986], Section 3.2&gt;
@@ -4532,6 +4561,7 @@ l-Wed = %x57.65.64.6E.65.73.64.61.79
 <x:ref>quoted-pair</x:ref> = "\" quoted-text
 <x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
 <x:ref>quoted-text</x:ref> = %x01-09 / %x0B-0C / %x0E-FF
+<x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 
 <x:ref>received-by</x:ref> = ( uri-host [ ":" port ] ) / pseudonym
 <x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
@@ -4564,9 +4594,11 @@ s-Tue = %x54.75.65
 s-Wed = %x57.65.64
 <x:ref>start-line</x:ref> = Request-Line / Status-Line
 
-<x:ref>t-codings</x:ref> = "trailers" / ( transfer-extension [ accept-params ] )
+<x:ref>t-codings</x:ref> = "trailers" / ( transfer-extension [ te-params ] )
 <x:ref>tchar</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "." /
  "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+<x:ref>te-ext</x:ref> = OWS ";" OWS token [ "=" ( token / quoted-string ) ]
+<x:ref>te-params</x:ref> = OWS ";" OWS "q=" qvalue *te-ext
 <x:ref>time</x:ref> = 2DIGIT ":" 2DIGIT ":" 2DIGIT
 <x:ref>token</x:ref> = 1*tchar
 <x:ref>trailer-part</x:ref> = *( entity-header CRLF )
@@ -4946,6 +4978,10 @@ s-Wed = %x57.65.64
   <list style="symbols"> 
     <t>
       Rewrite introduction; add mostly new Architecture Section.
+    </t>
+    <t>
+      Move definition of quality values from Part 3 into Part 1;
+      make TE request header grammar independent of accept-params (defined in Part 3).
     </t>
   </list>
 </t>
