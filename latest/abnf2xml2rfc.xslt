@@ -20,13 +20,17 @@
     <figure>
       <xsl:text>&#10;</xsl:text>
       <artwork type="abnf" name="{$abnf}">
-        <xsl:for-each select="$lines">
+        <xsl:for-each select="$lines[substring(.,1,2)!='; ']">
+        
+          <!-- Group by start character -->
           <xsl:variable name="lineno" select="position()"/>
           <xsl:variable name="sc1" select="substring(.,1,1)"/>
           <xsl:variable name="sc0" select="x:laststartchar($lines, $lineno - 1)"/>
           <xsl:if test="$sc1!=' ' and $sc0!=' ' and $sc1!=$sc0">
             <xsl:text>&#10;</xsl:text>
           </xsl:if>
+
+          <!-- Add cross-refs for terms -->
           <xsl:analyze-string select="." regex='^([A-Za-z0-9\-]+) = ' flags="sm">
             <xsl:matching-substring>
               <xsl:variable name="term" select="regex-group(1)"/>
@@ -44,17 +48,32 @@
               <xsl:value-of select="."/>
             </xsl:non-matching-substring>
           </xsl:analyze-string>
+
           <xsl:text>&#10;</xsl:text>
         </xsl:for-each>
       </artwork>
       <xsl:text>&#10;</xsl:text>
     </figure>  
     <xsl:text>&#10;</xsl:text>
+    
+    <figure>
+      <preamble>ABNF diagnostics:</preamble>
+      <artwork type="inline">
+        <xsl:for-each select="$lines[substring(.,1,2)='; ']">
+          <xsl:value-of select="."/>
+          <xsl:text>&#10;</xsl:text>
+        </xsl:for-each>
+    </artwork></figure>
   </section>
 
   <!-- check whether it's up-to-date... -->
+  <xsl:variable name="src">
+    <xsl:for-each select="//section[@anchor='collected.abnf']//artwork">
+      <xsl:value-of select="."/>
+    </xsl:for-each>
+  </xsl:variable>
   
-  <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space(//section[@anchor='collected.abnf']//artwork) != normalize-space($collected)">
+  <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space($src) != normalize-space($collected)">
     <xsl:message>WARNING: appendix contained inside source document needs to be updated</xsl:message>
     <!--<xsl:message>A: <xsl:value-of select="//section[@anchor='collected.abnf']//artwork"/></xsl:message>
     <xsl:message>B: <xsl:value-of select="$collected"/></xsl:message>-->
