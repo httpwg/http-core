@@ -4,6 +4,7 @@ saxon = java -classpath $(saxpath) net.sf.saxon.Transform -novw -l
 
 stylesheet = ../myxml2rfc.xslt
 reduction  = ../../rfc2629xslt/clean-for-DTD.xslt
+bap  = ../../abnfparser/bap
 
 TARGETS = p1-messaging.html \
           p2-semantics.html \
@@ -26,6 +27,27 @@ TARGETS = p1-messaging.html \
           p5-range.txt \
           p6-cache.txt \
           p7-auth.txt \
+          p1-messaging.abnf \
+          p2-semantics.abnf \
+          p3-payload.abnf \
+          p4-conditional.abnf \
+          p5-range.abnf \
+          p6-cache.abnf \
+          p7-auth.abnf \
+          p1-messaging.parsed-abnf \
+          p2-semantics.parsed-abnf \
+          p3-payload.parsed-abnf \
+          p4-conditional.parsed-abnf \
+          p5-range.parsed-abnf \
+          p6-cache.parsed-abnf \
+          p7-auth.parsed-abnf \
+          p1-messaging.abnf-appendix \
+          p2-semantics.abnf-appendix \
+          p3-payload.abnf-appendix \
+          p4-conditional.abnf-appendix \
+          p5-range.abnf-appendix \
+          p6-cache.abnf-appendix \
+          p7-auth.abnf-appendix \
           p1-messaging.iana-headers \
           p2-semantics.iana-headers \
           p2-semantics.iana-methods	\
@@ -50,6 +72,15 @@ clean:
 
 %.txt: %.redxml
 	$(xml2rfc) $< $@
+
+%.abnf: %.xml ../../rfc2629xslt/extract-artwork.xslt
+	$(saxon) $< ../../rfc2629xslt/extract-artwork.xslt type="abnf2616" >$@
+
+%.parsed-abnf: %.abnf
+	$(bap)/bap -i $(bap)/core.abnf < $< | sort | $(bap)/bap  -i $(bap)/core.abnf -l 69 >$@
+
+%.abnf-appendix: %.parsed-abnf
+	$(saxon) $(basename $<).xml abnf2xml2rfc.xslt abnf="$<" >$@
 
 %.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
 	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@

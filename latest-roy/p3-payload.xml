@@ -12,7 +12,7 @@
   <!ENTITY SHOULD "<bcp14 xmlns='http://purl.org/net/xml2rfc/ext'>SHOULD</bcp14>">
   <!ENTITY SHOULD-NOT "<bcp14 xmlns='http://purl.org/net/xml2rfc/ext'>SHOULD NOT</bcp14>">
   <!ENTITY ID-VERSION "latest">
-  <!ENTITY ID-MONTH "February">
+  <!ENTITY ID-MONTH "March">
   <!ENTITY ID-YEAR "2009">
   <!ENTITY notation                 "<xref target='Part1' x:rel='#notation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY notation-abnf            "<xref target='Part1' x:rel='#notation.abnf' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -30,6 +30,7 @@
   <!ENTITY message-headers          "<xref target='Part1' x:rel='#message.headers' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY multipart-byteranges     "<xref target='Part5' x:rel='#internet.media.type.multipart.byteranges' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY full-date                "<xref target='Part1' x:rel='#full.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY qvalue                   "<xref target='Part1' x:rel='#quality.values' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY uri                      "<xref target='Part1' x:rel='#uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
 ]>
 <?rfc toc="yes" ?>
@@ -295,6 +296,7 @@
   <x:anchor-alias value="Last-Modified"/>
   <x:anchor-alias value="message-header"/>
   <x:anchor-alias value="partial-URI"/>
+  <x:anchor-alias value="qvalue"/>
 <t>
   The ABNF rules below are defined in other parts: 
 </t>
@@ -303,6 +305,7 @@
   <x:ref>Content-Length</x:ref> = &lt;Content-Length, defined in &header-content-length;&gt;
   <x:ref>message-header</x:ref> = &lt;message-header, defined in &message-headers;&gt;
   <x:ref>partial-URI</x:ref>    = &lt;partial-URI, defined in &uri;&gt;
+  <x:ref>qvalue</x:ref>         = &lt;qvalue, defined in &qvalue;&gt;
 </artwork></figure>
 <figure><!--Part4--><artwork type="abnf2616">
   <x:ref>Last-Modified</x:ref>  = &lt;Last-Modified, defined in &header-last-modified;&gt;
@@ -602,29 +605,6 @@
 </section>
 </section>
 
-<section title="Quality Values" anchor="quality.values">
-  <x:anchor-alias value="qvalue"/>
-<t>
-   HTTP content negotiation (<xref target="content.negotiation"/>) uses short "floating point"
-   numbers to indicate the relative importance ("weight") of various
-   negotiable parameters.  A weight is normalized to a real number in
-   the range 0 through 1, where 0 is the minimum and 1 the maximum
-   value. If a parameter has a quality value of 0, then content with
-   this parameter is `not acceptable' for the client. HTTP/1.1
-   applications &MUST-NOT; generate more than three digits after the
-   decimal point. User configuration of these values &SHOULD; also be
-   limited in this fashion.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="qvalue"/>
-  <x:ref>qvalue</x:ref>         = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
-                 / ( "1" [ "." 0*3("0") ] )
-</artwork></figure>
-<t>
-   "Quality values" is a misnomer, since these values merely represent
-   relative degradation in desired quality.
-</t>
-</section>
-
 <section title="Language Tags" anchor="language.tags">
   <x:anchor-alias value="language-tag"/>
   <x:anchor-alias value="primary-tag"/>
@@ -653,7 +633,7 @@
    IANA. Example tags include:
 </t>
 <figure><artwork type="example">
-    en, en-US, en-cockney, i-cherokee, x-pig-latin
+  en, en-US, en-cockney, i-cherokee, x-pig-latin
 </artwork></figure>
 <t>
    where any two-letter primary-tag is an ISO-639 language abbreviation
@@ -729,7 +709,7 @@
    These define a two-layer, ordered encoding model:
 </t>
 <figure><artwork type="example">
-    entity-body := Content-Encoding( Content-Type( data ) )
+  entity-body := Content-Encoding( Content-Type( data ) )
 </artwork></figure>
 <t>
    Content-Type specifies the media type of the underlying data.
@@ -966,7 +946,7 @@
    factor. The first "q" parameter (if any) separates the media-range
    parameter(s) from the accept-params. Quality factors allow the user
    or user agent to indicate the relative degree of preference for that
-   media-range, using the qvalue scale from 0 to 1 (<xref target="quality.values"/>). The
+   media-range, using the qvalue scale from 0 to 1 (&qvalue;). The
    default value is q=1.
   <list><t>
       <x:h>Note:</x:h> Use of the "q" parameter name to separate media type
@@ -1019,13 +999,13 @@
 </artwork></figure>
 <t>
    have the following precedence:
+   <list style="numbers">
+    <t>text/html;level=1</t>
+    <t>text/html</t>
+    <t>text/*</t>
+    <t>*/*</t>
+   </list>
 </t>
-<figure><artwork type="example">
-    1) text/html;level=1
-    2) text/html
-    3) text/*
-    4) */*
-</artwork></figure>
 <t>
    The media type quality factor associated with a given type is
    determined by finding the media range with the highest precedence
@@ -1038,14 +1018,15 @@
 <t>
    would cause the following values to be associated:
 </t>
-<figure><artwork type="example">
-    text/html;level=1         = 1
-    text/html                 = 0.7
-    text/plain                = 0.3
-    image/jpeg                = 0.5
-    text/html;level=2         = 0.4
-    text/html;level=3         = 0.7
-</artwork></figure>
+<texttable align="left">
+  <ttcol>Media Type</ttcol><ttcol>Quality Value</ttcol>
+  <c>text/html;level=1</c>    <c>1</c>
+  <c>text/html</c>            <c>0.7</c>
+  <c>text/plain</c>           <c>0.3</c>
+  <c>image/jpeg</c>           <c>0.5</c>
+  <c>text/html;level=2</c>    <c>0.4</c>
+  <c>text/html;level=3</c>    <c>0.7</c>
+</texttable>
 <t>
       <x:h>Note:</x:h> A user agent might be provided with a default set of quality
       values for certain media ranges. However, unless the user agent is
@@ -1136,7 +1117,7 @@
   <list style="numbers">
       <t>If the content-coding is one of the content-codings listed in
          the Accept-Encoding field, then it is acceptable, unless it is
-         accompanied by a qvalue of 0. (As defined in <xref target="quality.values"/>, a
+         accompanied by a qvalue of 0. (As defined in &qvalue;, a
          qvalue of 0 means "not acceptable.")</t>
 
       <t>The special "*" symbol in an Accept-Encoding field matches any
@@ -2588,7 +2569,7 @@
    An example is
 </t>
 <figure><artwork type="example">
-   Content-Disposition: attachment; filename="fname.ext"
+  Content-Disposition: attachment; filename="fname.ext"
 </artwork></figure>
 <t>
    The receiving user agent &SHOULD-NOT;  respect any directory path
@@ -2631,10 +2612,6 @@
 <t>
    A content-coding of "identity" was introduced, to solve problems
    discovered in caching. (<xref target="content.codings"/>)
-</t>
-<t>
-   Quality Values of zero should indicate that "I don't want something"
-   to allow clients to refuse a representation. (<xref target="quality.values"/>)
 </t>
 <t>
    The Alternates<iref item="Alternates header" primary="true"/><iref item="Headers" subitem="Alternate" primary="true"/>, Content-Version<iref item="Content-Version header" primary="true"/><iref item="Headers" subitem="Content-Version" primary="true"/>, Derived-From<iref item="Derived-From header" primary="true"/><iref item="Headers" subitem="Derived-From" primary="true"/>, Link<iref item="Link header" primary="true"/><iref item="Headers" subitem="Link" primary="true"/>, URI<iref item="URI header" primary="true"/><iref item="Headers" subitem="URI" primary="true"/>, Public<iref item="Public header" primary="true"/><iref item="Headers" subitem="Public" primary="true"/> and
@@ -2737,7 +2714,7 @@
 <x:ref>primary-tag</x:ref> = 1*8ALPHA
 
 <x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in [Part1], Section 1.2.2&gt;
-<x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
+<x:ref>qvalue</x:ref> = &lt;qvalue, defined in [Part1], Section 3.5&gt;
 
 <x:ref>subtag</x:ref> = 1*8ALPHA
 <x:ref>subtype</x:ref> = token
@@ -2747,7 +2724,10 @@
 
 <x:ref>value</x:ref> = token / quoted-string
 
-; Accept defined but not used
+
+</artwork>
+</figure>
+<figure><preamble>ABNF diagnostics:</preamble><artwork type="inline">; Accept defined but not used
 ; Accept-Charset defined but not used
 ; Accept-Encoding defined but not used
 ; Accept-Language defined but not used
@@ -2755,11 +2735,7 @@
 ; content-disposition defined but not used
 ; entity-body defined but not used
 ; entity-header defined but not used
-
-
-</artwork>
-</figure>
-</section>
+</artwork></figure></section>
 
 <section title="Change Log (to be removed by RFC Editor before publication)" anchor="change.log">
 
@@ -2937,6 +2913,14 @@
   <list style="symbols"> 
     <t>
       Add appendix containing collected and expanded ABNF, reorganize ABNF introduction.
+    </t>
+  </list>
+</t>
+<t>
+  Other changes:
+  <list style="symbols"> 
+    <t>
+      Move definition of quality values into Part 1.
     </t>
   </list>
 </t>
