@@ -60,6 +60,7 @@
       <preamble>ABNF diagnostics:</preamble>
       <artwork type="inline">
         <xsl:for-each select="$lines[substring(.,1,2)='; ']">
+          <xsl:text>&#10;</xsl:text>
           <xsl:value-of select="."/>
           <xsl:text>&#10;</xsl:text>
         </xsl:for-each>
