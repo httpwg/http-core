@@ -77,7 +77,7 @@ clean:
 	$(saxon) $< ../../rfc2629xslt/extract-artwork.xslt type="abnf2616" >$@
 
 %.parsed-abnf: %.abnf
-	$(bap)/bap -i $(bap)/core.abnf < $< | sort | $(bap)/bap  -i $(bap)/core.abnf -l 69 >$@
+	$(bap)/bap -i $(bap)/core.abnf < $< | sort | $(bap)/bap -k -i $(bap)/core.abnf -l 69 >$@
 
 %.abnf-appendix: %.parsed-abnf
 	$(saxon) $(basename $<).xml abnf2xml2rfc.xslt abnf="$<" >$@

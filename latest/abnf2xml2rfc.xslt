@@ -13,7 +13,8 @@
   <xsl:variable name="src" select="."/>
   <xsl:variable name="collected" select="unparsed-text($abnf)"/>
 
-  <xsl:variable name="lines" as="xs:string*" select="tokenize($collected, '\r?\n')"/>
+  <xsl:variable name="all-lines" as="xs:string*" select="tokenize($collected, '\r?\n')"/>
+  <xsl:variable name="lines" select="$all-lines[normalize-space(.)!='']"/>
   
   <section title="Collected ABNF" anchor="collected.abnf">
     <xsl:text>&#10;</xsl:text>
