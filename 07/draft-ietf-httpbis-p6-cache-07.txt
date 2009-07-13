@@ -175,7 +175,7 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
      C.6.  Since draft-ietf-httpbis-p6-cache-04 . . . . . . . . . . . 35
      C.7.  Since draft-ietf-httpbis-p6-cache-05 . . . . . . . . . . . 35
      C.8.  Since draft-ietf-httpbis-p6-cache-06 . . . . . . . . . . . 35
-   Index  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+   Index  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
    Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 38
 
 
@@ -718,9 +718,9 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
 2.4.  Validation Model
 
-   Checking with the origin server to see if a stale or otherwise
-   unusable cached response can be reused is called "validating" or
-   "revalidating."  Doing so potentially avoids the overhead of
+   When a cache has one or more stored responses for a requested URI,
+   but cannot serve any of them (e.g., because they are not fresh, or
+   one cannot be selected; see Section 2.6), it can use the conditional
 
 
 
@@ -729,28 +729,43 @@ Fielding, et al.        Expires January 14, 2010               [Page 13]
 Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
 
-   retransmitting the response body when the stored response is valid.
+   request mechanism [Part4] in the forwarded request to give the origin
+   server an opportunity to both select a valid stored response to be
+   used, and to update it.  This process is known as "validating" or
+   "revalidating" the stored response.
 
-   HTTP's conditional request mechanism [Part4] is used for this
-   purpose.  When a stored response includes one or more validators,
-   such as the field values of an ETag or Last-Modified header field,
-   then a validating request SHOULD be made conditional to those field
-   values.
+   When sending such a conditional request, the cache SHOULD add an If-
+   Modified-Since header whose value is that of the Last-Modified header
+   from the selected (see Section 2.6) stored response, if available.
+
+   Additionally, the cache SHOULD add an If-None-Match header whose
+   value is that of the ETag header(s) from all responses stored for the
+   requested URI, if present.  However, if any of the stored responses
+   contains only partial content, its entity-tag SHOULD NOT be included
+   in the If-None-Match header field unless the request is for a range
+   that would be fully satisfied by that stored response.
 
    A 304 (Not Modified) response status code indicates that the stored
    response can be updated and reused; see Section 2.7.
 
-   If instead the cache receives a full response (i.e., one with a
-   response body), it is used to satisfy the request and replace the
-   stored response. [[anchor5: Should there be a requirement here?]]
+   A full response (i.e., one with a response body) indicates that none
+   of the stored responses nominated in the conditional request is
+   suitable.  Instead, the full response is used both to satisfy the
+   request and replace the stored response. [[anchor5: Should there be a
+   requirement here?]]
 
    If a cache receives a 5xx response while attempting to validate a
    response, it MAY either forward this response to the requesting
    client, or act as if the server failed to respond.  In the latter
-   case, it MAY return a previously stored response (which SHOULD
-   include the 111 warn-code; see Section 3.6) unless the stored
-   response includes the "must-revalidate" cache directive (see
-   Section 2.3.3).
+   case, it MAY return a previously stored response (see Section 2.3.3).
+
+   If a cache receives a successful response whose Content-Location
+   field matches that of an existing stored response for the same
+   Request-URI, whose entity-tag differs from that of the existing
+   stored response, and whose Date is more recent than that of the
+   existing response, the existing response SHOULD NOT be returned in
+   response to future requests and SHOULD be deleted from the cache.
+   [[anchor6: DISCUSS: Not sure if this is necessary.]]
 
 2.5.  Request Methods that Invalidate
 
@@ -761,6 +776,14 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
    The following HTTP methods MUST cause a cache to invalidate the
    Request-URI as well as the URI(s) in the Location and Content-
    Location headers (if present):
+
+
+
+
+Fielding, et al.        Expires January 14, 2010               [Page 14]
+
+Internet-Draft              HTTP/1.1, Part 6                   July 2009
+
 
    o  PUT
 
@@ -773,17 +796,10 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
    from the host part in the Request-URI.  This helps prevent denial of
    service attacks.
 
-   [[anchor6: TODO: "host part" needs to be specified better.]]
+   [[anchor7: TODO: "host part" needs to be specified better.]]
 
    A cache that passes through requests for methods it does not
    understand SHOULD invalidate the Request-URI.
-
-
-
-Fielding, et al.        Expires January 14, 2010               [Page 14]
-
-Internet-Draft              HTTP/1.1, Part 6                   July 2009
-
 
    Here, "invalidate" means that the cache will either remove all stored
    responses related to the Request-URI, or will mark these as "invalid"
@@ -795,44 +811,28 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
    origin server might not have gone through the cache where a response
    is stored.
 
-   [[anchor7: TODO: specify that only successful (2xx, 3xx?) responses
+   [[anchor8: TODO: specify that only successful (2xx, 3xx?) responses
    invalidate.]]
 
 2.6.  Caching Negotiated Responses
 
-   Use of server-driven content negotiation (Section 4.1 of [Part3])
-   alters the conditions under which a cache can use the response for
-   subsequent requests.
-
    When a cache receives a request that can be satisfied by a stored
-   response that includes a Vary header field (Section 3.5), it MUST NOT
-   use that response unless all of the selecting request-headers in the
-   presented request match the corresponding stored request-headers from
-   the original request.
+   response that has a Vary header field (Section 3.5), it MUST NOT use
+   that response unless all of the selecting request-headers nominated
+   by the Vary header match in both the original request (i.e., that
+   associated with the stored response), and the presented request.
 
    The selecting request-headers from two requests are defined to match
    if and only if the selecting request-headers in the first request can
    be transformed to the selecting request-headers in the second request
-   by adding or removing linear white space [[anchor8: [ref]]] at places
+   by adding or removing linear white space [[anchor9: [ref]]] at places
    where this is allowed by the corresponding ABNF, and/or combining
    multiple message-header fields with the same field name following the
-   rules about message headers in Section 4.2 of [Part1].  [[DISCUSS-
-   header-specific-canonicalization: Should the matching requirement be
-   relaxed so that it would be ok to use a cached response if the
-   selecting request headers match after header-specific
-   canonicalization? (see
-   <http://trac.tools.ietf.org/wg/httpbis/trac/ticket/147>)]]
+   rules about message headers in Section 4.2 of [Part1].
 
-   A Vary header field-value of "*" always fails to match, and
-   subsequent requests to that resource can only be properly interpreted
-   by the origin server.
+   If a header field is absent from a request, it can only match another
+   request if it is also absent there.
 
-   If no stored response matches, the cache MAY forward the presented
-   request to the origin server in a conditional request, and SHOULD
-   include all ETags stored with potentially suitable responses in an
-   If-None-Match request header.  If the server responds with 304 (Not
-   Modified) and includes an entity tag or Content-Location that
-   indicates the entity to be used, that cached response MUST be used to
 
 
 
@@ -841,54 +841,54 @@ Fielding, et al.        Expires January 14, 2010               [Page 15]
 Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
 
-   satisfy the presented request, and SHOULD be used to update the
-   corresponding stored response; see Section 2.7.
+   A Vary header field-value of "*" always fails to match, and
+   subsequent requests to that resource can only be properly interpreted
+   by the origin server.
 
-   If any of the stored responses contains only partial content, its
-   entity-tag SHOULD NOT be included in the If-None-Match header field
-   unless the request is for a range that would be fully satisfied by
-   that stored response.
+   The stored response with matching selecting request-headers is known
+   as the selected response.
 
-   If a cache receives a successful response whose Content-Location
-   field matches that of an existing stored response for the same
-   Request-URI, whose entity-tag differs from that of the existing
-   stored response, and whose Date is more recent than that of the
-   existing response, the existing response SHOULD NOT be returned in
-   response to future requests and SHOULD be deleted from the
-   cache.[[anchor9: DISCUSS: Not sure if this is necessary.]]
+   If no selected response is available, the cache MAY forward the
+   presented request to the origin server in a conditional request; see
+   Section 2.4.
 
 2.7.  Combining Responses
 
    When a cache receives a 304 (Not Modified) response or a 206 (Partial
-   Content) response, it needs to update the stored response with the
-   new one, so that the updated response can be sent to the client.
+   Content) response (in this section, the "new" response"), it needs to
+   created an updated response by combining the stored response with the
+   new one, so that the updated response can be used to satisfy the
+   request.
 
-   If the status code is 304 (Not Modified), the cache SHOULD use the
-   stored entity-body as the updated entity-body.  If the status code is
-   206 (Partial Content) and the ETag or Last-Modified headers match
-   exactly, the cache MAY combine the stored entity-body in the stored
-   response with the updated entity-body received in the response and
-   use the result as the updated entity-body (see Section 4 of [Part5]).
+   If the new response contains an ETag, it identifies the stored
+   response to use. [[anchor10: may need language about Content-Location
+   here]][[anchor11: cover case where INM with multiple etags was sent]]
 
-   The stored response headers are used for the updated response, except
-   that
+   If the status code is 206 (partial content), both the stored and new
+   responses MUST have ETags, and those ETags MUST match using the
+   strong comparison function (see Section 4 of [Part4]).  Otherwise,
+   the responses MUST NOT be combined.
+
+   The stored response headers are used as those of the updated
+   response, except that
 
    o  any stored Warning headers with warn-code 1xx (see Section 3.6)
-      MUST be deleted from the stored response and the forwarded
-      response.
+      MUST be deleted from the stored response and the updated response.
 
    o  any stored Warning headers with warn-code 2xx MUST be retained in
-      the stored response and the forwarded response.
+      the stored response and the updated response.
 
-   o  any headers provided in the 304 or 206 response MUST replace the
+   o  any headers provided in the new response MUST replace the
       corresponding headers from the stored response.
 
-   A cache MUST also replace any stored headers with corresponding
-   headers received in the incoming response, except for Warning headers
-   as described immediately above.  If a header field-name in the
-   incoming response matches more than one header in the stored
-   response, all such old headers MUST be replaced.  It MAY store the
-   combined entity-body.
+   If a header field-name in the new response matches more than one
+   header in the stored response, all such stored headers MUST be
+   replaced.
+
+   The updated response can [[[[anchor12: requirement?]]]] be used to
+   replace the stored response in cache.  In the case of a 206 response,
+   the combined entity-body MAY be stored.
+
 
 
 
@@ -897,7 +897,7 @@ Fielding, et al.        Expires January 14, 2010               [Page 16]
 Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
 
-   [[anchor10: ISSUE: discuss how to handle HEAD updates]]
+   [[anchor13: ISSUE: discuss how to handle HEAD updates]]
 
 
 3.  Header Field Definitions
@@ -1026,7 +1026,7 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
       willing to accept a response that has exceeded its expiration time
       by no more than the specified number of seconds.  If no value is
       assigned to max-stale, then the client is willing to accept a
-      stale response of any age. [[anchor11: of any staleness? --mnot]]
+      stale response of any age. [[anchor14: of any staleness? --mnot]]
 
    min-fresh
 
@@ -1697,12 +1697,12 @@ A.1.  Changes from RFC 2068
    required fixing exactly when chunked encoding is used (to allow for
    transfer encoding that may not be self delimiting); it was important
    to straighten out exactly how message lengths are computed. (see also
-   [Part1], [Part3] and [Part5]) [[anchor14: This used to refer to the
+   [Part1], [Part3] and [Part5]) [[anchor17: This used to refer to the
    text about non-modifiable headers, and will have to be updated later
    on. --jre]]
 
    Proxies should be able to add Content-Length when appropriate.
-   [[anchor15: This used to refer to the text about non-modifiable
+   [[anchor18: This used to refer to the text about non-modifiable
    headers, and will have to be updated later on. --jre]]
 
    Range request responses would become very verbose if all meta-data
@@ -1949,10 +1949,10 @@ C.8.  Since draft-ietf-httpbis-p6-cache-06
    o  <http://tools.ietf.org/wg/httpbis/trac/ticket/161>: "base for
       numeric protocol elements"
 
+   Affected issues:
 
-Index
-
-   A
+   o  <http://tools.ietf.org/wg/httpbis/trac/ticket/37>: Vary and non-
+      existant headers
 
 
 
@@ -1961,6 +1961,9 @@ Fielding, et al.        Expires January 14, 2010               [Page 35]
 Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
 
+Index
+
+   A
       age  6
       Age header  17
 
@@ -2006,9 +2009,6 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
          extension-pragma  24
          Pragma  24
          pragma-directive  24
-         Pragma-v  24
-         Vary  24
-         Vary-v  24
 
 
 
@@ -2017,6 +2017,9 @@ Fielding, et al.        Expires January 14, 2010               [Page 36]
 Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
 
+         Pragma-v  24
+         Vary  24
+         Vary-v  24
          warn-agent  25
          warn-code  25
          warn-date  25
@@ -2062,9 +2065,6 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
       private
          Cache Directive  20
       proxy-revalidate
-         Cache Directive  21
-      public
-         Cache Directive  20
 
 
 
@@ -2072,6 +2072,10 @@ Fielding, et al.        Expires January 14, 2010               [Page 37]
 
 Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
+
+         Cache Directive  21
+      public
+         Cache Directive  20
 
    S
       s-maxage
@@ -2110,14 +2114,10 @@ Authors' Addresses
    URI:   http://www.laptop.org/
 
 
-   Jeffrey C. Mogul
-   Hewlett-Packard Company
-   HP Labs, Large Scale Systems Group
-   1501 Page Mill Road, MS 1177
-   Palo Alto, CA  94304
-   USA
 
-   Email: JeffMogul@acm.org
+
+
+
 
 
 
@@ -2127,6 +2127,16 @@ Authors' Addresses
 Fielding, et al.        Expires January 14, 2010               [Page 38]
 
 Internet-Draft              HTTP/1.1, Part 6                   July 2009
+
+
+   Jeffrey C. Mogul
+   Hewlett-Packard Company
+   HP Labs, Large Scale Systems Group
+   1501 Page Mill Road, MS 1177
+   Palo Alto, CA  94304
+   USA
+
+   Email: JeffMogul@acm.org
 
 
    Henrik Frystyk Nielsen
@@ -2166,16 +2176,6 @@ Internet-Draft              HTTP/1.1, Part 6                   July 2009
 
    Email: timbl@w3.org
    URI:   http://www.w3.org/People/Berners-Lee/
-
-
-
-
-
-
-
-
-
-
 
 
 

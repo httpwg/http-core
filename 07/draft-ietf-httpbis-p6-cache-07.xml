@@ -144,9 +144,9 @@
 
   <author fullname="Mark Nottingham" initials="M." role="editor" surname="Nottingham">
     <organization/>
-    <address>		
-      <email>mnot@mnot.net</email>	
-      <uri>http://www.mnot.net/</uri>		
+    <address>
+      <email>mnot@mnot.net</email>
+      <uri>http://www.mnot.net/</uri>
     </address>
   </author>
 
@@ -158,10 +158,10 @@
         <city>Muenster</city><region>NW</region><code>48155</code>
         <country>Germany</country>
       </postal>
-      <phone>+49 251 2807760</phone>	
-      <facsimile>+49 251 2807761</facsimile>	
-      <email>julian.reschke@greenbytes.de</email>	
-      <uri>http://greenbytes.de/tech/webdav/</uri>	
+      <phone>+49 251 2807760</phone>
+      <facsimile>+49 251 2807761</facsimile>
+      <email>julian.reschke@greenbytes.de</email>
+      <uri>http://greenbytes.de/tech/webdav/</uri>
     </address>
   </author>
 
@@ -679,30 +679,50 @@
 
 <section anchor="validation.model" title="Validation Model">
 <t>
-  Checking with the origin server to see if a stale or otherwise unusable cached response
-  can be reused is called "validating" or "revalidating." Doing so potentially avoids
-  the overhead of retransmitting the response body when the stored response is valid.
+  When a cache has one or more stored responses for a requested URI, but cannot  
+  serve any of them (e.g., because they are not fresh, or one cannot be selected; 
+  see <xref target="caching.negotiated.responses"/>), 
+  it can use the conditional request mechanism <xref target="Part4"/> in the forwarded 
+  request to give the origin server an opportunity to both select a valid stored 
+  response to be used, and to update it. This process is known as "validating" 
+  or "revalidating" the stored response.
 </t>
 <t>
-  HTTP's conditional request mechanism <xref target="Part4"/> is used for this purpose. When a stored
-  response includes one or more validators, such as the field values of an ETag or
-  Last-Modified header field, then a validating request SHOULD be made conditional
-  to those field values.
+  When sending such a conditional request, the cache SHOULD add an If-Modified-Since 
+  header whose value is that of the Last-Modified header from the selected 
+  (see <xref target="caching.negotiated.responses"/>) stored response, if available.
+</t>
+<t>
+  Additionally, the cache SHOULD add an If-None-Match header whose value  
+  is that of the ETag header(s) from all responses stored for the requested URI, 
+  if present. However, if any of the stored responses contains only partial
+  content, its entity-tag SHOULD NOT be included in the If-None-Match header 
+  field unless the request is for a range that would be fully satisfied by 
+  that stored response.
 </t>
 <t>
   A 304 (Not Modified) response status code indicates that the stored 
   response can be updated and reused; see <xref target="combining.headers"/>.
 </t>
 <t>
-  If instead the cache receives a full response (i.e., one with a response body), it is used to satisfy the
+  A full response (i.e., one with a response body) indicates that none  
+  of the stored responses nominated in the conditional request is
+  suitable. Instead, the full response is used both to satisfy the
   request and replace the stored response. <cref>Should there be a requirement here?</cref>
 </t>
 <t>
   If a cache receives a 5xx response while attempting to validate a response, it MAY
   either forward this response to the requesting client, or act as if the server failed to
-  respond. In the latter case, it MAY return a previously stored response (which SHOULD include the
-  111 warn-code; see <xref target="header.warning"/>) unless the
-  stored response includes the "must-revalidate" cache directive (see <xref target="serving.stale.responses"/>).
+  respond. In the latter case, it MAY return a previously stored response (see <xref target="serving.stale.responses"/>).
+</t>
+<t>
+  If a cache receives a successful response whose Content-Location field  
+  matches that of an existing stored response for the same Request-URI,  
+  whose entity-tag differs from that of the existing stored response,  
+  and whose Date is more recent than that of the existing response, the  
+  existing response SHOULD NOT be returned in response to future  
+  requests and SHOULD be deleted from the cache. <cref>DISCUSS: Not  
+  sure if this is necessary.</cref>
 </t>
 </section>
 
@@ -750,15 +770,11 @@
 
 <section anchor="caching.negotiated.responses" title="Caching Negotiated Responses">
 <t>
-  Use of server-driven content negotiation (Section 4.1 of <xref target="Part3"/>) alters
-  the conditions under which a cache can use the response for subsequent
-  requests.
-</t>
-<t>
   When a cache receives a request that can be satisfied by a stored response
-  that includes a Vary header field (<xref target="header.vary"/>), it MUST NOT use that response unless
-  all of the selecting request-headers in the presented request match the corresponding
-  stored request-headers from the original request.
+  that has a Vary header field (<xref target="header.vary"/>), it MUST NOT use that 
+  response unless all of the selecting request-headers nominated by the Vary header match
+  in both the original request (i.e., that associated with the stored response),
+  and the presented request.
 </t>
 <t>
   The selecting request-headers from two requests are defined to match if and only if the
@@ -766,68 +782,62 @@
   request-headers in the second request by adding or removing linear white space
   <cref>[ref]</cref> at places where this is allowed by the corresponding ABNF, and/or
   combining multiple message-header fields with the same field name following the rules
-  about message headers in Section 4.2 of <xref target="Part1"/>. <cref anchor="DISCUSS-header-specific-canonicalization">
-  Should the matching requirement be relaxed so that it would be ok to use a cached response
-  if the selecting request headers match after header-specific canonicalization?
-  (see &lt;http://trac.tools.ietf.org/wg/httpbis/trac/ticket/147&gt;)
-  </cref>
+  about message headers in Section 4.2 of <xref target="Part1"/>.
+</t>
+<t>
+  If a header field is absent from a request, it can only match another request 
+  if it is also absent there.
 </t>
 <t>
   A Vary header field-value of "*" always fails to match, and subsequent requests to that
   resource can only be properly interpreted by the origin server.
 </t>
 <t>
-  If no stored response matches, the cache MAY forward the presented request to the origin
-  server in a conditional request, and SHOULD include all ETags stored with 
-  potentially suitable responses in an If-None-Match request header. If the server responds with 304 (Not Modified) and
-  includes an entity tag or Content-Location that indicates the entity to be used, that
-  cached response MUST be used to satisfy the presented request, and SHOULD
-  be used to update the corresponding stored response; see <xref target="combining.headers"/>.
+  The stored response with matching selecting request-headers is known as the
+  selected response.
 </t>
 <t>
-  If any of the stored responses contains only partial content, its entity-tag SHOULD NOT 
-  be included in the If-None-Match header field unless the request is for a range that would 
-  be fully satisfied by that stored response.
-</t>
-<t>
-  If a cache receives a successful response whose Content-Location field matches that of an
-  existing stored response for the same Request-URI, whose entity-tag differs from that of
-  the existing stored response, and whose Date is more recent than that of the existing
-  response, the existing response SHOULD NOT be returned in response to future
-  requests and SHOULD be deleted from the cache.<cref>DISCUSS: Not sure if this is necessary.</cref>
+  If no selected response is available, the cache MAY forward the presented 
+  request to the origin server in a conditional request; see <xref target="validation.model"/>.
 </t>
 </section>
 
 <section anchor="combining.headers" title="Combining Responses">
 <t>
-  When a cache receives a 304 (Not Modified) response or a 206 (Partial Content) response,
-  it needs to update the stored response with the new one, so that the updated response can
-  be sent to the client.
+  When a cache receives a 304 (Not Modified) response or a 206 (Partial Content) response
+  (in this section, the "new" response"), it needs to created an updated response by combining
+  the stored response with the new one, so that the updated response can be used to satisfy the request.
 </t>
 <t>
-  If the status code is 304 (Not Modified), the cache SHOULD use the stored entity-body as
-  the updated entity-body. If the status code is 206 (Partial Content) and the ETag or
-  Last-Modified headers match exactly, the cache MAY combine the stored entity-body in
-  the stored response with the updated entity-body received in the response and use the
-  result as the updated entity-body (see Section 4 of <xref target="Part5"/>).
+  If the new response contains an ETag, it identifies the stored  
+  response to use. <cref>may need language about Content-Location  
+  here</cref><cref>cover case where INM with multiple etags was sent</cref>
 </t>
 <t>
-  The stored response headers are used for the updated response, except that
+  If the status code is 206 (partial content), both the stored and new  
+  responses MUST have ETags, and those ETags MUST match using the strong  
+  comparison function (see Section 4 of <xref target="Part4"/>). Otherwise, the  
+  responses MUST NOT be combined.
+</t>
+<t>
+  The stored response headers are used as those of the updated response, except that
   <list style="symbols">
     <t>any stored Warning headers with warn-code 1xx (see <xref target="header.warning"/>)
-      MUST be deleted from the stored response and the forwarded response.</t>
+      MUST be deleted from the stored response and the updated response.</t>
     <t>any stored Warning headers with warn-code 2xx MUST be retained in the stored
-      response and the forwarded response.</t>
-    <t>any headers provided in the 304 or 206 response MUST replace the corresponding
+      response and the updated response.</t>
+    <t>any headers provided in the new response MUST replace the corresponding
       headers from the stored response.</t>
   </list>
 </t>
 <t>
-  A cache MUST also replace any stored headers with corresponding headers received in the
-  incoming response, except for Warning headers as described immediately above. If a header
-  field-name in the incoming response matches more than one header in the stored response,
-  all such old headers MUST be replaced. It MAY store the combined
-  entity-body.
+  If a header field-name in the new response matches more than one  
+  header in the stored response, all such stored headers MUST be replaced.
+</t>
+<t>
+  The updated response can [[<cref>requirement?</cref>]] be used to replace the  
+  stored response in cache. In the case of a 206 response, the combined  
+  entity-body MAY be stored.
 </t>
 <t>
   <cref>ISSUE: discuss how to handle HEAD updates</cref>
@@ -2282,6 +2292,15 @@ warning-value = warn-code SP warn-agent SP warn-text [ SP warn-date
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/161"/>:
       "base for numeric protocol elements"
+    </t>
+  </list>
+</t>
+<t>
+  Affected issues:
+  <list style="symbols">
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/37"/>: 
+      Vary and non-existant headers
     </t>
   </list>
 </t>
