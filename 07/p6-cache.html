@@ -869,19 +869,26 @@ li.indline1 {
          forward to the requesting client, and the received response is no longer fresh, the cache <em class="bcp14">SHOULD</em> forward it to the requesting client without adding a new Warning (but without removing any existing Warning headers). A cache <em class="bcp14">SHOULD NOT</em> attempt to validate a response simply because that response became stale in transit.
       </p>
       <h2 id="rfc.section.2.4"><a href="#rfc.section.2.4">2.4</a>&nbsp;<a id="validation.model" href="#validation.model">Validation Model</a></h2>
-      <p id="rfc.section.2.4.p.1">Checking with the origin server to see if a stale or otherwise unusable cached response can be reused is called "validating"
-         or "revalidating." Doing so potentially avoids the overhead of retransmitting the response body when the stored response is
-         valid.
+      <p id="rfc.section.2.4.p.1">When a cache has one or more stored responses for a requested URI, but cannot serve any of them (e.g., because they are not
+         fresh, or one cannot be selected; see <a href="#caching.negotiated.responses" title="Caching Negotiated Responses">Section&nbsp;2.6</a>), it can use the conditional request mechanism <a href="#Part4" id="rfc.xref.Part4.2"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a> in the forwarded request to give the origin server an opportunity to both select a valid stored response to be used, and to
+         update it. This process is known as "validating" or "revalidating" the stored response.
       </p>
-      <p id="rfc.section.2.4.p.2">HTTP's conditional request mechanism <a href="#Part4" id="rfc.xref.Part4.2"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a> is used for this purpose. When a stored response includes one or more validators, such as the field values of an ETag or Last-Modified
-         header field, then a validating request <em class="bcp14">SHOULD</em> be made conditional to those field values.
+      <p id="rfc.section.2.4.p.2">When sending such a conditional request, the cache <em class="bcp14">SHOULD</em> add an If-Modified-Since header whose value is that of the Last-Modified header from the selected (see <a href="#caching.negotiated.responses" title="Caching Negotiated Responses">Section&nbsp;2.6</a>) stored response, if available.
       </p>
-      <p id="rfc.section.2.4.p.3">A 304 (Not Modified) response status code indicates that the stored response can be updated and reused; see <a href="#combining.headers" title="Combining Responses">Section&nbsp;2.7</a>.
+      <p id="rfc.section.2.4.p.3">Additionally, the cache <em class="bcp14">SHOULD</em> add an If-None-Match header whose value is that of the ETag header(s) from all responses stored for the requested URI, if
+         present. However, if any of the stored responses contains only partial content, its entity-tag <em class="bcp14">SHOULD NOT</em> be included in the If-None-Match header field unless the request is for a range that would be fully satisfied by that stored
+         response.
       </p>
-      <p id="rfc.section.2.4.p.4">If instead the cache receives a full response (i.e., one with a response body), it is used to satisfy the request and replace
-         the stored response. <span class="comment" id="rfc.comment.5">[<a href="#rfc.comment.5" class="smpl">rfc.comment.5</a>: Should there be a requirement here?]</span> 
+      <p id="rfc.section.2.4.p.4">A 304 (Not Modified) response status code indicates that the stored response can be updated and reused; see <a href="#combining.headers" title="Combining Responses">Section&nbsp;2.7</a>.
       </p>
-      <p id="rfc.section.2.4.p.5">If a cache receives a 5xx response while attempting to validate a response, it <em class="bcp14">MAY</em> either forward this response to the requesting client, or act as if the server failed to respond. In the latter case, it <em class="bcp14">MAY</em> return a previously stored response (which <em class="bcp14">SHOULD</em> include the 111 warn-code; see <a href="#header.warning" id="rfc.xref.header.warning.2" title="Warning">Section&nbsp;3.6</a>) unless the stored response includes the "must-revalidate" cache directive (see <a href="#serving.stale.responses" title="Serving Stale Responses">Section&nbsp;2.3.3</a>).
+      <p id="rfc.section.2.4.p.5">A full response (i.e., one with a response body) indicates that none of the stored responses nominated in the conditional
+         request is suitable. Instead, the full response is used both to satisfy the request and replace the stored response. <span class="comment" id="rfc.comment.5">[<a href="#rfc.comment.5" class="smpl">rfc.comment.5</a>: Should there be a requirement here?]</span> 
+      </p>
+      <p id="rfc.section.2.4.p.6">If a cache receives a 5xx response while attempting to validate a response, it <em class="bcp14">MAY</em> either forward this response to the requesting client, or act as if the server failed to respond. In the latter case, it <em class="bcp14">MAY</em> return a previously stored response (see <a href="#serving.stale.responses" title="Serving Stale Responses">Section&nbsp;2.3.3</a>).
+      </p>
+      <p id="rfc.section.2.4.p.7">If a cache receives a successful response whose Content-Location field matches that of an existing stored response for the
+         same Request-URI, whose entity-tag differs from that of the existing stored response, and whose Date is more recent than that
+         of the existing response, the existing response <em class="bcp14">SHOULD NOT</em> be returned in response to future requests and <em class="bcp14">SHOULD</em> be deleted from the cache. <span class="comment" id="rfc.comment.6">[<a href="#rfc.comment.6" class="smpl">rfc.comment.6</a>: DISCUSS: Not sure if this is necessary.]</span> 
       </p>
       <h2 id="rfc.section.2.5"><a href="#rfc.section.2.5">2.5</a>&nbsp;<a id="invalidation.after.updates.or.deletions" href="#invalidation.after.updates.or.deletions">Request Methods that Invalidate</a></h2>
       <p id="rfc.section.2.5.p.1">Because unsafe methods (<a href="p2-semantics.html#safe.methods" title="Safe Methods">Section 7.1.1</a> of <a href="#Part2" id="rfc.xref.Part2.2"><cite title="HTTP/1.1, part 2: Message Semantics">[Part2]</cite></a>) have the potential for changing state on the origin server, intervening caches can use them to keep their contents up-to-date.
@@ -896,7 +903,7 @@ li.indline1 {
       <p id="rfc.section.2.5.p.3">An invalidation based on a URI from a Location or Content-Location header <em class="bcp14">MUST NOT</em> be performed if the host part of that URI differs from the host part in the Request-URI. This helps prevent denial of service
          attacks.
       </p>
-      <p id="rfc.section.2.5.p.4"> <span class="comment" id="rfc.comment.6">[<a href="#rfc.comment.6" class="smpl">rfc.comment.6</a>: TODO: "host part" needs to be specified better.]</span> 
+      <p id="rfc.section.2.5.p.4"> <span class="comment" id="rfc.comment.7">[<a href="#rfc.comment.7" class="smpl">rfc.comment.7</a>: TODO: "host part" needs to be specified better.]</span> 
       </p>
       <p id="rfc.section.2.5.p.5">A cache that passes through requests for methods it does not understand <em class="bcp14">SHOULD</em> invalidate the Request-URI.
       </p>
@@ -906,54 +913,46 @@ li.indline1 {
       <p id="rfc.section.2.5.p.7">Note that this does not guarantee that all appropriate responses are invalidated. For example, the request that caused the
          change at the origin server might not have gone through the cache where a response is stored.
       </p>
-      <p id="rfc.section.2.5.p.8"> <span class="comment" id="rfc.comment.7">[<a href="#rfc.comment.7" class="smpl">rfc.comment.7</a>: TODO: specify that only successful (2xx, 3xx?) responses invalidate.]</span> 
+      <p id="rfc.section.2.5.p.8"> <span class="comment" id="rfc.comment.8">[<a href="#rfc.comment.8" class="smpl">rfc.comment.8</a>: TODO: specify that only successful (2xx, 3xx?) responses invalidate.]</span> 
       </p>
       <h2 id="rfc.section.2.6"><a href="#rfc.section.2.6">2.6</a>&nbsp;<a id="caching.negotiated.responses" href="#caching.negotiated.responses">Caching Negotiated Responses</a></h2>
-      <p id="rfc.section.2.6.p.1">Use of server-driven content negotiation (<a href="p3-payload.html#server-driven.negotiation" title="Server-driven Negotiation">Section 4.1</a> of <a href="#Part3" id="rfc.xref.Part3.1"><cite title="HTTP/1.1, part 3: Message Payload and Content Negotiation">[Part3]</cite></a>) alters the conditions under which a cache can use the response for subsequent requests.
+      <p id="rfc.section.2.6.p.1">When a cache receives a request that can be satisfied by a stored response that has a Vary header field (<a href="#header.vary" id="rfc.xref.header.vary.1" title="Vary">Section&nbsp;3.5</a>), it <em class="bcp14">MUST NOT</em> use that response unless all of the selecting request-headers nominated by the Vary header match in both the original request
+         (i.e., that associated with the stored response), and the presented request.
       </p>
-      <p id="rfc.section.2.6.p.2">When a cache receives a request that can be satisfied by a stored response that includes a Vary header field (<a href="#header.vary" id="rfc.xref.header.vary.1" title="Vary">Section&nbsp;3.5</a>), it <em class="bcp14">MUST NOT</em> use that response unless all of the selecting request-headers in the presented request match the corresponding stored request-headers
-         from the original request.
+      <p id="rfc.section.2.6.p.2">The selecting request-headers from two requests are defined to match if and only if the selecting request-headers in the first
+         request can be transformed to the selecting request-headers in the second request by adding or removing linear white space <span class="comment" id="rfc.comment.9">[<a href="#rfc.comment.9" class="smpl">rfc.comment.9</a>: [ref]]</span> at places where this is allowed by the corresponding ABNF, and/or combining multiple message-header fields with the same field
+         name following the rules about message headers in <a href="p1-messaging.html#message.headers" title="Message Headers">Section 4.2</a> of <a href="#Part1" id="rfc.xref.Part1.12"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>.
       </p>
-      <p id="rfc.section.2.6.p.3">The selecting request-headers from two requests are defined to match if and only if the selecting request-headers in the first
-         request can be transformed to the selecting request-headers in the second request by adding or removing linear white space <span class="comment" id="rfc.comment.8">[<a href="#rfc.comment.8" class="smpl">rfc.comment.8</a>: [ref]]</span> at places where this is allowed by the corresponding ABNF, and/or combining multiple message-header fields with the same field
-         name following the rules about message headers in <a href="p1-messaging.html#message.headers" title="Message Headers">Section 4.2</a> of <a href="#Part1" id="rfc.xref.Part1.12"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>. <span class="comment" id="DISCUSS-header-specific-canonicalization">[<a href="#DISCUSS-header-specific-canonicalization" class="smpl">DISCUSS-header-specific-canonicalization</a>: Should the matching requirement be relaxed so that it would be ok to use a cached response if the selecting request headers
-            match after header-specific canonicalization? (see <a href="http://trac.tools.ietf.org/wg/httpbis/trac/ticket/147">Issue 147</a>)]</span> 
-      </p>
+      <p id="rfc.section.2.6.p.3">If a header field is absent from a request, it can only match another request if it is also absent there.</p>
       <p id="rfc.section.2.6.p.4">A Vary header field-value of "*" always fails to match, and subsequent requests to that resource can only be properly interpreted
          by the origin server.
       </p>
-      <p id="rfc.section.2.6.p.5">If no stored response matches, the cache <em class="bcp14">MAY</em> forward the presented request to the origin server in a conditional request, and <em class="bcp14">SHOULD</em> include all ETags stored with potentially suitable responses in an If-None-Match request header. If the server responds with
-         304 (Not Modified) and includes an entity tag or Content-Location that indicates the entity to be used, that cached response <em class="bcp14">MUST</em> be used to satisfy the presented request, and <em class="bcp14">SHOULD</em> be used to update the corresponding stored response; see <a href="#combining.headers" title="Combining Responses">Section&nbsp;2.7</a>.
-      </p>
-      <p id="rfc.section.2.6.p.6">If any of the stored responses contains only partial content, its entity-tag <em class="bcp14">SHOULD NOT</em> be included in the If-None-Match header field unless the request is for a range that would be fully satisfied by that stored
-         response.
-      </p>
-      <p id="rfc.section.2.6.p.7">If a cache receives a successful response whose Content-Location field matches that of an existing stored response for the
-         same Request-URI, whose entity-tag differs from that of the existing stored response, and whose Date is more recent than that
-         of the existing response, the existing response <em class="bcp14">SHOULD NOT</em> be returned in response to future requests and <em class="bcp14">SHOULD</em> be deleted from the cache.<span class="comment" id="rfc.comment.9">[<a href="#rfc.comment.9" class="smpl">rfc.comment.9</a>: DISCUSS: Not sure if this is necessary.]</span> 
+      <p id="rfc.section.2.6.p.5">The stored response with matching selecting request-headers is known as the selected response.</p>
+      <p id="rfc.section.2.6.p.6">If no selected response is available, the cache <em class="bcp14">MAY</em> forward the presented request to the origin server in a conditional request; see <a href="#validation.model" title="Validation Model">Section&nbsp;2.4</a>.
       </p>
       <h2 id="rfc.section.2.7"><a href="#rfc.section.2.7">2.7</a>&nbsp;<a id="combining.headers" href="#combining.headers">Combining Responses</a></h2>
-      <p id="rfc.section.2.7.p.1">When a cache receives a 304 (Not Modified) response or a 206 (Partial Content) response, it needs to update the stored response
-         with the new one, so that the updated response can be sent to the client.
+      <p id="rfc.section.2.7.p.1">When a cache receives a 304 (Not Modified) response or a 206 (Partial Content) response (in this section, the "new" response"),
+         it needs to created an updated response by combining the stored response with the new one, so that the updated response can
+         be used to satisfy the request.
       </p>
-      <p id="rfc.section.2.7.p.2">If the status code is 304 (Not Modified), the cache <em class="bcp14">SHOULD</em> use the stored entity-body as the updated entity-body. If the status code is 206 (Partial Content) and the ETag or Last-Modified
-         headers match exactly, the cache <em class="bcp14">MAY</em> combine the stored entity-body in the stored response with the updated entity-body received in the response and use the result
-         as the updated entity-body (see <a href="p5-range.html#combining.byte.ranges" title="Combining Ranges">Section 4</a> of <a href="#Part5" id="rfc.xref.Part5.3"><cite title="HTTP/1.1, part 5: Range Requests and Partial Responses">[Part5]</cite></a>).
+      <p id="rfc.section.2.7.p.2">If the new response contains an ETag, it identifies the stored response to use. <span class="comment" id="rfc.comment.10">[<a href="#rfc.comment.10" class="smpl">rfc.comment.10</a>: may need language about Content-Location here]</span><span class="comment" id="rfc.comment.11">[<a href="#rfc.comment.11" class="smpl">rfc.comment.11</a>: cover case where INM with multiple etags was sent]</span> 
       </p>
-      <p id="rfc.section.2.7.p.3">The stored response headers are used for the updated response, except that </p>
+      <p id="rfc.section.2.7.p.3">If the status code is 206 (partial content), both the stored and new responses <em class="bcp14">MUST</em> have ETags, and those ETags <em class="bcp14">MUST</em> match using the strong comparison function (see <a href="p4-conditional.html#weak.and.strong.validators" title="Weak and Strong Validators">Section 4</a> of <a href="#Part4" id="rfc.xref.Part4.3"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>). Otherwise, the responses <em class="bcp14">MUST NOT</em> be combined.
+      </p>
+      <p id="rfc.section.2.7.p.4">The stored response headers are used as those of the updated response, except that </p>
       <ul>
-         <li>any stored Warning headers with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.3" title="Warning">Section&nbsp;3.6</a>) <em class="bcp14">MUST</em> be deleted from the stored response and the forwarded response.
+         <li>any stored Warning headers with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.2" title="Warning">Section&nbsp;3.6</a>) <em class="bcp14">MUST</em> be deleted from the stored response and the updated response.
          </li>
-         <li>any stored Warning headers with warn-code 2xx <em class="bcp14">MUST</em> be retained in the stored response and the forwarded response.
+         <li>any stored Warning headers with warn-code 2xx <em class="bcp14">MUST</em> be retained in the stored response and the updated response.
          </li>
-         <li>any headers provided in the 304 or 206 response <em class="bcp14">MUST</em> replace the corresponding headers from the stored response.
+         <li>any headers provided in the new response <em class="bcp14">MUST</em> replace the corresponding headers from the stored response.
          </li>
       </ul>
-      <p id="rfc.section.2.7.p.4">A cache <em class="bcp14">MUST</em> also replace any stored headers with corresponding headers received in the incoming response, except for Warning headers as
-         described immediately above. If a header field-name in the incoming response matches more than one header in the stored response,
-         all such old headers <em class="bcp14">MUST</em> be replaced. It <em class="bcp14">MAY</em> store the combined entity-body.
+      <p id="rfc.section.2.7.p.5">If a header field-name in the new response matches more than one header in the stored response, all such stored headers <em class="bcp14">MUST</em> be replaced.
       </p>
-      <p id="rfc.section.2.7.p.5"> <span class="comment" id="rfc.comment.10">[<a href="#rfc.comment.10" class="smpl">rfc.comment.10</a>: ISSUE: discuss how to handle HEAD updates]</span> 
+      <p id="rfc.section.2.7.p.6">The updated response can [[<span class="comment" id="rfc.comment.12">[<a href="#rfc.comment.12" class="smpl">rfc.comment.12</a>: requirement?]</span>]] be used to replace the stored response in cache. In the case of a 206 response, the combined entity-body <em class="bcp14">MAY</em> be stored.
+      </p>
+      <p id="rfc.section.2.7.p.7"> <span class="comment" id="rfc.comment.13">[<a href="#rfc.comment.13" class="smpl">rfc.comment.13</a>: ISSUE: discuss how to handle HEAD updates]</span> 
       </p>
       <h1 id="rfc.section.3"><a href="#rfc.section.3">3.</a>&nbsp;<a id="header.fields" href="#header.fields">Header Field Definitions</a></h1>
       <p id="rfc.section.3.p.1">This section defines the syntax and semantics of HTTP/1.1 header fields related to caching.</p>
@@ -1039,7 +1038,7 @@ li.indline1 {
          <dd>The max-stale request directive indicates that the client is willing to accept a response that has exceeded its expiration
             time. If max-stale is assigned a value, then the client is willing to accept a response that has exceeded its expiration time
             by no more than the specified number of seconds. If no value is assigned to max-stale, then the client is willing to accept
-            a stale response of any age. <span class="comment" id="rfc.comment.11">[<a href="#rfc.comment.11" class="smpl">rfc.comment.11</a>: of any staleness? --mnot]</span></dd>
+            a stale response of any age. <span class="comment" id="rfc.comment.14">[<a href="#rfc.comment.14" class="smpl">rfc.comment.14</a>: of any staleness? --mnot]</span></dd>
       </dl>
       <p id="rfc.section.3.2.1.p.6"> <span id="rfc.iref.c.8"></span>  <span id="rfc.iref.m.3"></span> min-fresh 
       </p>
@@ -1427,7 +1426,7 @@ li.indline1 {
                   <td>Warning</td>
                   <td>http</td>
                   <td>standard</td>
-                  <td> <a href="#header.warning" id="rfc.xref.header.warning.4" title="Warning">Section&nbsp;3.6</a> 
+                  <td> <a href="#header.warning" id="rfc.xref.header.warning.3" title="Warning">Section&nbsp;3.6</a> 
                   </td>
                </tr>
             </tbody>
@@ -1543,16 +1542,16 @@ li.indline1 {
       </p>
       <p id="rfc.section.A.1.p.2">Transfer-coding and message lengths all interact in ways that required fixing exactly when chunked encoding is used (to allow
          for transfer encoding that may not be self delimiting); it was important to straighten out exactly how message lengths are
-         computed. (see also <a href="#Part1" id="rfc.xref.Part1.14"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>, <a href="#Part3" id="rfc.xref.Part3.2"><cite title="HTTP/1.1, part 3: Message Payload and Content Negotiation">[Part3]</cite></a> and <a href="#Part5" id="rfc.xref.Part5.4"><cite title="HTTP/1.1, part 5: Range Requests and Partial Responses">[Part5]</cite></a>) <span class="comment" id="rfc.comment.12">[<a href="#rfc.comment.12" class="smpl">rfc.comment.12</a>: This used to refer to the text about non-modifiable headers, and will have to be updated later on. --jre]</span> 
+         computed. (see also <a href="#Part1" id="rfc.xref.Part1.14"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>, <a href="#Part3" id="rfc.xref.Part3.1"><cite title="HTTP/1.1, part 3: Message Payload and Content Negotiation">[Part3]</cite></a> and <a href="#Part5" id="rfc.xref.Part5.3"><cite title="HTTP/1.1, part 5: Range Requests and Partial Responses">[Part5]</cite></a>) <span class="comment" id="rfc.comment.15">[<a href="#rfc.comment.15" class="smpl">rfc.comment.15</a>: This used to refer to the text about non-modifiable headers, and will have to be updated later on. --jre]</span> 
       </p>
-      <p id="rfc.section.A.1.p.3">Proxies should be able to add Content-Length when appropriate. <span class="comment" id="rfc.comment.13">[<a href="#rfc.comment.13" class="smpl">rfc.comment.13</a>: This used to refer to the text about non-modifiable headers, and will have to be updated later on. --jre]</span> 
+      <p id="rfc.section.A.1.p.3">Proxies should be able to add Content-Length when appropriate. <span class="comment" id="rfc.comment.16">[<a href="#rfc.comment.16" class="smpl">rfc.comment.16</a>: This used to refer to the text about non-modifiable headers, and will have to be updated later on. --jre]</span> 
       </p>
       <p id="rfc.section.A.1.p.4">Range request responses would become very verbose if all meta-data were always returned; by allowing the server to only send
          needed headers in a 206 response, this problem can be avoided. (<a href="#combining.headers" title="Combining Responses">Section&nbsp;2.7</a>)
       </p>
       <p id="rfc.section.A.1.p.5">The Cache-Control: max-age directive was not properly defined for responses. (<a href="#cache-response-directive" title="Response Cache-Control Directives">Section&nbsp;3.2.2</a>)
       </p>
-      <p id="rfc.section.A.1.p.6">Warnings could be cached incorrectly, or not updated appropriately. (Section <a href="#expiration.model" title="Freshness Model">2.3</a>, <a href="#combining.headers" title="Combining Responses">2.7</a>, <a href="#header.cache-control" id="rfc.xref.header.cache-control.7" title="Cache-Control">3.2</a>, and <a href="#header.warning" id="rfc.xref.header.warning.5" title="Warning">3.6</a>) Warning also needed to be a general header, as PUT or other methods may have need for it in requests.
+      <p id="rfc.section.A.1.p.6">Warnings could be cached incorrectly, or not updated appropriately. (Section <a href="#expiration.model" title="Freshness Model">2.3</a>, <a href="#combining.headers" title="Combining Responses">2.7</a>, <a href="#header.cache-control" id="rfc.xref.header.cache-control.7" title="Cache-Control">3.2</a>, and <a href="#header.warning" id="rfc.xref.header.warning.4" title="Warning">3.6</a>) Warning also needed to be a general header, as PUT or other methods may have need for it in requests.
       </p>
       <h2 id="rfc.section.A.2"><a href="#rfc.section.A.2">A.2</a>&nbsp;<a id="changes.from.rfc.2616" href="#changes.from.rfc.2616">Changes from RFC 2616</a></h2>
       <p id="rfc.section.A.2.p.1">Clarify denial of service attack avoidance requirement. (<a href="#invalidation.after.updates.or.deletions" title="Request Methods that Invalidate">Section&nbsp;2.5</a>)
@@ -1718,6 +1717,11 @@ li.indline1 {
          <li> &lt;<a href="http://tools.ietf.org/wg/httpbis/trac/ticket/161">http://tools.ietf.org/wg/httpbis/trac/ticket/161</a>&gt;: "base for numeric protocol elements"
          </li>
       </ul>
+      <p id="rfc.section.C.8.p.2">Affected issues: </p>
+      <ul>
+         <li> &lt;<a href="http://tools.ietf.org/wg/httpbis/trac/ticket/37">http://tools.ietf.org/wg/httpbis/trac/ticket/37</a>&gt;: Vary and non-existant headers
+         </li>
+      </ul>
       <h1 id="rfc.index"><a href="#rfc.index">Index</a></h1>
       <p class="noprint"><a href="#rfc.index.A">A</a> <a href="#rfc.index.C">C</a> <a href="#rfc.index.E">E</a> <a href="#rfc.index.F">F</a> <a href="#rfc.index.G">G</a> <a href="#rfc.index.H">H</a> <a href="#rfc.index.I">I</a> <a href="#rfc.index.M">M</a> <a href="#rfc.index.N">N</a> <a href="#rfc.index.O">O</a> <a href="#rfc.index.P">P</a> <a href="#rfc.index.R">R</a> <a href="#rfc.index.S">S</a> <a href="#rfc.index.V">V</a> <a href="#rfc.index.W">W</a> 
       </p>
@@ -1799,7 +1803,7 @@ li.indline1 {
                         <li class="indline1">Expires&nbsp;&nbsp;<a class="iref" href="#rfc.xref.header.expires.1">2.3</a>, <a class="iref" href="#rfc.xref.header.expires.2">2.3.1</a>, <a class="iref" href="#rfc.iref.h.4"><b>3.3</b></a>, <a class="iref" href="#rfc.xref.header.expires.3">5.1</a></li>
                         <li class="indline1">Pragma&nbsp;&nbsp;<a class="iref" href="#rfc.xref.header.pragma.1">2.2</a>, <a class="iref" href="#rfc.xref.header.pragma.2">3.2</a>, <a class="iref" href="#rfc.iref.h.5"><b>3.4</b></a>, <a class="iref" href="#rfc.xref.header.pragma.3">5.1</a></li>
                         <li class="indline1">Vary&nbsp;&nbsp;<a class="iref" href="#rfc.xref.header.vary.1">2.6</a>, <a class="iref" href="#rfc.iref.h.6"><b>3.5</b></a>, <a class="iref" href="#rfc.xref.header.vary.2">5.1</a></li>
-                        <li class="indline1">Warning&nbsp;&nbsp;<a class="iref" href="#rfc.xref.header.warning.1">2.3.3</a>, <a class="iref" href="#rfc.xref.header.warning.2">2.4</a>, <a class="iref" href="#rfc.xref.header.warning.3">2.7</a>, <a class="iref" href="#rfc.iref.h.7"><b>3.6</b></a>, <a class="iref" href="#rfc.xref.header.warning.4">5.1</a>, <a class="iref" href="#rfc.xref.header.warning.5">A.1</a></li>
+                        <li class="indline1">Warning&nbsp;&nbsp;<a class="iref" href="#rfc.xref.header.warning.1">2.3.3</a>, <a class="iref" href="#rfc.xref.header.warning.2">2.7</a>, <a class="iref" href="#rfc.iref.h.7"><b>3.6</b></a>, <a class="iref" href="#rfc.xref.header.warning.3">5.1</a>, <a class="iref" href="#rfc.xref.header.warning.4">A.1</a></li>
                      </ul>
                   </li>
                   <li class="indline1">heuristic expiration time&nbsp;&nbsp;<a class="iref" href="#rfc.iref.h.1">1.2</a></li>
@@ -1873,16 +1877,14 @@ li.indline1 {
                         <li class="indline1"><em>Section 7.1.1</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part2.1">2.2</a>, <a class="iref" href="#rfc.xref.Part2.2">2.5</a></li>
                      </ul>
                   </li>
-                  <li class="indline1"><em>Part3</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part3.1">2.6</a>, <a class="iref" href="#Part3"><b>8.1</b></a>, <a class="iref" href="#rfc.xref.Part3.2">A.1</a><ul class="ind">
-                        <li class="indline1"><em>Section 4.1</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part3.1">2.6</a></li>
-                     </ul>
-                  </li>
-                  <li class="indline1"><em>Part4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.1">2.3.1.1</a>, <a class="iref" href="#rfc.xref.Part4.2">2.4</a>, <a class="iref" href="#Part4"><b>8.1</b></a><ul class="ind">
+                  <li class="indline1"><em>Part3</em>&nbsp;&nbsp;<a class="iref" href="#Part3"><b>8.1</b></a>, <a class="iref" href="#rfc.xref.Part3.1">A.1</a></li>
+                  <li class="indline1"><em>Part4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.1">2.3.1.1</a>, <a class="iref" href="#rfc.xref.Part4.2">2.4</a>, <a class="iref" href="#rfc.xref.Part4.3">2.7</a>, <a class="iref" href="#Part4"><b>8.1</b></a><ul class="ind">
+                        <li class="indline1"><em>Section 4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.3">2.7</a></li>
                         <li class="indline1"><em>Section 6.6</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part4.1">2.3.1.1</a></li>
                      </ul>
                   </li>
-                  <li class="indline1"><em>Part5</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part5.1">2.1.1</a>, <a class="iref" href="#rfc.xref.Part5.2">2.1.1</a>, <a class="iref" href="#rfc.xref.Part5.3">2.7</a>, <a class="iref" href="#Part5"><b>8.1</b></a>, <a class="iref" href="#rfc.xref.Part5.4">A.1</a><ul class="ind">
-                        <li class="indline1"><em>Section 4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part5.2">2.1.1</a>, <a class="iref" href="#rfc.xref.Part5.3">2.7</a></li>
+                  <li class="indline1"><em>Part5</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part5.1">2.1.1</a>, <a class="iref" href="#rfc.xref.Part5.2">2.1.1</a>, <a class="iref" href="#Part5"><b>8.1</b></a>, <a class="iref" href="#rfc.xref.Part5.3">A.1</a><ul class="ind">
+                        <li class="indline1"><em>Section 4</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part5.2">2.1.1</a></li>
                      </ul>
                   </li>
                   <li class="indline1"><em>Part7</em>&nbsp;&nbsp;<a class="iref" href="#rfc.xref.Part7.1">2.1</a>, <a class="iref" href="#rfc.xref.Part7.2">3.2.2</a>, <a class="iref" href="#Part7"><b>8.1</b></a><ul class="ind">
@@ -1934,7 +1936,7 @@ li.indline1 {
                </ul>
             </li>
             <li class="indline0"><a id="rfc.index.W" href="#rfc.index.W"><b>W</b></a><ul class="ind">
-                  <li class="indline1">Warning header&nbsp;&nbsp;<a class="iref" href="#rfc.xref.header.warning.1">2.3.3</a>, <a class="iref" href="#rfc.xref.header.warning.2">2.4</a>, <a class="iref" href="#rfc.xref.header.warning.3">2.7</a>, <a class="iref" href="#rfc.iref.w.1"><b>3.6</b></a>, <a class="iref" href="#rfc.xref.header.warning.4">5.1</a>, <a class="iref" href="#rfc.xref.header.warning.5">A.1</a></li>
+                  <li class="indline1">Warning header&nbsp;&nbsp;<a class="iref" href="#rfc.xref.header.warning.1">2.3.3</a>, <a class="iref" href="#rfc.xref.header.warning.2">2.7</a>, <a class="iref" href="#rfc.iref.w.1"><b>3.6</b></a>, <a class="iref" href="#rfc.xref.header.warning.3">5.1</a>, <a class="iref" href="#rfc.xref.header.warning.4">A.1</a></li>
                </ul>
             </li>
          </ul>
