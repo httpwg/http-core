@@ -507,6 +507,115 @@
    and syntax productions used to define HTTP.
 </t>
 
+<section title="Overall Operation" anchor="intro.overall.operation">
+<t>
+   HTTP is a request/response protocol. A client sends a
+   request to the server in the form of a request method, URI, and
+   protocol version, followed by a MIME-like message containing request
+   modifiers, client information, and possible body content over a
+   connection with a server. The server responds with a status line,
+   including the message's protocol version and a success or error code,
+   followed by a MIME-like message containing server information, entity
+   metadata, and possible entity-body content.
+</t>
+<t>
+   Most HTTP communication is initiated by a user agent and consists of
+   a request to be applied to a resource via the HTTP interface provided
+   by some origin server. In the
+   simplest case, this may be accomplished via a single connection (v)
+   between the user agent (UA) and the origin server (O).
+</t>
+<figure><artwork type="drawing">
+       request chain ------------------------&gt;
+    UA -------------------v------------------- O
+       &lt;----------------------- response chain
+</artwork></figure>
+<t>
+   A more complicated situation occurs when one or more intermediaries
+   are present in the request/response chain. There are three common
+   forms of intermediary: proxy, gateway, and tunnel. A proxy is a
+   forwarding agent, receiving requests for a URI in its absolute form,
+   rewriting all or part of the message, and forwarding the reformatted
+   request toward the server identified by the URI. A gateway is a
+   receiving agent, acting as a layer above some other server(s) and, if
+   necessary, translating the requests to the underlying server's
+   protocol. A tunnel acts as a relay point between two connections
+   without changing the messages; tunnels are used when the
+   communication needs to pass through an intermediary (such as a
+   firewall) even when the intermediary cannot understand the contents
+   of the messages.
+</t>
+<figure><artwork type="drawing">
+       request chain --------------------------------------&gt;
+    UA -----v----- A -----v----- B -----v----- C -----v----- O
+       &lt;------------------------------------- response chain
+</artwork></figure>
+<t>
+   The figure above shows three intermediaries (A, B, and C) between the
+   user agent and origin server. A request or response message that
+   travels the whole chain will pass through four separate connections.
+   This distinction is important because some HTTP communication options
+   may apply only to the connection with the nearest, non-tunnel
+   neighbor, only to the end-points of the chain, or to all connections
+   along the chain. Although the diagram is linear, each participant may
+   be engaged in multiple, simultaneous communications. For example, B
+   may be receiving requests from many clients other than A, and/or
+   forwarding requests to servers other than C, at the same time that it
+   is handling A's request.
+</t>
+<t>
+   Any party to the communication which is not acting as a tunnel may
+   employ an internal cache for handling requests. The effect of a cache
+   is that the request/response chain is shortened if one of the
+   participants along the chain has a cached response applicable to that
+   request. The following illustrates the resulting chain if B has a
+   cached copy of an earlier response from O (via C) for a request which
+   has not been cached by UA or A.
+</t>
+<figure><artwork type="drawing">
+          request chain ----------&gt;
+       UA -----v----- A -----v----- B - - - - - - C - - - - - - O
+          &lt;--------- response chain
+</artwork></figure>
+<t>
+   Not all responses are usefully cacheable, and some requests may
+   contain modifiers which place special requirements on cache behavior.
+   HTTP requirements for cache behavior and cacheable responses are
+   defined in &caching;.
+</t>
+<t>
+   In fact, there are a wide variety of architectures and configurations
+   of caches and proxies currently being experimented with or deployed
+   across the World Wide Web. These systems include national hierarchies
+   of proxy caches to save transoceanic bandwidth, systems that
+   broadcast or multicast cache entries, organizations that distribute
+   subsets of cached data via CD-ROM, and so on. HTTP systems are used
+   in corporate intranets over high-bandwidth links, and for access via
+   PDAs with low-power radio links and intermittent connectivity. The
+   goal of HTTP/1.1 is to support the wide diversity of configurations
+   already deployed while introducing protocol constructs that meet the
+   needs of those who build web applications that require high
+   reliability and, failing that, at least reliable indications of
+   failure.
+</t>
+<t>
+   HTTP communication usually takes place over TCP/IP connections. The
+   default port is TCP 80 (<eref target="http://www.iana.org/assignments/port-numbers"/>), but other ports can be used. This does
+   not preclude HTTP from being implemented on top of any other protocol
+   on the Internet, or on other networks. HTTP only presumes a reliable
+   transport; any protocol that provides such guarantees can be used;
+   the mapping of the HTTP/1.1 request and response structures onto the
+   transport data units of the protocol in question is outside the scope
+   of this specification.
+</t>
+<t>
+   In HTTP/1.0, most implementations used a new connection for each
+   request/response exchange. In HTTP/1.1, a connection may be used for
+   one or more request/response exchanges, although connections may be
+   closed for a variety of reasons (see <xref target="persistent.connections"/>).
+</t>
+</section>
+
 <section title="Uniform Resource Identifiers" anchor="uri">
 <iref primary="true" item="resource"/>
 <t>
@@ -700,115 +809,6 @@
    <cref>TBS: describe why aliases like webcal are harmful.</cref>
 </t>
 </section>
-</section>
-
-<section title="Overall Operation" anchor="intro.overall.operation">
-<t>
-   HTTP is a request/response protocol. A client sends a
-   request to the server in the form of a request method, URI, and
-   protocol version, followed by a MIME-like message containing request
-   modifiers, client information, and possible body content over a
-   connection with a server. The server responds with a status line,
-   including the message's protocol version and a success or error code,
-   followed by a MIME-like message containing server information, entity
-   metadata, and possible entity-body content.
-</t>
-<t>
-   Most HTTP communication is initiated by a user agent and consists of
-   a request to be applied to a resource via the HTTP interface provided
-   by some origin server. In the
-   simplest case, this may be accomplished via a single connection (v)
-   between the user agent (UA) and the origin server (O).
-</t>
-<figure><artwork type="drawing">
-       request chain ------------------------&gt;
-    UA -------------------v------------------- O
-       &lt;----------------------- response chain
-</artwork></figure>
-<t>
-   A more complicated situation occurs when one or more intermediaries
-   are present in the request/response chain. There are three common
-   forms of intermediary: proxy, gateway, and tunnel. A proxy is a
-   forwarding agent, receiving requests for a URI in its absolute form,
-   rewriting all or part of the message, and forwarding the reformatted
-   request toward the server identified by the URI. A gateway is a
-   receiving agent, acting as a layer above some other server(s) and, if
-   necessary, translating the requests to the underlying server's
-   protocol. A tunnel acts as a relay point between two connections
-   without changing the messages; tunnels are used when the
-   communication needs to pass through an intermediary (such as a
-   firewall) even when the intermediary cannot understand the contents
-   of the messages.
-</t>
-<figure><artwork type="drawing">
-       request chain --------------------------------------&gt;
-    UA -----v----- A -----v----- B -----v----- C -----v----- O
-       &lt;------------------------------------- response chain
-</artwork></figure>
-<t>
-   The figure above shows three intermediaries (A, B, and C) between the
-   user agent and origin server. A request or response message that
-   travels the whole chain will pass through four separate connections.
-   This distinction is important because some HTTP communication options
-   may apply only to the connection with the nearest, non-tunnel
-   neighbor, only to the end-points of the chain, or to all connections
-   along the chain. Although the diagram is linear, each participant may
-   be engaged in multiple, simultaneous communications. For example, B
-   may be receiving requests from many clients other than A, and/or
-   forwarding requests to servers other than C, at the same time that it
-   is handling A's request.
-</t>
-<t>
-   Any party to the communication which is not acting as a tunnel may
-   employ an internal cache for handling requests. The effect of a cache
-   is that the request/response chain is shortened if one of the
-   participants along the chain has a cached response applicable to that
-   request. The following illustrates the resulting chain if B has a
-   cached copy of an earlier response from O (via C) for a request which
-   has not been cached by UA or A.
-</t>
-<figure><artwork type="drawing">
-          request chain ----------&gt;
-       UA -----v----- A -----v----- B - - - - - - C - - - - - - O
-          &lt;--------- response chain
-</artwork></figure>
-<t>
-   Not all responses are usefully cacheable, and some requests may
-   contain modifiers which place special requirements on cache behavior.
-   HTTP requirements for cache behavior and cacheable responses are
-   defined in &caching;.
-</t>
-<t>
-   In fact, there are a wide variety of architectures and configurations
-   of caches and proxies currently being experimented with or deployed
-   across the World Wide Web. These systems include national hierarchies
-   of proxy caches to save transoceanic bandwidth, systems that
-   broadcast or multicast cache entries, organizations that distribute
-   subsets of cached data via CD-ROM, and so on. HTTP systems are used
-   in corporate intranets over high-bandwidth links, and for access via
-   PDAs with low-power radio links and intermittent connectivity. The
-   goal of HTTP/1.1 is to support the wide diversity of configurations
-   already deployed while introducing protocol constructs that meet the
-   needs of those who build web applications that require high
-   reliability and, failing that, at least reliable indications of
-   failure.
-</t>
-<t>
-   HTTP communication usually takes place over TCP/IP connections. The
-   default port is TCP 80 (<eref target="http://www.iana.org/assignments/port-numbers"/>), but other ports can be used. This does
-   not preclude HTTP from being implemented on top of any other protocol
-   on the Internet, or on other networks. HTTP only presumes a reliable
-   transport; any protocol that provides such guarantees can be used;
-   the mapping of the HTTP/1.1 request and response structures onto the
-   transport data units of the protocol in question is outside the scope
-   of this specification.
-</t>
-<t>
-   In HTTP/1.0, most implementations used a new connection for each
-   request/response exchange. In HTTP/1.1, a connection may be used for
-   one or more request/response exchanges, although connections may be
-   closed for a variety of reasons (see <xref target="persistent.connections"/>).
-</t>
 </section>
 
 <section title="Use of HTTP for proxy communication" anchor="http.proxy">
