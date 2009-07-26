@@ -272,9 +272,9 @@
    defining the protocol referred to as "HTTP/1.1" and obsoleting
    <xref target="RFC2616"/>.
    Part 1 describes the architectural elements that are used or
-   referred to in HTTP and defines the URI schemes specific to
-   HTTP-based resources, overall network operation, connection
-   management, and HTTP message framing and forwarding requirements.
+   referred to in HTTP, defines the "http" and "https" URI schemes,
+   describes overall network operation and connection management,
+   and defines HTTP message framing and forwarding requirements.
    Our goal is to define all of the mechanisms necessary for HTTP message
    handling that are independent of message semantics, thereby defining the
    complete set of requirements for message parsers and
@@ -501,17 +501,18 @@
 
 <section title="HTTP architecture" anchor="architecture">
 <t>
-   HTTP was created with a specific architecture in mind, the World Wide Web,
+   HTTP was created for the World Wide Web architecture
    and has evolved over time to support the scalability needs of a worldwide
    hypertext system. Much of that architecture is reflected in the terminology
    and syntax productions used to define HTTP.
 </t>
 
 <section title="Uniform Resource Identifiers" anchor="uri">
+<iref primary="true" item="resource"/>
 <t>
    Uniform Resource Identifiers (URIs) <xref target="RFC3986"/> are used
    throughout HTTP as the means for identifying resources. URI references
-   are used to target requests, redirect responses, and define relationships.
+   are used to target requests, indicate redirects, and define relationships.
    HTTP does not limit what a resource may be; it merely defines an interface
    that can be used to interact with a resource via HTTP. More information on
    the scope of URIs and resources can be found in <xref target="RFC3986"/>.
@@ -564,24 +565,63 @@
   <iref item="http URI scheme" primary="true"/>
   <iref item="URI scheme" subitem="http" primary="true"/>
 <t>
-   The "http" scheme is used to locate network resources via the HTTP
-   protocol.
+   The "http" URI scheme is hereby defined for the purpose of minting
+   identifiers according to their association with the hierarchical
+   namespace governed by a potential HTTP origin server listening for
+   TCP connections on a given port.
+   The HTTP server is identified via the generic syntax's 
+   <x:ref>authority</x:ref> component, which includes a host
+   identifier and optional TCP port, and the remainder of the URI is
+   considered to be identifying data corresponding to a resource for
+   which that server might provide an HTTP interface.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URI"/>
   <x:ref>http-URI</x:ref> = "http:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
 </artwork></figure>
 <t>
-   If the port is empty or not given, port 80 is assumed. The semantics
-   are that the identified resource is located at the server listening
-   for TCP connections on that port of that host, and the request-target
-   for the resource is path-absolute (<xref target="request-target"/>). The use of IP addresses
-   in URLs &SHOULD; be avoided whenever possible (see <xref target="RFC1900"/>). If
-   the path-absolute is not present in the URL, it &MUST; be given as "/" when
-   used as a request-target for a resource (<xref target="request-target"/>). If a proxy
-   receives a host name which is not a fully qualified domain name, it
-   &MAY; add its domain to the host name it received. If a proxy receives
-   a fully qualified domain name, the proxy &MUST-NOT; change the host
-   name.
+   The host identifier within an <x:ref>authority</x:ref> component is
+   defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>.  If host is
+   provided as an IP literal or IPv4 address, then the HTTP server is any
+   listener on the indicated TCP port at that IP address. If host is a
+   registered name, then that name is considered an indirect identifier
+   and the recipient might use a name resolution service, such as DNS,
+   to find the address of a listener for that host.
+   The host &MUST-NOT; be empty; if an "http" URI is received with an
+   empty host, then it &MUST; be rejected as invalid. 
+   If the port subcomponent is empty or not given, then TCP port 80 is
+   assumed (the default reserved port for WWW services).
+</t>
+<t>
+   Regardless of the form of host identifier, access to that host is not
+   implied by the mere presence of its name or address. The host may or may
+   not exist and, even when it does exist, may or may not be running an
+   HTTP server or listening to the indicated port. The "http" URI scheme
+   makes use of the delegated nature of Internet names and addresses to
+   establish a naming authority (whatever entity has the ability to place
+   an HTTP server at that Internet name or address) and allows that
+   authority to determine which names are valid and how they might be used.
+</t>
+<t>
+   When an "http" URI is used within a context that calls for access to the
+   indicated resource, a client &MAY; attempt access by resolving
+   the host to an IP address, establishing a TCP connection to that address
+   on the indicated port, and sending an HTTP request message to the server
+   containing the URI's identifying data as described in <xref target="request"/>.
+   If the server responds to that request with a non-interim HTTP response
+   message, as described in <xref target="response"/>, then that response
+   is considered an authoritative answer to the client's request.
+</t>
+<t>
+   Although HTTP is independent of the transport protocol, the "http"
+   scheme is specific to TCP-based services because the name delegation
+   process depends on TCP for establishing authority.
+   An HTTP service based on some other underlying connection protocol
+   would presumably be identified using a different URI scheme, just as
+   the "https" scheme (below) is used for servers that require an SSL/TLS
+   transport layer on a connection. Other protocols may also be used to
+   provide access to "http" identified resources --- it is only the
+   authoritative interface used for mapping the namespace that is
+   specific to TCP.
 </t>
 </section>
 
@@ -589,30 +629,49 @@
    <iref item="https URI scheme"/>
    <iref item="URI scheme" subitem="https"/>
 <t>
-   <cref>TBD: Define and explain purpose of https scheme.</cref>
+   The "https" URI scheme is hereby defined for the purpose of minting
+   identifiers according to their association with the hierarchical
+   namespace governed by a potential HTTP origin server listening for
+   SSL/TLS-secured connections on a given TCP port.
+   The host and port are determined in the same way
+   as for the "http" scheme, except that a default TCP port of 443
+   is assumed if the port subcomponent is empty or not given.
 </t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> the "https" scheme is defined in <xref target="RFC2818"/>.
-  </t>
-</x:note>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="https-URI"/>
+  <x:ref>https-URI</x:ref> = "https:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
+</artwork></figure>
+<t>
+   The primary difference between the "http" and "https" schemes is
+   that interaction with the latter is required to be secured for
+   privacy through the use of strong encryption. The URI cannot be
+   sent in a request until the connection is secure. Likewise, the
+   default for caching is that each response that would be considered
+   "public" under the "http" scheme is instead treated as "private"
+   and thus not eligible for shared caching.
+</t>
+<t>
+   The process for authoritative access to an "https" identified
+   resource is defined in <xref target="RFC2818"/>.
+</t>
 </section>
 
-<section title="URI Comparison" anchor="uri.comparison">
+<section title="http and https URI Normalization and Comparison" anchor="uri.comparison">
 <t>
-   When comparing two URIs to decide if they match or not, a client
-   &SHOULD; use a case-sensitive octet-by-octet comparison of the entire
-   URIs, with these exceptions:
-  <list style="symbols">
-    <t>A port that is empty or not given is equivalent to the default
-        port for that URI-reference;</t>
-    <t>Comparisons of host names &MUST; be case-insensitive;</t>
-    <t>Comparisons of scheme names &MUST; be case-insensitive;</t>
-    <t>An empty path-absolute is equivalent to a path-absolute of "/".</t>
-    <t>Characters other than those in the "reserved" set are equivalent to their
-       percent-encoded octets (see <xref target="RFC3986" x:fmt="," x:sec="2.1"/>).
-    </t>
-  </list>
+   Since the "http" and "https" schemes conform to the URI generic syntax,
+   such URIs are normalized and compared according to the algorithm defined
+   in <xref target="RFC3986" x:fmt="," x:sec="6"/>, using the defaults
+   described above for each scheme.
+</t>
+<t>
+   If the port is equal to the default port for a scheme, the normal
+   form is to elide the port subcomponent. Likewise, an empty path
+   component is equivalent to an absolute path of "/", so the normal
+   form is to provide a path of "/" instead. The scheme and host
+   are case-insensitive and normally provided in lowercase; all
+   other components are compared in a case-sensitive manner.
+   Characters other than those in the "reserved" set are equivalent
+   to their percent-encoded octets (see <xref target="RFC3986"
+   x:fmt="," x:sec="2.1"/>): the normal form is to not encode them.
 </t>
 <t>
    For example, the following three URIs are equivalent:
@@ -622,10 +681,22 @@
    http://EXAMPLE.com/%7Esmith/home.html
    http://EXAMPLE.com:/%7esmith/home.html
 </artwork></figure>
+<t>
+   <cref>[[This paragraph does not belong here. --Roy]]</cref>
+   If path-abempty is the empty string (i.e., there is no slash "/"
+   path separator following the authority), then the "http" URI
+   &MUST; be given as "/" when
+   used as a request-target (<xref target="request-target"/>). If a proxy
+   receives a host name which is not a fully qualified domain name, it
+   &MAY; add its domain to the host name it received. If a proxy receives
+   a fully qualified domain name, the proxy &MUST-NOT; change the host
+   name.
+</t>
 </section>
 
 <section title="Scheme aliases considered harmful" anchor="scheme.aliases">
 <t>
+   <cref>TBS: describe why aliases like webcal are harmful.</cref>
 </t>
 </section>
 </section>
@@ -639,11 +710,12 @@
    connection with a server. The server responds with a status line,
    including the message's protocol version and a success or error code,
    followed by a MIME-like message containing server information, entity
-   metainformation, and possible entity-body content.
+   metadata, and possible entity-body content.
 </t>
 <t>
    Most HTTP communication is initiated by a user agent and consists of
-   a request to be applied to a resource on some origin server. In the
+   a request to be applied to a resource via the HTTP interface provided
+   by some origin server. In the
    simplest case, this may be accomplished via a single connection (v)
    between the user agent (UA) and the origin server (O).
 </t>
@@ -4194,7 +4266,7 @@
   <list>
     <t>
       The information transferred as the payload of a request or
-      response. An entity consists of metainformation in the form of
+      response. An entity consists of metadata in the form of
       entity-header fields and content in the form of an entity-body, as
       described in &entity;.
     </t>
@@ -4272,18 +4344,6 @@
   <list>
     <t>
       An HTTP request message, as defined in <xref target="request"/>.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="resource"/>
-  <x:dfn>resource</x:dfn>
-  <list>
-    <t>
-      A network data object or service that can be identified by a URI,
-      as defined in <xref target="uri"/>. Resources may be available in multiple
-      representations (e.g. multiple languages, data formats, size, and
-      resolutions) or vary in other ways.
     </t>
   </list>
 </t>
@@ -4572,6 +4632,7 @@
 ; fragment defined but not used
 ; generic-message defined but not used
 ; http-URI defined but not used
+; https-URI defined but not used
 ; partial-URI defined but not used
 </artwork></figure></section>
 
