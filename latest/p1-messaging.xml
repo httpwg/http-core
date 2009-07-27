@@ -507,21 +507,32 @@
    and syntax productions used to define HTTP.
 </t>
 
-<section title="Overall Operation" anchor="intro.overall.operation">
+<section title="Client/Server Operation" anchor="operation">
+<iref item="client"/>
+<iref item="server"/>
+<iref item="connection"/>
 <t>
-   HTTP is a request/response protocol. A client sends a
-   request to the server in the form of a request method, URI, and
-   protocol version, followed by a MIME-like message containing request
-   modifiers, client information, and possible body content over a
-   connection with a server. The server responds with a status line,
-   including the message's protocol version and a success or error code,
-   followed by a MIME-like message containing server information, entity
-   metadata, and possible entity-body content.
+   HTTP is a request/response protocol that operates by exchanging messages
+   across a reliable transport or session-layer connection. An HTTP client
+   is a program that establishes a connection to a server for the purpose
+   of sending one or more HTTP requests.  An HTTP server is a program that
+   accepts connections in order to service HTTP requests by sending HTTP
+   responses.
+</t>
+<iref item="user agent"/>
+<iref item="origin server"/>
+<t>
+   Note that the terms "client" and "server" refer only to the roles that
+   these programs perform for a particular connection.  The same program
+   may act as a client on some connections and a server on others.  We use
+   the term "user agent" to refer to the program that initiates a request,
+   such as a WWW browser, editor, or spider (web-traversing robot), and
+   the term "origin server" to refer to the program that can originate
+   authoritative responses to a request.
 </t>
 <t>
-   Most HTTP communication is initiated by a user agent and consists of
-   a request to be applied to a resource via the HTTP interface provided
-   by some origin server. In the
+   Most HTTP communication consists of a retrieval request (GET) for
+   a representation of some resource identified by a URI.  In the
    simplest case, this may be accomplished via a single connection (v)
    between the user agent (UA) and the origin server (O).
 </t>
@@ -530,20 +541,55 @@
     UA -------------------v------------------- O
        &lt;----------------------- response chain
 </artwork></figure>
+<iref item="message"/>
+<iref item="request"/>
+<iref item="response"/>
+<t>
+   A client sends an HTTP request to the server in the form of a request
+   message (<xref target="request"/>), beginning with a method, URI, and
+   protocol version, followed by MIME-like header fields containing
+   request modifiers, client information, and payload metadata, an empty
+   line, and finally the payload body (if any).
+   The server response (<xref target="response"/>) begins with a status line,
+   including the protocol version, a success or error code, and textual
+   reason phrase, followed by MIME-like header fields containing server
+   information, resource metadata, payload metadata, an empty line, and
+   finally the payload body (if any).
+</t>
+<figure><preamble>
+   The following example illustrates a typical message exchange for a
+   GET request on the URI "http://www.example.com/hello.txt":
+</preamble><artwork type="drawing">
+client request:
+
+  GET /hello.txt HTTP/1.1
+  User-Agent: curl/7.16.3 libcurl/7.16.3 OpenSSL/0.9.7l zlib/1.2.3
+  Host: www.example.com
+  Accept: */*
+
+server response:
+
+  HTTP/1.1 200 OK
+  Date: Mon, 27 Jul 2009 12:28:53 GMT
+  Server: Apache
+  Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
+  ETag: "34aa387-d-1568eb00"
+  Accept-Ranges: bytes
+  Content-Length: 13
+  Vary: Accept-Encoding
+  Content-Type: text/plain
+  
+  Hello World!
+</artwork></figure>
+</section>
+
+<section title="Intermediaries" anchor="intermediaries">
 <t>
    A more complicated situation occurs when one or more intermediaries
    are present in the request/response chain. There are three common
-   forms of intermediary: proxy, gateway, and tunnel. A proxy is a
-   forwarding agent, receiving requests for a URI in its absolute form,
-   rewriting all or part of the message, and forwarding the reformatted
-   request toward the server identified by the URI. A gateway is a
-   receiving agent, acting as a layer above some other server(s) and, if
-   necessary, translating the requests to the underlying server's
-   protocol. A tunnel acts as a relay point between two connections
-   without changing the messages; tunnels are used when the
-   communication needs to pass through an intermediary (such as a
-   firewall) even when the intermediary cannot understand the contents
-   of the messages.
+   forms of intermediary: proxy, gateway, and tunnel.  In some cases,
+   a single intermediary may act as an origin server, proxy, gateway,
+   or tunnel, switching behavior based on the nature of each request.
 </t>
 <figure><artwork type="drawing">
        request chain --------------------------------------&gt;
@@ -554,7 +600,7 @@
    The figure above shows three intermediaries (A, B, and C) between the
    user agent and origin server. A request or response message that
    travels the whole chain will pass through four separate connections.
-   This distinction is important because some HTTP communication options
+   Some HTTP communication options
    may apply only to the connection with the nearest, non-tunnel
    neighbor, only to the end-points of the chain, or to all connections
    along the chain. Although the diagram is linear, each participant may
@@ -564,39 +610,102 @@
    is handling A's request.
 </t>
 <t>
-   Any party to the communication which is not acting as a tunnel may
-   employ an internal cache for handling requests. The effect of a cache
-   is that the request/response chain is shortened if one of the
-   participants along the chain has a cached response applicable to that
-   request. The following illustrates the resulting chain if B has a
-   cached copy of an earlier response from O (via C) for a request which
-   has not been cached by UA or A.
+<iref item="upstream"/><iref item="downstream"/>
+<iref item="inbound"/><iref item="outbound"/>
+   We use the terms "upstream" and "downstream" to describe various
+   requirements in relation to the directional flow of a message:
+   all messages flow from upstream to downstream.
+   Likewise, we use the terms "inbound" and "outbound" to refer to
+   directions in relation to the request path: "inbound" means toward
+   the origin server and "outbound" means toward the user agent.
+</t>
+<t><iref item="proxy"/>
+   A proxy is a message forwarding agent that is selected by the
+   client, usually via local configuration rules, to receive requests
+   for some type(s) of absolute URI and attempt to satisfy those
+   requests via translation through the HTTP interface.  Some translations
+   are minimal, such as for proxy requests for "http" URIs, whereas
+   other requests may require translation to and from entirely different
+   application-layer protocols. Proxies are often used to group an
+   organization's HTTP requests through a common intermediary for the
+   sake of security, annotation services, or shared caching.
+</t>
+<t><iref item="gateway"/><iref item="reverse proxy"/>
+   A gateway (a.k.a., reverse proxy) is a receiving agent that acts
+   as a layer above some other server(s) and translates the received
+   requests to the underlying server's protocol.  Gateways are often
+   used for load balancing or partitioning HTTP services across
+   multiple machines.
+   Unlike a proxy, a gateway receives requests as if it were the
+   origin server for the requested resource; the requesting client
+   will not be aware that it is communicating with a gateway.
+   A gateway communicates with the client as if the gateway is the
+   origin server and thus is subject to all of the requirements on
+   origin servers for that connection.  A gateway communicates
+   with inbound servers using any protocol it desires, including
+   private extensions to HTTP that are outside the scope of this
+   specification.
+</t>
+<t><iref item="tunnel"/>
+   A tunnel acts as a blind relay between two connections
+   without changing the messages. Once active, a tunnel is not
+   considered a party to the HTTP communication, though the tunnel may
+   have been initiated by an HTTP request. A tunnel ceases to exist when
+   both ends of the relayed connection are closed. Tunnels are used to
+   extend a virtual connection through an intermediary, such as when
+   transport-layer security is used to establish private communication
+   through a shared firewall proxy.
+</t>
+</section>
+
+<section title="Caches" anchor="caches">
+<iref item="cache"/>
+<t>
+   Any party to HTTP communication that is not acting as a tunnel may
+   employ an internal cache for handling requests.
+   A cache is a local store of previous response messages and the
+   subsystem that controls its message storage, retrieval, and deletion.
+   A cache stores cacheable responses in order to reduce the response
+   time and network bandwidth consumption on future, equivalent
+   requests. Any client or server may include a cache, though a cache
+   cannot be used by a server while it is acting as a tunnel.
+</t>
+<t>
+   The effect of a cache is that the request/response chain is shortened
+   if one of the participants along the chain has a cached response
+   applicable to that request. The following illustrates the resulting
+   chain if B has a cached copy of an earlier response from O (via C)
+   for a request which has not been cached by UA or A.
 </t>
 <figure><artwork type="drawing">
           request chain ----------&gt;
        UA -----v----- A -----v----- B - - - - - - C - - - - - - O
           &lt;--------- response chain
 </artwork></figure>
-<t>
-   Not all responses are usefully cacheable, and some requests may
-   contain modifiers which place special requirements on cache behavior.
-   HTTP requirements for cache behavior and cacheable responses are
-   defined in &caching;.
+<t><iref item="cacheable"/>
+   A response is cacheable if a cache is allowed to store a copy of
+   the response message for use in answering subsequent requests.
+   Even when a response is cacheable, there may be additional
+   constraints placed by the client or by the origin server on when
+   that cached response can be used for a particular request. HTTP
+   requirements for cache behavior and cacheable responses are
+   defined in &caching;.  
 </t>
 <t>
-   In fact, there are a wide variety of architectures and configurations
-   of caches and proxies currently being experimented with or deployed
-   across the World Wide Web. These systems include national hierarchies
+   There are a wide variety of architectures and configurations
+   of caches and proxies deployed across the World Wide Web and
+   inside large organizations. These systems include national hierarchies
    of proxy caches to save transoceanic bandwidth, systems that
    broadcast or multicast cache entries, organizations that distribute
-   subsets of cached data via CD-ROM, and so on. HTTP systems are used
-   in corporate intranets over high-bandwidth links, and for access via
-   PDAs with low-power radio links and intermittent connectivity. The
-   goal of HTTP/1.1 is to support the wide diversity of configurations
-   already deployed while introducing protocol constructs that meet the
-   needs of those who build web applications that require high
-   reliability and, failing that, at least reliable indications of
-   failure.
+   subsets of cached data via CD-ROM, and so on.
+</t>
+</section>
+
+<section title="Transport Independence" anchor="transport-independence">
+<t>
+  HTTP systems are used in a wide variety of environments, from
+  corporate intranets with high-bandwidth links to long-distance
+  communication over low-power radio links and intermittent connectivity.
 </t>
 <t>
    HTTP communication usually takes place over TCP/IP connections. The
@@ -4202,54 +4311,6 @@
    played by participants in, and objects of, the HTTP communication.
 </t>
 <t>
-  <iref item="cache"/>
-  <x:dfn>cache</x:dfn>
-  <list>
-    <t>
-      A program's local store of response messages and the subsystem
-      that controls its message storage, retrieval, and deletion. A
-      cache stores cacheable responses in order to reduce the response
-      time and network bandwidth consumption on future, equivalent
-      requests. Any client or server may include a cache, though a cache
-      cannot be used by a server that is acting as a tunnel.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="cacheable"/>
-  <x:dfn>cacheable</x:dfn>
-  <list>
-    <t>
-      A response is cacheable if a cache is allowed to store a copy of
-      the response message for use in answering subsequent requests. The
-      rules for determining the cacheability of HTTP responses are
-      defined in &caching;. Even if a resource is cacheable, there may
-      be additional constraints on whether a cache can use the cached
-      copy for a particular request.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="client"/>
-  <x:dfn>client</x:dfn>
-  <list>
-    <t>
-      A program that establishes connections for the purpose of sending
-      requests.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="connection"/>
-  <x:dfn>connection</x:dfn>
-  <list>
-    <t>
-      A transport layer virtual circuit established between two programs
-      for the purpose of communication.
-    </t>
-  </list>
-</t>
-<t>
   <iref item="content negotiation"/>
   <x:dfn>content negotiation</x:dfn>
   <list>
@@ -4274,90 +4335,6 @@
   </list>
 </t>
 <t>
-  <iref item="gateway"/>
-  <x:dfn>gateway</x:dfn>
-  <list>
-    <t>
-      A server which acts as an intermediary for some other server.
-      Unlike a proxy, a gateway receives requests as if it were the
-      origin server for the requested resource; the requesting client
-      may not be aware that it is communicating with a gateway.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="inbound"/>
-  <iref item="outbound"/>
-  <x:dfn>inbound</x:dfn>/<x:dfn>outbound</x:dfn>
-  <list>
-    <t>
-      Inbound and outbound refer to the request and response paths for
-      messages: "inbound" means "traveling toward the origin server",
-      and "outbound" means "traveling toward the user agent"
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="message"/>
-  <x:dfn>message</x:dfn>
-  <list>
-    <t>
-      The basic unit of HTTP communication, consisting of a structured
-      sequence of octets matching the syntax defined in <xref target="http.message"/> and
-      transmitted via the connection.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="origin server"/>
-  <x:dfn>origin server</x:dfn>
-  <list>
-    <t>
-      The server on which a given resource resides or is to be created.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="proxy"/>
-  <x:dfn>proxy</x:dfn>
-  <list>
-    <t>
-      An intermediary program which acts as both a server and a client
-      for the purpose of making requests on behalf of other clients.
-      Requests are serviced internally or by passing them on, with
-      possible translation, to other servers. A proxy &MUST; implement
-      both the client and server requirements of this specification. A
-      "transparent proxy" is a proxy that does not modify the request or
-      response beyond what is required for proxy authentication and
-      identification. A "non-transparent proxy" is a proxy that modifies
-      the request or response in order to provide some added service to
-      the user agent, such as group annotation services, media type
-      transformation, protocol reduction, or anonymity filtering. Except
-      where either transparent or non-transparent behavior is explicitly
-      stated, the HTTP proxy requirements apply to both types of
-      proxies.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="request"/>
-  <x:dfn>request</x:dfn>
-  <list>
-    <t>
-      An HTTP request message, as defined in <xref target="request"/>.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="response"/>
-  <x:dfn>response</x:dfn>
-  <list>
-    <t>
-      An HTTP response message, as defined in <xref target="response"/>.
-    </t>
-  </list>
-</t>
-<t>
   <iref item="representation"/>
   <x:dfn>representation</x:dfn>
   <list>
@@ -4365,56 +4342,6 @@
       An entity included with a response that is subject to content
       negotiation, as described in &content.negotiation;. There may exist multiple
       representations associated with a particular response status.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="server"/>
-  <x:dfn>server</x:dfn>
-  <list>
-    <t>
-      An application program that accepts connections in order to
-      service requests by sending back responses. Any given program may
-      be capable of being both a client and a server; our use of these
-      terms refers only to the role being performed by the program for a
-      particular connection, rather than to the program's capabilities
-      in general. Likewise, any server may act as an origin server,
-      proxy, gateway, or tunnel, switching behavior based on the nature
-      of each request.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="tunnel"/>
-  <x:dfn>tunnel</x:dfn>
-  <list>
-    <t>
-      An intermediary program which is acting as a blind relay between
-      two connections. Once active, a tunnel is not considered a party
-      to the HTTP communication, though the tunnel may have been
-      initiated by an HTTP request. The tunnel ceases to exist when both
-      ends of the relayed connections are closed.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="upstream"/>
-  <iref item="downstream"/>
-  <x:dfn>upstream</x:dfn>/<x:dfn>downstream</x:dfn>
-  <list>
-    <t>
-      Upstream and downstream describe the flow of a message: all
-      messages flow from upstream to downstream.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="user agent"/>
-  <x:dfn>user agent</x:dfn>
-  <list>
-    <t>
-      The client which initiates a request. These are often browsers,
-      editors, spiders (web-traversing robots), or other end user tools.
     </t>
   </list>
 </t>
