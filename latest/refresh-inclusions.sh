@@ -9,18 +9,18 @@ expand() {
   }
   
   # start include
-  /^<!-- BEGININC .* -->$/ {
+  /^<\?BEGININC .* \?>$/ {
     print
-    includefile = $3
+    includefile = $2
     while (getline <includefile > 0) {
       print
     }
   }
   
   # end include
-  /^<!-- ENDINC .* -->$/ {
-    if ($3 != includefile) {
-      printf ("unexpected ENDINC, got %s but expected %s\n", $3, includefile) >> /dev/stderr
+  /^<\?ENDINC .* \?>$/ {
+    if ($2 != includefile) {
+      printf ("unexpected ENDINC, got %s but expected %s\n", $2, includefile) >> /dev/stderr
     }
     includefile = "";
   }
