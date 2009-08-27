@@ -452,22 +452,22 @@
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
   <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
-  <x:ref>qdtext</x:ref>         = <x:ref>WSP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-                 ; <x:ref>WSP</x:ref> / &lt;<x:ref>VCHAR</x:ref> except <x:ref>DQUOTE</x:ref> and "\"&gt; / <x:ref>obs-text</x:ref> 
+  <x:ref>qdtext</x:ref>         = <x:ref>OWS</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
+                 ; <x:ref>OWS</x:ref> / &lt;<x:ref>VCHAR</x:ref> except <x:ref>DQUOTE</x:ref> and "\"&gt; / <x:ref>obs-text</x:ref> 
   <x:ref>obs-text</x:ref>       = %x80-FF
 </artwork></figure>
 <t anchor="rule.quoted-pair">
   <x:anchor-alias value="quoted-pair"/>
-   The backslash character ("\") can be used as a single-character quoting
-	 mechanism only within quoted-string and comment constructs:
+  <x:anchor-alias value="quoted-text"/>
+   The backslash character ("\") &MAY; be used as a single-character
+   quoting mechanism only within quoted-string and comment constructs.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
-  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-text"/><iref primary="true" item="Grammar" subitem="quoted-pair"/>
+  <x:ref>quoted-text</x:ref>    = %x01-09 / 
+                   %x0B-0C /
+                   %x0E-FF ; Characters excluding NUL, <x:ref>CR</x:ref> and <x:ref>LF</x:ref>
+  <x:ref>quoted-pair</x:ref>    = "\" <x:ref>quoted-text</x:ref>
 </artwork></figure>
-<t>
-	 Note that quoted-pair includes those characters otherwise disallowed in
-	 quoted-string or comment (<xref target="header.fields"/>).
-</t>
 </section>
 
 <section title="ABNF Rules defined in other Parts of the Specification" anchor="abnf.dependencies">
@@ -1164,8 +1164,8 @@ Content-Type: text/plain
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
   <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
-  <x:ref>ctext</x:ref>          = <x:ref>WSP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-                 ; <x:ref>WSP</x:ref> / &lt;<x:ref>VCHAR</x:ref> except "(", ")", and "\"&gt; / <x:ref>obs-text</x:ref>
+  <x:ref>ctext</x:ref>          = <x:ref>OWS</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
+                 ; <x:ref>OWS</x:ref> / &lt;<x:ref>VCHAR</x:ref> except "(", ")", and "\"&gt; / <x:ref>obs-text</x:ref>
 </artwork></figure>
   
 </section>
@@ -4607,8 +4607,8 @@ Content-Type: text/plain
 <t>
   Rules about implicit linear whitespace between certain grammar productions
   have been removed; now it's only allowed when specifically pointed out
-  in the ABNF. Control characters other than HTAB are no longer allowed in
-	comment and quoted-string text (escaped or not).
+  in the ABNF. The NUL character is no longer allowed in comment and quoted-string
+  text. The quoted-pair rule no longer allows escaping NUL, CR or LF.
   Non-ASCII content in header fields and reason phrase has been obsoleted and
   made opaque (the TEXT rule was removed)
   (<xref target="basic.rules"/>)
@@ -4720,7 +4720,7 @@ Content-Type: text/plain
 <x:ref>chunk-size</x:ref> = 1*HEXDIG
 <x:ref>comment</x:ref> = "(" *( ctext / quoted-pair / comment ) ")"
 <x:ref>connection-token</x:ref> = token
-<x:ref>ctext</x:ref> = WSP / %x21-27 ; '!'-'''
+<x:ref>ctext</x:ref> = OWS / %x21-27 ; '!'-'''
  / %x2A-5B ; '*'-'['
  / %x5D-7E ; ']'-'~'
  / obs-text
@@ -4791,12 +4791,13 @@ Content-Type: text/plain
 <x:ref>protocol-version</x:ref> = token
 <x:ref>pseudonym</x:ref> = token
 
-<x:ref>qdtext</x:ref> = WSP / "!" / %x23-5B ; '#'-'['
+<x:ref>qdtext</x:ref> = OWS / "!" / %x23-5B ; '#'-'['
  / %x5D-7E ; ']'-'~'
  / obs-text
 <x:ref>query</x:ref> = &lt;query, defined in [RFC3986], Section 3.4&gt;
-<x:ref>quoted-pair</x:ref> = "\" ( WSP / VCHAR / obs-text )
+<x:ref>quoted-pair</x:ref> = "\" quoted-text
 <x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+<x:ref>quoted-text</x:ref> = %x01-09 / %x0B-0C / %x0E-FF
 <x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 
 <x:ref>received-by</x:ref> = ( uri-host [ ":" port ] ) / pseudonym
@@ -5252,10 +5253,6 @@ Content-Type: text/plain
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/172"/>:
       "take over HTTP Upgrade Token Registry"
-    </t>
-    <t>
-      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/173"/>:
-      "CR and LF in chunk extension values"
     </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/184"/>:
