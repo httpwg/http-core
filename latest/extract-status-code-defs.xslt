@@ -76,10 +76,14 @@
 
 <xsl:template match="section">
   <xsl:variable name="text" select="iref[@item='Status Codes']/@subitem"/>
-  <xsl:text>&#10;</xsl:text>
-  <c><xsl:value-of select="substring-before($text,' ')"/></c>
-  <c><xsl:value-of select="substring($text,2+string-length(substring-before($text,' ')))"/></c>
-  <c><xref target="{@anchor}"/></c>
+  <xsl:variable name="redirects-to-other-part" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#" select="rdf:Description/p2:redirects-to"/>
+
+  <xsl:if test="not($redirects-to-other-part)">
+    <xsl:text>&#10;</xsl:text>
+    <c><xsl:value-of select="substring-before($text,' ')"/></c>
+    <c><xsl:value-of select="substring($text,2+string-length(substring-before($text,' ')))"/></c>
+    <c><xref target="{@anchor}"/></c>
+  </xsl:if>
 </xsl:template>
 
 </xsl:transform>

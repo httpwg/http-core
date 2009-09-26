@@ -54,9 +54,12 @@ TARGETS = p1-messaging.html \
           p2-semantics.iana-status-codes \
           p3-payload.iana-headers \
           p4-conditional.iana-headers \
+          p4-conditional.iana-status-codes \
           p5-range.iana-headers \
+          p5-range.iana-status-codes \
           p6-cache.iana-headers \
-          p7-auth.iana-headers
+          p7-auth.iana-headers \
+          p7-auth.iana-status-codes
 
 
 all: $(TARGETS)
