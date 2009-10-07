@@ -1833,6 +1833,8 @@ Content-Type: text/plain
   <x:anchor-alias value="chunk-size"/>
   <x:anchor-alias value="last-chunk"/>
   <x:anchor-alias value="trailer-part"/>
+  <x:anchor-alias value="quoted-str-nf"/>
+  <x:anchor-alias value="qdtext-nf"/>
 <t>
    The chunked encoding modifies the body of a message in order to
    transfer it as a series of chunks, each with its own size indicator,
@@ -1841,7 +1843,7 @@ Content-Type: text/plain
    information necessary for the recipient to verify that it has
    received the full message.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Chunked-Body"/><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="true" item="Grammar" subitem="trailer-part"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Chunked-Body"/><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="true" item="Grammar" subitem="trailer-part"/><iref primary="true" item="Grammar" subitem="quoted-str-nf"/><iref primary="true" item="Grammar" subitem="qdtext-nf"/>
   <x:ref>Chunked-Body</x:ref>   = *<x:ref>chunk</x:ref>
                    <x:ref>last-chunk</x:ref>
                    <x:ref>trailer-part</x:ref>
@@ -1855,9 +1857,14 @@ Content-Type: text/plain
   <x:ref>chunk-ext</x:ref>      = *( ";" *WSP <x:ref>chunk-ext-name</x:ref>
                       [ "=" <x:ref>chunk-ext-val</x:ref> ] *WSP )
   <x:ref>chunk-ext-name</x:ref> = <x:ref>token</x:ref>
-  <x:ref>chunk-ext-val</x:ref>  = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
+  <x:ref>chunk-ext-val</x:ref>  = <x:ref>token</x:ref> / <x:ref>quoted-str-nf</x:ref>
   <x:ref>chunk-data</x:ref>     = 1*<x:ref>OCTET</x:ref> ; a sequence of chunk-size octets
   <x:ref>trailer-part</x:ref>   = *( <x:ref>entity-header</x:ref> <x:ref>CRLF</x:ref> )
+  
+  <x:ref>quoted-str-nf</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext-nf</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
+                 ; like <x:ref>quoted-string</x:ref>, but disallowing line folding
+  <x:ref>qdtext-nf</x:ref>      = <x:ref>WSP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
+                 ; <x:ref>WSP</x:ref> / &lt;<x:ref>VCHAR</x:ref> except <x:ref>DQUOTE</x:ref> and "\"&gt; / <x:ref>obs-text</x:ref> 
 </artwork></figure>
 <t>
    The chunk-size field is a string of hex digits indicating the size of
@@ -4639,11 +4646,6 @@ Content-Type: text/plain
   <xref format="counter" target="message.length"/>)
 </t>
 <t>
-  Clarification that the chunk length does not include
-  the count of the octets in the chunk header and trailer.
-  (<xref target="chunked.encoding"/>)
-</t>
-<t>
   Require that invalid whitespace around field-names be rejected.
   (<xref target="header.fields"/>)
 </t>
@@ -4651,6 +4653,12 @@ Content-Type: text/plain
   Update use of abs_path production from RFC1808 to the path-absolute + query
   components of RFC3986.
   (<xref target="request-target"/>)
+</t>
+<t>
+  Clarification that the chunk length does not include the count of the octets
+  in the chunk header and trailer. Furthermore disallowed line folding
+  in chunk extensions.
+  (<xref target="chunked.encoding"/>)
 </t>
 <t>
   Clarify exactly when close connection options must be sent.
@@ -4732,7 +4740,7 @@ Content-Type: text/plain
 <x:ref>chunk-data</x:ref> = 1*OCTET
 <x:ref>chunk-ext</x:ref> = *( ";" *WSP chunk-ext-name [ "=" chunk-ext-val ] *WSP )
 <x:ref>chunk-ext-name</x:ref> = token
-<x:ref>chunk-ext-val</x:ref> = token / quoted-string
+<x:ref>chunk-ext-val</x:ref> = token / quoted-str-nf
 <x:ref>chunk-size</x:ref> = 1*HEXDIG
 <x:ref>comment</x:ref> = "(" *( ctext / quoted-cpair / comment ) ")"
 <x:ref>connection-token</x:ref> = token
@@ -4810,9 +4818,13 @@ Content-Type: text/plain
 <x:ref>qdtext</x:ref> = OWS / "!" / %x23-5B ; '#'-'['
  / %x5D-7E ; ']'-'~'
  / obs-text
+<x:ref>qdtext-nf</x:ref> = WSP / "!" / %x23-5B ; '#'-'['
+ / %x5D-7E ; ']'-'~'
+ / obs-text
 <x:ref>query</x:ref> = &lt;query, defined in [RFC3986], Section 3.4&gt;
 <x:ref>quoted-cpair</x:ref> = "\" ( WSP / VCHAR / obs-text )
 <x:ref>quoted-pair</x:ref> = "\" ( WSP / VCHAR / obs-text )
+<x:ref>quoted-str-nf</x:ref> = DQUOTE *( qdtext-nf / quoted-pair ) DQUOTE
 <x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
 <x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 
@@ -5269,6 +5281,10 @@ Content-Type: text/plain
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/172"/>:
       "take over HTTP Upgrade Token Registry"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/173"/>:
+      "CR and LF in chunk extension values"
     </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/184"/>:
