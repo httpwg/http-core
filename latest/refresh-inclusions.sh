@@ -39,6 +39,8 @@ expand() {
   rm -f $$
 }
 
+[ $# -ne 0 ] || echo "refresh-inclusions.sh file..." >&2 ; exit 2
+
 for i in $*
 do
   expand $i
