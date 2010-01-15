@@ -806,36 +806,46 @@
 
 <section title="Content Negotiation" anchor="content.negotiation">
 <t>
-   Most HTTP responses include an entity which contains information for
-   interpretation by a human user. Naturally, it is desirable to supply
-   the user with the "best available" entity corresponding to the
-   request. Unfortunately for servers and caches, not all users have the
-   same preferences for what is "best," and not all user agents are
-   equally capable of rendering all entity types. For that reason, HTTP
-   has provisions for several mechanisms for "content negotiation" --
-   the process of selecting the best representation for a given response
-   when there are multiple representations available.
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> This is not called "format negotiation" because the
-    alternate representations may be of the same media type, but use
-    different capabilities of that type, be in different languages,
-    etc.
-  </t>
-</x:note>
-<t>
-   Any response containing an entity-body &MAY; be subject to negotiation,
-   including error responses.
+   HTTP responses include a representation which contains information for
+   interpretation, whether by a human user or for further processing.
+   Often, the server has different ways of representing the
+   same information; for example, in different formats, languages,
+   or using different character encodings.
 </t>
 <t>
-   There are two kinds of content negotiation which are possible in
-   HTTP: server-driven and agent-driven negotiation. These two kinds of
-   negotiation are orthogonal and thus may be used separately or in
-   combination. One method of combination, referred to as transparent
-   negotiation, occurs when a cache uses the agent-driven negotiation
-   information provided by the origin server in order to provide
-   server-driven negotiation for subsequent requests.
+   HTTP clients and their users might have different or variable
+   capabilities, characteristics or preferences which would influence
+   which representation, among those available from the server,
+   would be best for the server to deliver. For this reason, HTTP
+   provides mechanisms for "content negotiation" -- a process of
+   allowing selection of a representation of a given resource,
+   when more than one is available.
+</t>
+<t>
+   This specification defines two patterns of content negotiation;
+   "server-driven", where the server selects the representation based
+   upon the client's stated preferences, and "agent-driven" negotiation,
+   where the server provides a list of representations for the client to
+   choose from, based upon their metadata. In addition,  there are
+   other patterns: some applications use an "active content" pattern,
+   where the server returns active content which runs on the client
+   and, based on client available parameters, selects additional
+   resources to invoke. "Transparent Content Negotiation" (<xref target="RFC2295"/>)
+   has also been proposed.
+</t>
+<t>
+   These patterns are all widely used, and have trade-offs in applicability
+   and practicality. In particular, when the number of preferences or
+   capabilities to be expressed by a client are large (such as when many
+   different formats are supported by a user-agent), server-driven
+   negotiation becomes unwieldy, and may not be appropriate. Conversely,
+   when the number of representations to choose from is very large,
+   agent-driven negotiation may not be appropriate.
+</t>
+<t>
+   Note that in all cases, the supplier of representations has the
+   responsibility for determining which representations might be
+   considered to be the "same information".
 </t>
 
 <section title="Server-driven Negotiation" anchor="server-driven.negotiation">
@@ -890,12 +900,18 @@
    server-driven negotiation through description of user agent
    capabilities and user preferences: Accept (<xref target="header.accept"/>), Accept-Charset
    (<xref target="header.accept-charset"/>), Accept-Encoding (<xref target="header.accept-encoding"/>), Accept-Language
-   (<xref target="header.accept-language"/>), and User-Agent (&header-user-agent;). However, an
-   origin server is not limited to these dimensions and &MAY; vary the
-   response based on any aspect of the request, including information
+   (<xref target="header.accept-language"/>), and User-Agent (&header-user-agent;).
+   However, an origin server is not limited to these dimensions and &MAY; vary 
+   the response based on any aspect of the request, including information
    outside the request-header fields or within extension header fields
    not defined by this specification.
 </t>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> In practice, User-Agent based negotiation is fragile,
+    because new clients might not be recognized. 
+  </t>
+</x:note>
 <t>
    The Vary header field (&header-vary;) can be used to express the parameters the
    server uses to select a representation that is subject to server-driven
@@ -932,34 +948,10 @@
    HTTP/1.1.
 </t>
 <t>
-   HTTP/1.1 defines the 300 (Multiple Choices) and 406 (Not Acceptable)
+   This specification defines the 300 (Multiple Choices) and 406 (Not Acceptable)
    status codes for enabling agent-driven negotiation when the server is
    unwilling or unable to provide a varying response using server-driven
    negotiation.
-</t>
-</section>
-
-<section title="Transparent Negotiation" anchor="transparent.negotiation">
-<t>
-   Transparent negotiation is a combination of both server-driven and
-   agent-driven negotiation. When a cache is supplied with a form of the
-   list of available representations of the response (as in agent-driven
-   negotiation) and the dimensions of variance are completely understood
-   by the cache, then the cache becomes capable of performing server-driven
-   negotiation on behalf of the origin server for subsequent
-   requests on that resource.
-</t>
-<t>
-   Transparent negotiation has the advantage of distributing the
-   negotiation work that would otherwise be required of the origin
-   server and also removing the second request delay of agent-driven
-   negotiation when the cache is able to correctly guess the right
-   response.
-</t>
-<t>
-   This specification does not define any mechanism for transparent
-   negotiation, though it also does not prevent any such mechanism from
-   being developed as an extension that could be used within HTTP/1.1.
 </t>
 </section>
 </section>
@@ -2282,6 +2274,26 @@
   <seriesInfo name="RFC" value="2277"/>
 </reference>
 
+<reference anchor='RFC2295'>
+  <front>
+    <title abbrev='HTTP Content Negotiation'>Transparent Content Negotiation in HTTP</title>
+    <author initials='K.' surname='Holtman' fullname='Koen Holtman'>
+      <organization>Technische Universiteit Eindhoven</organization>
+      <address>
+        <email>koen@win.tue.nl</email>
+      </address>
+    </author>
+    <author initials='A.H.' surname='Mutz' fullname='Andrew H. Mutz'>
+      <organization>Hewlett-Packard Company</organization>
+      <address>
+        <email>mutz@hpl.hp.com</email>
+      </address>
+    </author>
+    <date year='1998' month='March'/>
+  </front>
+  <seriesInfo name='RFC' value='2295'/>
+</reference>
+
 <reference anchor="RFC2388">
   <front>
     <title abbrev="multipart/form-data">Returning Values from Forms:  multipart/form-data</title>
@@ -3077,6 +3089,10 @@
 <t>
   Closed issues:
   <list style="symbols"> 
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/81"/>:
+      "Content Negotiation for media types"
+    </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/181"/>:
       "Accept-Language: which RFC4647 filtering?"
