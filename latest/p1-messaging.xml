@@ -24,6 +24,7 @@
   <!ENTITY entity                 "<xref target='Part3' x:rel='#entity' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-body            "<xref target='Part3' x:rel='#entity.body' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-header-fields   "<xref target='Part3' x:rel='#entity.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY entity-length          "<xref target='Part3' x:rel='#entity.length' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-cache-control   "<xref target='Part6' x:rel='#header.cache-control' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-expect          "<xref target='Part2' x:rel='#header.expect' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-pragma          "<xref target='Part6' x:rel='#header.pragma' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -2256,6 +2257,119 @@ Content-Type: text/plain
    for information and discussion of the problems with the Keep-Alive header
    implemented by many HTTP/1.0 clients).
 </t>
+
+<section title="End-to-end and Hop-by-hop Headers" anchor="end-to-end.and.hop-by-hop.headers">
+<t>
+  <cref anchor="TODO-end-to-end" source="jre">
+    Restored from <eref target="http://tools.ietf.org/html/draft-ietf-httpbis-p6-cache-05#section-7.1"/>.
+    See also <eref target="http://trac.tools.ietf.org/wg/httpbis/trac/ticket/60"/>.
+  </cref>
+</t>
+<t>
+   For the purpose of defining the behavior of caches and non-caching
+   proxies, we divide HTTP headers into two categories:
+  <list style="symbols">
+      <t>End-to-end headers, which are  transmitted to the ultimate
+        recipient of a request or response. End-to-end headers in
+        responses MUST be stored as part of a cache entry and &MUST; be
+        transmitted in any response formed from a cache entry.</t>
+
+      <t>Hop-by-hop headers, which are meaningful only for a single
+        transport-level connection, and are not stored by caches or
+        forwarded by proxies.</t>
+  </list>
+</t>
+<t>
+   The following HTTP/1.1 headers are hop-by-hop headers:
+  <list style="symbols">
+      <t>Connection</t>
+      <t>Keep-Alive</t>
+      <t>Proxy-Authenticate</t>
+      <t>Proxy-Authorization</t>
+      <t>TE</t>
+      <t>Trailer</t>
+      <t>Transfer-Encoding</t>
+      <t>Upgrade</t>
+  </list>
+</t>
+<t>
+   All other headers defined by HTTP/1.1 are end-to-end headers.
+</t>
+<t>
+   Other hop-by-hop headers &MUST; be listed in a Connection header
+   (<xref target="header.connection"/>).
+</t>
+</section>
+
+<section title="Non-modifiable Headers" anchor="non-modifiable.headers">
+<t>
+  <cref anchor="TODO-non-mod-headers" source="jre">
+    Restored from <eref target="http://tools.ietf.org/html/draft-ietf-httpbis-p6-cache-05#section-7.2"/>.
+    See also <eref target="http://trac.tools.ietf.org/wg/httpbis/trac/ticket/60"/>.
+  </cref>
+</t>
+<t>
+   Some features of HTTP/1.1, such as Digest Authentication, depend on the
+   value of certain end-to-end headers. A transparent proxy &SHOULD-NOT;
+   modify an end-to-end header unless the definition of that header requires
+   or specifically allows that.
+</t>
+<t>
+   A transparent proxy &MUST-NOT; modify any of the following fields in a
+   request or response, and it &MUST-NOT; add any of these fields if not
+   already present:
+  <list style="symbols">
+      <t>Content-Location</t>
+      <t>Content-MD5</t>
+      <t>ETag</t>
+      <t>Last-Modified</t>
+  </list>
+</t>
+<t>
+   A transparent proxy &MUST-NOT; modify any of the following fields in a
+   response:
+  <list style="symbols">
+    <t>Expires</t>
+  </list>
+</t>
+<t>
+   but it &MAY; add any of these fields if not already present. If an
+   Expires header is added, it &MUST; be given a field-value identical to
+   that of the Date header in that response.
+</t>
+<t>
+   A proxy &MUST-NOT; modify or add any of the following fields in a
+   message that contains the no-transform cache-control directive, or in
+   any request:
+  <list style="symbols">
+    <t>Content-Encoding</t>
+    <t>Content-Range</t>
+    <t>Content-Type</t>
+  </list>
+</t>
+<t>
+   A non-transparent proxy &MAY; modify or add these fields to a message
+   that does not include no-transform, but if it does so, it &MUST; add a
+   Warning 214 (Transformation applied) if one does not already appear
+   in the message (see &header-warning;).
+</t>
+<x:note>
+  <t>
+    <x:h>Warning:</x:h> Unnecessary modification of end-to-end headers might
+    cause authentication failures if stronger authentication
+    mechanisms are introduced in later versions of HTTP. Such
+    authentication mechanisms &MAY; rely on the values of header fields
+    not listed here.
+  </t>
+</x:note>
+<t>
+   The Content-Length field of a request or response is added or deleted
+   according to the rules in <xref target="message.length"/>. A transparent proxy &MUST;
+   preserve the entity-length (&entity-length;) of the entity-body,
+   although it &MAY; change the transfer-length (<xref target="message.length"/>).
+</t>
+</section>
+
 </section>
 
 <section title="Practical Considerations" anchor="persistent.practical">
@@ -4637,8 +4751,15 @@ Content-Type: text/plain
    worth fixing <xref target="Nie1997"/>. TE also solves another, obscure, downward
    interoperability problem that could have occurred due to interactions
    between authentication trailers, chunked encoding and HTTP/1.0
-   clients.(Section <xref target="transfer.codings" format="counter"/>, <xref target="chunked.encoding" format="counter"/>,
+   clients.(Section
+   <xref target="transfer.codings" format="counter"/>,
+   <xref target="chunked.encoding" format="counter"/>,
+   <xref target="non-modifiable.headers" format="counter"/>,
    and <xref target="header.te" format="counter"/>)
+</t>
+<t>
+  Proxies should be able to add Content-Length when appropriate.
+  (<xref target="non-modifiable.headers"/>)
 </t>
 </section>
 
@@ -5360,6 +5481,10 @@ Content-Type: text/plain
 <t>
   Partly resolved issues:
   <list style="symbols"> 
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/60"/>:
+      "Placement of 13.5.1 and 13.5.2"
+    </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/200"/>:
       "use of term "word" when talking about header structure"
