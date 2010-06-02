@@ -2,10 +2,22 @@
                xmlns:x="http://purl.org/net/xml2rfc/ext"
                xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
                version="1.0"
+               xmlns:my="#my"
                exclude-result-prefixes="rdf x"
 >
 
 <xsl:output indent="yes" omit-xml-declaration="yes"/>
+
+<my:data>
+  <my:item>
+    <iref item='Cache Directives' subitem='stale-while-revalidate'>
+      <xref target="RFC5861" x:fmt="," x:sec="3"/>
+    </iref>
+    <iref item='Cache Directives' subitem='stale-if-error'>
+      <xref target="RFC5861" x:fmt="," x:sec="4"/>
+    </iref>
+  </my:item>
+</my:data>
 
 <xsl:template match="/">
   <xsl:variable name="table">
@@ -13,7 +25,7 @@
       <ttcol>Cache Directive</ttcol>
       <ttcol>Reference</ttcol>
       <xsl:text>&#10;</xsl:text>
-      <xsl:apply-templates select="//iref[@item='Cache Directives']">
+      <xsl:apply-templates select="//iref[@item='Cache Directives']|document('')//iref[@item='Cache Directives']">
         <xsl:sort select="@subitem"/>
       </xsl:apply-templates>
     </texttable>
@@ -79,14 +91,29 @@
     <xsl:text>&#10;</xsl:text>
     <c><xsl:value-of select="$dir"/></c>
     <c>
-      <xsl:for-each select="//*[iref[@item='Cache Directives' and @subitem=$dir]]">
-        <xsl:if test="position()!=1">
-          <xsl:text>, </xsl:text>
-        </xsl:if>
-        <xref target="{ancestor-or-self::*[@anchor][1]/@anchor}"/>
-      </xsl:for-each>
+      <xsl:choose>
+        <!-- from this XSLT? -->
+        <xsl:when test="ancestor::my:item">
+          <xsl:for-each select="xref">
+            <xsl:if test="position()!=1">
+              <xsl:text>, </xsl:text>
+            </xsl:if>
+            <xref>
+              <xsl:copy-of select="@*"/>
+            </xref>
+          </xsl:for-each>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:for-each select="//*[iref[@item='Cache Directives' and @subitem=$dir]]">
+            <xsl:if test="position()!=1">
+              <xsl:text>, </xsl:text>
+            </xsl:if>
+            <xref target="{ancestor-or-self::*[@anchor][1]/@anchor}"/>
+          </xsl:for-each>
+        </xsl:otherwise>
+      </xsl:choose>
     </c>
-
+    
   </xsl:if>
 </xsl:template>
 
