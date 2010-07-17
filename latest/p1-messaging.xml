@@ -15,16 +15,15 @@
   <!ENTITY ID-MONTH "July">
   <!ENTITY ID-YEAR "2010">
   <!ENTITY caching-overview       "<xref target='Part6' x:rel='#caching.overview' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY cache-incomplete       "<xref target='Part6' x:rel='#errors.or.incomplete.response.cache.behavior' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY payload                "<xref target='Part3' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY media-types            "<xref target='Part3' x:rel='#media.types' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY content-codings        "<xref target='Part3' x:rel='#content.codings' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY CONNECT                "<xref target='Part2' x:rel='#CONNECT' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY content.negotiation    "<xref target='Part3' x:rel='#content.negotiation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY diff2045entity         "<xref target='Part3' x:rel='#differences.between.http.entities.and.rfc.2045.entities' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY diff-mime              "<xref target='Part3' x:rel='#differences.between.http.entities.and.rfc.2045.entities' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity                 "<xref target='Part3' x:rel='#entity' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY entity-body            "<xref target='Part3' x:rel='#entity.body' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-header-fields   "<xref target='Part3' x:rel='#entity.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY entity-length          "<xref target='Part3' x:rel='#entity.length' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-cache-control   "<xref target='Part6' x:rel='#header.cache-control' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-expect          "<xref target='Part2' x:rel='#header.expect' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-pragma          "<xref target='Part6' x:rel='#header.pragma' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -235,7 +234,7 @@
    relationships between resources.
    Messages are passed in a format similar to that used by Internet mail
    <xref target="RFC5322"/> and the Multipurpose Internet Mail Extensions
-   (MIME) <xref target="RFC2045"/> (see &diff2045entity; for the differences
+   (MIME) <xref target="RFC2045"/> (see &diff-mime; for the differences
    between HTTP and MIME messages).
 </t>
 <t>
@@ -420,9 +419,8 @@
 <t anchor="rule.CRLF">
   <x:anchor-alias value="CRLF"/>
    HTTP/1.1 defines the sequence CR LF as the end-of-line marker for all
-   protocol elements except the entity-body (see <xref target="tolerant.applications"/> for
-   tolerant applications). The end-of-line marker within an entity-body
-   is defined by its associated media type, as described in &media-types;.
+   protocol elements other than the message-body
+   (see <xref target="tolerant.applications"/> for tolerant applications).
 </t>
 <t anchor="rule.LWS">
    This specification uses three rules to denote the use of linear
@@ -521,7 +519,6 @@
 <section title="ABNF Rules defined in other Parts of the Specification" anchor="abnf.dependencies">
   <x:anchor-alias value="request-header"/>
   <x:anchor-alias value="response-header"/>
-  <x:anchor-alias value="entity-body"/>
   <x:anchor-alias value="entity-header"/>
   <x:anchor-alias value="Cache-Control"/>
   <x:anchor-alias value="Pragma"/>
@@ -534,7 +531,6 @@
   <x:ref>response-header</x:ref> = &lt;response-header, defined in &response-header-fields;&gt;
 </artwork></figure>
 <figure><!-- Part3--><artwork type="abnf2616">
-  <x:ref>entity-body</x:ref>     = &lt;entity-body, defined in &entity-body;&gt;
   <x:ref>entity-header</x:ref>   = &lt;entity-header, defined in &entity-header-fields;&gt;
 </artwork></figure>
 <figure><!-- Part6--><artwork type="abnf2616">
@@ -1057,7 +1053,7 @@ Content-Type: text/plain
    response from server to client.  Syntactically, the two types of message
    differ only in the start-line, which is either a Request-Line (for requests)
    or a Status-Line (for responses), and in the algorithm for determining
-   the length of the message-body (<xref target="message.length"/>).
+   the length of the message-body (<xref target="message.body.length"/>).
    In theory, a client could receive requests and a server could receive
    responses, distinguishing them by their different start-line formats,
    but in practice servers are implemented to only expect a request
@@ -1104,9 +1100,9 @@ Content-Type: text/plain
    table by field name until the empty line, and then use the parsed
    data to determine if a message-body is expected.  If a message-body
    has been indicated, then it is read as a stream until an amount
-   of OCTETs equal to the message-length is read or the connection
+   of octets equal to the message-body length is read or the connection
    is closed.  Care must be taken to parse an HTTP message as a sequence
-   of OCTETs in an encoding that is a superset of US-ASCII.  Attempting
+   of octets in an encoding that is a superset of US-ASCII.  Attempting
    to parse HTTP as a stream of Unicode characters in a character encoding
    like UTF-16 may introduce security flaws due to the differing ways
    that such parsers interpret invalid characters.
@@ -1232,21 +1228,21 @@ Content-Type: text/plain
   <x:anchor-alias value="message-body"/>
 <t>
    The message-body (if any) of an HTTP message is used to carry the
-   entity-body associated with the request or response. The message-body
-   differs from the entity-body only when a transfer-coding has been
+   payload body associated with the request or response. The message-body
+   differs from the payload body only when a transfer-coding has been
    applied, as indicated by the Transfer-Encoding header field (<xref target="header.transfer-encoding"/>).
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="message-body"/>
-  <x:ref>message-body</x:ref> = <x:ref>entity-body</x:ref>
-               / &lt;entity-body encoded as per <x:ref>Transfer-Encoding</x:ref>&gt;
+  <x:ref>message-body</x:ref> = *OCTET
 </artwork></figure>
 <t>
-   Transfer-Encoding &MUST; be used to indicate any transfer-codings
-   applied by an application to ensure safe and proper transfer of the
-   message. Transfer-Encoding is a property of the message, not of the
-   entity, and thus &MAY; be added or removed by any application along the
-   request/response chain. (However, <xref target="transfer.codings"/> places restrictions on
-   when certain transfer-codings may be used.)
+   When one or more transfer-codings are applied to a payload body,
+   usually for the sake of stream-delimiting or data compression, the
+   Transfer-Encoding header field &MUST; be provided with the list of
+   transfer-codings applied. Transfer-Encoding is a property of the message,
+   not of the payload, and thus &MAY; be added or removed by any implementation
+   along the request/response chain under the constraints found in
+   <xref target="transfer.codings"/>.
 </t>
 <t>
    The rules for when a message-body is allowed in a message differ for
@@ -1255,107 +1251,139 @@ Content-Type: text/plain
 <t>
    The presence of a message-body in a request is signaled by the
    inclusion of a Content-Length or Transfer-Encoding header field in
-   the request's header fields. 
-   When a request message contains both a message-body of non-zero
-   length and a method that does not define any semantics for that
-   request message-body, then an origin server &SHOULD; either ignore
-   the message-body or respond with an appropriate error message
-   (e.g., 413).  A proxy or gateway, when presented the same request,
-   &SHOULD; either forward the request inbound with the message-body or
-   ignore the message-body when determining a response.
+   the request's header fields, even if the request method does not
+   define any use for a message-body.  This allows the request
+   message framing algorithm to be independent of method semantics.
+   A server &MUST; read the entire request message-body or close
+   the connection after sending its response.
 </t>
 <t>
    For response messages, whether or not a message-body is included with
    a message is dependent on both the request method and the response
-   status code (<xref target="status.code.and.reason.phrase"/>). All responses to the HEAD request method
-   &MUST-NOT; include a message-body, even though the presence of entity-header
-   fields might lead one to believe they do. All 1xx
-   (Informational), 204 (No Content), and 304 (Not Modified) responses
-   &MUST-NOT; include a message-body. All other responses do include a
-   message-body, although it &MAY; be of zero length.
+   status code (<xref target="status.code.and.reason.phrase"/>).
+   Responses to the HEAD request method never include a message-body
+   because the associated response header fields (e.g., Transfer-Encoding,
+   Content-Length, etc.) only indicate what their values would have been
+   if the method had been GET.  All 1xx (Informational), 204 (No Content),
+   and 304 (Not Modified) responses &MUST-NOT; include a message-body.
+   All other responses do include a message-body, although the body
+   &MAY; be of zero length.
 </t>
-</section>
-
-<section title="Message Length" anchor="message.length">
-<t>
-   The transfer-length of a message is the length of the message-body as
-   it appears in the message; that is, after any transfer-codings have
-   been applied. When a message-body is included with a message, the
-   transfer-length of that body is determined by one of the following
+<t anchor="message.body.length">
+   The length of the message-body is determined by one of the following
    (in order of precedence):
 </t>
 <t>
   <list style="numbers">
     <x:lt><t>
-     Any response message which "&MUST-NOT;" include a message-body (such
-     as the 1xx, 204, and 304 responses and any response to a HEAD
-     request) is always terminated by the first empty line after the
-     header fields, regardless of the entity-header fields present in
-     the message.
+     Any response to a HEAD request and any response with a status
+     code of 100-199, 204, or 304 is always terminated by the first
+     empty line after the header fields, regardless of the header
+     fields present in the message, and thus cannot contain a message-body.
     </t></x:lt>
     <x:lt><t>
      If a Transfer-Encoding header field (<xref target="header.transfer-encoding"/>)
      is present and the "chunked" transfer-coding (<xref target="transfer.codings"/>)
-     is used, the transfer-length is defined by the use of this transfer-coding.
-     If a Transfer-Encoding header field is present and the "chunked" transfer-coding
-     is not present, the transfer-length is defined by the sender closing the connection. 
+     is used, the message-body length is determined by reading and decoding the
+     chunked data until the transfer-coding indicates the data is complete.
+    </t>
+    <t>
+     If a message is received with both a Transfer-Encoding header field and a
+     Content-Length header field, the Transfer-Encoding overrides the Content-Length.
+     Such a message may indicate an attempt to perform request or response
+     smuggling (bypass of security-related checks on message routing or content)
+     and thus should be handled as an error.  The provided Content-Length &MUST;
+     be removed, prior to forwarding the message downstream, or replaced with
+     the real message-body length after the transfer-coding is decoded.
+    </t>
+    <t>
+     If a Transfer-Encoding header field is present in a response and the
+     "chunked" transfer-coding is not present, the message-body length is
+     determined by reading the connection until it is closed.
+     If a Transfer-Encoding header field is present in a request and the
+     "chunked" transfer-coding is not present, the message-body length cannot
+     be determined reliably; the server &MUST; respond with 400 (Bad Request)
+     and then close the connection.
     </t></x:lt>
     <x:lt><t>
-     If a Content-Length header field (<xref target="header.content-length"/>) is present, its
-     value in OCTETs represents both the entity-length and the
-     transfer-length. The Content-Length header field &MUST-NOT; be sent
-     if these two lengths are different (i.e., if a Transfer-Encoding
-     header field is present). If a message is received with both a
-     Transfer-Encoding header field and a Content-Length header field,
-     the latter &MUST; be ignored.
+     If a valid Content-Length header field (<xref target="header.content-length"/>)
+     is present without Transfer-Encoding, its decimal value in octets defines
+     the message-body length.  If the actual number of octets sent in the message
+     is less than the indicated Content-Length, the recipient &MUST; consider
+     the message to be incomplete and treat the connection as no longer usable.
+     If the actual number of octets sent in the message is less than the indicated
+     Content-Length, the recipient &MUST; only process the message-body up to the
+     field value's number of octets; the remainder of the message &MUST; either
+     be discarded or treated as the next message in a pipeline.  For the sake of
+     robustness, a user-agent &MAY; attempt to detect and correct such an error
+     in message framing if it is parsing the response to the last request on
+     on a connection and the connection has been closed by the server.
+    </t>
+    <t>
+     If a message is received with multiple Content-Length header fields or a
+     Content-Length header field with an invalid value, the message framing
+     is invalid and &MUST; be treated as an error to prevent request or
+     response smuggling.
+     If this is a request message, the server &MUST; respond with
+     a 400 (Bad Request) status and then close the connection.
+     If this is a response message received by a proxy or gateway, the proxy
+     or gateway &MUST; discard the received response, send a 502 (Bad Gateway)
+     status as its downstream response, and then close the connection.
+     If this is a response message received by a user-agent, the message-body
+     length is determined by reading the connection until it is closed;
+     an error &SHOULD; be indicated to the user.
     </t></x:lt>
     <x:lt><t>
-     If the message uses the media type "multipart/byteranges", and the
-     transfer-length is not otherwise specified, then this self-delimiting
-     media type defines the transfer-length. This media type
-     &MUST-NOT; be used unless the sender knows that the recipient can parse
-     it; the presence in a request of a Range header with multiple byte-range
-     specifiers from a HTTP/1.1 client implies that the client can parse
-     multipart/byteranges responses.
-    <list style="empty"><t>
-       A range header might be forwarded by a HTTP/1.0 proxy that does not
-       understand multipart/byteranges; in this case the server &MUST;
-       delimit the message using methods defined in items 1, 3 or 5 of
-       this section.
-    </t></list>
+     If this is a request message and none of the above are true, then the
+     message-body length is zero (no message-body is present).
     </t></x:lt>
     <x:lt><t>
-     By the server closing the connection. (Closing the connection
-     cannot be used to indicate the end of a request body, since that
-     would leave no possibility for the server to send back a response.)
+     Otherwise, this is a response message without a declared message-body
+     length, so the message-body length is determined by the number of octets
+     received prior to the server closing the connection.
     </t></x:lt>
   </list>
 </t>
 <t>
-   For compatibility with HTTP/1.0 applications, HTTP/1.1 requests
-   containing a message-body &MUST; include a valid Content-Length header
-   field unless the server is known to be HTTP/1.1 compliant. If a
-   request contains a message-body and a Content-Length is not given,
-   the server &SHOULD; respond with 400 (Bad Request) if it cannot
-   determine the length of the message, or with 411 (Length Required) if
-   it wishes to insist on receiving a valid Content-Length.
+   Since there is no way to distinguish a successfully completed,
+   close-delimited message from a partially-received message interrupted
+   by network failure, implementations &SHOULD; use encoding or
+   length-delimited messages whenever possible.  The close-delimiting
+   feature exists primarily for backwards compatibility with HTTP/1.0.
 </t>
 <t>
-   All HTTP/1.1 applications that receive entities &MUST; accept the
-   "chunked" transfer-coding (<xref target="transfer.codings"/>), thus allowing this mechanism
-   to be used for messages when the message length cannot be determined
-   in advance.
+   A server &MAY; reject a request that contains a message-body but
+   not a Content-Length by responding with 411 (Length Required).
 </t>
 <t>
-   Messages &MUST-NOT; include both a Content-Length header field and a
-   transfer-coding. If the message does include a
-   transfer-coding, the Content-Length &MUST; be ignored.
+   A client that sends a request containing a message-body &SHOULD;
+   include a valid Content-Length header field if the message-body length
+   is known in advance, since many existing services will otherwise respond
+   with a 411 (Length Required) status code though they can handle the
+   chunked encoding.  This is typically because such services are
+   implemented via a gateway that requires a content-length in
+   advance of being called and the server is unable or unwilling
+   to buffer the entire request before processing.
 </t>
 <t>
-   When a Content-Length is given in a message where a message-body is
-   allowed, its field value &MUST; exactly match the number of OCTETs in
-   the message-body. HTTP/1.1 user agents &MUST; notify the user when an
-   invalid length is received and detected.
+   A client that sends a request containing a message-body &MUST; include a
+   valid Content-Length header field if it does not know the server will
+   handle HTTP/1.1 (or later) requests; such knowledge can be in the form
+   of specific user configuration or by remembering the version of a prior
+   received response.
+</t>
+<t>
+   Request messages that are prematurely terminated, possibly due to a
+   cancelled connection or a server-imposed time-out exception, &MUST;
+   result in closure of the connection; sending an HTTP/1.1 error response
+   prior to closing the connection is &OPTIONAL;.
+   Response messages that are prematurely terminated, usually by closure
+   of the connection prior to receiving the given number of octets or by
+   failure to decode a transfer-encoded message-body, &MUST; be recorded
+   as incomplete.  A user agent &MUST-NOT; render an incomplete response
+   message-body as if it were complete (i.e., some indication must be given
+   to the user that an error occurred).  Cache requirements for incomplete
+   responses are defined in &cache-incomplete;.
 </t>
 </section>
 
@@ -1364,7 +1392,7 @@ Content-Type: text/plain
 <t>
    There are a few header fields which have general applicability for
    both request and response messages, but which do not apply to the
-   entity being transferred. These header fields apply only to the
+   payload being transferred. These header fields apply only to the
    message being transmitted.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="general-header"/>
@@ -1548,7 +1576,7 @@ Host: www.example.org:8001
 <t>
    Various ad-hoc limitations on request-target length are found in practice.
    It is &RECOMMENDED; that all HTTP senders and recipients support
-   request-target lengths of 8000 or more OCTETs.
+   request-target lengths of 8000 or more octets.
 </t>
 <x:note>
   <t>
@@ -1760,10 +1788,8 @@ Host: www.example.org
   <x:anchor-alias value="HTTP-date"/>
 <t>
    HTTP applications have historically allowed three different formats
-   for the representation of date/time stamps.
-</t>
-<t>
-   The first format is preferred as an Internet standard and represents
+   for date/time stamps.
+   However, the preferred format is 
    a fixed-length subset of that defined by <xref target="RFC1123"/>:
 </t>
 <figure><artwork type="example" x:indent-with="  ">
@@ -1778,7 +1804,7 @@ Sunday, 06-Nov-94 08:49:37 GMT ; obsolete RFC 850 format
 Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </artwork></figure>
 <t>
-   HTTP/1.1 clients and servers that parse the date value &MUST; accept
+   HTTP/1.1 clients and servers that parse a date value &MUST; accept
    all three formats (for compatibility with HTTP/1.0), though they &MUST;
    only generate the RFC 1123 format for representing HTTP-date values
    in header fields. See <xref target="tolerant.applications"/> for further information.
@@ -1908,10 +1934,11 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:anchor-alias value="transfer-extension"/>
 <t>
    Transfer-coding values are used to indicate an encoding
-   transformation that has been, can be, or may need to be applied to an
-   entity-body in order to ensure "safe transport" through the network.
+   transformation that has been, can be, or may need to be applied to a
+   payload body in order to ensure "safe transport" through the network.
    This differs from a content coding in that the transfer-coding is a
-   property of the message, not of the original entity.
+   property of the message rather than a property of the representation
+   that is being transferred.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="transfer-coding"/><iref primary="true" item="Grammar" subitem="transfer-extension"/>
   <x:ref>transfer-coding</x:ref>         = "chunked" ; <xref target="chunked.encoding"/>
@@ -1925,7 +1952,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:anchor-alias value="attribute"/>
   <x:anchor-alias value="transfer-parameter"/>
   <x:anchor-alias value="value"/>
-   Parameters are in  the form of attribute/value pairs.
+   Parameters are in the form of attribute/value pairs.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="transfer-parameter"/><iref primary="true" item="Grammar" subitem="attribute"/><iref primary="true" item="Grammar" subitem="value"/><iref primary="true" item="Grammar" subitem="date2"/><iref primary="true" item="Grammar" subitem="date3"/>
   <x:ref>transfer-parameter</x:ref>      = <x:ref>attribute</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> <x:ref>value</x:ref>
@@ -1938,13 +1965,13 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    the Transfer-Encoding header field (<xref target="header.transfer-encoding"/>).
 </t>
 <t>
-   Whenever a transfer-coding is applied to a message-body, the set of
+   Whenever a transfer-coding is applied to a payload body, the set of
    transfer-codings &MUST; include "chunked", unless the message indicates it
    is terminated by closing the connection. When the "chunked" transfer-coding
-   is used, it &MUST; be the last transfer-coding applied to the
+   is used, it &MUST; be the last transfer-coding applied to form the
    message-body. The "chunked" transfer-coding &MUST-NOT; be applied more
    than once to a message-body. These rules allow the recipient to
-   determine the transfer-length of the message (<xref target="message.length"/>).
+   determine the message-body length of the message (<xref target="message.body.length"/>).
 </t>
 <t>
    Transfer-codings are analogous to the Content-Transfer-Encoding values of
@@ -1953,13 +1980,13 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    However, safe transport
    has a different focus for an 8bit-clean transfer protocol. In HTTP,
    the only unsafe characteristic of message-bodies is the difficulty in
-   determining the exact body length (<xref target="message.length"/>), or the desire to
+   determining the exact body length (<xref target="message.body.length"/>), or the desire to
    encrypt data over a shared transport.
 </t>
 <t>
-   A server which receives an entity-body with a transfer-coding it does
-   not understand &SHOULD; return 501 (Not Implemented), and close the
-   connection. A server &MUST-NOT; send transfer-codings to an HTTP/1.0
+   A server that receives a request message with a transfer-coding it does
+   not understand &SHOULD; respond with 501 (Not Implemented) and then
+   close the connection. A server &MUST-NOT; send transfer-codings to an HTTP/1.0
    client.
 </t>
 
@@ -2052,21 +2079,21 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   read chunk-size, chunk-ext (if any) and CRLF
   while (chunk-size &gt; 0) {
      read chunk-data and CRLF
-     append chunk-data to entity-body
+     append chunk-data to decoded-body
      length := length + chunk-size
      read chunk-size and CRLF
   }
-  read entity-header
-  while (entity-header not empty) {
-     append entity-header to existing header fields
-     read entity-header
+  read header-field
+  while (header-field not empty) {
+     append header-field to existing header fields
+     read header-field
   }
   Content-Length := length
   Remove "chunked" from Transfer-Encoding
 </artwork></figure>
 <t>
    All HTTP/1.1 applications &MUST; be able to receive and decode the
-   "chunked" transfer-coding, and &MUST; ignore chunk-ext extensions
+   "chunked" transfer-coding and &MUST; ignore chunk-ext extensions
    they do not understand.
 </t>
 </section>
@@ -2320,7 +2347,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <t>
    In order to remain persistent, all messages on the connection &MUST;
    have a self-defined message length (i.e., one not defined by closure
-   of the connection), as described in <xref target="message.length"/>.
+   of the connection), as described in <xref target="message.body.length"/>.
 </t>
 </section>
 
@@ -2474,10 +2501,9 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   </t>
 </x:note>
 <t>
-   The Content-Length field of a request or response is added or deleted
-   according to the rules in <xref target="message.length"/>. A transparent proxy &MUST;
-   preserve the entity-length (&entity-length;) of the entity-body,
-   although it &MAY; change the transfer-length (<xref target="message.length"/>).
+   A transparent proxy &MUST; preserve the message payload (&payload;),
+   though it &MAY; change the message-body through application or removal
+   of a transfer-coding (<xref target="transfer.codings"/>).
 </t>
 </section>
 
@@ -2857,10 +2883,15 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:anchor-alias value="Content-Length"/>
   <x:anchor-alias value="Content-Length-v"/>
 <t>
-   The "Content-Length" entity-header field indicates the size of the
-   entity-body, in number of OCTETs. In the case of responses to the HEAD
-   method, it indicates the size of the entity-body that would have been sent
-   had the request been a GET.
+   The "Content-Length" header field indicates the size of the
+   message-body, in decimal number of octets, for any message other than
+   a response to the HEAD method or a response with a status code of 304.
+   In the case of responses to the HEAD method, it indicates the size of
+   the payload body (not including any potential transfer-coding) that
+   would have been sent had the request been a GET.
+   In the case of the 304 (Not Modified) response, it indicates the size of
+   the payload body (not including any potential transfer-coding) that
+   would have been sent in a 200 (OK) response.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/><iref primary="true" item="Grammar" subitem="Content-Length-v"/>
   <x:ref>Content-Length</x:ref>   = "Content-Length" ":" <x:ref>OWS</x:ref> 1*<x:ref>Content-Length-v</x:ref>
@@ -2873,21 +2904,19 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   Content-Length: 3495
 </artwork></figure>
 <t>
-   Applications &SHOULD; use this field to indicate the transfer-length of
-   the message-body, unless this is prohibited by the rules in <xref target="message.length"/>.
+   Implementations &SHOULD; use this field to indicate the message-body
+   length when no transfer-coding is being applied and the
+   payload's body length can be determined prior to being transferred.
 </t>
 <t>
    Any Content-Length greater than or equal to zero is a valid value.
-   <xref target="message.length"/> describes how to determine the length of a message-body
+   <xref target="message.body.length"/> describes how to determine the length of a message-body
    if a Content-Length is not given.
 </t>
 <t>
    Note that the meaning of this field is significantly different from
    the corresponding definition in MIME, where it is an optional field
-   used within the "message/external-body" content-type. In HTTP, it
-   &SHOULD; be sent whenever the message's length can be determined prior
-   to being transferred, unless this is prohibited by the rules in
-   <xref target="message.length"/>.
+   used within the "message/external-body" content-type.
 </t>
 </section>
 
@@ -2942,7 +2971,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </t>
 <t>
    Clients &SHOULD; only send a Date header field in messages that include
-   an entity-body, as in the case of the PUT and POST requests, and even
+   a payload, as is usually the case for PUT and POST requests, and even
    then it is optional. A client without a clock &MUST-NOT; send a Date
    header field in a request.
 </t>
@@ -2952,7 +2981,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    the best available approximation of the date and time of message
    generation, unless the implementation has no means of generating a
    reasonably accurate date and time. In theory, the date ought to
-   represent the moment just before the entity is generated. In
+   represent the moment just before the payload is generated. In
    practice, the date can be generated at any time during the message
    origination without affecting its semantic value.
 </t>
@@ -4671,10 +4700,10 @@ Host: www.example.org
    recognize a single LF as a line terminator and ignore the leading CR.
 </t>
 <t>
-   The character set of an entity-body &SHOULD; be labeled as the lowest
-   common denominator of the character codes used within that body, with
-   the exception that not labeling the entity is preferred over labeling
-   the entity with the labels US-ASCII or ISO-8859-1. See &payload;.
+   The character set of a representation &SHOULD; be labeled as the lowest
+   common denominator of the character codes used within that representation, with
+   the exception that not labeling the representation is preferred over labeling
+   the representation with the labels US-ASCII or ISO-8859-1. See &payload;.
 </t>
 <t>
    Additional rules for requirements on parsing and encoding of dates
@@ -4843,7 +4872,7 @@ Host: www.example.org
    required fixing exactly when chunked encoding is used (to allow for
    transfer encoding that may not be self delimiting); it was important
    to straighten out exactly how message lengths are computed. (Sections
-   <xref target="transfer.codings" format="counter"/>, <xref target="message.length" format="counter"/>,
+   <xref target="transfer.codings" format="counter"/>, <xref target="message.body.length" format="counter"/>,
    <xref target="header.content-length" format="counter"/>,
    see also <xref target="Part3"/>, <xref target="Part5"/> and <xref target="Part6"/>)
 </t>
@@ -4900,7 +4929,7 @@ Host: www.example.org
 <t>
   Remove reference to non-existent identity transfer-coding value tokens.
   (Sections <xref format="counter" target="transfer.codings"/> and
-  <xref format="counter" target="message.length"/>)
+  <xref format="counter" target="message.body.length"/>)
 </t>
 <t>
   Require that invalid whitespace around field-names be rejected.
@@ -5028,7 +5057,6 @@ Host: www.example.org
  / %x53.61.74.75.72.64.61.79 ; Saturday
  / %x53.75.6E.64.61.79 ; Sunday
 
-<x:ref>entity-body</x:ref> = &lt;entity-body, defined in [Part3], Section 3.2&gt;
 <x:ref>entity-header</x:ref> = &lt;entity-header, defined in [Part3], Section 3.1&gt;
 
 <x:ref>field-content</x:ref> = *( WSP / VCHAR / obs-text )
@@ -5045,8 +5073,7 @@ Host: www.example.org
 
 <x:ref>last-chunk</x:ref> = 1*"0" *WSP [ chunk-ext ] CRLF
 
-<x:ref>message-body</x:ref> = entity-body /
- &lt;entity-body encoded as per Transfer-Encoding&gt;
+<x:ref>message-body</x:ref> = *OCTET
 <x:ref>minute</x:ref> = 2DIGIT
 <x:ref>month</x:ref> = %x4A.61.6E ; Jan
  / %x46.65.62 ; Feb
