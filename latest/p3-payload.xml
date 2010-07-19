@@ -255,19 +255,22 @@
   <list>
     <t>
       The mechanism for selecting the appropriate representation when
-      servicing a request. The representation of entities in any response
+      servicing a request. The representation in any response
       can be negotiated (including error responses).
     </t>
   </list>
 </t>
 <t>
-  <iref item="entity"/>
-  <x:dfn>entity</x:dfn>
+  <iref item="payload"/>
+  <x:dfn>payload</x:dfn>
   <list>
     <t>
-      The information transferred as the payload of a request or
-      response. An entity consists of metadata in the form of
-      entity-header fields and content in the form of an entity-body.
+      The information transferred within a given message is called the
+      payload, consisting  of optional payload metadata and an optional
+      payload body.  The payload in HTTP is always a partial or complete
+      representation of some resource, though which resource is represented
+      is dependent on the type of message (request or response), the
+      request method, and the response status code.
     </t>
   </list>
 </t>
@@ -276,22 +279,12 @@
   <x:dfn>representation</x:dfn>
   <list>
     <t>
-      An entity included with a response that is subject to content
-      negotiation. There may exist multiple
-      representations associated with a particular response status.
-    </t>
-  </list>
-</t>
-<t>
-  <iref item="variant"/>
-  <x:dfn>variant</x:dfn>
-  <list>
-    <t>
-      A resource may have one, or more than one, representation(s)
-      associated with it at any given instant. Each of these
-      representations is termed a "variant".  Use of the term "variant"
-      does not necessarily imply that the resource is subject to content
-      negotiation.
+      A representation is information in a format that can be readily
+      communicated from one party to another.  For our purposes, a
+      representation is binary data and its associated metadata.
+      A representation of a resource is information that reflects the
+      state of that resource, as observed at some point in the past
+      or to be desired at some point in the future.
     </t>
   </list>
 </t>
@@ -1419,16 +1412,11 @@
   <x:anchor-alias value="Content-Location"/>
   <x:anchor-alias value="Content-Location-v"/>
 <t>
-   The "Content-Location" entity-header field is used to supply a URI for the
-   entity in the message when it is accessible from a location separate from
-   the requested resource's URI.
-</t>
-<t>
-   A server &SHOULD; provide a Content-Location for the variant corresponding
-   to the response entity, especially in the case where a resource has multiple
-   entities associated with it, and those entities actually have separate
-   locations by which they might be individually accessed, the server &SHOULD;
-   provide a Content-Location for the particular variant which is returned.
+   The "Content-Location" header field supplies a URI that can be used
+   as a specific identifier for the representation in this message.
+   In other words, if one were to perform a GET on this URI at the time
+   of this message's generation, then a 200 response would contain the
+   same representation that is enclosed as payload in this message.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Location"/><iref primary="true" item="Grammar" subitem="Content-Location-v"/>
   <x:ref>Content-Location</x:ref>   = "Content-Location" ":" <x:ref>OWS</x:ref>
@@ -1438,29 +1426,73 @@
 </artwork></figure>
 <t>
    The Content-Location value is not a replacement for the Effective
-   Request URI (&effective-request-uri;); it is only a statement of the location of the resource
-   corresponding to this particular entity at the time of the request.
-   Future requests &MAY; may be addressed to the Content-Location URI
-   if the desire is to identify the source of that particular
-   entity.
+   Request URI (&effective-request-uri;).  It is representation metadata.
+   It has the same syntax and semantics as the header field of the same name
+   defined for MIME body parts in <xref target="RFC2557" x:sec="4"/>.
+   However, its appearance in an HTTP message has some special implications
+   for HTTP recipients.
 </t>
 <t>
-   &response-representation; describes how clients may process the Content-Location header field.
+   If Content-Location is included in a response message and its value
+   is the same as the Effective Request URI, then the response payload
+   &SHOULD; be considered the current representation of that resource.
+   For a GET or HEAD request, this is the same as the default semantics
+   when no Content-Location is provided by the server.  For a state-changing
+   method like PUT or POST, it implies that the server's response contains
+   the new representation of that resource, thereby distinguishing it from
+   representations that might only report about the action (e.g., "It worked!").
+   This allows authoring applications to update their local copies without
+   the need for a subsequent GET request.
 </t>
 <t>
-   A cache cannot assume that an entity with a Content-Location
+   If Content-Location is included in a response message and its value
+   differs from the Effective Request URI, then the origin server is
+   informing recipients that this representation has its own, presumably
+   more specific, identifier.  For a GET or HEAD request, this is an
+   indication that the Effective Request URI identifies a resource that
+   is subject to content negotiation and the representation selected for
+   this response can also be found at the identified URI.  For other
+   methods, such a Content-Location indicates that this representation
+   contains a report on the action's status and the same report is
+   available (for future access with GET) at the given URI.  For
+   example, a purchase transaction made via the POST method may
+   include a receipt document as the payload of the 200 response;
+   the Content-Location value provides an identifier for retrieving
+   a copy of that same receipt in the future.
+</t>
+<t>
+   If Content-Location is included in a request message, then it &MAY;
+   be interpreted by the origin server as an indication of where the
+   user agent originally obtained the content of the enclosed
+   representation (prior to any subsequent modification of the content
+   by that user agent).  In other words, the user agent is providing
+   the same representation metadata that it received with the original
+   representation.  However, such interpretation &MUST-NOT; be used to
+   alter the semantics of the method requested by the client.  For
+   example, if a client makes a PUT request on a negotiated resource
+   and the origin server accepts that PUT (without redirection), then the
+   new set of values for that resource is expected to be consistent with
+   the one representation supplied in that PUT; the Content-Location
+   cannot be used as a form of reverse content selection that
+   identifies only one of the negotiated representations to be updated.
+   If the user agent had wanted the latter semantics, it would have applied
+   the PUT directly to the Content-Location URI.
+</t>
+<t>
+   A Content-Location field received in a request message is transitory
+   information that &SHOULD-NOT; be saved with other representation
+   metadata for use in later responses.  The Content-Location's value
+   might be saved for use in other contexts, such as within source links
+   or other metadata.
+</t>
+<t>
+   A cache cannot assume that a representation with a Content-Location
    different from the URI used to retrieve it can be used to respond to
-   later requests on that Content-Location URI. However, the Content-Location
-   can be used to differentiate between multiple entities
-   retrieved from a single requested resource, as described in &caching-neg-resp;.
+   later requests on that Content-Location URI.
 </t>
 <t>
-   If the Content-Location is a relative URI, the relative URI is
+   If the Content-Location value is a partial URI, it is
    interpreted relative to the Effective Request URI.
-</t>
-<t>
-   The meaning of the Content-Location header in requests is
-   undefined; servers are free to ignore it in those cases.
 </t>
 </section>
 
