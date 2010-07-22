@@ -356,8 +356,8 @@ Accept-Encoding: gzip
 
 </artwork></figure>
 <t>
-   In this case, the response may use the gzip Content Coding or not.
-   If it does, it might look like that:
+   In this case, the response may or may not use the gzip content coding.
+   If it does not, the response might look like:
 </t>
 <figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
 HTTP/1.1 200 OK
@@ -374,7 +374,7 @@ Hello World!
 Hello World!
 </x:span></artwork></figure>
 <t>
-   A variant that does use gzip Content Coding would be:
+   An alternative representation that does use gzip content coding would be:
 </t>
 <figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
 HTTP/1.1 200 OK
@@ -388,10 +388,11 @@ Content-Encoding: gzip
 <spanx>...binary data...</spanx></artwork></figure>
 <x:note>
   <t>
-    <x:h>Note:</x:h> Content Codings are a property of the response
-    entity, thus affect the Entity Tag. An alternative are Transfer
-    Codings (&transfer-codings;) which apply only to the transfer of
-    the message, and thus do not require assigning distinct entity tags.
+    <x:h>Note:</x:h> Content codings are a property of the representation,
+    so therefore an entity tag of an encoded representation must be distinct
+    from an unencoded representation to prevent conflicts during cache updates
+    and range requests.  In contrast, transfer codings (&transfer-codings;)
+    apply only during message transfer and do not require distinct entity tags.
   </t>
 </x:note>
 </section>
@@ -409,38 +410,27 @@ Content-Encoding: gzip
    after the header fields.
 </t>
 <t>
-   The response &MUST; include the following header fields:
-  <list style="symbols">
-    <x:lt>
-      <t>Date, unless its omission is required by &clockless;.</t>
-      <t>
-         If a clockless origin server obeys these rules, and proxies and
-         clients add their own Date to any response received without one (as
-         already specified by &header-date;, caches will operate
-         correctly.</t>
-    </x:lt>
-    <x:lt>
-      <t>ETag and/or Content-Location, if the header would have been sent
-         in a 200 response to the same request.</t>
-    </x:lt>
-    <x:lt>
-      <t>Expires, Cache-Control, and/or Vary, if the field-value might
-         differ from that sent in any previous response for the same
-         variant.</t>
-    </x:lt>
-  </list>
+   A 304 response &MUST; include a Date header field (&header-date;)
+   unless its omission is required by &clockless;.  If a 200 response
+   to the same request would have included any of the header fields
+   Cache-Control, Content-Location, ETag, Expires, Last-Modified, or
+   Vary, then those same header fields &MUST; be sent in a 304 response.
 </t>
 <t>
-   If the conditional GET used a strong cache validator (see <xref target="weak.and.strong.validators"/>),
-   the response &SHOULD-NOT;  include other entity-headers.
-   Otherwise (i.e., the conditional GET used a weak validator), the
-   response &MUST-NOT; include other entity-headers; this prevents
-   inconsistencies between cached entity-bodies and updated headers.
+   Since the goal of a 304 response is to minimize information transfer
+   when the recipient already has one or more cached representations,
+   the response &SHOULD-NOT; include representation metadata other
+   than the above listed fields unless said metadata exists for the
+   purpose of guiding cache updates (e.g., future HTTP extensions).
 </t>
 <t>
-   If a 304 response indicates an entity not currently cached, then the
-   cache &MUST; disregard the response and repeat the request without the
-   conditional.
+   If a 304 response includes an entity-tag that indicates a
+   representation not currently cached, then the recipient &MUST-NOT;
+   use the 304 to update its own cache.  If that conditional request originated
+   with an outbound client, such as a user agent with its own cache sending a
+   conditional GET to a shared proxy, then the 304 response &MUST; be
+   forwarded to the outbound client.  Otherwise, disregard the response
+   and repeat the request without the conditional.
 </t>
 <t>
    If a cache uses a received 304 response to update a cache entry, the
@@ -745,9 +735,11 @@ Content-Encoding: gzip
   <x:anchor-alias value="ETag-v"/>
 <t>
    The "ETag" response-header field provides the current value of the
-   entity tag (see <xref target="entity.tags"/>) for the requested variant,
-   which may be used for comparison with other entities from the same resource
-   (see <xref target="weak.and.strong.validators"/>).
+   entity tag (see <xref target="entity.tags"/>) for one representation of
+   the resource identified by the Effective Request URI.  An entity tag
+   is intended for use as a resource-local identifier for differentiating
+   between representations of the same resource that vary over time or via
+   content negotiation (see <xref target="weak.and.strong.validators"/>).
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="ETag-v"/>
   <x:ref>ETag</x:ref>   = "ETag" ":" <x:ref>OWS</x:ref> <x:ref>ETag-v</x:ref>
@@ -762,9 +754,9 @@ Content-Encoding: gzip
   ETag: ""
 </artwork></figure>
 <t>
-   The ETag response-header field value, an entity tag, provides for an
-   "opaque" cache validator. This might allow more reliable validation
-   in situations where it is inconvenient to store modification dates,
+   An entity tag provides an "opaque" cache validator that allows for
+   more reliable validation than modification dates in situations where
+   it is inconvenient to store modification dates,
    where the one-second resolution of HTTP date values is not
    sufficient, or where the origin server wishes to avoid certain
    paradoxes that might arise from the use of modification dates.
@@ -857,9 +849,10 @@ Content-Encoding: gzip
   <x:anchor-alias value="If-Modified-Since-v"/>
 <t>
    The "If-Modified-Since" request-header field is used to make a request 
-   method conditional: if the requested variant has not been modified since the
-   time specified in this field, the server will not return an entity; instead,
-   a 304 (Not Modified) response will be returned.
+   method conditional by date: if the representation that would have been
+   transferred in a 200 response to a GET request has not been modified since
+   the time specified in this field, then do not perform the method;
+   instead, respond as detailed below.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Modified-Since"/><iref primary="true" item="Grammar" subitem="If-Modified-Since-v"/>
   <x:ref>If-Modified-Since</x:ref>   = "If-Modified-Since" ":" <x:ref>OWS</x:ref>
@@ -874,7 +867,7 @@ Content-Encoding: gzip
 </artwork></figure>
 <t>
    A GET method with an If-Modified-Since header and no Range header
-   requests that the identified entity be transferred only if it has
+   requests that the representation be transferred only if it has
    been modified since the date given by the If-Modified-Since header.
    The algorithm for determining this includes the following cases:
   <list style="numbers">
@@ -884,12 +877,12 @@ Content-Encoding: gzip
          A date which is later than the server's current time is
          invalid.</t>
 
-      <t>If the variant has been modified since the If-Modified-Since
+      <t>If the representation has been modified since the If-Modified-Since
          date, the response is exactly the same as for a normal GET.</t>
 
-      <t>If the variant has not been modified since a valid If-Modified-Since
-         date, the server &SHOULD; return a 304 (Not
-         Modified) response.</t>
+      <t>If the representation has not been modified since a valid
+         If-Modified-Since date, the server &SHOULD; return a
+         304 (Not Modified) response.</t>
   </list>
 </t>
 <t>
@@ -1020,13 +1013,14 @@ Content-Encoding: gzip
   <x:anchor-alias value="If-Unmodified-Since-v"/>
 <t>
    The "If-Unmodified-Since" request-header field is used to make a request
-   method conditional. If the requested resource has not been modified
+   method conditional.  If the representation that would have been transferred
+   in a 200 response to a GET request on the same resource has not been modified
    since the time specified in this field, the server &SHOULD; perform the
    requested operation as if the If-Unmodified-Since header were not
    present.
 </t>
 <t>
-   If the requested variant has been modified since the specified time,
+   If the representation has been modified since the specified time,
    the server &MUST-NOT; perform the requested operation, and &MUST; return
    a 412 (Precondition Failed).
 </t>
@@ -1063,7 +1057,7 @@ Content-Encoding: gzip
   <x:anchor-alias value="Last-Modified-v"/>
 <t>
    The "Last-Modified" entity-header field indicates the date and time at
-   which the origin server believes the variant was last modified.
+   which the origin server believes the representation was last modified.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Last-Modified"/><iref primary="true" item="Grammar" subitem="Last-Modified-v"/>
   <x:ref>Last-Modified</x:ref>   = "Last-Modified" ":" <x:ref>OWS</x:ref> <x:ref>Last-Modified-v</x:ref>
@@ -1104,7 +1098,7 @@ Content-Encoding: gzip
 <t>
    The Last-Modified entity-header field value is often used as a cache
    validator. In simple terms, a cache entry is considered to be valid
-   if the entity has not been modified since the Last-Modified value.
+   if the representation has not been modified since the Last-Modified value.
 </t>
 </section>
 
