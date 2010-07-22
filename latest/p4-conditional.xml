@@ -455,33 +455,34 @@ Content-Encoding: gzip
 <section title="Weak and Strong Validators" anchor="weak.and.strong.validators">
 <t>
    Since both origin servers and caches will compare two validators to
-   decide if they represent the same or different entities, one normally
-   would expect that if the entity (the entity-body or any entity-headers)
-   changes in any way, then the associated validator would
-   change as well. If this is true, then we call this validator a
-   "strong validator."
+   decide if they represent the same or different representations, one normally
+   would expect that if the representation (including both representation
+   header fields and representation body) changes in any way, then the
+   associated validator would change as well. If this is true, then we
+   call this validator a "strong validator."
 </t>
 <t>
    However, there might be cases when a server prefers to change the
    validator only on semantically significant changes, and not when
-   insignificant aspects of the entity change. A validator that does not
-   always change when the resource changes is a "weak validator."
+   insignificant aspects of the representation change. A validator that does not
+   always change when the representation changes is a "weak validator."
 </t>
 <t>
    Entity tags are normally "strong validators," but the protocol
    provides a mechanism to tag an entity tag as "weak." One can think of
-   a strong validator as one that changes whenever the bits of an entity
-   changes, while a weak value changes whenever the meaning of an entity
-   changes. Alternatively, one can think of a strong validator as part
-   of an identifier for a specific entity, while a weak validator is
-   part of an identifier for a set of semantically equivalent entities.
+   a strong validator as one that changes whenever the sequence of bits
+   in a representation changes, while a weak value changes whenever the
+   meaning of a representation changes. Alternatively, one can think of
+   a strong validator as part of an identifier for a specific representation,
+   whereas a weak validator is part of an identifier for a set of semantically
+   equivalent representations.
   <list><t>
       <x:h>Note:</x:h> One example of a strong validator is an integer that is
-      incremented in stable storage every time an entity is changed.
+      incremented in stable storage every time a representation is changed.
     </t><t>
-      An entity's modification time, if represented with one-second
+      An entity's modification time, if defined with only one-second
       resolution, could be a weak validator, since it is possible that
-      the resource might be modified twice during a single second.
+      the representation might be modified twice during a single second.
     </t><t>
       Support for weak validators is optional. However, weak validators
       allow for more efficient caching of equivalent objects; for
@@ -497,11 +498,11 @@ Content-Encoding: gzip
 </t>
 <t>
    Strong validators are usable in any context. Weak validators are only
-   usable in contexts that do not depend on exact equality of an entity.
-   For example, either kind is usable for a conditional GET of a full
-   entity. However, only a strong validator is usable for a sub-range
+   usable in contexts that do not depend on exact equality of a representation.
+   For example, either kind is usable for a normal conditional GET.
+   However, only a strong validator is usable for a sub-range
    retrieval, since otherwise the client might end up with an internally
-   inconsistent entity.
+   inconsistent representation.
 </t>
 <t>
    Clients &MUST-NOT; use weak validators in range requests (<xref target="Part5"/>). 
@@ -561,8 +562,8 @@ Content-Encoding: gzip
    using the following rules:
   <list style="symbols">
      <t>The validator is being compared by an origin server to the
-        actual current validator for the entity and,</t>
-     <t>That origin server reliably knows that the associated entity did
+        actual current validator for the representation and,</t>
+     <t>That origin server reliably knows that the associated representation did
         not change twice during the second covered by the presented
         validator.</t>
   </list>
@@ -572,7 +573,7 @@ Content-Encoding: gzip
   <list style="symbols">
      <t>The validator is about to be used by a client in an If-Modified-Since
         or If-Unmodified-Since header, because the client
-        has a cache entry for the associated entity, and</t>
+        has a cache entry for the associated representation, and</t>
      <t>That cache entry includes a Date value, which gives the time
         when the origin server sent the original response, and</t>
      <t>The presented Last-Modified time is at least 60 seconds before
@@ -583,7 +584,7 @@ Content-Encoding: gzip
    or
   <list style="symbols">
      <t>The validator is being compared by an intermediate cache to the
-        validator stored in its cache entry for the entity, and</t>
+        validator stored in its cache entry for the representation, and</t>
      <t>That cache entry includes a Date value, which gives the time
         when the origin server sent the original response, and</t>
      <t>The presented Last-Modified time is at least 60 seconds before
@@ -725,7 +726,7 @@ Content-Encoding: gzip
 </t>
 <t>
    For entity-header fields, both sender and recipient refer to either the
-   client or the server, depending on who sends and who receives the entity.
+   client or the server, depending on who sends and who receives the message.
 </t>
 
 <section title="ETag" anchor="header.etag">
@@ -795,7 +796,7 @@ Content-Encoding: gzip
   <x:ref>If-Match-v</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
 </artwork></figure>
 <t>
-   If any of the entity tags match the entity tag of the entity that
+   If any of the entity tags match the entity tag of the representation that
    would have been returned in the response to a similar GET request
    (without the If-Match header) on that resource, or if "*" is given
    and any current entity exists for that resource, then the server &MAY;
@@ -804,7 +805,7 @@ Content-Encoding: gzip
 </t>
 <t>
    If none of the entity tags match, or if "*" is given and no current
-   entity exists, the server &MUST-NOT; perform the requested method, and
+   representation exists, the server &MUST-NOT; perform the requested method, and
    &MUST; return a 412 (Precondition Failed) response. This behavior is
    most useful when the client wants to prevent an updating method, such
    as PUT, from modifying a resource that has changed since the client
@@ -824,7 +825,7 @@ Content-Encoding: gzip
 <t>
    A request intended to update a resource (e.g., a PUT) &MAY; include an
    If-Match header field to signal that the request method &MUST-NOT; be
-   applied if the entity corresponding to the If-Match value (a single
+   applied if the representation corresponding to the If-Match value (a single
    entity tag) is no longer a representation of that resource. This
    allows the user to indicate that they do not wish the request to be
    successful if the resource has been changed without their knowledge.
@@ -954,16 +955,16 @@ Content-Encoding: gzip
   <x:ref>If-None-Match-v</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
 </artwork></figure>
 <t>
-   If any of the entity tags match the entity tag of the entity that
+   If any of the entity tags match the entity tag of the representation that
    would have been returned in the response to a similar GET request
    (without the If-None-Match header) on that resource, or if "*" is
-   given and any current entity exists for that resource, then the
+   given and any current representation exists for that resource, then the
    server &MUST-NOT; perform the requested method, unless required to do
    so because the resource's modification date fails to match that
    supplied in an If-Modified-Since header field in the request.
    Instead, if the request method was GET or HEAD, the server &SHOULD;
    respond with a 304 (Not Modified) response, including the cache-related
-   header fields (particularly ETag) of one of the entities that
+   header fields (particularly ETag) of one of the representations that
    matched. For all other request methods, the server &MUST; respond with
    a status of 412 (Precondition Failed).
 </t>
@@ -1086,10 +1087,10 @@ Content-Encoding: gzip
    origination date.
 </t>
 <t>
-   An origin server &SHOULD; obtain the Last-Modified value of the entity
+   An origin server &SHOULD; obtain the Last-Modified value of the representation
    as close as possible to the time that it generates the Date value of
    its response. This allows a recipient to make an accurate assessment
-   of the entity's modification time, especially if the entity changes
+   of the entity's modification time, especially if the representation changes
    near the time that the response is generated.
 </t>
 <t>
