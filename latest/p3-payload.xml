@@ -601,8 +601,8 @@
 
 <section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
 <t>
-   Internet media types are registered with a canonical form. An
-   entity-body transferred via HTTP messages &MUST; be represented in the
+   Internet media types are registered with a canonical form. A
+   representation transferred via HTTP messages &MUST; be in the
    appropriate canonical form prior to its transmission except for
    "text" types, as defined in the next paragraph.
 </t>
@@ -610,28 +610,28 @@
    When in canonical form, media subtypes of the "text" type use CRLF as
    the text line break. HTTP relaxes this requirement and allows the
    transport of text media with plain CR or LF alone representing a line
-   break when it is done consistently for an entire entity-body. HTTP
-   applications &MUST; accept CRLF, bare CR, and bare LF as being
-   representative of a line break in text media received via HTTP. In
-   addition, if the text is represented in a character set that does not
+   break when it is done consistently for an entire representation. HTTP
+   applications &MUST; accept CRLF, bare CR, and bare LF as indicating
+   a line break in text media received via HTTP. In
+   addition, if the text is in a character encoding that does not
    use octets 13 and 10 for CR and LF respectively, as is the case for
-   some multi-byte character sets, HTTP allows the use of whatever octet
-   sequences are defined by that character set to represent the
+   some multi-byte character encodings, HTTP allows the use of whatever octet
+   sequences are defined by that character encoding to represent the
    equivalent of CR and LF for line breaks. This flexibility regarding
-   line breaks applies only to text media in the entity-body; a bare CR
+   line breaks applies only to text media in the payload body; a bare CR
    or LF &MUST-NOT; be substituted for CRLF within any of the HTTP control
    structures (such as header fields and multipart boundaries).
 </t>
 <t>
-   If an entity-body is encoded with a content-coding, the underlying
+   If a representation is encoded with a content-coding, the underlying
    data &MUST; be in a form defined above prior to being encoded.
 </t>
 <t>
    The "charset" parameter is used with some media types to define the
-   character set (<xref target="character.sets"/>) of the data. When no explicit charset
+   character encoding (<xref target="character.sets"/>) of the data. When no explicit charset
    parameter is provided by the sender, media subtypes of the "text"
    type are defined to have a default charset value of "ISO-8859-1" when
-   received via HTTP. Data in character sets other than "ISO-8859-1" or
+   received via HTTP. Data in character encodings other than "ISO-8859-1" or
    its subsets &MUST; be labeled with an appropriate charset value. See
    <xref target="missing.charset"/> for compatibility problems.
 </t>
@@ -640,7 +640,7 @@
 <section title="Multipart Types" anchor="multipart.types">
 <t>
    MIME provides for a number of "multipart" types -- encapsulations of
-   one or more entities within a single message-body. All multipart
+   one or more representations within a single message-body. All multipart
    types share a common syntax, as defined in <xref target="RFC2046" x:sec="5.1.1" x:fmt="of"/>,
    and &MUST; include a boundary parameter as part of the media type
    value. The message body is itself a protocol element and &MUST;
@@ -704,7 +704,7 @@
 </section>
 </section>
 
-<section title="Entity" anchor="entity">
+<section title="Representation" anchor="representation">
 <t>
    Request and Response messages &MAY; transfer a representation if not otherwise
    restricted by the request method or response status code. A representation
@@ -720,8 +720,10 @@
   <x:anchor-alias value="entity-header"/>
   <x:anchor-alias value="extension-header"/>
 <t>
-   Entity-header fields define metadata about the entity-body or,
-   if no body is present, about the resource identified by the request.
+   Entity-header fields define metadata about the representation data
+   enclosed in the message-body or, if no message-body is present, about
+   the representation that would have been transferred in a 200 response
+   to a simultaneous GET request on the Effective Request URI.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="entity-header"/><iref primary="true" item="Grammar" subitem="extension-header"/>
   <x:ref>entity-header</x:ref>  = <x:ref>Content-Encoding</x:ref>         ; <xref target="header.content-encoding"/>
@@ -746,34 +748,31 @@
 </t>
 </section>
 
-<section title="Entity Body" anchor="entity.body">
-  <x:anchor-alias value="entity-body"/>
+<section title="Payload Body" anchor="payload.body">
+  <x:anchor-alias value="payload-body"/>
 <t>
-   The entity-body (if any) sent with an HTTP request or response is in
+   The payload body (if any) sent with an HTTP request or response is in
    a format and encoding defined by the entity-header fields.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="entity-body"/>
-  <x:ref>entity-body</x:ref>    = *<x:ref>OCTET</x:ref>
-</artwork></figure>
 <t>
-   An entity-body is only present in a message when a message-body is
-   present, as described in &message-body;. The entity-body is obtained
+   A payload body is only present in a message when a message-body is
+   present, as described in &message-body;. The payload body is obtained
    from the message-body by decoding any Transfer-Encoding that might
    have been applied to ensure safe and proper transfer of the message.
 </t>
 
 <section title="Type" anchor="type">
 <t>
-   When an entity-body is included with a message, the data type of that
+   When a payload body is included with a message, the data type of that
    body is determined via the header fields Content-Type and Content-Encoding.
    These define a two-layer, ordered encoding model:
 </t>
 <figure><artwork type="example">
-  entity-body := Content-Encoding( Content-Type( data ) )
+  payload-body := Content-Encoding( Content-Type( data ) )
 </artwork></figure>
 <t>
    Content-Type specifies the media type of the underlying data. Any HTTP/1.1
-   message containing an entity-body &SHOULD; include a Content-Type header
+   message containing a payload body &SHOULD; include a Content-Type header
    field defining the media type of that body, unless that information is
    unknown.
 </t>
@@ -790,7 +789,7 @@
    body's content and override the specified type.
 </t>
 <t>
-   Client that do so risk drawing incorrect conclusions, which may expose
+   Clients that do so risk drawing incorrect conclusions, which may expose
    additional security risks (e.g., "privilege escalation"). Implementers are
    encouraged to provide a means of disabling such "content sniffing" when it
    is used.
@@ -798,7 +797,7 @@
 <t>
    Content-Encoding may be used to indicate any additional content
    codings applied to the data, usually for the purpose of data
-   compression, that are a property of the requested resource.  There is
+   compression, that are a property of the representation.  There is
    no default encoding.
 </t>
 </section>
@@ -927,7 +926,7 @@
    for a response is performed by the user agent after receiving an
    initial response from the origin server. Selection is based on a list
    of the available representations of the response included within the
-   header fields or entity-body of the initial response, with each
+   header fields or body of the initial response, with each
    representation identified by its own URI. Selection from among the
    representations may be performed automatically (if the user agent is
    capable of doing so) or manually by the user selecting from a
@@ -1341,7 +1340,7 @@
    that lists the non-identity content-coding(s) used.
 </t>
 <t>
-   If the content-coding of an entity in a request message is not
+   If the content-coding of a representation in a request message is not
    acceptable to the origin server, the server &SHOULD; respond with a
    status code of 415 (Unsupported Media Type).
 </t>
@@ -1361,7 +1360,7 @@
 <t>
    The "Content-Language" entity-header field describes the natural
    language(s) of the intended audience for the representation. Note that this might
-   not be equivalent to all the languages used within the entity-body.
+   not be equivalent to all the languages used within the representation.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Language"/><iref primary="true" item="Grammar" subitem="Content-Language-v"/>
   <x:ref>Content-Language</x:ref>   = "Content-Language" ":" <x:ref>OWS</x:ref> <x:ref>Content-Language-v</x:ref>
@@ -1503,9 +1502,10 @@
   <x:anchor-alias value="Content-MD5-v"/>
 <t>
    The "Content-MD5" entity-header field, as defined in <xref target="RFC1864"/>, is
-   an MD5 digest of the entity-body that provides an end-to-end message
-   integrity check (MIC) of the entity-body. Note that a MIC is good for
-   detecting accidental modification of the entity-body in transit, but is not
+   an MD5 digest of the payload body that provides an end-to-end message
+   integrity check (MIC) of the payload body (the message-body after any
+   transfer-coding is decoded). Note that a MIC is good for
+   detecting accidental modification of the payload body in transit, but is not
    proof against malicious attacks.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-MD5"/><iref primary="true" item="Grammar" subitem="Content-MD5-v"/>
@@ -1514,24 +1514,21 @@
 </artwork></figure>
 <t>
    The Content-MD5 header field &MAY; be generated by an origin server or
-   client to function as an integrity check of the entity-body. Only
-   origin servers or clients &MAY; generate the Content-MD5 header field;
+   client to function as an integrity check of the payload body. Only
+   origin servers or user agents &MAY; generate the Content-MD5 header field;
    proxies and gateways &MUST-NOT; generate it, as this would defeat its
-   value as an end-to-end integrity check. Any recipient of the entity-body,
-   including gateways and proxies, &MAY; check that the digest value
-   in this header field matches that of the entity-body as received.
+   value as an end-to-end integrity check. Any recipient &MAY; check that
+   the digest value in this header field matches a corresponding digest
+   calculated on payload body as received.
 </t>
 <t>
-   The MD5 digest is computed based on the content of the entity-body,
-   including any content-coding that has been applied, but not including
-   any transfer-encoding applied to the message-body. If the message is
-   received with a transfer-encoding, that encoding &MUST; be removed
-   prior to checking the Content-MD5 value against the received representation.
-</t>
-<t>
-   This has the result that the digest is computed on the octets of the
-   entity-body exactly as, and in the order that, they would be sent if
-   no transfer-encoding were being applied.
+   The MD5 digest is computed based on the content of the payload body,
+   including any content-coding, but not including any transfer-coding
+   applied to the message-body because such transfer-codings might be
+   applied or removed anywhere along the request/response chain.
+   If the message is received with a transfer-coding, that encoding &MUST;
+   be decoded prior to checking the Content-MD5 value against the received
+   payload.
 </t>
 <t>
    HTTP extends RFC 1864 to permit the digest to be computed for MIME
@@ -1540,7 +1537,7 @@
    preceding paragraph.
 </t>
 <t>
-   There are several consequences of this. The entity-body for composite
+   There are several consequences of this. The payload for composite
    types &MAY; contain many body-parts, each with its own MIME and HTTP
    headers (including Content-MD5, Content-Transfer-Encoding, and
    Content-Encoding headers). If a body-part has a Content-Transfer-Encoding
@@ -1580,7 +1577,7 @@
   <x:anchor-alias value="Content-Type-v"/>
 <t>
    The "Content-Type" entity-header field indicates the media type of the
-   entity-body. In the case of responses to the HEAD method, the media type is
+   representation. In the case of responses to the HEAD method, the media type is
    that which would have been sent had the request been a GET.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Type"/><iref primary="true" item="Grammar" subitem="Content-Type-v"/>
@@ -1594,8 +1591,8 @@
   Content-Type: text/html; charset=ISO-8859-4
 </artwork></figure>
 <t>
-   Further discussion of methods for identifying the media type of an
-   entity is provided in <xref target="type"/>.
+   Further discussion of methods for identifying the media type of a
+   representation is provided in <xref target="type"/>.
 </t>
 </section>
 
@@ -2533,21 +2530,21 @@
 
 </references>
 
-<section title="Differences Between HTTP Entities and RFC 2045 Entities" anchor="differences.between.http.entities.and.rfc.2045.entities">
+<section title="Differences between HTTP and MIME" anchor="differences.between.http.and.mime">
 <t>
    HTTP/1.1 uses many of the constructs defined for Internet Mail (<xref target="RFC5322"/>) and the Multipurpose Internet Mail Extensions (MIME <xref target="RFC2045"/>) to
-   allow entities to be transmitted in an open variety of
+   allow a message-body to be transmitted in an open variety of
    representations and with extensible mechanisms. However, RFC 2045
    discusses mail, and HTTP has a few features that are different from
-   those described in RFC 2045. These differences were carefully chosen
+   those described in MIME. These differences were carefully chosen
    to optimize performance over binary connections, to allow greater
    freedom in the use of new media types, to make date comparisons
    easier, and to acknowledge the practice of some early HTTP servers
    and clients.
 </t>
 <t>
-   This appendix describes specific areas where HTTP differs from RFC
-   2045. Proxies and gateways to strict MIME environments &SHOULD; be
+   This appendix describes specific areas where HTTP differs from MIME.
+   Proxies and gateways to strict MIME environments &SHOULD; be
    aware of these differences and provide the appropriate conversions
    where necessary. Proxies and gateways from MIME environments to HTTP
    also need to be aware of the differences because some conversions
@@ -2581,7 +2578,7 @@
 
 <section title="Conversion to Canonical Form" anchor="conversion.to.canonical.form">
 <t>
-   <xref target="RFC2045"/> requires that an Internet mail entity be converted to
+   MIME requires that an Internet mail body-part be converted to
    canonical form prior to being transferred, as described in <xref target="RFC2049" x:fmt="of" x:sec="4"/>.
    <xref target="canonicalization.and.text.defaults"/> of this document describes the forms
    allowed for subtypes of the "text" media type when transmitted over
@@ -2622,22 +2619,22 @@
 
 <section title="Introduction of Content-Encoding" anchor="introduction.of.content-encoding">
 <t>
-   RFC 2045 does not include any concept equivalent to HTTP/1.1's
+   MIME does not include any concept equivalent to HTTP/1.1's
    Content-Encoding header field. Since this acts as a modifier on the
    media type, proxies and gateways from HTTP to MIME-compliant
    protocols &MUST; either change the value of the Content-Type header
-   field or decode the entity-body before forwarding the message. (Some
+   field or decode the representation before forwarding the message. (Some
    experimental applications of Content-Type for Internet mail have used
    a media-type parameter of ";conversions=&lt;content-coding&gt;" to perform
    a function equivalent to Content-Encoding. However, this parameter is
-   not part of RFC 2045).
+   not part of the MIME standards).
 </t>
 </section>
 
 <section title="No Content-Transfer-Encoding" anchor="no.content-transfer-encoding">
 <t>
-   HTTP does not use the Content-Transfer-Encoding field of RFC
-   2045. Proxies and gateways from MIME-compliant protocols to HTTP &MUST;
+   HTTP does not use the Content-Transfer-Encoding field of MIME.
+   Proxies and gateways from MIME-compliant protocols to HTTP &MUST;
    remove any Content-Transfer-Encoding
    prior to delivering the response message to an HTTP client.
 </t>
@@ -2845,7 +2842,6 @@
 <x:ref>disposition-parm</x:ref> = filename-parm / disp-extension-parm
 <x:ref>disposition-type</x:ref> = "attachment" / disp-extension-token
 
-<x:ref>entity-body</x:ref> = *OCTET
 <x:ref>entity-header</x:ref> = Content-Encoding / Content-Language / Content-Length
  / Content-Location / Content-MD5 / Content-Range / Content-Type /
  Expires / Last-Modified / extension-header
@@ -2885,7 +2881,6 @@
 ; Accept-Language defined but not used
 ; MIME-Version defined but not used
 ; content-disposition defined but not used
-; entity-body defined but not used
 ; entity-header defined but not used
 </artwork></figure></section>
 <?ENDINC p3-payload.abnf-appendix ?>
