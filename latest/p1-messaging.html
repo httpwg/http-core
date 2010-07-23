@@ -1237,8 +1237,9 @@ Content-Type: text/plain
                is decoded.
             </p>
             <p>If a Transfer-Encoding header field is present in a response and the "chunked" transfer-coding is not present, the message-body
-               length is determined by reading the connection until it is closed. If a Transfer-Encoding header field is present in a request
-               and the "chunked" transfer-coding is not present, the message-body length cannot be determined reliably; the server <em class="bcp14">MUST</em> respond with 400 (Bad Request) and then close the connection.
+               length is determined by reading the connection until it is closed by the server. If a Transfer-Encoding header field is present
+               in a request and the "chunked" transfer-coding is not the final encoding, the message-body length cannot be determined reliably;
+               the server <em class="bcp14">MUST</em> respond with 400 (Bad Request) and then close the connection.
             </p>
          </li>
          <li>
@@ -1269,16 +1270,16 @@ Content-Type: text/plain
       </p>
       <p id="rfc.section.3.3.p.10">A server <em class="bcp14">MAY</em> reject a request that contains a message-body but not a Content-Length by responding with 411 (Length Required).
       </p>
-      <p id="rfc.section.3.3.p.11">A client that sends a request containing a message-body <em class="bcp14">SHOULD</em> include a valid Content-Length header field if the message-body length is known in advance, since many existing services will
-         otherwise respond with a 411 (Length Required) status code though they can handle the chunked encoding. This is typically
-         because such services are implemented via a gateway that requires a content-length in advance of being called and the server
-         is unable or unwilling to buffer the entire request before processing.
+      <p id="rfc.section.3.3.p.11">Unless a transfer-coding other than "chunked" has been applied, a client that sends a request containing a message-body <em class="bcp14">SHOULD</em> use a valid Content-Length header field if the message-body length is known in advance, rather than the "chunked" encoding,
+         since some existing services respond to "chunked" with a 411 (Length Required) status code even though they understand the
+         chunked encoding. This is typically because such services are implemented via a gateway that requires a content-length in
+         advance of being called and the server is unable or unwilling to buffer the entire request before processing.
       </p>
       <p id="rfc.section.3.3.p.12">A client that sends a request containing a message-body <em class="bcp14">MUST</em> include a valid Content-Length header field if it does not know the server will handle HTTP/1.1 (or later) requests; such
          knowledge can be in the form of specific user configuration or by remembering the version of a prior received response.
       </p>
-      <p id="rfc.section.3.3.p.13">Request messages that are prematurely terminated, possibly due to a cancelled connection or a server-imposed time-out exception, <em class="bcp14">MUST</em> result in closure of the connection; sending an HTTP/1.1 error response prior to closing the connection is <em class="bcp14">OPTIONAL</em>. Response messages that are prematurely terminated, usually by closure of the connection prior to receiving the given number
-         of octets or by failure to decode a transfer-encoded message-body, <em class="bcp14">MUST</em> be recorded as incomplete. A user agent <em class="bcp14">MUST NOT</em> render an incomplete response message-body as if it were complete (i.e., some indication must be given to the user that an
+      <p id="rfc.section.3.3.p.13">Request messages that are prematurely terminated, possibly due to a cancelled connection or a server-imposed time-out exception, <em class="bcp14">MUST</em> result in closure of the connection; sending an HTTP/1.1 error response prior to closing the connection is <em class="bcp14">OPTIONAL</em>. Response messages that are prematurely terminated, usually by closure of the connection prior to receiving the expected
+         number of octets or by failure to decode a transfer-encoded message-body, <em class="bcp14">MUST</em> be recorded as incomplete. A user agent <em class="bcp14">MUST NOT</em> render an incomplete response message-body as if it were complete (i.e., some indication must be given to the user that an
          error occurred). Cache requirements for incomplete responses are defined in <a href="p6-cache.html#errors.or.incomplete.response.cache.behavior" title="Storing Partial and Incomplete Responses">Section 2.1.1</a> of <a href="#Part6" id="rfc.xref.Part6.5"><cite title="HTTP/1.1, part 6: Caching">[Part6]</cite></a>.
       </p>
       <h2 id="rfc.section.3.4"><a href="#rfc.section.3.4">3.4</a>&nbsp;<a id="general.header.fields" href="#general.header.fields">General Header Fields</a></h2>
@@ -1566,14 +1567,11 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <a href="#rule.parameter" class="smpl">value</a>                   = <a href="#rule.token.separators" class="smpl">word</a>
 </pre><p id="rfc.section.6.2.p.5">All transfer-coding values are case-insensitive. HTTP/1.1 uses transfer-coding values in the TE header field (<a href="#header.te" id="rfc.xref.header.te.1" title="TE">Section&nbsp;9.5</a>) and in the Transfer-Encoding header field (<a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.4" title="Transfer-Encoding">Section&nbsp;9.7</a>).
       </p>
-      <p id="rfc.section.6.2.p.6">Whenever a transfer-coding is applied to a payload body, the set of transfer-codings <em class="bcp14">MUST</em> include "chunked", unless the message indicates it is terminated by closing the connection. When the "chunked" transfer-coding
-         is used, it <em class="bcp14">MUST</em> be the last transfer-coding applied to form the message-body. The "chunked" transfer-coding <em class="bcp14">MUST NOT</em> be applied more than once to a message-body.
-      </p>
-      <p id="rfc.section.6.2.p.7">Transfer-codings are analogous to the Content-Transfer-Encoding values of MIME, which were designed to enable safe transport
+      <p id="rfc.section.6.2.p.6">Transfer-codings are analogous to the Content-Transfer-Encoding values of MIME, which were designed to enable safe transport
          of binary data over a 7-bit transport service (<a href="#RFC2045" id="rfc.xref.RFC2045.2"><cite title="Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies">[RFC2045]</cite></a>, <a href="http://tools.ietf.org/html/rfc2045#section-6">Section 6</a>). However, safe transport has a different focus for an 8bit-clean transfer protocol. In HTTP, the only unsafe characteristic
          of message-bodies is the difficulty in determining the exact message body length (<a href="#message.body" title="Message Body">Section&nbsp;3.3</a>), or the desire to encrypt data over a shared transport.
       </p>
-      <p id="rfc.section.6.2.p.8">A server that receives a request message with a transfer-coding it does not understand <em class="bcp14">SHOULD</em> respond with 501 (Not Implemented) and then close the connection. A server <em class="bcp14">MUST NOT</em> send transfer-codings to an HTTP/1.0 client.
+      <p id="rfc.section.6.2.p.7">A server that receives a request message with a transfer-coding it does not understand <em class="bcp14">SHOULD</em> respond with 501 (Not Implemented) and then close the connection. A server <em class="bcp14">MUST NOT</em> send transfer-codings to an HTTP/1.0 client.
       </p>
       <div id="rfc.iref.c.5"></div>
       <div id="rfc.iref.c.6"></div>
@@ -1641,6 +1639,10 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   Content-Length := length
   Remove "chunked" from Transfer-Encoding
 </pre><p id="rfc.section.6.2.1.p.9">All HTTP/1.1 applications <em class="bcp14">MUST</em> be able to receive and decode the "chunked" transfer-coding and <em class="bcp14">MUST</em> ignore chunk-ext extensions they do not understand.
+      </p>
+      <p id="rfc.section.6.2.1.p.10">Since "chunked" is the only transfer-coding required to be understood by HTTP/1.1 recipients, it plays a crucial role in delimiting
+         messages on a persistent connection. Whenever a transfer-coding is applied to a payload body in a request, the final transfer-coding
+         applied <em class="bcp14">MUST</em> be "chunked". If a transfer-coding is applied to a response payload body, then either the final transfer-coding applied <em class="bcp14">MUST</em> be "chunked" or the message <em class="bcp14">MUST</em> be terminated by closing the connection. When the "chunked" transfer-coding is used, it <em class="bcp14">MUST</em> be the last transfer-coding applied to form the message-body. The "chunked" transfer-coding <em class="bcp14">MUST NOT</em> be applied more than once in a message-body.
       </p>
       <h3 id="rfc.section.6.2.2"><a href="#rfc.section.6.2.2">6.2.2</a>&nbsp;<a id="compression.codings" href="#compression.codings">Compression Codings</a></h3>
       <p id="rfc.section.6.2.2.p.1">The codings defined below can be used to compress the payload of a message.</p>
