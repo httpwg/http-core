@@ -1299,11 +1299,11 @@ Content-Type: text/plain
     <t>
      If a Transfer-Encoding header field is present in a response and the
      "chunked" transfer-coding is not present, the message-body length is
-     determined by reading the connection until it is closed.
+     determined by reading the connection until it is closed by the server.
      If a Transfer-Encoding header field is present in a request and the
-     "chunked" transfer-coding is not present, the message-body length cannot
-     be determined reliably; the server &MUST; respond with 400 (Bad Request)
-     and then close the connection.
+     "chunked" transfer-coding is not the final encoding, the message-body
+     length cannot be determined reliably; the server &MUST; respond with
+     400 (Bad Request) and then close the connection.
     </t></x:lt>
     <x:lt><t>
      If a valid Content-Length header field (<xref target="header.content-length"/>)
@@ -1356,14 +1356,15 @@ Content-Type: text/plain
    not a Content-Length by responding with 411 (Length Required).
 </t>
 <t>
-   A client that sends a request containing a message-body &SHOULD;
-   include a valid Content-Length header field if the message-body length
-   is known in advance, since many existing services will otherwise respond
-   with a 411 (Length Required) status code though they can handle the
-   chunked encoding.  This is typically because such services are
-   implemented via a gateway that requires a content-length in
-   advance of being called and the server is unable or unwilling
-   to buffer the entire request before processing.
+   Unless a transfer-coding other than "chunked" has been applied,
+   a client that sends a request containing a message-body &SHOULD;
+   use a valid Content-Length header field if the message-body length
+   is known in advance, rather than the "chunked" encoding, since some
+   existing services respond to "chunked" with a 411 (Length Required)
+   status code even though they understand the chunked encoding.  This
+   is typically because such services are implemented via a gateway that
+   requires a content-length in advance of being called and the server
+   is unable or unwilling to buffer the entire request before processing.
 </t>
 <t>
    A client that sends a request containing a message-body &MUST; include a
@@ -1378,7 +1379,7 @@ Content-Type: text/plain
    result in closure of the connection; sending an HTTP/1.1 error response
    prior to closing the connection is &OPTIONAL;.
    Response messages that are prematurely terminated, usually by closure
-   of the connection prior to receiving the given number of octets or by
+   of the connection prior to receiving the expected number of octets or by
    failure to decode a transfer-encoded message-body, &MUST; be recorded
    as incomplete.  A user agent &MUST-NOT; render an incomplete response
    message-body as if it were complete (i.e., some indication must be given
@@ -1965,14 +1966,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    the Transfer-Encoding header field (<xref target="header.transfer-encoding"/>).
 </t>
 <t>
-   Whenever a transfer-coding is applied to a payload body, the set of
-   transfer-codings &MUST; include "chunked", unless the message indicates it
-   is terminated by closing the connection. When the "chunked" transfer-coding
-   is used, it &MUST; be the last transfer-coding applied to form the
-   message-body. The "chunked" transfer-coding &MUST-NOT; be applied more
-   than once to a message-body.
-</t>
-<t>
    Transfer-codings are analogous to the Content-Transfer-Encoding values of
    MIME, which were designed to enable safe transport of binary data over a
    7-bit transport service (<xref target="RFC2045" x:fmt="," x:sec="6"/>).
@@ -2094,6 +2087,18 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    All HTTP/1.1 applications &MUST; be able to receive and decode the
    "chunked" transfer-coding and &MUST; ignore chunk-ext extensions
    they do not understand.
+</t>
+<t>
+   Since "chunked" is the only transfer-coding required to be understood
+   by HTTP/1.1 recipients, it plays a crucial role in delimiting messages
+   on a persistent connection.  Whenever a transfer-coding is applied to
+   a payload body in a request, the final transfer-coding applied &MUST;
+   be "chunked".  If a transfer-coding is applied to a response payload
+   body, then either the final transfer-coding applied &MUST; be "chunked"
+   or the message &MUST; be terminated by closing the connection. When the
+   "chunked" transfer-coding is used, it &MUST; be the last transfer-coding
+   applied to form the message-body. The "chunked" transfer-coding &MUST-NOT;
+   be applied more than once in a message-body.
 </t>
 </section>
 
