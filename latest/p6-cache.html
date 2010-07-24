@@ -779,7 +779,7 @@ li.indline1 {
             </ul> 
          </li>
       </ul>
-      <p id="rfc.section.2.2.p.2">When a stored response is used to satisfy a request, caches <em class="bcp14">MUST</em> include a single Age header field (<a href="#header.age" id="rfc.xref.header.age.1" title="Age">Section&nbsp;3.1</a>) in the response with a value equal to the stored response's current_age; see <a href="#age.calculations" title="Calculating Age">Section&nbsp;2.3.2</a>. <span class="comment" id="DISCUSS-includes-validated">[<a href="#DISCUSS-includes-validated" class="smpl">DISCUSS-includes-validated</a>: this currently includes successfully validated responses.]</span> 
+      <p id="rfc.section.2.2.p.2">When a stored response is used to satisfy a request without validation, caches <em class="bcp14">MUST</em> include a single Age header field (<a href="#header.age" id="rfc.xref.header.age.1" title="Age">Section&nbsp;3.1</a>) in the response with a value equal to the stored response's current_age; see <a href="#age.calculations" title="Calculating Age">Section&nbsp;2.3.2</a>.
       </p>
       <p id="rfc.section.2.2.p.3">Requests with methods that are unsafe (<a href="p2-semantics.html#safe.methods" title="Safe Methods">Section 7.1.1</a> of <a href="#Part2" id="rfc.xref.Part2.1"><cite title="HTTP/1.1, part 2: Message Semantics">[Part2]</cite></a>) <em class="bcp14">MUST</em> be written through the cache to the origin server; i.e., a cache must not reply to such a request before having forwarded
          the request and having received a corresponding response.
@@ -947,17 +947,13 @@ li.indline1 {
       </ul>
       <p id="rfc.section.2.5.p.3">An invalidation based on a URI from a Location or Content-Location header <em class="bcp14">MUST NOT</em> be performed if the host part of that URI differs from the host part in the Effective Request URI (<a href="p1-messaging.html#effective.request.uri" title="Effective Request URI">Section 4.3</a> of <a href="#Part1" id="rfc.xref.Part1.14"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>). This helps prevent denial of service attacks.
       </p>
-      <p id="rfc.section.2.5.p.4"> <span class="comment" id="TODO-def-host-part">[<a href="#TODO-def-host-part" class="smpl">TODO-def-host-part</a>: "host part" needs to be specified better.]</span> 
+      <p id="rfc.section.2.5.p.4">A cache that passes through requests for methods it does not understand <em class="bcp14">SHOULD</em> invalidate the Effective Request URI (<a href="p1-messaging.html#effective.request.uri" title="Effective Request URI">Section 4.3</a> of <a href="#Part1" id="rfc.xref.Part1.15"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>).
       </p>
-      <p id="rfc.section.2.5.p.5">A cache that passes through requests for methods it does not understand <em class="bcp14">SHOULD</em> invalidate the Effective Request URI (<a href="p1-messaging.html#effective.request.uri" title="Effective Request URI">Section 4.3</a> of <a href="#Part1" id="rfc.xref.Part1.15"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>).
-      </p>
-      <p id="rfc.section.2.5.p.6">Here, "invalidate" means that the cache will either remove all stored responses related to the Effective Request URI, or will
+      <p id="rfc.section.2.5.p.5">Here, "invalidate" means that the cache will either remove all stored responses related to the Effective Request URI, or will
          mark these as "invalid" and in need of a mandatory validation before they can be returned in response to a subsequent request.
       </p>
-      <p id="rfc.section.2.5.p.7">Note that this does not guarantee that all appropriate responses are invalidated. For example, the request that caused the
+      <p id="rfc.section.2.5.p.6">Note that this does not guarantee that all appropriate responses are invalidated. For example, the request that caused the
          change at the origin server might not have gone through the cache where a response is stored.
-      </p>
-      <p id="rfc.section.2.5.p.8"> <span class="comment" id="TODO-spec-success-invalidate">[<a href="#TODO-spec-success-invalidate" class="smpl">TODO-spec-success-invalidate</a>: specify that only successful (2xx, 3xx?) responses invalidate.]</span> 
       </p>
       <h2 id="rfc.section.2.6"><a href="#rfc.section.2.6">2.6</a>&nbsp;<a id="caching.authenticated.responses" href="#caching.authenticated.responses">Shared Caching of Authenticated Responses</a></h2>
       <p id="rfc.section.2.6.p.1">Shared caches <em class="bcp14">MUST NOT</em> use a cached response to a request with an Authorization header (<a href="p7-auth.html#header.authorization" title="Authorization">Section 3.1</a> of <a href="#Part7" id="rfc.xref.Part7.2"><cite title="HTTP/1.1, part 7: Authentication">[Part7]</cite></a>) to satisfy any subsequent request unless a cache directive that allows such responses to be stored is present in the response.
@@ -995,24 +991,23 @@ li.indline1 {
       <h2 id="rfc.section.2.8"><a href="#rfc.section.2.8">2.8</a>&nbsp;<a id="combining.headers" href="#combining.headers">Combining Responses</a></h2>
       <p id="rfc.section.2.8.p.1">When a cache receives a 304 (Not Modified) response or a 206 (Partial Content) response (in this section, the "new" response"),
          it needs to created an updated response by combining the stored response with the new one, so that the updated response can
-         be used to satisfy the request.
+         be used to satisfy the request, and potentially update the cached response.
       </p>
-      <p id="rfc.section.2.8.p.2">If the new response contains an ETag, it identifies the stored response to use. <span class="comment" id="TODO-mention-CL">[<a href="#TODO-mention-CL" class="smpl">TODO-mention-CL</a>: might need language about Content-Location here]</span> 
+      <p id="rfc.section.2.8.p.2">If the new response contains an ETag, it identifies the stored response to use. <span class="comment" id="TODO-mention-CL">[<a href="#TODO-mention-CL" class="smpl">TODO-mention-CL</a>: might need language about Content-Location here]</span><span class="comment" id="TODO-select-for-combine">[<a href="#TODO-select-for-combine" class="smpl">TODO-select-for-combine</a>: Shouldn't this be the selected response?]</span> 
       </p>
-      <p id="rfc.section.2.8.p.3">If the status code is 206 (partial content), both the stored and new responses <em class="bcp14">MUST</em> have validators, and those validators <em class="bcp14">MUST</em> match using the strong comparison function (see <a href="p4-conditional.html#weak.and.strong.validators" title="Weak and Strong Validators">Section 4</a> of <a href="#Part4" id="rfc.xref.Part4.3"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>). Otherwise, the responses <em class="bcp14">MUST NOT</em> be combined.
+      <p id="rfc.section.2.8.p.3">If the new response's status code is 206 (partial content), both the stored and new responses <em class="bcp14">MUST</em> have validators, and those validators <em class="bcp14">MUST</em> match using the strong comparison function (see <a href="p4-conditional.html#weak.and.strong.validators" title="Weak and Strong Validators">Section 4</a> of <a href="#Part4" id="rfc.xref.Part4.3"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>). Otherwise, the responses <em class="bcp14">MUST NOT</em> be combined.
       </p>
       <p id="rfc.section.2.8.p.4">The stored response headers are used as those of the updated response, except that </p>
       <ul>
-         <li>any stored Warning headers with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.2" title="Warning">Section&nbsp;3.6</a>) <em class="bcp14">MUST</em> be deleted from the stored response and the updated response.
+         <li>any stored Warning headers with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.2" title="Warning">Section&nbsp;3.6</a>) <em class="bcp14">MUST</em> be deleted.
          </li>
-         <li>any stored Warning headers with warn-code 2xx <em class="bcp14">MUST</em> be retained in the stored response and the updated response.
+         <li>any stored Warning headers with warn-code 2xx <em class="bcp14">MUST</em> be retained.
          </li>
-         <li>any headers provided in the new response <em class="bcp14">MUST</em> replace the corresponding headers from the stored response.
+         <li>any other headers provided in the new response <em class="bcp14">MUST</em> replace all instances of the corresponding headers from the stored response.
          </li>
       </ul>
-      <p id="rfc.section.2.8.p.5">If a header field-name in the new response matches more than one header in the stored response, all such stored headers <em class="bcp14">MUST</em> be replaced.
-      </p>
-      <p id="rfc.section.2.8.p.6">The updated response can <span class="comment" id="TODO-is-req">[<a href="#TODO-is-req" class="smpl">TODO-is-req</a>: requirement?]</span> be used to replace the stored response in cache. In the case of a 206 response, the combined representation <em class="bcp14">MAY</em> be stored.
+      <p id="rfc.section.2.8.p.5">The updated response headers <em class="bcp14">MUST</em> be used to replace those of the stored response in cache (unless the stored response is removed from cache). In the case of
+         a 206 response, the combined representation <em class="bcp14">MAY</em> be stored.
       </p>
       <h1 id="rfc.section.3"><a href="#rfc.section.3">3.</a>&nbsp;<a id="header.fields" href="#header.fields">Header Field Definitions</a></h1>
       <p id="rfc.section.3.p.1">This section defines the syntax and semantics of HTTP/1.1 header fields related to caching.</p>
@@ -1100,7 +1095,8 @@ li.indline1 {
          <li>The max-stale request directive indicates that the client is willing to accept a response that has exceeded its expiration
             time. If max-stale is assigned a value, then the client is willing to accept a response that has exceeded its expiration time
             by no more than the specified number of seconds. If no value is assigned to max-stale, then the client is willing to accept
-            a stale response of any age. <span class="comment" id="TODO-staleness">[<a href="#TODO-staleness" class="smpl">TODO-staleness</a>: of any staleness? --mnot]</span></li>
+            a stale response of any age.
+         </li>
       </ul>
       <p id="rfc.section.3.2.1.p.6"> <dfn>min-fresh</dfn>  <span id="rfc.iref.c.8"></span>  <span id="rfc.iref.m.3"></span>  
       </p>
@@ -1906,6 +1902,7 @@ li.indline1 {
          </li>
          <li> &lt;<a href="http://tools.ietf.org/wg/httpbis/trac/ticket/223">http://tools.ietf.org/wg/httpbis/trac/ticket/223</a>&gt;: "Allowing heuristic caching for new status codes"
          </li>
+         <li>Clean up TODOs and prose in "Combining Responses."</li>
       </ul>
       <h1 id="rfc.index"><a href="#rfc.index">Index</a></h1>
       <p class="noprint"><a href="#rfc.index.A">A</a> <a href="#rfc.index.C">C</a> <a href="#rfc.index.E">E</a> <a href="#rfc.index.F">F</a> <a href="#rfc.index.G">G</a> <a href="#rfc.index.H">H</a> <a href="#rfc.index.M">M</a> <a href="#rfc.index.N">N</a> <a href="#rfc.index.O">O</a> <a href="#rfc.index.P">P</a> <a href="#rfc.index.R">R</a> <a href="#rfc.index.S">S</a> <a href="#rfc.index.V">V</a> <a href="#rfc.index.W">W</a> 

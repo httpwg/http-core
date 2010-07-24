@@ -78,12 +78,7 @@
   <xsl:text>&#10;</xsl:text>
   <c><xsl:value-of select="iref[@item='Headers']/@subitem"/></c>
   <c>http</c>
-  <c>
-    <xsl:choose>
-      <xsl:when test="ancestor::middle">standard</xsl:when>
-      <xsl:otherwise></xsl:otherwise>
-    </xsl:choose>
-  </c>
+  <c>standard</c>
   <c><xref target="{@anchor}"/></c>
 </xsl:template>
 
