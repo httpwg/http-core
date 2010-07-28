@@ -1275,8 +1275,6 @@ Content-Type: text/plain
    the request's header fields, even if the request method does not
    define any use for a message-body.  This allows the request
    message framing algorithm to be independent of method semantics.
-   A server &MUST; read the entire request message-body or close
-   the connection after sending its response.
 </t>
 <t>
    For response messages, whether or not a message-body is included with
@@ -1305,8 +1303,19 @@ Content-Type: text/plain
     <x:lt><t>
      If a Transfer-Encoding header field (<xref target="header.transfer-encoding"/>)
      is present and the "chunked" transfer-coding (<xref target="transfer.codings"/>)
-     is used, the message-body length is determined by reading and decoding the
-     chunked data until the transfer-coding indicates the data is complete.
+     is the final encoding, the message-body length is determined by reading
+     and decoding the chunked data until the transfer-coding indicates the
+     data is complete.
+    </t>
+    <t>
+     If a Transfer-Encoding header field is present in a response and the
+     "chunked" transfer-coding is not the final encoding, the message-body
+     length is determined by reading the connection until it is closed by
+     the server.
+     If a Transfer-Encoding header field is present in a request and the
+     "chunked" transfer-coding is not the final encoding, the message-body
+     length cannot be determined reliably; the server &MUST; respond with
+     the 400 (Bad Request) status code and then close the connection.
     </t>
     <t>
      If a message is received with both a Transfer-Encoding header field and a
@@ -1316,35 +1325,12 @@ Content-Type: text/plain
      and thus should be handled as an error.  The provided Content-Length &MUST;
      be removed, prior to forwarding the message downstream, or replaced with
      the real message-body length after the transfer-coding is decoded.
-    </t>
-    <t>
-     If a Transfer-Encoding header field is present in a response and the
-     "chunked" transfer-coding is not present, the message-body length is
-     determined by reading the connection until it is closed by the server.
-     If a Transfer-Encoding header field is present in a request and the
-     "chunked" transfer-coding is not the final encoding, the message-body
-     length cannot be determined reliably; the server &MUST; respond with
-     400 (Bad Request) and then close the connection.
     </t></x:lt>
     <x:lt><t>
-     If a valid Content-Length header field (<xref target="header.content-length"/>)
-     is present without Transfer-Encoding, its decimal value in octets defines
-     the message-body length.  If the actual number of octets sent in the message
-     is less than the indicated Content-Length, the recipient &MUST; consider
-     the message to be incomplete and treat the connection as no longer usable.
-     If the actual number of octets sent in the message is less than the indicated
-     Content-Length, the recipient &MUST; only process the message-body up to the
-     field value's number of octets; the remainder of the message &MUST; either
-     be discarded or treated as the next message in a pipeline.  For the sake of
-     robustness, a user-agent &MAY; attempt to detect and correct such an error
-     in message framing if it is parsing the response to the last request on
-     on a connection and the connection has been closed by the server.
-    </t>
-    <t>
-     If a message is received with multiple Content-Length header fields or a
-     Content-Length header field with an invalid value, the message framing
-     is invalid and &MUST; be treated as an error to prevent request or
-     response smuggling.
+     If a message is received without Transfer-Encoding and with either
+     multiple Content-Length header fields or a single Content-Length header
+     field with an invalid value, then the message framing is invalid and
+     &MUST; be treated as an error to prevent request or response smuggling.
      If this is a request message, the server &MUST; respond with
      a 400 (Bad Request) status code and then close the connection.
      If this is a response message received by a proxy or gateway, the proxy
@@ -1353,6 +1339,21 @@ Content-Type: text/plain
      If this is a response message received by a user-agent, the message-body
      length is determined by reading the connection until it is closed;
      an error &SHOULD; be indicated to the user.
+    </t></x:lt>
+    <x:lt><t>
+     If a valid Content-Length header field (<xref target="header.content-length"/>)
+     is present without Transfer-Encoding, its decimal value defines the
+     message-body length in octets.  If the actual number of octets sent in
+     the message is less than the indicated Content-Length, the recipient
+     &MUST; consider the message to be incomplete and treat the connection
+     as no longer usable.
+     If the actual number of octets sent in the message is more than the indicated
+     Content-Length, the recipient &MUST; only process the message-body up to the
+     field value's number of octets; the remainder of the message &MUST; either
+     be discarded or treated as the next message in a pipeline.  For the sake of
+     robustness, a user-agent &MAY; attempt to detect and correct such an error
+     in message framing if it is parsing the response to the last request on
+     on a connection and the connection has been closed by the server.
     </t></x:lt>
     <x:lt><t>
      If this is a request message and none of the above are true, then the
@@ -1406,6 +1407,15 @@ Content-Type: text/plain
    message-body as if it were complete (i.e., some indication must be given
    to the user that an error occurred).  Cache requirements for incomplete
    responses are defined in &cache-incomplete;.
+</t>
+<t>
+   A server &MUST; read the entire request message-body or close
+   the connection after sending its response, since otherwise the
+   remaining data on a persistent connection would be misinterpreted
+   as the next request.  Likewise,
+   a client &MUST; read the entire response message-body if it intends
+   to reuse the same connection for a subsequent request.  Pipelining
+   multiple requests on a connection is described in <xref target="pipelining"/>.
 </t>
 </section>
 
