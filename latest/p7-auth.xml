@@ -18,6 +18,7 @@
   <!ENTITY notation-abnf                "<xref target='Part1' x:rel='#notation.abnf' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY basic-rules                  "<xref target='Part1' x:rel='#basic.rules' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY effective-request-uri        "<xref target='Part1' x:rel='#effective.request.uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY end-to-end.and-hop-by-hop    "<xref target='Part1' x:rel='#end-to-end.and.hop-by-hop.header-fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY shared-and-non-shared-caches "<xref target='Part6' x:rel='#shared.and.non-shared.caches' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
 ]>
 <?rfc toc="yes" ?>
@@ -206,23 +207,18 @@
 <middle>
 <section title="Introduction" anchor="introduction">
 <t>
-   This document defines HTTP/1.1 access control and authentication. Right now it
-   includes the extracted relevant sections of
-   <xref target="RFC2616" x:fmt="none">RFC 2616</xref> with only minor changes.
-   The intention is to move the general framework for HTTP authentication here,
-   as currently specified in <xref target="RFC2617"/>, and allow the individual
-   authentication mechanisms to be defined elsewhere.  This introduction will
-   be rewritten when that occurs. 
+   This document defines HTTP/1.1 access control and authentication. It
+   includes the relevant parts of <xref target="RFC2616" x:fmt="none">RFC 2616</xref>
+   with only minor changes, plus the general framework for HTTP authentication,
+   as previously defined in "HTTP Authentication: Basic and Digest Access
+   Authentication" (<xref target="RFC2617"/>).
 </t>
 <t>
    HTTP provides several &OPTIONAL; challenge-response authentication
-   mechanisms which can be used by a server to challenge a client
-   request and by a client to provide authentication information. The
-   general framework for access authentication, and the specification of
-   "basic" and "digest" authentication, are specified in "HTTP
-   Authentication: Basic and Digest Access Authentication" <xref target="RFC2617"/>. This
-   specification adopts the definitions of "challenge" and "credentials"
-   from that specification.
+   mechanisms which can be used by a server to challenge a client request and
+   by a client to provide authentication information. The "basic" and "digest"
+   authentication schemes continue to be specified in
+   <xref target="RFC2617" x:fmt="none">RFC 2617</xref>.
 </t>
 
 <section title="Requirements" anchor="intro.requirements">
@@ -249,6 +245,7 @@
   <x:anchor-alias value="LF"/>
   <x:anchor-alias value="OCTET"/>
   <x:anchor-alias value="VCHAR"/>
+  <x:anchor-alias value="SP"/>
   <x:anchor-alias value="WSP"/>
 <t>
   This specification uses the ABNF syntax defined in &notation; (which
@@ -268,32 +265,146 @@
 </t>
 
 <section title="Core Rules" anchor="core.rules">
-  <x:anchor-alias value="OWS"/>
+   <x:anchor-alias value="quoted-string"/>
+   <x:anchor-alias value="token"/>
+   <x:anchor-alias value="OWS"/>
 <t>
-  The core rules below are defined in &basic-rules;:
+   The core rules below are defined in &basic-rules;:
 </t>
 <figure><artwork type="abnf2616">
-  <x:ref>OWS</x:ref>         = &lt;OWS, defined in &basic-rules;&gt;
+  <x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in &basic-rules;&gt;
+  <x:ref>token</x:ref>         = &lt;token, defined in &basic-rules;&gt;
+  <x:ref>OWS</x:ref>           = &lt;OWS, defined in &basic-rules;&gt;
 </artwork></figure>
 </section>
+</section>
+</section>
 
-<section title="ABNF Rules defined in other Parts of the Specification" anchor="abnf.dependencies">
+<section title="Access Authentication Framework" anchor="access.authentication.framework">
+  <x:anchor-alias value="auth-scheme"/>
+  <x:anchor-alias value="auth-param"/>
   <x:anchor-alias value="challenge"/>
   <x:anchor-alias value="credentials"/>
 <t>
-  <x:anchor-alias value="OWS"/>
-  The ABNF rules below are defined in other specifications: 
+   HTTP provides a simple challenge-response authentication mechanism
+   that can be used by a server to challenge a client request and by a
+   client to provide authentication information. It uses an extensible,
+   case-insensitive token to identify the authentication scheme,
+   followed by a comma-separated list of attribute-value pairs which
+   carry the parameters necessary for achieving authentication via that
+   scheme.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="challenge"/><iref primary="true" item="Grammar" subitem="credentials"/>
-  <x:ref>challenge</x:ref>   = &lt;challenge, defined in <xref target="RFC2617" x:fmt="," x:sec="1.2"/>&gt;
-  <x:ref>credentials</x:ref> = &lt;credentials, defined in <xref target="RFC2617" x:fmt="," x:sec="1.2"/>&gt;
+<figure><artwork type="abnf2616"><iref item="auth-scheme" primary="true"/><iref item="auth-param" primary="true"/>
+  auth-scheme    = token
+  auth-param     = token "=" ( token / quoted-string )
 </artwork></figure>
+<t>
+   The 401 (Unauthorized) response message is used by an origin server
+   to challenge the authorization of a user agent. This response &MUST;
+   include a WWW-Authenticate header field containing at least one
+   challenge applicable to the requested resource. The 407 (Proxy
+   Authentication Required) response message is used by a proxy to
+   challenge the authorization of a client and &MUST; include a Proxy-Authenticate
+   header field containing at least one challenge
+   applicable to the proxy for the requested resource.
+</t>
+<figure><artwork type="abnf2616"><iref item="challenge" primary="true"/>
+  <x:ref>challenge</x:ref>   = <x:ref>auth-scheme</x:ref> 1*<x:ref>SP</x:ref> 1#<x:ref>auth-param</x:ref>
+</artwork></figure>
+<x:note>
+  <t>
+   <x:h>Note:</x:h> User agents will need to take special care in parsing the WWW-Authenticate
+   or Proxy-Authenticate header field value if it contains
+   more than one challenge, or if more than one WWW-Authenticate header
+   field is provided, since the contents of a challenge can itself
+   contain a comma-separated list of authentication parameters.
+  </t>
+</x:note>
+<t>
+   The authentication parameter realm is defined for all authentication
+   schemes:
+</t>
+<figure><artwork type="abnf2616"><iref item="realm" primary="true"/><iref item="realm-value" primary="true"/>
+  realm       = "realm" "=" realm-value
+  realm-value = quoted-string
+</artwork></figure>
+<t>
+   The realm directive (case-insensitive) is required for all
+   authentication schemes that issue a challenge. The realm value
+   (case-sensitive), in combination with the canonical root URL (
+   the scheme and authority components of the effective request URI; see <xref target="Part1" x:fmt="of" x:rel="#effective.request.uri"/>) of the server being accessed, defines the protection space.
+   These realms allow the protected resources on a server to be
+   partitioned into a set of protection spaces, each with its own
+   authentication scheme and/or authorization database. The realm value
+   is a string, generally assigned by the origin server, which can have
+   additional semantics specific to the authentication scheme. Note that
+   there can be multiple challenges with the same auth-scheme but
+   different realms.
+</t>
+<t>
+   A user agent that wishes to authenticate itself with an origin
+   server -- usually, but not necessarily, after receiving a 401
+   (Unauthorized) -- &MAY; do so by including an Authorization header field
+   with the request. A client that wishes to authenticate itself with a
+   proxy -- usually, but not necessarily, after receiving a 407 (Proxy
+   Authentication Required) -- &MAY; do so by including a Proxy-Authorization
+   header field with the request.  Both the Authorization
+   field value and the Proxy-Authorization field value consist of
+   credentials containing the authentication information of the client
+   for the realm of the resource being requested. The user agent &MUST;
+   choose to use one of the challenges with the strongest auth-scheme it
+   understands and request credentials from the user based upon that
+   challenge.
+</t>
+<figure><artwork type="abnf2616"><iref item="credentials" primary="true"/>
+  <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> ( <x:ref>token</x:ref>
+                            / <x:ref>quoted-string</x:ref>
+                            / #<x:ref>auth-param</x:ref> )
+</artwork></figure>
+<x:note>
+  <t>
+      <x:h>Note:</x:h> many browsers will only recognize Basic and will require
+      that it be the first auth-scheme presented. Servers should only
+      include Basic if it is minimally acceptable.<cref>Either rephrase and add reference or drop.</cref>
+  </t>
+</x:note>
+<t>
+   The protection space determines the domain over which credentials can
+   be automatically applied. If a prior request has been authorized, the
+   same credentials &MAY; be reused for all other requests within that
+   protection space for a period of time determined by the
+   authentication scheme, parameters, and/or user preference. Unless
+   otherwise defined by the authentication scheme, a single protection
+   space cannot extend outside the scope of its server.
+</t>
+<t>
+   If the origin server does not wish to accept the credentials sent
+   with a request, it &SHOULD; return a 401 (Unauthorized) response. The
+   response &MUST; include a WWW-Authenticate header field containing at
+   least one (possibly new) challenge applicable to the requested
+   resource. If a proxy does not accept the credentials sent with a
+   request, it &SHOULD; return a 407 (Proxy Authentication Required). The
+   response &MUST; include a Proxy-Authenticate header field containing a
+   (possibly new) challenge applicable to the proxy for the requested
+   resource.
+</t>
+<t>
+   The HTTP protocol does not restrict applications to this simple
+   challenge-response mechanism for access authentication. Additional
+   mechanisms &MAY; be used, such as encryption at the transport level or
+   via message encapsulation, and with additional header fields
+   specifying authentication information. However, these additional
+   mechanisms are not defined by this specification.
+</t>
+<t>
+   Proxies &MUST; be completely transparent regarding user agent
+   authentication by origin servers. That is, they &MUST; forward the
+   WWW-Authenticate and Authorization headers untouched, and follow the
+   rules found in <xref target="header.authorization"/>. Both the Proxy-Authenticate and
+   the Proxy-Authorization header fields are hop-by-hop headers (see
+   &end-to-end.and-hop-by-hop;).
+</t>
 </section>
-
-</section>
-
-</section>
-
 
 <section title="Status Code Definitions" anchor="status.code.definitions">
 <section title="401 Unauthorized" anchor="status.401">
@@ -310,9 +421,7 @@
    prior response, and the user agent has already attempted
    authentication at least once, then the user &SHOULD; be presented the
    representation that was given in the response, since that representation might
-   include relevant diagnostic information. HTTP access authentication
-   is explained in "HTTP Authentication: Basic and Digest Access
-   Authentication" <xref target="RFC2617"/>.
+   include relevant diagnostic information.
 </t>
 </section>
 <section title="407 Proxy Authentication Required" anchor="status.407">
@@ -320,13 +429,11 @@
   <iref primary="true" item="Status Codes" subitem="407 Proxy Authentication Required" x:for-anchor=""/>
 <t>
    This code is similar to 401 (Unauthorized), but indicates that the
-   client must first authenticate itself with the proxy. The proxy &MUST;
+   client ought to first authenticate itself with the proxy. The proxy &MUST;
    return a Proxy-Authenticate header field (<xref target="header.proxy-authenticate"/>) containing a
    challenge applicable to the proxy for the target resource. The
    client &MAY; repeat the request with a suitable Proxy-Authorization
-   header field (<xref target="header.proxy-authorization"/>). HTTP access authentication is explained
-   in "HTTP Authentication: Basic and Digest Access Authentication"
-   <xref target="RFC2617"/>.
+   header field (<xref target="header.proxy-authorization"/>).
 </t>
 </section>
 </section>
@@ -354,8 +461,7 @@
   <x:ref>Authorization-v</x:ref> = <x:ref>credentials</x:ref>
 </artwork></figure>
 <t>
-   HTTP access authentication is described in "HTTP Authentication:
-   Basic and Digest Access Authentication" <xref target="RFC2617"/>. If a request is
+   If a request is
    authenticated and a realm specified, the same credentials &SHOULD;
    be valid for all other requests within this realm (assuming that
    the authentication scheme itself does not require otherwise, such
@@ -410,9 +516,7 @@
   <x:ref>Proxy-Authenticate-v</x:ref> = 1#<x:ref>challenge</x:ref>
 </artwork></figure>
 <t>
-   The HTTP access authentication process is described in "HTTP
-   Authentication: Basic and Digest Access Authentication" <xref target="RFC2617"/>. Unlike
-   WWW-Authenticate, the Proxy-Authenticate header field applies only to
+   Unlike WWW-Authenticate, the Proxy-Authenticate header field applies only to
    the current connection and &SHOULD-NOT;  be passed on to downstream
    clients. However, an intermediate proxy might need to obtain its own
    credentials by requesting them from the downstream client, which in
@@ -439,9 +543,7 @@
   <x:ref>Proxy-Authorization-v</x:ref> = <x:ref>credentials</x:ref>
 </artwork></figure>
 <t>
-   The HTTP access authentication process is described in "HTTP
-   Authentication: Basic and Digest Access Authentication" <xref target="RFC2617"/>. Unlike
-   Authorization, the Proxy-Authorization header field applies only to
+   Unlike Authorization, the Proxy-Authorization header field applies only to
    the next outbound proxy that demanded authentication using the Proxy-Authenticate
    field. When multiple proxies are used in a chain, the
    Proxy-Authorization header field is consumed by the first outbound
@@ -468,9 +570,7 @@
   <x:ref>WWW-Authenticate-v</x:ref> = 1#<x:ref>challenge</x:ref>
 </artwork></figure>
 <t>
-   The HTTP access authentication process is described in "HTTP
-   Authentication: Basic and Digest Access Authentication" <xref target="RFC2617"/>. User
-   agents are advised to take special care in parsing the WWW-Authenticate
+   User agents are advised to take special care in parsing the WWW-Authenticate
    field value as it might contain more than one challenge,
    or if more than one WWW-Authenticate header field is provided, the
    contents of a challenge itself can contain a comma-separated list of
@@ -596,7 +696,14 @@
 
 <section title="Acknowledgments" anchor="ack">
 <t>
-  <cref anchor="acks">TBD.</cref>
+  This specification takes over the definition of the HTTP Authentication
+  Framework, previously defined in <xref target="RFC2616" x:fmt="none">RFC 2617</xref>. We thank to John Franks,
+  Phillip M. Hallam-Baker, Jeffery L. Hostetler, Scott D. Lawrence,
+  Paul J. Leach, Ari Luotonen, and Lawrence C. Stewart for their work
+  on that specification.
+</t>
+<t>
+  <cref anchor="acks">HTTPbis acknowledgements.</cref>
 </t>
 </section>
 </middle>
@@ -711,41 +818,6 @@
   <seriesInfo name="RFC" value="2119"/>
 </reference>
 
-<reference anchor="RFC2617">
-  <front>
-    <title abbrev="HTTP Authentication">HTTP Authentication: Basic and Digest Access Authentication</title>
-    <author initials="J." surname="Franks" fullname="John Franks">
-      <organization>Northwestern University, Department of Mathematics</organization>
-      <address><email>john@math.nwu.edu</email></address>
-    </author>
-    <author initials="P.M." surname="Hallam-Baker" fullname="Phillip M. Hallam-Baker">
-      <organization>Verisign Inc.</organization>
-      <address><email>pbaker@verisign.com</email></address>
-    </author>
-    <author initials="J.L." surname="Hostetler" fullname="Jeffery L. Hostetler">
-      <organization>AbiSource, Inc.</organization>
-      <address><email>jeff@AbiSource.com</email></address>
-    </author>
-    <author initials="S.D." surname="Lawrence" fullname="Scott D. Lawrence">
-      <organization>Agranat Systems, Inc.</organization>
-      <address><email>lawrence@agranat.com</email></address>
-    </author>
-    <author initials="P.J." surname="Leach" fullname="Paul J. Leach">
-      <organization>Microsoft Corporation</organization>
-      <address><email>paulle@microsoft.com</email></address>
-    </author>
-    <author initials="A." surname="Luotonen" fullname="Ari Luotonen">
-      <organization>Netscape Communications Corporation</organization>
-    </author>
-    <author initials="L." surname="Stewart" fullname="Lawrence C. Stewart">
-      <organization>Open Market, Inc.</organization>
-      <address><email>stewart@OpenMarket.com</email></address>
-    </author>
-    <date month="June" year="1999"/>
-  </front>
-  <seriesInfo name="RFC" value="2617"/>
-</reference>
-
 <reference anchor="RFC5234">
   <front>
     <title abbrev="ABNF for Syntax Specifications">Augmented BNF for Syntax Specifications: ABNF</title>
@@ -807,6 +879,41 @@
   <seriesInfo name="RFC" value="2616"/>
 </reference>
 
+<reference anchor="RFC2617">
+  <front>
+    <title abbrev="HTTP Authentication">HTTP Authentication: Basic and Digest Access Authentication</title>
+    <author initials="J." surname="Franks" fullname="John Franks">
+      <organization>Northwestern University, Department of Mathematics</organization>
+      <address><email>john@math.nwu.edu</email></address>
+    </author>
+    <author initials="P.M." surname="Hallam-Baker" fullname="Phillip M. Hallam-Baker">
+      <organization>Verisign Inc.</organization>
+      <address><email>pbaker@verisign.com</email></address>
+    </author>
+    <author initials="J.L." surname="Hostetler" fullname="Jeffery L. Hostetler">
+      <organization>AbiSource, Inc.</organization>
+      <address><email>jeff@AbiSource.com</email></address>
+    </author>
+    <author initials="S.D." surname="Lawrence" fullname="Scott D. Lawrence">
+      <organization>Agranat Systems, Inc.</organization>
+      <address><email>lawrence@agranat.com</email></address>
+    </author>
+    <author initials="P.J." surname="Leach" fullname="Paul J. Leach">
+      <organization>Microsoft Corporation</organization>
+      <address><email>paulle@microsoft.com</email></address>
+    </author>
+    <author initials="A." surname="Luotonen" fullname="Ari Luotonen">
+      <organization>Netscape Communications Corporation</organization>
+    </author>
+    <author initials="L." surname="Stewart" fullname="Lawrence C. Stewart">
+      <organization>Open Market, Inc.</organization>
+      <address><email>stewart@OpenMarket.com</email></address>
+    </author>
+    <date month="June" year="1999"/>
+  </front>
+  <seriesInfo name="RFC" value="2617"/>
+</reference>
+
 <reference anchor='RFC3864'>
   <front>
     <title>Registration Procedures for Message Header Fields</title>
@@ -855,8 +962,20 @@
 <x:ref>WWW-Authenticate-v</x:ref> = *( "," OWS ) challenge *( OWS "," [ OWS
  challenge ] )
 
-<x:ref>challenge</x:ref> = &lt;challenge, defined in [RFC2617], Section 1.2&gt;
-<x:ref>credentials</x:ref> = &lt;credentials, defined in [RFC2617], Section 1.2&gt;
+<x:ref>auth-param</x:ref> = token "=" ( token / quoted-string )
+<x:ref>auth-scheme</x:ref> = token
+
+<x:ref>challenge</x:ref> = auth-scheme 1*SP *( "," OWS ) auth-param *( OWS "," [ OWS
+ auth-param ] )
+<x:ref>credentials</x:ref> = auth-scheme ( token / quoted-string / [ ( "," /
+ auth-param ) *( OWS "," [ OWS auth-param ] ) ] )
+
+<x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in [Part1], Section 1.2.2&gt;
+
+realm = "realm=" realm-value
+realm-value = quoted-string
+
+<x:ref>token</x:ref> = &lt;token, defined in [Part1], Section 1.2.2&gt;
 </artwork>
 </figure>
 <figure><preamble>ABNF diagnostics:</preamble><artwork type="inline">
@@ -864,6 +983,7 @@
 ; Proxy-Authenticate defined but not used
 ; Proxy-Authorization defined but not used
 ; WWW-Authenticate defined but not used
+; realm defined but not used
 </artwork></figure></section>
 <?ENDINC p7-auth.abnf-appendix ?>
 
@@ -992,7 +1112,17 @@
 
 <section title="Since draft-ietf-httpbis-p7-auth-11" anchor="changes.since.11">
 <t>
-  None yet.
+  Closed issues:
+  <list style="symbols"> 
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/195"/>:
+      "auth-param syntax"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/237"/>:
+      "absorbing the auth framework from 2617"
+    </t>
+  </list>
 </t>
 </section>
 
