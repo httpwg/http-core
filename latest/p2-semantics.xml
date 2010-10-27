@@ -376,6 +376,7 @@
 </t>
 <figure><!--Part1--><artwork type="abnf2616">
   <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, defined in &uri;&gt;
+  <x:ref>authority</x:ref>     = &lt;authority, defined in &uri;&gt;
   <x:ref>comment</x:ref>       = &lt;comment, defined in &header-fields;&gt;
   <x:ref>Host</x:ref>          = &lt;Host, defined in &uri;&gt;
   <x:ref>HTTP-date</x:ref>     = &lt;HTTP-date, defined in &full-date;&gt;
@@ -1142,10 +1143,73 @@
   <iref primary="true" item="CONNECT method" x:for-anchor=""/>
   <iref primary="true" item="Methods" subitem="CONNECT" x:for-anchor=""/>
 <t>
-   This specification reserves the method name CONNECT for use with a
-   proxy that can dynamically switch to being a tunnel (e.g., SSL
-   tunneling <xref target="RFC2817"/>).
+   The CONNECT method is used with a proxy to dynamically switch 
+   the connection to a tunnel.
 </t>
+<t>
+   When using CONNECT, the request-target &MUST; be an authority; i.e.,
+   the host name and port number destination of the requested connection
+   separated by a colon:
+</t>
+
+<figure><artwork type="example">
+    CONNECT server.example.com:80 HTTP/1.1
+    Host: server.example.com:80
+</artwork></figure>
+
+<t>
+   Other HTTP mechanisms can be used normally with the CONNECT method --
+   except end-to-end protocol Upgrade requests, since the
+   tunnel must be established first.
+</t>
+<t>
+   For example, proxy authentication might be used to establish the
+   authority to create a tunnel:
+</t>
+
+<figure><artwork type="example">
+    CONNECT server.example.com:80 HTTP/1.1
+    Host: server.example.com:80
+    Proxy-Authorization: basic aGVsbG86d29ybGQ=
+</artwork></figure>
+
+<t>
+   Like any other pipelined HTTP/1.1 request, data to be tunnel may be
+   sent immediately after the blank line. The usual caveats also apply:
+   data may be discarded if the eventual response is negative, and the
+   connection may be reset with no response if more than one TCP segment
+   is outstanding.
+</t>
+
+<section title="Establishing a Tunnel with CONNECT">
+<t>
+   Any successful (2xx) response to a CONNECT request indicates that the
+   proxy has established a connection to the requested host and port,
+   and has switched to tunneling the current connection to that server
+   connection.
+</t>
+<t>
+   It may be the case that the proxy itself can only reach the requested
+   origin server through another proxy.  In this case, the first proxy
+   &SHOULD; make a CONNECT request of that next proxy, requesting a tunnel
+   to the authority.  A proxy &MUST-NOT; respond with any 2xx status code
+   unless it has either a direct or tunnel connection established to the
+   authority.
+</t>
+<t>
+   An origin server which receives a CONNECT request for itself &MAY;
+   respond with a 2xx status code to indicate that a connection is
+   established.
+</t>
+<t>
+   If at any point either one of the peers gets disconnected, any
+   outstanding data that came from that peer will be passed to the other
+   one, and after that also the other connection will be terminated by
+   the proxy. If there is outstanding data to that peer undelivered,
+   that data will be discarded.
+</t>
+
+</section>
 </section>
 </section>
 
@@ -2846,6 +2910,16 @@
 </t>
 </section>
 
+<section title="Security Considerations for CONNECT">
+<t>
+   Since tunneled data is opaque to the proxy, there are additional 
+   risks to tunneling to other well-known or reserved ports. 
+   A HTTP client CONNECTing to port 25 could relay spam
+   via SMTP, for example. As such, proxies &SHOULD; restrict CONNECT 
+   access to a small number of known ports.
+</t>
+</section>
+
 </section>
 
 <section title="Acknowledgments" anchor="ack">
@@ -3913,6 +3987,10 @@ WWW-Authenticate =
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/88"/>:
       "205 Bodies"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/239"/>:
+      "Migrate CONNECT from RFC2817 to p2"
     </t>
   </list>
 </t>
