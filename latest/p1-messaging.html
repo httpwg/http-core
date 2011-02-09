@@ -949,7 +949,16 @@ Content-Type: text/plain
          to and from entirely different application-layer protocols. Proxies are often used to group an organization's HTTP requests
          through a common intermediary for the sake of security, annotation services, or shared caching.
       </p>
-      <p id="rfc.section.2.2.p.6"><span id="rfc.iref.g.24"></span><span id="rfc.iref.r.3"></span> A "gateway" (a.k.a., "reverse proxy") is a receiving agent that acts as a layer above some other server(s) and translates
+      <p id="rfc.section.2.2.p.6"> <span id="rfc.iref.t.1"></span>  <span id="rfc.iref.n.1"></span> An HTTP-to-HTTP proxy is called a "transforming proxy" if it designed or configured to modify request or response messages
+         in a semantically meaningful way (i.e., modifications, beyond those required by normal HTTP processing, that change the message
+         in a way that would be significant to the original sender or potentially significant to downstream recipients). For example,
+         a transforming proxy might be acting as a shared annotation server (modifying responses to include references to a local annotation
+         database), a malware filter, a format transcoder, or an intranet-to-Internet privacy filter. Such transformations are presumed
+         to be desired by the client (or client organization) that selected the proxy and are beyond the scope of this specification.
+         However, when a proxy is not intended to transform a given message, we use the term "non-transforming proxy" to target requirements
+         that preserve HTTP message semantics.
+      </p>
+      <p id="rfc.section.2.2.p.7"><span id="rfc.iref.g.24"></span><span id="rfc.iref.r.3"></span> A "gateway" (a.k.a., "reverse proxy") is a receiving agent that acts as a layer above some other server(s) and translates
          the received requests to the underlying server's protocol. Gateways are often used for load balancing or partitioning HTTP
          services across multiple machines. Unlike a proxy, a gateway receives requests as if it were the origin server for the target
          resource; the requesting client will not be aware that it is communicating with a gateway. A gateway communicates with the
@@ -957,10 +966,17 @@ Content-Type: text/plain
          A gateway communicates with inbound servers using any protocol it desires, including private extensions to HTTP that are outside
          the scope of this specification.
       </p>
-      <p id="rfc.section.2.2.p.7"><span id="rfc.iref.t.1"></span> A "tunnel" acts as a blind relay between two connections without changing the messages. Once active, a tunnel is not considered
+      <p id="rfc.section.2.2.p.8"><span id="rfc.iref.t.2"></span> A "tunnel" acts as a blind relay between two connections without changing the messages. Once active, a tunnel is not considered
          a party to the HTTP communication, though the tunnel might have been initiated by an HTTP request. A tunnel ceases to exist
          when both ends of the relayed connection are closed. Tunnels are used to extend a virtual connection through an intermediary,
          such as when transport-layer security is used to establish private communication through a shared firewall proxy.
+      </p>
+      <p id="rfc.section.2.2.p.9"><span id="rfc.iref.i.3"></span><span id="rfc.iref.t.3"></span> In addition, there may exist network intermediaries that are not considered part of the HTTP communication but nevertheless
+         act as filters or redirecting agents (usually violating HTTP semantics, causing security problems, and otherwise making a
+         mess of things). Such a network intermediary, referred to as an "interception proxy" <a href="#RFC3040" id="rfc.xref.RFC3040.1"><cite title="Internet Web Replication and Caching Taxonomy">[RFC3040]</cite></a> or "transparent proxy" <a href="#RFC1919" id="rfc.xref.RFC1919.1"><cite title="Classical versus Transparent IP Proxies">[RFC1919]</cite></a>, differs from an HTTP proxy because it has not been selected by the client. Instead, the network intermediary redirects outgoing
+         TCP port 80 packets (and occasionally other common port traffic) to an internal HTTP server. Interception proxies are commonly
+         found on public network access points as a means of enforcing account subscription prior to allowing use of non-local Internet
+         services. They are indistinguishable from a man-in-the-middle attack.
       </p>
       <div id="rfc.iref.c.3"></div>
       <h2 id="rfc.section.2.3"><a href="#rfc.section.2.3">2.3</a>&nbsp;<a id="caches" href="#caches">Caches</a></h2>
@@ -1158,8 +1174,8 @@ Content-Type: text/plain
          is a superset of US-ASCII. Attempting to parse HTTP as a stream of Unicode characters in a character encoding like UTF-16
          might introduce security flaws due to the differing ways that such parsers interpret invalid characters.
       </p>
-      <p id="rfc.section.3.1.p.4">HTTP allows the set of defined header fields to be extended without changing the protocol version (see <a href="#header.field.registration" title="Header Field Registration">Section&nbsp;10.1</a>). However, such fields might not be recognized by a downstream recipient and might be stripped by non-transparent intermediaries.
-         Unrecognized header fields <em class="bcp14">MUST</em> be forwarded by transparent proxies and <em class="bcp14">SHOULD</em> be ignored by a recipient.
+      <p id="rfc.section.3.1.p.4">HTTP allows the set of defined header fields to be extended without changing the protocol version (see <a href="#header.field.registration" title="Header Field Registration">Section&nbsp;10.1</a>). Unrecognized header fields <em class="bcp14">MUST</em> be forwarded by a proxy unless the proxy is specifically configured to block or otherwise transform such fields. Unrecognized
+         header fields <em class="bcp14">SHOULD</em> be ignored by other recipients.
       </p>
       <h2 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2</a>&nbsp;<a id="header.fields" href="#header.fields">Header Fields</a></h2>
       <p id="rfc.section.3.2.p.1">Each HTTP header field consists of a case-insensitive field name followed by a colon (":"), optional whitespace, and the field
@@ -1374,7 +1390,7 @@ Host: www.example.org:8001
 </pre>  <p>after connecting to port 8001 of host "www.example.org".</p> 
       <p id="rfc.section.4.1.2.p.16">The request-target is transmitted in the format specified in <a href="#http.uri" title="http URI scheme">Section&nbsp;2.6.1</a>. If the request-target is percent-encoded (<a href="#RFC3986" id="rfc.xref.RFC3986.18"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="http://tools.ietf.org/html/rfc3986#section-2.1">Section 2.1</a>), the origin server <em class="bcp14">MUST</em> decode the request-target in order to properly interpret the request. Servers <em class="bcp14">SHOULD</em> respond to invalid request-targets with an appropriate status code.
       </p>
-      <p id="rfc.section.4.1.2.p.17">A transparent proxy <em class="bcp14">MUST NOT</em> rewrite the "path-absolute" part of the received request-target when forwarding it to the next inbound server, except as noted
+      <p id="rfc.section.4.1.2.p.17">A non-transforming proxy <em class="bcp14">MUST NOT</em> rewrite the "path-absolute" part of the received request-target when forwarding it to the next inbound server, except as noted
          above to replace a null path-absolute with "/" or "*".
       </p>
       <div class="note" id="rfc.section.4.1.2.p.18"> 
@@ -1414,7 +1430,7 @@ Host: www.example.org:8001
          what exact resource is being requested.
       </p>
       <div id="rfc.iref.e.1"></div>
-      <div id="rfc.iref.t.2"></div>
+      <div id="rfc.iref.t.4"></div>
       <h2 id="rfc.section.4.3"><a href="#rfc.section.4.3">4.3</a>&nbsp;<a id="effective.request.uri" href="#effective.request.uri">Effective Request URI</a></h2>
       <p id="rfc.section.4.3.p.1">HTTP requests often do not carry the absolute URI (<a href="#RFC3986" id="rfc.xref.RFC3986.20"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="http://tools.ietf.org/html/rfc3986#section-4.3">Section 4.3</a>) for the target resource; instead, the URI needs to be inferred from the request-target, Host header field, and connection
          context. The result of this process is called the "effective request URI". The "target resource" is the resource identified
@@ -1825,10 +1841,10 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
       <p id="rfc.section.7.1.3.1.p.4">Other hop-by-hop header fields <em class="bcp14">MUST</em> be listed in a Connection header field (<a href="#header.connection" id="rfc.xref.header.connection.4" title="Connection">Section&nbsp;9.1</a>).
       </p>
       <h4 id="rfc.section.7.1.3.2"><a href="#rfc.section.7.1.3.2">7.1.3.2</a>&nbsp;<a id="non-modifiable.header-fields" href="#non-modifiable.header-fields">Non-modifiable Header Fields</a></h4>
-      <p id="rfc.section.7.1.3.2.p.1">Some features of HTTP/1.1, such as Digest Authentication, depend on the value of certain end-to-end header fields. A transparent
+      <p id="rfc.section.7.1.3.2.p.1">Some features of HTTP/1.1, such as Digest Authentication, depend on the value of certain end-to-end header fields. A non-transforming
          proxy <em class="bcp14">SHOULD NOT</em> modify an end-to-end header field unless the definition of that header field requires or specifically allows that.
       </p>
-      <p id="rfc.section.7.1.3.2.p.2">A transparent proxy <em class="bcp14">MUST NOT</em> modify any of the following fields in a request or response, and it <em class="bcp14">MUST NOT</em> add any of these fields if not already present: 
+      <p id="rfc.section.7.1.3.2.p.2">A non-transforming proxy <em class="bcp14">MUST NOT</em> modify any of the following fields in a request or response, and it <em class="bcp14">MUST NOT</em> add any of these fields if not already present: 
       </p>
       <ul>
          <li>Content-Location</li>
@@ -1836,7 +1852,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
          <li>ETag</li>
          <li>Last-Modified</li>
       </ul>
-      <p id="rfc.section.7.1.3.2.p.3">A transparent proxy <em class="bcp14">MUST NOT</em> modify any of the following fields in a response: 
+      <p id="rfc.section.7.1.3.2.p.3">A non-transforming proxy <em class="bcp14">MUST NOT</em> modify any of the following fields in a response: 
       </p>
       <ul>
          <li>Expires</li>
@@ -1850,14 +1866,14 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
          <li>Content-Range</li>
          <li>Content-Type</li>
       </ul>
-      <p id="rfc.section.7.1.3.2.p.6">A non-transparent proxy <em class="bcp14">MAY</em> modify or add these fields to a message that does not include no-transform, but if it does so, it <em class="bcp14">MUST</em> add a Warning 214 (Transformation applied) if one does not already appear in the message (see <a href="p6-cache.html#header.warning" title="Warning">Section 3.6</a> of <a href="#Part6" id="rfc.xref.Part6.9"><cite title="HTTP/1.1, part 6: Caching">[Part6]</cite></a>).
+      <p id="rfc.section.7.1.3.2.p.6">A transforming proxy <em class="bcp14">MAY</em> modify or add these fields to a message that does not include no-transform, but if it does so, it <em class="bcp14">MUST</em> add a Warning 214 (Transformation applied) if one does not already appear in the message (see <a href="p6-cache.html#header.warning" title="Warning">Section 3.6</a> of <a href="#Part6" id="rfc.xref.Part6.9"><cite title="HTTP/1.1, part 6: Caching">[Part6]</cite></a>).
       </p>
       <div class="note" id="rfc.section.7.1.3.2.p.7"> 
          <p> <b>Warning:</b> Unnecessary modification of end-to-end header fields might cause authentication failures if stronger authentication mechanisms
             are introduced in later versions of HTTP. Such authentication mechanisms <em class="bcp14">MAY</em> rely on the values of header fields not listed here.
          </p> 
       </div>
-      <p id="rfc.section.7.1.3.2.p.8">A transparent proxy <em class="bcp14">MUST</em> preserve the message payload (<a href="#Part3" id="rfc.xref.Part3.6"><cite title="HTTP/1.1, part 3: Message Payload and Content Negotiation">[Part3]</cite></a>), though it <em class="bcp14">MAY</em> change the message-body through application or removal of a transfer-coding (<a href="#transfer.codings" title="Transfer Codings">Section&nbsp;6.2</a>).
+      <p id="rfc.section.7.1.3.2.p.8">A non-transforming proxy <em class="bcp14">MUST</em> preserve the message payload (<a href="#Part3" id="rfc.xref.Part3.6"><cite title="HTTP/1.1, part 3: Message Payload and Content Negotiation">[Part3]</cite></a>), though it <em class="bcp14">MAY</em> change the message-body through application or removal of a transfer-coding (<a href="#transfer.codings" title="Transfer Codings">Section&nbsp;6.2</a>).
       </p>
       <h3 id="rfc.section.7.1.4"><a href="#rfc.section.7.1.4">7.1.4</a>&nbsp;<a id="persistent.practical" href="#persistent.practical">Practical Considerations</a></h3>
       <p id="rfc.section.7.1.4.p.1">Servers will usually have some time-out value beyond which they will no longer maintain an inactive connection. Proxy servers
@@ -2109,7 +2125,7 @@ Host: www.example.org
       </p>
       <p id="rfc.section.9.4.p.7">See Sections <a href="#the.resource.identified.by.a.request" title="The Resource Identified by a Request">4.2</a> and <a href="#changes.to.simplify.multi-homed.web.servers.and.conserve.ip.addresses" title="Changes to Simplify Multi-homed Web Servers and Conserve IP Addresses">B.1.1</a> for other requirements relating to Host.
       </p>
-      <div id="rfc.iref.t.3"></div>
+      <div id="rfc.iref.t.5"></div>
       <div id="rfc.iref.h.11"></div>
       <h2 id="rfc.section.9.5"><a href="#rfc.section.9.5">9.5</a>&nbsp;<a id="header.te" href="#header.te">TE</a></h2>
       <p id="rfc.section.9.5.p.1">The "TE" request-header field indicates what extension transfer-codings it is willing to accept in the response, and whether
@@ -2158,7 +2174,7 @@ Host: www.example.org
       <p id="rfc.section.9.5.p.9">If the TE field-value is empty or if no TE field is present, the only transfer-coding is "chunked". A message with no transfer-coding
          is always acceptable.
       </p>
-      <div id="rfc.iref.t.4"></div>
+      <div id="rfc.iref.t.6"></div>
       <div id="rfc.iref.h.12"></div>
       <h2 id="rfc.section.9.6"><a href="#rfc.section.9.6">9.6</a>&nbsp;<a id="header.trailer" href="#header.trailer">Trailer</a></h2>
       <p id="rfc.section.9.6.p.1">The "Trailer" general-header field indicates that the given set of header fields is present in the trailer of a message encoded
@@ -2178,7 +2194,7 @@ Host: www.example.org
          <li>Content-Length</li>
          <li>Trailer</li>
       </ul>
-      <div id="rfc.iref.t.5"></div>
+      <div id="rfc.iref.t.7"></div>
       <div id="rfc.iref.h.13"></div>
       <h2 id="rfc.section.9.7"><a href="#rfc.section.9.7">9.7</a>&nbsp;<a id="header.transfer-encoding" href="#header.transfer-encoding">Transfer-Encoding</a></h2>
       <p id="rfc.section.9.7.p.1">The "Transfer-Encoding" general-header field indicates what transfer-codings (if any) have been applied to the message body.
@@ -2722,7 +2738,7 @@ Host: www.example.org
       </table>
       <h2 id="rfc.references.2"><a href="#rfc.section.13.2" id="rfc.section.13.2">13.2</a> Informative References
       </h2>
-      <table>                                              
+      <table>                                                  
          <tr>
             <td class="reference"><b id="BCP97">[BCP97]</b></td>
             <td class="top"><a href="mailto:klensin+ietf@jck.com">Klensin, J.</a> and <a href="mailto:hartmans-ietf@mit.edu" title="MIT">S. Hartman</a>, “<a href="http://tools.ietf.org/html/rfc4897">Handling Normative References to Standards-Track Documents</a>”, BCP&nbsp;97, RFC&nbsp;4897, June&nbsp;2007.
@@ -2752,6 +2768,11 @@ Host: www.example.org
          <tr>
             <td class="reference"><b id="RFC1900">[RFC1900]</b></td>
             <td class="top"><a href="mailto:brian@dxcoms.cern.ch" title="CERN, Computing and Networks Division">Carpenter, B.</a> and <a href="mailto:yakov@cisco.com" title="cisco Systems">Y. Rekhter</a>, “<a href="http://tools.ietf.org/html/rfc1900">Renumbering Needs Work</a>”, RFC&nbsp;1900, February&nbsp;1996.
+            </td>
+         </tr>
+         <tr>
+            <td class="reference"><b id="RFC1919">[RFC1919]</b></td>
+            <td class="top"><a href="mailto:mchatel@pax.eunet.ch">Chatel, M.</a>, “<a href="http://tools.ietf.org/html/rfc1919">Classical versus Transparent IP Proxies</a>”, RFC&nbsp;1919, March&nbsp;1996.
             </td>
          </tr>
          <tr>
@@ -2802,6 +2823,11 @@ Host: www.example.org
          <tr>
             <td class="reference"><b id="RFC2965">[RFC2965]</b></td>
             <td class="top"><a href="mailto:dmk@bell-labs.com" title="Bell Laboratories, Lucent Technologies">Kristol, D.</a> and <a href="mailto:lou@montulli.org" title="Epinions.com, Inc.">L. Montulli</a>, “<a href="http://tools.ietf.org/html/rfc2965">HTTP State Management Mechanism</a>”, RFC&nbsp;2965, October&nbsp;2000.
+            </td>
+         </tr>
+         <tr>
+            <td class="reference"><b id="RFC3040">[RFC3040]</b></td>
+            <td class="top">Cooper, I., Melve, I., and G. Tomlinson, “<a href="http://tools.ietf.org/html/rfc3040">Internet Web Replication and Caching Taxonomy</a>”, RFC&nbsp;3040, January&nbsp;2001.
             </td>
          </tr>
          <tr>
@@ -3680,6 +3706,7 @@ Host: www.example.org
             </li>
             <li><a id="rfc.index.I" href="#rfc.index.I"><b>I</b></a><ul>
                   <li>inbound&nbsp;&nbsp;<a href="#rfc.iref.i.2"><b>2.2</b></a></li>
+                  <li>interception proxy&nbsp;&nbsp;<a href="#rfc.iref.i.3"><b>2.2</b></a></li>
                   <li>intermediary&nbsp;&nbsp;<a href="#rfc.iref.i.1"><b>2.2</b></a></li>
                   <li><em>ISO-8859-1</em>&nbsp;&nbsp;<a href="#rfc.xref.ISO-8859-1.1">3.2</a>, <a href="#ISO-8859-1"><b>13.1</b></a></li>
                </ul>
@@ -3701,6 +3728,7 @@ Host: www.example.org
             </li>
             <li><a id="rfc.index.N" href="#rfc.index.N"><b>N</b></a><ul>
                   <li><em>Nie1997</em>&nbsp;&nbsp;<a href="#rfc.xref.Nie1997.1">7.1.1</a>, <a href="#Nie1997"><b>13.2</b></a></li>
+                  <li>non-transforming proxy&nbsp;&nbsp;<a href="#rfc.iref.n.1"><b>2.2</b></a></li>
                </ul>
             </li>
             <li><a id="rfc.index.O" href="#rfc.index.O"><b>O</b></a><ul>
@@ -3752,6 +3780,7 @@ Host: www.example.org
                      </ul>
                   </li>
                   <li><em>RFC1900</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC1900.1">11.4</a>, <a href="#RFC1900"><b>13.2</b></a></li>
+                  <li><em>RFC1919</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC1919.1">2.2</a>, <a href="#RFC1919"><b>13.2</b></a></li>
                   <li><em>RFC1945</em>&nbsp;&nbsp;<a href="#RFC1945"><b>13.2</b></a>, <a href="#rfc.xref.RFC1945.1">B</a></li>
                   <li><em>RFC1950</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC1950.1">6.2.2.2</a>, <a href="#rfc.xref.RFC1950.2">10.4</a>, <a href="#RFC1950"><b>13.1</b></a></li>
                   <li><em>RFC1951</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC1951.1">6.2.2.2</a>, <a href="#rfc.xref.RFC1951.2">10.4</a>, <a href="#RFC1951"><b>13.1</b></a></li>
@@ -3775,6 +3804,7 @@ Host: www.example.org
                   </li>
                   <li><em>RFC2818</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC2818.1">2.6.2</a>, <a href="#RFC2818"><b>13.2</b></a></li>
                   <li><em>RFC2965</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC2965.1">3.2</a>, <a href="#RFC2965"><b>13.2</b></a></li>
+                  <li><em>RFC3040</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC3040.1">2.2</a>, <a href="#RFC3040"><b>13.2</b></a></li>
                   <li><em>RFC3864</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC3864.1">10.1</a>, <a href="#RFC3864"><b>13.2</b></a></li>
                   <li><em>RFC3986</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC3986.1">1</a>, <a href="#rfc.xref.RFC3986.2">2.6</a>, <a href="#rfc.xref.RFC3986.3">2.6</a>, <a href="#rfc.xref.RFC3986.4">2.6</a>, <a href="#rfc.xref.RFC3986.5">2.6</a>, <a href="#rfc.xref.RFC3986.6">2.6</a>, <a href="#rfc.xref.RFC3986.7">2.6</a>, <a href="#rfc.xref.RFC3986.8">2.6</a>, <a href="#rfc.xref.RFC3986.9">2.6</a>, <a href="#rfc.xref.RFC3986.10">2.6</a>, <a href="#rfc.xref.RFC3986.11">2.6</a>, <a href="#rfc.xref.RFC3986.12">2.6</a>, <a href="#rfc.xref.RFC3986.13">2.6</a>, <a href="#rfc.xref.RFC3986.14">2.6.1</a>, <a href="#rfc.xref.RFC3986.15">2.6.1</a>, <a href="#rfc.xref.RFC3986.16">2.6.3</a>, <a href="#rfc.xref.RFC3986.17">2.6.3</a>, <a href="#rfc.xref.RFC3986.18">4.1.2</a>, <a href="#rfc.xref.RFC3986.19">4.1.2</a>, <a href="#rfc.xref.RFC3986.20">4.3</a>, <a href="#RFC3986"><b>13.1</b></a><ul>
                         <li><em>Section 2.1</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC3986.17">2.6.3</a>, <a href="#rfc.xref.RFC3986.18">4.1.2</a></li>
@@ -3816,12 +3846,14 @@ Host: www.example.org
                </ul>
             </li>
             <li><a id="rfc.index.T" href="#rfc.index.T"><b>T</b></a><ul>
-                  <li>target resource&nbsp;&nbsp;<a href="#rfc.iref.t.2"><b>4.3</b></a></li>
-                  <li>TE header&nbsp;&nbsp;<a href="#rfc.xref.header.te.1">6.2</a>, <a href="#rfc.xref.header.te.2">6.2.1</a>, <a href="#rfc.xref.header.te.3">6.4</a>, <a href="#rfc.iref.t.3"><b>9.5</b></a>, <a href="#rfc.xref.header.te.4">10.1</a></li>
+                  <li>target resource&nbsp;&nbsp;<a href="#rfc.iref.t.4"><b>4.3</b></a></li>
+                  <li>TE header&nbsp;&nbsp;<a href="#rfc.xref.header.te.1">6.2</a>, <a href="#rfc.xref.header.te.2">6.2.1</a>, <a href="#rfc.xref.header.te.3">6.4</a>, <a href="#rfc.iref.t.5"><b>9.5</b></a>, <a href="#rfc.xref.header.te.4">10.1</a></li>
                   <li><em>Tou1998</em>&nbsp;&nbsp;<a href="#rfc.xref.Tou1998.1">7.1.1</a>, <a href="#Tou1998"><b>13.2</b></a></li>
-                  <li>Trailer header&nbsp;&nbsp;<a href="#rfc.xref.header.trailer.1">3.4</a>, <a href="#rfc.xref.header.trailer.2">6.2.1</a>, <a href="#rfc.iref.t.4"><b>9.6</b></a>, <a href="#rfc.xref.header.trailer.3">10.1</a></li>
-                  <li>Transfer-Encoding header&nbsp;&nbsp;<a href="#rfc.xref.header.transfer-encoding.1">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.2">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.3">3.4</a>, <a href="#rfc.xref.header.transfer-encoding.4">6.2</a>, <a href="#rfc.iref.t.5"><b>9.7</b></a>, <a href="#rfc.xref.header.transfer-encoding.5">10.1</a></li>
-                  <li>tunnel&nbsp;&nbsp;<a href="#rfc.iref.t.1"><b>2.2</b></a></li>
+                  <li>Trailer header&nbsp;&nbsp;<a href="#rfc.xref.header.trailer.1">3.4</a>, <a href="#rfc.xref.header.trailer.2">6.2.1</a>, <a href="#rfc.iref.t.6"><b>9.6</b></a>, <a href="#rfc.xref.header.trailer.3">10.1</a></li>
+                  <li>Transfer-Encoding header&nbsp;&nbsp;<a href="#rfc.xref.header.transfer-encoding.1">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.2">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.3">3.4</a>, <a href="#rfc.xref.header.transfer-encoding.4">6.2</a>, <a href="#rfc.iref.t.7"><b>9.7</b></a>, <a href="#rfc.xref.header.transfer-encoding.5">10.1</a></li>
+                  <li>transforming proxy&nbsp;&nbsp;<a href="#rfc.iref.t.1"><b>2.2</b></a></li>
+                  <li>transparent proxy&nbsp;&nbsp;<a href="#rfc.iref.t.3"><b>2.2</b></a></li>
+                  <li>tunnel&nbsp;&nbsp;<a href="#rfc.iref.t.2"><b>2.2</b></a></li>
                </ul>
             </li>
             <li><a id="rfc.index.U" href="#rfc.index.U"><b>U</b></a><ul>
