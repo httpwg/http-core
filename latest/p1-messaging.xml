@@ -687,6 +687,24 @@ Content-Type: text/plain
    organization's HTTP requests through a common intermediary for the
    sake of security, annotation services, or shared caching.
 </t>
+<t>
+<iref primary="true" item="transforming proxy"/>
+<iref primary="true" item="non-transforming proxy"/>
+   An HTTP-to-HTTP proxy is called a "transforming proxy" if it designed
+   or configured to modify request or response messages in a semantically
+   meaningful way (i.e., modifications, beyond those required by normal
+   HTTP processing, that change the message in a way that would be
+   significant to the original sender or potentially significant to
+   downstream recipients).  For example, a transforming proxy might be
+   acting as a shared annotation server (modifying responses to include
+   references to a local annotation database), a malware filter, a
+   format transcoder, or an intranet-to-Internet privacy filter.  Such
+   transformations are presumed to be desired by the client (or client
+   organization) that selected the proxy and are beyond the scope of
+   this specification.  However, when a proxy is not intended to transform
+   a given message, we use the term "non-transforming proxy" to target
+   requirements that preserve HTTP message semantics.
+</t>
 <t><iref primary="true" item="gateway"/><iref primary="true" item="reverse proxy"/>
    A "gateway" (a.k.a., "reverse proxy") is a receiving agent that acts
    as a layer above some other server(s) and translates the received
@@ -712,6 +730,16 @@ Content-Type: text/plain
    extend a virtual connection through an intermediary, such as when
    transport-layer security is used to establish private communication
    through a shared firewall proxy.
+</t>
+<t><iref primary="true" item="intercept"/><iref primary="true" item="transparent proxy"/>
+   In addition, there may exist network intermediaries that are not
+   considered part of the HTTP communication but nevertheless act as
+   filters or redirecting agents (usually violating HTTP semantics,
+   causing security problems, and otherwise making a mess of things).
+   These network intermediaries are often referred to as "intercepts"
+   or "transparent proxies", and are commonly found on public network
+   access points as a means of enforcing account subscription prior to
+   allowing use of non-local Internet services.
 </t>
 </section>
 
@@ -1134,10 +1162,9 @@ Content-Type: text/plain
 <t>
    HTTP allows the set of defined header fields to be extended without
    changing the protocol version (see <xref target="header.field.registration"/>).
-   However, such fields might not be recognized by a downstream recipient
-   and might be stripped by non-transparent intermediaries.
-   Unrecognized header fields &MUST; be forwarded by transparent proxies
-   and &SHOULD; be ignored by a recipient.
+   Unrecognized header fields &MUST; be forwarded by a proxy unless the
+   proxy is specifically configured to block or otherwise transform such
+   fields.  Unrecognized header fields &SHOULD; be ignored by other recipients.
 </t>
 </section>
 
@@ -1590,7 +1617,7 @@ Host: www.example.org:8001
    request-targets with an appropriate status code.
 </t>
 <t>
-   A transparent proxy &MUST-NOT; rewrite the "path-absolute" part of the
+   A non-transforming proxy &MUST-NOT; rewrite the "path-absolute" part of the
    received request-target when forwarding it to the next inbound server,
    except as noted above to replace a null path-absolute with "/" or "*".
 </t>
@@ -2489,12 +2516,12 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </t>-->
 <t>
    Some features of HTTP/1.1, such as Digest Authentication, depend on the
-   value of certain end-to-end header fields. A transparent proxy &SHOULD-NOT;
+   value of certain end-to-end header fields. A non-transforming proxy &SHOULD-NOT;
    modify an end-to-end header field unless the definition of that header field requires
    or specifically allows that.
 </t>
 <t>
-   A transparent proxy &MUST-NOT; modify any of the following fields in a
+   A non-transforming proxy &MUST-NOT; modify any of the following fields in a
    request or response, and it &MUST-NOT; add any of these fields if not
    already present:
   <list style="symbols">
@@ -2505,7 +2532,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   </list>
 </t>
 <t>
-   A transparent proxy &MUST-NOT; modify any of the following fields in a
+   A non-transforming proxy &MUST-NOT; modify any of the following fields in a
    response:
   <list style="symbols">
     <t>Expires</t>
@@ -2527,7 +2554,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   </list>
 </t>
 <t>
-   A non-transparent proxy &MAY; modify or add these fields to a message
+   A transforming proxy &MAY; modify or add these fields to a message
    that does not include no-transform, but if it does so, it &MUST; add a
    Warning 214 (Transformation applied) if one does not already appear
    in the message (see &header-warning;).
@@ -2542,7 +2569,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   </t>
 </x:note>
 <t>
-   A transparent proxy &MUST; preserve the message payload (&payload;),
+   A non-transforming proxy &MUST; preserve the message payload (&payload;),
    though it &MAY; change the message-body through application or removal
    of a transfer-coding (<xref target="transfer.codings"/>).
 </t>
