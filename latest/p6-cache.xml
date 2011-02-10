@@ -263,13 +263,37 @@
    participants in, and objects of, HTTP caching.
 </t>
 <t>
+   <iref item="cache" />
+   <x:dfn>cache</x:dfn>
+   <list>
+      <t>A conformant implementation of a HTTP cache. Note that this implies
+        an HTTP/1.1 cache; this specification does not define conformance
+        for HTTP/1.0 caches.</t>
+   </list>
+</t>
+<t anchor="shared.and.non-shared.caches">
+   <iref item="shared cache" />
+   <x:dfn>shared cache</x:dfn>
+   <list>
+      <t>A cache that is accessible to more than one user; usually (but
+        not always) deployed as part of an intermediary.</t>
+   </list>
+</t>
+<t>
+   <iref item="private cache" />
+   <x:dfn>private cache</x:dfn>
+   <list>
+      <t>A cache that is dedicated to a single user.</t>
+   </list>
+</t>
+<t>
    <iref item="cacheable" />
    <x:dfn>cacheable</x:dfn>
    <list>
       <t>A response is cacheable if a cache is allowed to store a copy of the
       response message for use in answering subsequent requests. Even when a
       response is cacheable, there might be additional constraints on whether
-      a cache can use the cached copy to satisfy a particular request.</t>
+      a cache can use the stored copy to satisfy a particular request.</t>
    </list>
 </t>
 <t>
@@ -333,16 +357,8 @@
    <x:dfn>validator</x:dfn>
    <list>
       <t>A protocol element (e.g., an entity-tag or a Last-Modified time) that
-      is used to find out whether a stored response has an equivalent copy of
+      is used to find out whether a stored response is an equivalent copy of
       a representation.</t>
-   </list>
-</t>
-<t anchor="shared.and.non-shared.caches">
-   <iref item="validator" />
-   <x:dfn>shared cache</x:dfn>
-   <list>
-      <t>A cache that is accessible to more than one user. A non-shared cache
-      is dedicated to a single user.</t>
    </list>
 </t>
 </section>
@@ -524,29 +540,29 @@
 </t>
 <t>
    When a stored response is used to satisfy a request without validation,
-   caches &MUST; include a single Age header field (<xref target="header.age"
+   a cache &MUST; include a single Age header field (<xref target="header.age"
    />) in the response with a value equal to the stored response's
    current_age; see <xref target="age.calculations" />.
 </t>
 <t>
-   Requests with methods that are unsafe (&safe-methods;) &MUST; be written
-   through the cache to the origin server; i.e., a cache must not reply to
-   such a request before having forwarded the request and having received a
-   corresponding response.
+   A cache &MUST; write through requests with methods that are unsafe 
+   (&safe-methods;) to the origin server; i.e., a cache must not generate 
+   a reply to such a request before having forwarded the request and having 
+   received a corresponding response.
 </t>
 <t>
    Also, note that unsafe requests might invalidate already stored responses;
    see <xref target="invalidation.after.updates.or.deletions" />.
 </t>
 <t>
-   Caches &MUST; use the most recent response (as determined by the Date
-   header field) when more than one suitable response is stored. They can also
+   A cache &MUST; use the most recent response (as determined by the Date
+   header field) when more than one suitable response is stored. It can also
    forward a request with "Cache-Control: max-age=0" or "Cache-Control:
    no-cache" to disambiguate which response to use.
 </t>
 <t>
-   An HTTP implementation without a clock &MUST-NOT; used stored responses
-   without revalidating them on every use. An HTTP cache, especially a shared
+   A cache that does not have a clock available &MUST-NOT; used stored responses
+   without revalidating them on every use. A cache, especially a shared
    cache, &SHOULD; use a mechanism, such as NTP <xref target="RFC1305"/>, to
    synchronize its clock with a reliable external standard.
 </t>
@@ -575,10 +591,10 @@
    before reusing it for subsequent requests.
 </t>
 <t>
-   Since origin servers do not always provide explicit expiration times, HTTP
-   caches &MAY; assign heuristic expiration times when explicit times are not
-   specified, employing algorithms that use other heade field values (such as the
-   Last-Modified time) to estimate a plausible expiration time. The HTTP/1.1
+   Since origin servers do not always provide explicit expiration times, 
+   a cache &MAY; assign a heuristic expiration time when an explicit time is not
+   specified, employing algorithms that use other header field values (such as the
+   Last-Modified time) to estimate a plausible expiration time. This
    specification does not provide specific algorithms, but does impose
    worst-case constraints on their results.
 </t>
@@ -641,21 +657,21 @@
    If no explicit expiration time is present in a stored response that has a
    status code whose definition allows heuristic freshness to be used
    (including the following in &status-codes;: 200, 203, 206, 300, 301 and
-   410), a heuristic expiration time &MAY; be calculated. Heuristics
-   &MUST-NOT; be used for response status codes that do not explicitly allow
-   it.
+   410), a cache &MAY; calculate a heuristic expiration time. A cache &MUST-NOT; 
+   use heuristics to determine freshness for responses with status codes that do 
+   not explicitly allow it.
 </t>
 <t>
-   When a heuristic is used to calculate freshness lifetime, the cache
+   When a heuristic is used to calculate freshness lifetime, a cache
    &SHOULD; attach a Warning header field with a 113 warn-code to the response if
    its current_age is more than 24 hours and such a warning is not already
    present.
 </t>
 <t>
    Also, if the response has a Last-Modified header field (&header-last-modified;),
-   the heuristic expiration value &SHOULD; be no more than some fraction of
-   the interval since that time. A typical setting of this fraction might be
-   10%.
+   a cache &SHOULD-NOT; use a heuristic expiration value that is more than some 
+   fraction of the interval since that time. A typical setting of this fraction 
+   might be 10%.
 </t>
 <x:note>
    <t>
@@ -711,9 +727,8 @@
    <list>
       <t>
          The term "now" means "the current value of the clock at the host
-         performing the calculation". Hosts that use HTTP, but especially
-         hosts running origin servers and caches, &SHOULD; use NTP (<xref
-         target="RFC1305"/>) or some similar protocol to synchronize their
+         performing the calculation". A cache &SHOULD; use NTP (<xref
+         target="RFC1305"/>) or some similar protocol to synchronize its
          clocks to a globally accurate time standard.
       </t>
    </list>
@@ -743,7 +758,7 @@
       clock is reasonably well synchronized to the origin server's clock. If
       the result is negative, the result is replaced by zero.</t>
       <t>the "corrected_age_value", if all of the caches along the response
-      path implement HTTP/1.1; note this value &MUST; be interpreted relative
+      path implement HTTP/1.1. A cache &MUST; interpret this value relative
       to the time the request was initiated, not the time that the response
       was received.</t>
    </list>
@@ -779,22 +794,23 @@
    the calculations in <xref target="expiration.model" />.
 </t>
 <t>
-   Caches &MUST-NOT; return a stale response if it is prohibited by an
+   A cache &MUST-NOT; return a stale response if it is prohibited by an
    explicit in-protocol directive (e.g., by a "no-store" or "no-cache" cache
    directive, a "must-revalidate" cache-response-directive, or an applicable
    "s-maxage" or "proxy-revalidate" cache-response-directive; see <xref
    target="cache-response-directive"/>).
 </t>
 <t>
-   Caches &SHOULD-NOT; return stale responses unless they are disconnected
+   A cache &SHOULD-NOT; return stale responses unless it is disconnected
    (i.e., it cannot contact the origin server or otherwise find a forward
    path) or otherwise explicitly allowed (e.g., the max-stale request
    directive; see <xref target="cache-request-directive" />).
 </t>
 <t>
-   Stale responses &SHOULD; have a Warning header field with the 110 warn-code (see
-   <xref target="header.warning" />). Likewise, the 112 warn-code &SHOULD; be
-   sent on stale responses if the cache is disconnected.
+   A cache &SHOULD; append a Warning header field with the 110 warn-code (see
+   <xref target="header.warning" />) to stale responses. Likewise, a cache
+   &SHOULD; add the 112 warn-code to stale responses if the cache is 
+   disconnected.
 </t>
 <t>
    If a cache receives a first-hand response (either an entire response, or a
@@ -819,16 +835,16 @@
    "validating" or "revalidating" the stored response.
 </t>
 <t>
-   When sending such a conditional request, the cache &SHOULD; add an
+   When sending such a conditional request, a cache &SHOULD; add an
    If-Modified-Since header field whose value is that of the Last-Modified header
    field from the selected (see <xref target="caching.negotiated.responses"/>)
    stored response, if available.
 </t>
 <t>
-   Additionally, the cache &SHOULD; add an If-None-Match header field whose value is
+   Additionally, a cache &SHOULD; add an If-None-Match header field whose value is
    that of the ETag header field(s) from all responses stored for the requested URI,
    if present. However, if any of the stored responses contains only partial
-   content, its entity-tag &SHOULD-NOT; be included in the If-None-Match
+   content, the cache &SHOULD-NOT; include its entity-tag in the If-None-Match
    header field unless the request is for a range that would be fully
    satisfied by that stored response.
 </t>
@@ -839,8 +855,8 @@
 <t>
    A full response (i.e., one with a response body) indicates that none of the
    stored responses nominated in the conditional request is suitable. Instead,
-   the full response &SHOULD; be used to satisfy the request and &MAY; replace
-   the stored response.
+   a cache &SHOULD; use the full response to satisfy the request and &MAY; 
+   replace the stored response.
 </t>
 <t>
    If a cache receives a 5xx response while attempting to validate a response,
@@ -853,14 +869,15 @@
 <section anchor="invalidation.after.updates.or.deletions" 
    title="Request Methods that Invalidate">
 <t>
-   Because unsafe methods (&safe-methods;) have the potential for changing
+   Because unsafe request methods (&safe-methods;) have the potential for changing
    state on the origin server, intervening caches can use them to keep their
    contents up-to-date.
 </t>
 <t>
-   The following HTTP methods &MUST; cause a cache to invalidate the effective
-   Request URI (&effective-request-uri;) as well as the URI(s) in the Location
-   and Content-Location header fields (if present):
+   A cache &MUST; invalidate the effective Request URI 
+   (&effective-request-uri;) as well as the URI(s) in the Location
+   and Content-Location header fields (if present) when the following
+   request methods are received:
    <list style="symbols">
       <t>PUT</t>
       <t>DELETE</t>
@@ -868,13 +885,13 @@
    </list>
 </t>
 <t>
-   An invalidation based on a URI from a Location or Content-Location header field
-   &MUST-NOT; be performed if the host part of that URI differs from the host
-   part in the effective request URI (&effective-request-uri;). This helps
-   prevent denial of service attacks.
+   However, a cache &MUST-NOT; invalidate a URI from a 
+   Location or Content-Location header field if the host part of that URI 
+   differs from the host part in the effective request URI 
+   (&effective-request-uri;). This helps prevent denial of service attacks.
 </t>
 <t>
-   A cache that passes through requests for methods it does not understand
+   A cache that passes through requests with methods it does not understand
    &SHOULD; invalidate the effective request URI (&effective-request-uri;).
 </t>
 <t>
@@ -894,7 +911,7 @@
    title="Shared Caching of Authenticated Responses">
 
 <t>
-   Shared caches &MUST-NOT; use a cached response to a request with an
+   A shared cache &MUST-NOT; use a cached response to a request with an
    Authorization header field (&header-authorization;) to satisfy any subsequent
    request unless a cache directive that allows such responses to be stored is
    present in the response.
@@ -982,26 +999,27 @@
    response?</cref>
 </t>
 <t>
-   If the new response's status code is 206 (partial content), both the stored
-   and new responses &MUST; have validators, and those validators &MUST; match
-   using the strong comparison function (see &weak-and-strong;). Otherwise,
-   the responses &MUST-NOT; be combined.
+   When the new response's status code is 206 (partial content), a cache
+   &MUST-NOT; combine it with the old response if either response does not
+   have a validator, and &MUST-NOT; combine it with the old response when
+   those validators do not match with the strong comparison function
+   (see &weak-and-strong;).
 </t>
 <t>
    The stored response header fields are used as those of the updated response,
    except that
    <list style="symbols">
-      <t>any stored Warning header fields with warn-code 1xx (see <xref
-      target="header.warning" />) &MUST; be deleted.</t>
-      <t>any stored Warning header fields with warn-code 2xx &MUST; be retained.</t>
-      <t>any other header fields provided in the new response &MUST; replace all
+      <t>a cache &MUST; delete any stored Warning header fields with warn-code 1xx (see <xref
+      target="header.warning" />).</t>
+      <t>a cache &MUST; retain any stored Warning header fields with warn-code 2xx.</t>
+      <t>a cache &MUST; use other header fields provided in the new response to replace all
       instances of the corresponding header fields from the stored response.</t>
    </list>
 </t>
 <t>
-   The updated response header fields &MUST; be used to replace those of the stored
-   response in cache (unless the stored response is removed from cache). In
-   the case of a 206 response, the combined representation &MAY; be stored.
+   A cache &MUST; use the updated response header fields to replace those of the stored
+   response (unless the stored response is removed). In
+   the case of a 206 response, a cache &MAY; store the combined representation.
 </t>
 </section>
 
@@ -1039,8 +1057,9 @@
 <t>
    If a cache receives a value larger than the largest positive integer it can
    represent, or if any of its age calculations overflows, it &MUST; transmit
-   an Age header field with a field-value of 2147483648 (2<x:sup>31</x:sup>). Caches
-   &SHOULD; use an arithmetic type of at least 31 bits of range.
+   an Age header field with a field-value of 2147483648 (2<x:sup>31</x:sup>). 
+   Recipients parsing the Age header field-value &SHOULD; use an arithmetic type of 
+   at least 31 bits of range.
 </t>
 <t>
    The presence of an Age header field in a response implies that a response
@@ -1066,7 +1085,7 @@
    imply that the same directive is to be given in the response.
 </t>
 <t>
-   HTTP/1.1 caches &MUST; obey the requirements of the Cache-Control
+   A cache &MUST; obey the requirements of the Cache-Control
    directives defined in this section. See <xref
    target="cache.control.extensions"/> for information about how Cache-Control
    directives defined elsewhere are handled.
@@ -1079,11 +1098,11 @@
    </t>
 </x:note>
 <t>
-   Cache directives &MUST; be passed through by a proxy or gateway
-   application, regardless of their significance to that application, since
-   the directives might be applicable to all recipients along the
-   request/response chain. It is not possible to target a directive to a
-   specific cache.
+   An intermediary (i.e., a proxy or gateway, whether or not it implements
+   a cache) &MUST; pass cache directives through, regardless of their 
+   significance to that application, since the directives might be applicable 
+   to all recipients along the request/response chain. It is not possible to 
+   target a directive to a specific cache.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Cache-Control"/><iref primary="true" item="Grammar" subitem="Cache-Control-v"/><iref primary="true" item="Grammar" subitem="cache-extension"/>
   <x:ref>Cache-Control</x:ref>   = "Cache-Control" ":" <x:ref>OWS</x:ref> <x:ref>Cache-Control-v</x:ref>
@@ -1117,9 +1136,9 @@
    <iref item="Cache Directives" primary="true" subitem="no-cache" />
    <iref item="no-cache" primary="true" subitem="Cache Directive" />
    <list>
-      <t>The no-cache request directive indicates that a stored response
-      &MUST-NOT; be used to satisfy the request without successful validation
-      on the origin server.</t> 
+      <t>The no-cache request directive indicates that a cache &MUST-NOT; 
+      use a stored response to satisfy the request without successful 
+      validation on the origin server.</t> 
    </list>
 </t>
 <t>
@@ -1129,7 +1148,7 @@
    <list>
       <t>The no-store request directive indicates that a cache &MUST-NOT;
       store any part of either this request or any response to it. This
-      directive applies to both non-shared and shared caches. "&MUST-NOT;
+      directive applies to both private and shared caches. "&MUST-NOT;
       store" in this context means that the cache &MUST-NOT; intentionally
       store the information in non-volatile storage, and &MUST; make a
       best-effort attempt to remove the information from volatile storage as
@@ -1184,9 +1203,10 @@
    <iref item="Cache Directives" primary="true" subitem="no-transform" />
    <iref item="no-transform" primary="true" subitem="Cache Directive" />
    <list>
-      <t>The no-transform request directive indicates that an intermediate
-      cache or proxy &MUST-NOT; change the Content-Encoding, Content-Range or
-      Content-Type request header fields, nor the request representation.</t>
+      <t>The no-transform request directive indicates that an intermediary
+        (whether or not it implements a cache) &MUST-NOT; change the 
+        Content-Encoding, Content-Range or Content-Type request header fields, 
+        nor the request representation.</t>
    </list>
 </t>
 <t>
@@ -1199,8 +1219,8 @@
       cache &SHOULD; either respond using a stored response that is consistent
       with the other constraints of the request, or respond with a 504
       (Gateway Timeout) status code. If a group of caches is being operated as
-      a unified system with good internal connectivity, such a request &MAY;
-      be forwarded within that group of caches.</t>
+      a unified system with good internal connectivity, a member cache &MAY;
+      forward such a request within that group of caches.</t>
    </list>
 </t>
 </section>
@@ -1229,9 +1249,9 @@
    <iref item="Cache Directives" primary="true" subitem="public" />
    <iref item="public" primary="true" subitem="Cache Directive" />
    <list>
-      <t>The public response directive indicates that the response &MAY; be
-      cached, even if it would normally be non-cacheable or cacheable only
-      within a non-shared cache. (See also Authorization,
+      <t>The public response directive indicates that a cache &MAY; store
+      the response, even if it would normally be non-cacheable or cacheable only
+      within a private cache. (See also Authorization,
       &header-authorization;, for additional details.) </t>
   </list>
 </t>
@@ -1242,12 +1262,12 @@
    <list>
       <t>The private response directive indicates that the response message is
       intended for a single user and &MUST-NOT; be stored by a shared cache. A
-      private (non-shared) cache &MAY; store the response.</t>
+      private cache &MAY; store the response.</t>
       <t>If the private response directive specifies one or more field-names,
       this requirement is limited to the field-values associated with the
-      listed response header fields. That is, the specified field-names(s)
-      &MUST-NOT; be stored by a shared cache, whereas the remainder of the
-      response message &MAY; be.</t>
+      listed response header fields. That is, a shared cache &MUST-NOT; store
+      the specified field-names(s), whereas it &MAY; store the remainder of the
+      response message.</t>
       <t> <x:h>Note:</x:h> This usage of the word private only controls where
       the response can be stored; it cannot ensure the privacy of the message
       content. Also, private response directives with field-names are often
@@ -1268,8 +1288,8 @@
       have been configured to return stale responses.</t>
       <t>If the no-cache response directive specifies one or more field-names,
       this requirement is limited to the field-values associated with the
-      listed response header fields. That is, the specified field-name(s) &MUST-NOT;
-      be sent in the response to a subsequent request without successful
+      listed response header fields. That is, a cache &MUST-NOT; send the 
+      specified field-name(s) in the response to a subsequent request without successful
       validation on the origin server. This allows an origin server to prevent
       the re-use of certain header fields in a response, while still allowing
       caching of the rest of the response.</t>
@@ -1287,7 +1307,7 @@
    <list>
       <t>The no-store response directive indicates that a cache &MUST-NOT;
       store any part of either the immediate request or response. This
-      directive applies to both non-shared and shared caches. "&MUST-NOT;
+      directive applies to both private and shared caches. "&MUST-NOT;
       store" in this context means that the cache &MUST-NOT; intentionally
       store the information in non-volatile storage, and &MUST; make a
       best-effort attempt to remove the information from volatile storage as
@@ -1304,14 +1324,14 @@
    <iref item="must-revalidate" primary="true" subitem="Cache Directive" />
    <list>
       <t>The must-revalidate response directive indicates that once it has
-      become stale, the response &MUST-NOT; be used to satisfy subsequent
+      become stale, a cache &MUST-NOT; use the response to satisfy subsequent
       requests without successful validation on the origin server.</t>
       <t>The must-revalidate directive is necessary to support reliable
-      operation for certain protocol features. In all circumstances an
-      HTTP/1.1 cache &MUST; obey the must-revalidate directive; in particular,
-      if the cache cannot reach the origin server for any reason, it &MUST;
+      operation for certain protocol features. In all circumstances a
+      cache &MUST; obey the must-revalidate directive; in particular,
+      if a cache cannot reach the origin server for any reason, it &MUST;
       generate a 504 (Gateway Timeout) response.</t>
-      <t>Servers &SHOULD; send the must-revalidate directive if and only if
+      <t>A server &SHOULD; send the must-revalidate directive if and only if
       failure to validate a request on the representation could result in
       incorrect operation, such as a silently unexecuted financial
       transaction.</t>
@@ -1324,7 +1344,7 @@
    <list>
       <t>The proxy-revalidate response directive has the same meaning as the
       must-revalidate response directive, except that it does not apply to
-      non-shared caches.</t>
+      private caches.</t>
    </list>
 </t>
 <t>
@@ -1354,9 +1374,10 @@
    <iref item="Cache Directives" primary="true" subitem="no-transform" />
    <iref item="no-transform" primary="true" subitem="Cache Directive" />
    <list>
-      <t>The no-transform response directive indicates that an intermediate
-      cache or proxy &MUST-NOT; change the Content-Encoding, Content-Range or
-      Content-Type response header fields, nor the response representation.</t>
+      <t>The no-transform response directive indicates that an intermediary
+      (regardless of whether it implements a cache) &MUST-NOT; change the 
+      Content-Encoding, Content-Range or Content-Type response header fields, 
+      nor the response representation.</t>
    </list>
 </t>
 
@@ -1386,7 +1407,7 @@
 <t>
    For example, consider a hypothetical new response directive called
    "community" that acts as a modifier to the private directive. We define
-   this new directive to mean that, in addition to any non-shared cache, any
+   this new directive to mean that, in addition to any private cache, any
    cache that is shared only by members of the community named within its
    value may cache the response. An origin server wishing to allow the UCI
    community to use an otherwise private response in their shared cache(s)
@@ -1401,7 +1422,7 @@
    understand the private directive and thus default to the safe behavior.
 </t>
 <t>
-   Unrecognized cache directives &MUST; be ignored; it is assumed that any
+   A cache &MUST; be ignore unrecognized cache directives; it is assumed that any
    cache directive likely to be unrecognized by an HTTP/1.1 cache will be
    combined with standard directives (or the response's default cacheability)
    such that the cache behavior will remain minimally correct even if the
@@ -1412,7 +1433,7 @@
    directives.
 </t>
 <t>
-   Registrations &MUST; include the following fields:
+   A registration &MUST; include the following fields:
    <list style="symbols">
       <t>Cache Directive Name</t>
       <t>Pointer to specification text</t>
@@ -1446,7 +1467,7 @@
 </t>
 <t>
    The field-value is an absolute date and time as defined by HTTP-date in
-   &full-date;; it &MUST; be sent in rfc1123-date format.
+   &full-date;; a sender &MUST; use the rfc1123-date format.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Expires"/><iref primary="true" item="Grammar" subitem="Expires-v"/>
   <x:ref>Expires</x:ref>   = "Expires" ":" <x:ref>OWS</x:ref> <x:ref>Expires-v</x:ref>
@@ -1466,11 +1487,11 @@
    </t>
 </x:note>
 <t>
-   HTTP/1.1 servers &SHOULD-NOT; send Expires dates more than one year in the
+   A server &SHOULD-NOT; send Expires dates more than one year in the
    future.
 </t>
 <t>
-   HTTP/1.1 clients and caches &MUST; treat other invalid date formats,
+   A cache &MUST; treat other invalid date formats,
    especially including the value "0", as in the past (i.e., "already
    expired").
 </t>
@@ -1497,14 +1518,14 @@
   <x:ref>extension-pragma</x:ref>  = <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) ]
 </artwork></figure>
 <t>
-   When the no-cache directive is present in a request message, an application
+   When the no-cache directive is present in a request message, a cache
    &SHOULD; forward the request toward the origin server even if it has a
-   cached copy of what is being requested. This pragma directive has the same
+   stored copy of what is being requested. This pragma directive has the same
    semantics as the no-cache response directive (see <xref
    target="cache-response-directive" />) and is defined here for backward
-   compatibility with HTTP/1.0. Clients &SHOULD; include both header fields
+   compatibility with HTTP/1.0. A client &SHOULD; include both header fields
    when a no-cache request is sent to a server not known to be HTTP/1.1
-   compliant. HTTP/1.1 caches &SHOULD; treat "Pragma: no-cache" as if the
+   compliant. A cache &SHOULD; treat "Pragma: no-cache" as if the
    client had sent "Cache-Control: no-cache".
 </t>
 <x:note>
@@ -1550,7 +1571,7 @@
    selecting request-header fields.
 </t>
 <t>
-   Servers &SHOULD; include a Vary header field with any cacheable response
+   A server &SHOULD; include a Vary header field with any cacheable response
    that is subject to server-driven negotiation. Doing so allows a cache to
    properly interpret future requests on that resource and informs the user
    agent about the presence of negotiation on that resource. A server &MAY;
@@ -1563,8 +1584,8 @@
    A Vary field value of "*" signals that unspecified parameters not limited
    to the request-header fields (e.g., the network address of the client), play a
    role in the selection of the response representation; therefore, a cache
-   cannot determine whether this response is appropriate. The "*" value
-   &MUST-NOT; be generated by a proxy server.
+   cannot determine whether this response is appropriate. A proxy &MUST-NOT;
+   generate the "*" value.
 </t>
 <t>
    The field-names given are not limited to the set of standard request-header
@@ -1633,12 +1654,12 @@
    validation:
    <list style="symbols">
       <t>1xx Warnings describe the freshness or validation status of the
-      response, and so &MUST; be deleted by caches after validation. They can
+      response, and so &MUST; be deleted by a cache after validation. They can
       only be generated by a cache when validating a cached entry, and
       &MUST-NOT; be generated in any other situation.</t>
       <t>2xx Warnings describe some aspect of the representation that is not
       rectified by a validation (for example, a lossy compression of the
-      representation) and &MUST-NOT; be deleted by caches after validation,
+      representation) and &MUST-NOT; be deleted by a cache after validation,
       unless a full response is returned, in which case they &MUST; be.</t>
    </list>
 </t>
@@ -1649,7 +1670,7 @@
    message.
 </t>
 <t>
-   If an implementation receives a message with a warning-value that includes
+   If a system receives a message with a warning-value that includes
    a warn-date, and that warn-date is different from the Date value in the
    response, then that warning-value &MUST; be deleted from the message before
    storing, forwarding, or using it. (preventing the consequences of naive
@@ -1663,13 +1684,13 @@
 <t><?rfc needLines="4"?>
    110 Response is stale
    <list>
-      <t>&SHOULD; be included whenever the returned response is stale.</t>
+      <t>A cache &SHOULD; include this whenever the returned response is stale.</t>
    </list>
 </t>
 <t><?rfc needLines="4"?>
    111 Revalidation failed
    <list>
-      <t>&SHOULD; be included if a cache returns a stale response because an
+      <t>A cache &SHOULD; include this when returning a stale response because an
       attempt to validate the response failed, due to an inability to reach
       the server.</t>
    </list>
@@ -1677,14 +1698,14 @@
 <t><?rfc needLines="4"?>
    112 Disconnected operation
    <list>
-      <t>&SHOULD; be included if the cache is intentionally disconnected from
+      <t>A cache &SHOULD; b include this if it is intentionally disconnected from
       the rest of the network for a period of time.</t>
    </list>
 </t>
 <t><?rfc needLines="4"?>
    113 Heuristic expiration
    <list>
-      <t>&SHOULD; be included if the cache heuristically chose a freshness
+      <t>A cache &SHOULD; include this if it heuristically chose a freshness
       lifetime greater than 24 hours and the response's age is greater than 24
       hours.</t>
    </list>
@@ -1700,7 +1721,7 @@
 <t><?rfc needLines="4"?>
    214 Transformation applied
    <list>
-      <t>&MUST; be added by an intermediate proxy if it applies any
+      <t>&MUST; be added by a proxy if it applies any
       transformation to the representation, such as changing the
       content-coding, media-type, or modifying the representation data, unless
       this Warning code already appears in the response.</t>
