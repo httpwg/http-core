@@ -40,8 +40,8 @@ TARGETS = $(TARGETS_HTML) \
           p6-cache.iana-headers \
           p6-cache.cache-directives \
           p7-auth.iana-headers \
-          p7-auth.iana-status-codes
-
+          p7-auth.iana-status-codes \
+          httpbis.abnf
 
 all: $(TARGETS)
 
@@ -86,5 +86,5 @@ outlineALL.html:	$(TARGETS_XHTML) \
 	$(saxon) extractOutline.xslt extractOutline.xslt > $@
 	rm p*.xhtml
 
-
-
+httpbis.abnf:	$(TARGETS_ABNF)
+	common-abnf.sh $^ > $@
