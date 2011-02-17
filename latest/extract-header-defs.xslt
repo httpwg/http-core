@@ -15,8 +15,8 @@
       <ttcol>Status</ttcol>
       <ttcol>Reference</ttcol>
       <xsl:text>&#10;</xsl:text>
-      <xsl:apply-templates select="//section[iref/@item='Headers']">
-        <xsl:sort select="iref[@item='Headers']/@subitem"/>
+      <xsl:apply-templates select="//section[iref/@item='Header Fields']">
+        <xsl:sort select="iref[@item='Header Fields']/@subitem"/>
       </xsl:apply-templates>
     </texttable>
     <xsl:text>&#10;</xsl:text>
@@ -76,7 +76,7 @@
 
 <xsl:template match="section">
   <xsl:text>&#10;</xsl:text>
-  <c><xsl:value-of select="iref[@item='Headers']/@subitem"/></c>
+  <c><xsl:value-of select="iref[@item='Header Fields']/@subitem"/></c>
   <c>http</c>
   <c>standard</c>
   <c><xref target="{@anchor}"/></c>
