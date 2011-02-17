@@ -16,6 +16,5 @@ do
 done | tee foobar | \
 	fgrep -v ", defined in [Part" | \
 	fgrep -v "Method = %x" | \
-	fgrep -v 'Status-Code = "100"' | \
 	sort | uniq | \
 	$bap/bap -k -i $bap/core.abnf
