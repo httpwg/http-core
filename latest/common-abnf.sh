@@ -15,6 +15,5 @@ do
   $bap/bap -i $bap/core.abnf -n "$i" 
 done | tee foobar | \
 	fgrep -v ", defined in [Part" | \
-	fgrep -v "Method = %x" | \
 	sort | uniq | \
 	$bap/bap -k -i $bap/core.abnf
