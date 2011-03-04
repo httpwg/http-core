@@ -87,4 +87,4 @@ outlineALL.html:	$(TARGETS_XHTML) \
 	rm p*.xhtml
 
 httpbis.abnf:	$(TARGETS_ABNF)
-	common-abnf.sh $^ > $@
+	./common-abnf.sh $^ > $@
