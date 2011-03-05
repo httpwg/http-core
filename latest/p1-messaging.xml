@@ -50,7 +50,7 @@
 <?rfc rfcedstyle="yes"?>
 <?rfc-ext allow-markup-in-artwork="yes" ?>
 <?rfc-ext include-references-in-index="yes" ?>
-<rfc obsoletes="2616" updates="2817" category="std" x:maturity-level="draft"
+<rfc obsoletes="2145,2616" updates="2817" category="std" x:maturity-level="draft"
      ipr="pre5378Trust200902" docName="draft-ietf-httpbis-p1-messaging-&ID-VERSION;"
      xmlns:x='http://purl.org/net/xml2rfc/ext'>
 <front>
@@ -270,8 +270,8 @@
 </t>
 <t>
    This document is Part 1 of the seven-part specification of HTTP,
-   defining the protocol referred to as "HTTP/1.1" and obsoleting
-   <xref target="RFC2616"/>.
+   defining the protocol referred to as "HTTP/1.1", obsoleting
+   <xref target="RFC2616"/> and <xref target="RFC2145"/>.
    Part 1 describes the architectural elements that are used or
    referred to in HTTP, defines the "http" and "https" URI schemes,
    describes overall network operation and connection management,
@@ -639,12 +639,36 @@ Content-Type: text/plain
 </x:span></artwork></figure>
 </section>
 
+<section title="Connections and Transport Independence" anchor="transport-independence">
+<t>
+   HTTP messaging is independent of the underlying transport or
+   session-layer connection protocol(s).  HTTP only presumes a reliable
+   transport with in-order delivery of requests and the corresponding
+   in-order delivery of responses.  The mapping of HTTP request and
+   response structures onto the data units of the underlying transport
+   protocol is outside the scope of this specification.
+</t>
+<t>
+   The specific connection protocols to be used for an interaction
+   are determined by client configuration and the identifier (if any)
+   provided for the request target.  For example, the "http" URI scheme
+   (<xref target="http.uri"/>) indicates a default connection of TCP
+   over IP, with a default TCP port of 80, but the client might be
+   configured to use a proxy via some other connection port or protocol
+   instead of using the defaults.
+</t>
+<t>
+   A connection might be used for multiple HTTP request/response exchanges,
+   as defined in <xref target="persistent.connections"/>.
+</t>
+</section>
+
 <section title="Intermediaries" anchor="intermediaries">
 <iref primary="true" item="intermediary"/>
 <t>
-   A more complicated situation occurs when one or more intermediaries
-   are present in the request/response chain. There are three common
-   forms of intermediary: proxy, gateway, and tunnel.  In some cases,
+   HTTP enables the use of intermediaries to satisfy requests through
+   a chain of connections.  There are three common forms of HTTP
+   intermediary: proxy, gateway, and tunnel.  In some cases,
    a single intermediary might act as an origin server, proxy, gateway,
    or tunnel, switching behavior based on the nature of each request.
 </t>
@@ -789,47 +813,15 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Transport Independence" anchor="transport-independence">
-<t>
-  HTTP systems are used in a wide variety of environments, from
-  corporate intranets with high-bandwidth links to long-distance
-  communication over low-power radio links and intermittent connectivity.
-</t>
-<t>
-   HTTP communication usually takes place over TCP/IP connections. The
-   default port is TCP 80 (<eref target="http://www.iana.org/assignments/port-numbers"/>), but other ports can be used. This does
-   not preclude HTTP from being implemented on top of any other protocol
-   on the Internet, or on other networks. HTTP only presumes a reliable
-   transport; any protocol that provides such guarantees can be used;
-   the mapping of the HTTP/1.1 request and response structures onto the
-   transport data units of the protocol in question is outside the scope
-   of this specification.
-</t>
-<t>
-   In HTTP/1.0, most implementations used a new connection for each
-   request/response exchange. In HTTP/1.1, a connection might be used for
-   one or more request/response exchanges, although connections might be
-   closed for a variety of reasons (see <xref target="persistent.connections"/>).
-</t>
-</section>
-
-<section title="HTTP Version" anchor="http.version">
+<section title="Protocol Versioning" anchor="http.version">
   <x:anchor-alias value="HTTP-Version"/>
   <x:anchor-alias value="HTTP-Prot-Name"/>
 <t>
-   HTTP uses a "&lt;major&gt;.&lt;minor&gt;" numbering scheme to indicate versions
-   of the protocol. The protocol versioning policy is intended to allow
-   the sender to indicate the format of a message and its capacity for
-   understanding further HTTP communication, rather than the features
-   obtained via that communication. No change is made to the version
-   number for the addition of message components which do not affect
-   communication behavior or which only add to extensible field values.
-   The &lt;minor&gt; number is incremented when the changes made to the
-   protocol add features which do not change the general message parsing
-   algorithm, but which might add to the message semantics and imply
-   additional capabilities of the sender. The &lt;major&gt; number is
-   incremented when the format of a message within the protocol is
-   changed. See <xref target="RFC2145"/> for a fuller explanation.
+   HTTP uses a "&lt;major&gt;.&lt;minor&gt;" numbering scheme to indicate
+   versions of the protocol. This specification defines version "1.1".
+   The protocol version as a whole indicates the sender's compliance
+   with the set of requirements laid out in that version's corresponding
+   specification of HTTP.
 </t>
 <t>
    The version of an HTTP message is indicated by an HTTP-Version field
@@ -840,48 +832,113 @@ Content-Type: text/plain
   <x:ref>HTTP-Prot-Name</x:ref> = <x:abnf-char-sequence>"HTTP"</x:abnf-char-sequence> ; "HTTP", case-sensitive 
 </artwork></figure>
 <t>
-   Note that the major and minor numbers &MUST; be treated as separate
-   integers and that each &MAY; be incremented higher than a single digit.
-   Thus, HTTP/2.4 is a lower version than HTTP/2.13, which in turn is
-   lower than HTTP/12.3. Leading zeros &MUST; be ignored by recipients and
-   &MUST-NOT; be sent.
+   The HTTP version number consists of two non-negative decimal integers
+   separated by the "." (period or decimal point) character.  The first
+   number ("major version") indicates the HTTP messaging syntax, whereas
+   the second number ("minor version") indicates the highest minor
+   version to which the sender is at least conditionally compliant and
+   able to understand for future communication.  The minor version
+   advertises the sender's communication capabilities even when the
+   sender is only using a backwards-compatible subset of the protocol,
+   thereby letting the recipient know that more advanced features can
+   be used in response (by servers) or in future requests (by clients).
 </t>
 <t>
-   An application that sends a request or response message that includes
-   HTTP-Version of "HTTP/1.1" &MUST; be at least conditionally compliant
-   with this specification. Applications that are at least conditionally
-   compliant with this specification &SHOULD; use an HTTP-Version of
-   "HTTP/1.1" in their messages, and &MUST; do so for any message that is
-   not compatible with HTTP/1.0. For more details on when to send
-   specific HTTP-Version values, see <xref target="RFC2145"/>.
+   When comparing HTTP versions, the numbers &MUST; be compared
+   numerically rather than lexically.  For example, HTTP/2.4 is a lower
+   version than HTTP/2.13, which in turn is lower than HTTP/12.3.
+   Leading zeros &MUST; be ignored by recipients and &MUST-NOT; be sent.
 </t>
 <t>
-   The HTTP version of an application is the highest HTTP version for
-   which the application is at least conditionally compliant.
+   When an HTTP/1.1 message is sent to an HTTP/1.0 recipient
+   (or a recipient whose version is unknown), the HTTP/1.1 message is
+   constructed such that it will be interpreted as a valid HTTP/1.0
+   message even if all of the provided header fields not defined in
+   the HTTP/1.0 specification <xref target="RFC1945"/> are ignored.
+   This specification excludes incompatible message constructions by
+   imposing recipient-version requirements on new HTTP/1.1 features
+   that are not safely interpreted by earlier HTTP/1.0 recipients.
 </t>
 <t>
-   Proxy and gateway applications need to be careful when forwarding
-   messages in protocol versions different from that of the application.
-   Since the protocol version indicates the protocol capability of the
-   sender, a proxy/gateway &MUST-NOT; send a message with a version
-   indicator which is greater than its actual version. If a higher
-   version request is received, the proxy/gateway &MUST; either downgrade
-   the request version, or respond with an error, or switch to tunnel
-   behavior.
+   The interpretation of an HTTP message header field does not change
+   between minor versions of the same major version, though the default
+   behavior of a recipient in the absence of such a field can change.
+   Unless specified otherwise, header fields defined in HTTP/1.1 are
+   defined for all versions of HTTP/1.x.  The most popular example of
+   this is the Host header field, which was introduced during the
+   standardization process of HTTP/1.1 and widely deployed for HTTP/1.0
+   requests out of necessity.
 </t>
 <t>
-   Due to interoperability problems with HTTP/1.0 proxies discovered
-   since the publication of <xref target="RFC2068"/>, caching proxies &MUST;, gateways
-   &MAY;, and tunnels &MUST-NOT; upgrade the request to the highest version
-   they support. The proxy/gateway's response to that request &MUST; be in
-   the same major version as the request.
+   Likewise, new header fields can be defined such that, when they are
+   understood by a recipient, they might override or enhance the
+   interpretation of previously defined header fields.  When an
+   implementation receives an unrecognized header field, the recipient
+   &MUST; ignore that header field for local processing regardless of
+   the message's HTTP version.  An unrecognized header field received
+   by a proxy &MUST; be forwarded downstream unless the header field's
+   field-name is listed in the message's Connection header-field
+   (see <xref target="header.connection"/>).
+   These requirements allow HTTP's functionality to be enhanced without
+   requiring prior update of all compliant intermediaries.
 </t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> Converting between versions of HTTP might involve modification
-    of header fields required or forbidden by the versions involved.
-  </t>
-</x:note>
+<t>
+   Intermediaries that process HTTP messages (i.e., all intermediaries
+   other than those acting as a tunnel) &MUST; send their own HTTP-Version
+   in forwarded messages.  In other words, they &MUST-NOT; blindly
+   forward the first line of an HTTP message without ensuring that the
+   protocol version matches what the intermediary understands, and
+   is at least conditionally compliant to, for both the receiving and
+   sending of messages.  Forwarding an HTTP message without rewriting
+   the HTTP-Version might result in communication errors when downstream
+   recipients use the message sender's version to determine what features
+   are safe to use for later communication with that sender.
+</t>
+<t>
+   An HTTP client &SHOULD; send a request version equal to the highest
+   version for which the client is at least conditionally compliant and
+   whose major version is no higher than the highest version supported
+   by the server, if this is known.  An HTTP client &MUST-NOT; send a
+   version for which it is not at least conditionally compliant.
+</t>
+<t>
+   An HTTP client &MAY; send a lower request version if it is known that
+   the server incorrectly implements the HTTP specification, but only
+   after the client has attempted at least one normal request and determined
+   from the response status or header fields (e.g., Server) that the
+   server improperly handles higher request versions.
+</t>
+<t>
+   An HTTP server &SHOULD; send a response version equal to the highest
+   version for which the server is at least conditionally compliant and
+   whose major version is less than or equal to the one received in the
+   request.  An HTTP server &MUST-NOT; send a version for which it is not
+   at least conditionally compliant.  A server &MAY; send a 505 (HTTP
+   Version Not Supported) response if it cannot send a response using the
+   major version used in the client's request.
+</t>
+<t>
+   An HTTP server &MAY; send an HTTP/1.0 response to an HTTP/1.0 request
+   if it is known or suspected that the client incorrectly implements the
+   HTTP specification and is incapable of correctly processing later
+   version responses, such as when a client fails to parse the version
+   number correctly or when an intermediary is known to blindly forward
+   the HTTP-Version even when it doesn't comply with the given minor
+   version of the protocol. Such protocol downgrades &SHOULD-NOT; be
+   performed unless triggered by specific client attributes, such as when
+   one or more of the request header fields (e.g., User-Agent) uniquely
+   match the values sent by a client known to be in error.
+</t>
+<t>
+   The intention of HTTP's versioning design is that the major number
+   will only be incremented if an incompatible message syntax is
+   introduced, and that the minor number will only be incremented when
+   changes made to the protocol have the effect of adding to the message
+   semantics or implying additional capabilities of the sender.  However,
+   the minor version was not incremented for the changes introduced in
+   <xref target="RFC2616"/>, and this revision is specifically avoiding
+   any such changes to the protocol.
+</t>
 </section>
 
 <section title="Uniform Resource Identifiers" anchor="uri">
