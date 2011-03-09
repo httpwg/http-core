@@ -1270,21 +1270,28 @@ Content-Type: text/plain
       <p id="rfc.section.3.3.p.1">The message-body (if any) of an HTTP message is used to carry the payload body associated with the request or response.</p>
       <div id="rfc.figure.u.29"></div><pre class="inline"><span id="rfc.iref.g.44"></span>  <a href="#message.body" class="smpl">message-body</a> = *OCTET
 </pre><p id="rfc.section.3.3.p.3">The message-body differs from the payload body only when a transfer-coding has been applied, as indicated by the Transfer-Encoding
-         header field (<a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.1" title="Transfer-Encoding">Section&nbsp;9.7</a>). When one or more transfer-codings are applied to a payload in order to form the message-body, the Transfer-Encoding header
+         header field (<a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.1" title="Transfer-Encoding">Section&nbsp;9.7</a>). If more than one Transfer-Encoding header field is present in a message, the multiple field-values <em class="bcp14">MUST</em> be combined into one field-value, according to the algorithm defined in <a href="#header.fields" title="Header Fields">Section&nbsp;3.2</a>, before determining the message-body length.
+      </p>
+      <p id="rfc.section.3.3.p.4">When one or more transfer-codings are applied to a payload in order to form the message-body, the Transfer-Encoding header
          field <em class="bcp14">MUST</em> contain the list of transfer-codings applied. Transfer-Encoding is a property of the message, not of the payload, and thus <em class="bcp14">MAY</em> be added or removed by any implementation along the request/response chain under the constraints found in <a href="#transfer.codings" title="Transfer Codings">Section&nbsp;6.2</a>.
       </p>
-      <p id="rfc.section.3.3.p.4">The rules for when a message-body is allowed in a message differ for requests and responses.</p>
-      <p id="rfc.section.3.3.p.5">The presence of a message-body in a request is signaled by the inclusion of a Content-Length or Transfer-Encoding header field
+      <p id="rfc.section.3.3.p.5">If a message is received that has multiple Content-Length header fields (<a href="#header.content-length" id="rfc.xref.header.content-length.1" title="Content-Length">Section&nbsp;9.2</a>) with field-values consisting of the same decimal value, or a single Content-Length header field with a field value containing
+         a list of identical decimal values (e.g., "Content-Length: 42, 42"), indicating that duplicate Content-Length header fields
+         have been generated or combined by an upstream message processor, then the recipient <em class="bcp14">MUST</em> replace the duplicated fields or field-values with a single valid Content-Length field containing that decimal value prior
+         to determining the message-body length.
+      </p>
+      <p id="rfc.section.3.3.p.6">The rules for when a message-body is allowed in a message differ for requests and responses.</p>
+      <p id="rfc.section.3.3.p.7">The presence of a message-body in a request is signaled by the inclusion of a Content-Length or Transfer-Encoding header field
          in the request's header fields, even if the request method does not define any use for a message-body. This allows the request
          message framing algorithm to be independent of method semantics.
       </p>
-      <p id="rfc.section.3.3.p.6">For response messages, whether or not a message-body is included with a message is dependent on both the request method and
+      <p id="rfc.section.3.3.p.8">For response messages, whether or not a message-body is included with a message is dependent on both the request method and
          the response status code (<a href="#status.code.and.reason.phrase" title="Status Code and Reason Phrase">Section&nbsp;5.1.1</a>). Responses to the HEAD request method never include a message-body because the associated response header fields (e.g.,
          Transfer-Encoding, Content-Length, etc.) only indicate what their values would have been if the method had been GET. All 1xx
          (Informational), 204 (No Content), and 304 (Not Modified) responses <em class="bcp14">MUST NOT</em> include a message-body. All other responses do include a message-body, although the body <em class="bcp14">MAY</em> be of zero length.
       </p>
-      <p id="rfc.section.3.3.p.7">The length of the message-body is determined by one of the following (in order of precedence):</p>
-      <p id="rfc.section.3.3.p.8"> </p>
+      <p id="rfc.section.3.3.p.9">The length of the message-body is determined by one of the following (in order of precedence):</p>
+      <p id="rfc.section.3.3.p.10"> </p>
       <ol>
          <li>
             <p>Any response to a HEAD request and any response with a status code of 100-199, 204, or 304 is always terminated by the first
@@ -1292,7 +1299,7 @@ Content-Type: text/plain
             </p>
          </li>
          <li>
-            <p>If a Transfer-Encoding header field (<a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.2" title="Transfer-Encoding">Section&nbsp;9.7</a>) is present and the "chunked" transfer-coding (<a href="#transfer.codings" title="Transfer Codings">Section&nbsp;6.2</a>) is the final encoding, the message-body length is determined by reading and decoding the chunked data until the transfer-coding
+            <p>If a Transfer-Encoding header field is present and the "chunked" transfer-coding (<a href="#transfer.codings" title="Transfer Codings">Section&nbsp;6.2</a>) is the final encoding, the message-body length is determined by reading and decoding the chunked data until the transfer-coding
                indicates the data is complete.
             </p>
             <p>If a Transfer-Encoding header field is present in a response and the "chunked" transfer-coding is not the final encoding,
@@ -1307,15 +1314,15 @@ Content-Type: text/plain
             </p>
          </li>
          <li>
-            <p>If a message is received without Transfer-Encoding and with either multiple Content-Length header fields or a single Content-Length
-               header field with an invalid value, then the message framing is invalid and <em class="bcp14">MUST</em> be treated as an error to prevent request or response smuggling. If this is a request message, the server <em class="bcp14">MUST</em> respond with a 400 (Bad Request) status code and then close the connection. If this is a response message received by a proxy
+            <p>If a message is received without Transfer-Encoding and with either multiple Content-Length header fields having differing
+               field-values or a single Content-Length header field having an invalid value, then the message framing is invalid and <em class="bcp14">MUST</em> be treated as an error to prevent request or response smuggling. If this is a request message, the server <em class="bcp14">MUST</em> respond with a 400 (Bad Request) status code and then close the connection. If this is a response message received by a proxy
                or gateway, the proxy or gateway <em class="bcp14">MUST</em> discard the received response, send a 502 (Bad Gateway) status code as its downstream response, and then close the connection.
-               If this is a response message received by a user-agent, it <em class="bcp14">SHOULD</em> be treated as an error by discarding the message and closing the connection.
+               If this is a response message received by a user-agent, it <em class="bcp14">MUST</em> be treated as an error by discarding the message and closing the connection.
             </p>
          </li>
          <li>
-            <p>If a valid Content-Length header field (<a href="#header.content-length" id="rfc.xref.header.content-length.1" title="Content-Length">Section&nbsp;9.2</a>) is present without Transfer-Encoding, its decimal value defines the message-body length in octets. If the actual number
-               of octets sent in the message is less than the indicated Content-Length, the recipient <em class="bcp14">MUST</em> consider the message to be incomplete and treat the connection as no longer usable. If the actual number of octets sent in
+            <p>If a valid Content-Length header field is present without Transfer-Encoding, its decimal value defines the message-body length
+               in octets. If the actual number of octets sent in the message is less than the indicated Content-Length, the recipient <em class="bcp14">MUST</em> consider the message to be incomplete and treat the connection as no longer usable. If the actual number of octets sent in
                the message is more than the indicated Content-Length, the recipient <em class="bcp14">MUST</em> only process the message-body up to the field value's number of octets; the remainder of the message <em class="bcp14">MUST</em> either be discarded or treated as the next message in a pipeline. For the sake of robustness, a user-agent <em class="bcp14">MAY</em> attempt to detect and correct such an error in message framing if it is parsing the response to the last request on on a connection
                and the connection has been closed by the server.
             </p>
@@ -1329,25 +1336,25 @@ Content-Type: text/plain
             </p>
          </li>
       </ol>
-      <p id="rfc.section.3.3.p.9">Since there is no way to distinguish a successfully completed, close-delimited message from a partially-received message interrupted
+      <p id="rfc.section.3.3.p.11">Since there is no way to distinguish a successfully completed, close-delimited message from a partially-received message interrupted
          by network failure, implementations <em class="bcp14">SHOULD</em> use encoding or length-delimited messages whenever possible. The close-delimiting feature exists primarily for backwards compatibility
          with HTTP/1.0.
       </p>
-      <p id="rfc.section.3.3.p.10">A server <em class="bcp14">MAY</em> reject a request that contains a message-body but not a Content-Length by responding with 411 (Length Required).
+      <p id="rfc.section.3.3.p.12">A server <em class="bcp14">MAY</em> reject a request that contains a message-body but not a Content-Length by responding with 411 (Length Required).
       </p>
-      <p id="rfc.section.3.3.p.11">Unless a transfer-coding other than "chunked" has been applied, a client that sends a request containing a message-body <em class="bcp14">SHOULD</em> use a valid Content-Length header field if the message-body length is known in advance, rather than the "chunked" encoding,
+      <p id="rfc.section.3.3.p.13">Unless a transfer-coding other than "chunked" has been applied, a client that sends a request containing a message-body <em class="bcp14">SHOULD</em> use a valid Content-Length header field if the message-body length is known in advance, rather than the "chunked" encoding,
          since some existing services respond to "chunked" with a 411 (Length Required) status code even though they understand the
          chunked encoding. This is typically because such services are implemented via a gateway that requires a content-length in
          advance of being called and the server is unable or unwilling to buffer the entire request before processing.
       </p>
-      <p id="rfc.section.3.3.p.12">A client that sends a request containing a message-body <em class="bcp14">MUST</em> include a valid Content-Length header field if it does not know the server will handle HTTP/1.1 (or later) requests; such
+      <p id="rfc.section.3.3.p.14">A client that sends a request containing a message-body <em class="bcp14">MUST</em> include a valid Content-Length header field if it does not know the server will handle HTTP/1.1 (or later) requests; such
          knowledge can be in the form of specific user configuration or by remembering the version of a prior received response.
       </p>
-      <p id="rfc.section.3.3.p.13">Request messages that are prematurely terminated, possibly due to a cancelled connection or a server-imposed time-out exception, <em class="bcp14">MUST</em> result in closure of the connection; sending an HTTP/1.1 error response prior to closing the connection is <em class="bcp14">OPTIONAL</em>. Response messages that are prematurely terminated, usually by closure of the connection prior to receiving the expected
+      <p id="rfc.section.3.3.p.15">Request messages that are prematurely terminated, possibly due to a cancelled connection or a server-imposed time-out exception, <em class="bcp14">MUST</em> result in closure of the connection; sending an HTTP/1.1 error response prior to closing the connection is <em class="bcp14">OPTIONAL</em>. Response messages that are prematurely terminated, usually by closure of the connection prior to receiving the expected
          number of octets or by failure to decode a transfer-encoded message-body, <em class="bcp14">MUST</em> be recorded as incomplete. A user agent <em class="bcp14">MUST NOT</em> render an incomplete response message-body as if it were complete (i.e., some indication must be given to the user that an
          error occurred). Cache requirements for incomplete responses are defined in <a href="p6-cache.html#errors.or.incomplete.response.cache.behavior" title="Storing Partial and Incomplete Responses">Section 2.1.1</a> of <a href="#Part6" id="rfc.xref.Part6.5"><cite title="HTTP/1.1, part 6: Caching">[Part6]</cite></a>.
       </p>
-      <p id="rfc.section.3.3.p.14">A server <em class="bcp14">MUST</em> read the entire request message-body or close the connection after sending its response, since otherwise the remaining data
+      <p id="rfc.section.3.3.p.16">A server <em class="bcp14">MUST</em> read the entire request message-body or close the connection after sending its response, since otherwise the remaining data
          on a persistent connection would be misinterpreted as the next request. Likewise, a client <em class="bcp14">MUST</em> read the entire response message-body if it intends to reuse the same connection for a subsequent request. Pipelining multiple
          requests on a connection is described in <a href="#pipelining" title="Pipelining">Section&nbsp;7.1.2.2</a>.
       </p>
@@ -1382,7 +1389,7 @@ Content-Type: text/plain
                </tr>
                <tr>
                   <td class="left">Transfer-Encoding</td>
-                  <td class="left"><a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.3" title="Transfer-Encoding">Section&nbsp;9.7</a></td>
+                  <td class="left"><a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.2" title="Transfer-Encoding">Section&nbsp;9.7</a></td>
                </tr>
                <tr>
                   <td class="left">Upgrade</td>
@@ -1676,7 +1683,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
       <div id="rfc.figure.u.52"></div><pre class="inline"><span id="rfc.iref.g.71"></span><span id="rfc.iref.g.72"></span><span id="rfc.iref.g.73"></span><span id="rfc.iref.g.74"></span><span id="rfc.iref.g.75"></span>  <a href="#rule.parameter" class="smpl">transfer-parameter</a>      = <a href="#rule.parameter" class="smpl">attribute</a> <a href="#rule.whitespace" class="smpl">BWS</a> "=" <a href="#rule.whitespace" class="smpl">BWS</a> <a href="#rule.parameter" class="smpl">value</a>
   <a href="#rule.parameter" class="smpl">attribute</a>               = <a href="#rule.token.separators" class="smpl">token</a>
   <a href="#rule.parameter" class="smpl">value</a>                   = <a href="#rule.token.separators" class="smpl">word</a>
-</pre><p id="rfc.section.6.2.p.5">All transfer-coding values are case-insensitive. HTTP/1.1 uses transfer-coding values in the TE header field (<a href="#header.te" id="rfc.xref.header.te.1" title="TE">Section&nbsp;9.5</a>) and in the Transfer-Encoding header field (<a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.4" title="Transfer-Encoding">Section&nbsp;9.7</a>).
+</pre><p id="rfc.section.6.2.p.5">All transfer-coding values are case-insensitive. HTTP/1.1 uses transfer-coding values in the TE header field (<a href="#header.te" id="rfc.xref.header.te.1" title="TE">Section&nbsp;9.5</a>) and in the Transfer-Encoding header field (<a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.3" title="Transfer-Encoding">Section&nbsp;9.7</a>).
       </p>
       <p id="rfc.section.6.2.p.6">Transfer-codings are analogous to the Content-Transfer-Encoding values of MIME, which were designed to enable safe transport
          of binary data over a 7-bit transport service (<a href="#RFC2045" id="rfc.xref.RFC2045.2"><cite title="Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies">[RFC2045]</cite></a>, <a href="http://tools.ietf.org/html/rfc2045#section-6">Section 6</a>). However, safe transport has a different focus for an 8bit-clean transfer protocol. In HTTP, the only unsafe characteristic
@@ -2446,7 +2453,7 @@ Host: www.example.org
                   <td class="left">Transfer-Encoding</td>
                   <td class="left">http</td>
                   <td class="left">standard</td>
-                  <td class="left"> <a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.5" title="Transfer-Encoding">Section&nbsp;9.7</a> 
+                  <td class="left"> <a href="#header.transfer-encoding" id="rfc.xref.header.transfer-encoding.4" title="Transfer-Encoding">Section&nbsp;9.7</a> 
                   </td>
                </tr>
                <tr>
@@ -3778,7 +3785,7 @@ Host: www.example.org
                         <li>Host&nbsp;&nbsp;<a href="#rfc.xref.header.host.1">4.3</a>, <a href="#rfc.iref.h.10"><b>9.4</b></a>, <a href="#rfc.xref.header.host.2">10.1</a>, <a href="#rfc.xref.header.host.3">B.1.1</a></li>
                         <li>TE&nbsp;&nbsp;<a href="#rfc.xref.header.te.1">6.2</a>, <a href="#rfc.xref.header.te.2">6.2.1</a>, <a href="#rfc.xref.header.te.3">6.4</a>, <a href="#rfc.iref.h.11"><b>9.5</b></a>, <a href="#rfc.xref.header.te.4">10.1</a></li>
                         <li>Trailer&nbsp;&nbsp;<a href="#rfc.xref.header.trailer.1">3.4</a>, <a href="#rfc.xref.header.trailer.2">6.2.1</a>, <a href="#rfc.iref.h.12"><b>9.6</b></a>, <a href="#rfc.xref.header.trailer.3">10.1</a></li>
-                        <li>Transfer-Encoding&nbsp;&nbsp;<a href="#rfc.xref.header.transfer-encoding.1">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.2">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.3">3.4</a>, <a href="#rfc.xref.header.transfer-encoding.4">6.2</a>, <a href="#rfc.iref.h.13"><b>9.7</b></a>, <a href="#rfc.xref.header.transfer-encoding.5">10.1</a></li>
+                        <li>Transfer-Encoding&nbsp;&nbsp;<a href="#rfc.xref.header.transfer-encoding.1">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.2">3.4</a>, <a href="#rfc.xref.header.transfer-encoding.3">6.2</a>, <a href="#rfc.iref.h.13"><b>9.7</b></a>, <a href="#rfc.xref.header.transfer-encoding.4">10.1</a></li>
                         <li>Upgrade&nbsp;&nbsp;<a href="#rfc.xref.header.upgrade.1">3.4</a>, <a href="#rfc.iref.h.14"><b>9.8</b></a>, <a href="#rfc.xref.header.upgrade.2">10.1</a>, <a href="#rfc.xref.header.upgrade.3">B.3</a></li>
                         <li>Via&nbsp;&nbsp;<a href="#rfc.xref.header.via.1">3.4</a>, <a href="#rfc.iref.h.15"><b>9.9</b></a>, <a href="#rfc.xref.header.via.2">10.1</a></li>
                      </ul>
@@ -3934,7 +3941,7 @@ Host: www.example.org
                   <li>TE header field&nbsp;&nbsp;<a href="#rfc.xref.header.te.1">6.2</a>, <a href="#rfc.xref.header.te.2">6.2.1</a>, <a href="#rfc.xref.header.te.3">6.4</a>, <a href="#rfc.iref.t.5"><b>9.5</b></a>, <a href="#rfc.xref.header.te.4">10.1</a></li>
                   <li><em>Tou1998</em>&nbsp;&nbsp;<a href="#rfc.xref.Tou1998.1">7.1.1</a>, <a href="#Tou1998"><b>13.2</b></a></li>
                   <li>Trailer header field&nbsp;&nbsp;<a href="#rfc.xref.header.trailer.1">3.4</a>, <a href="#rfc.xref.header.trailer.2">6.2.1</a>, <a href="#rfc.iref.t.6"><b>9.6</b></a>, <a href="#rfc.xref.header.trailer.3">10.1</a></li>
-                  <li>Transfer-Encoding header field&nbsp;&nbsp;<a href="#rfc.xref.header.transfer-encoding.1">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.2">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.3">3.4</a>, <a href="#rfc.xref.header.transfer-encoding.4">6.2</a>, <a href="#rfc.iref.t.7"><b>9.7</b></a>, <a href="#rfc.xref.header.transfer-encoding.5">10.1</a></li>
+                  <li>Transfer-Encoding header field&nbsp;&nbsp;<a href="#rfc.xref.header.transfer-encoding.1">3.3</a>, <a href="#rfc.xref.header.transfer-encoding.2">3.4</a>, <a href="#rfc.xref.header.transfer-encoding.3">6.2</a>, <a href="#rfc.iref.t.7"><b>9.7</b></a>, <a href="#rfc.xref.header.transfer-encoding.4">10.1</a></li>
                   <li>transforming proxy&nbsp;&nbsp;<a href="#rfc.iref.t.1"><b>2.3</b></a></li>
                   <li>transparent proxy&nbsp;&nbsp;<a href="#rfc.iref.t.3"><b>2.3</b></a></li>
                   <li>tunnel&nbsp;&nbsp;<a href="#rfc.iref.t.2"><b>2.3</b></a></li>

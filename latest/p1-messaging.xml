@@ -1355,13 +1355,31 @@ Content-Type: text/plain
 </artwork></figure>
 <t>
    The message-body differs from the payload body only when a transfer-coding
-   has been applied, as indicated by the Transfer-Encoding header field (<xref target="header.transfer-encoding"/>).  When one or more transfer-codings are
-   applied to a payload in order to form the message-body, the
-   Transfer-Encoding header field &MUST; contain the list of
-   transfer-codings applied. Transfer-Encoding is a property of the message,
-   not of the payload, and thus &MAY; be added or removed by any implementation
-   along the request/response chain under the constraints found in
-   <xref target="transfer.codings"/>.
+   has been applied, as indicated by the Transfer-Encoding header field
+   (<xref target="header.transfer-encoding"/>).  If more than one
+   Transfer-Encoding header field is present in a message, the multiple
+   field-values &MUST; be combined into one field-value, according to the
+   algorithm defined in <xref target="header.fields"/>, before determining
+   the message-body length.
+</t>
+<t>
+   When one or more transfer-codings are applied to a payload in order to
+   form the message-body, the Transfer-Encoding header field &MUST; contain
+   the list of transfer-codings applied. Transfer-Encoding is a property of
+   the message, not of the payload, and thus &MAY; be added or removed by
+   any implementation along the request/response chain under the constraints
+   found in <xref target="transfer.codings"/>.
+</t>
+<t>
+   If a message is received that has multiple Content-Length header fields
+   (<xref target="header.content-length"/>) with field-values consisting
+   of the same decimal value, or a single Content-Length header field with
+   a field value containing a list of identical decimal values (e.g.,
+   "Content-Length: 42, 42"), indicating that duplicate Content-Length
+   header fields have been generated or combined by an upstream message
+   processor, then the recipient &MUST; replace the duplicated fields or
+   field-values with a single valid Content-Length field containing that
+   decimal value prior to determining the message-body length.
 </t>
 <t>
    The rules for when a message-body is allowed in a message differ for
@@ -1399,8 +1417,8 @@ Content-Type: text/plain
      fields present in the message, and thus cannot contain a message-body.
     </t></x:lt>
     <x:lt><t>
-     If a Transfer-Encoding header field (<xref target="header.transfer-encoding"/>)
-     is present and the "chunked" transfer-coding (<xref target="transfer.codings"/>)
+     If a Transfer-Encoding header field is present
+     and the "chunked" transfer-coding (<xref target="transfer.codings"/>)
      is the final encoding, the message-body length is determined by reading
      and decoding the chunked data until the transfer-coding indicates the
      data is complete.
@@ -1416,8 +1434,9 @@ Content-Type: text/plain
      the 400 (Bad Request) status code and then close the connection.
     </t>
     <t>
-     If a message is received with both a Transfer-Encoding header field and a
-     Content-Length header field, the Transfer-Encoding overrides the Content-Length.
+     If a message is received with both a Transfer-Encoding header field
+     and a Content-Length header field, the Transfer-Encoding overrides
+     the Content-Length.
      Such a message might indicate an attempt to perform request or response
      smuggling (bypass of security-related checks on message routing or content)
      and thus ought to be handled as an error.  The provided Content-Length &MUST;
@@ -1426,19 +1445,20 @@ Content-Type: text/plain
     </t></x:lt>
     <x:lt><t>
      If a message is received without Transfer-Encoding and with either
-     multiple Content-Length header fields or a single Content-Length header
-     field with an invalid value, then the message framing is invalid and
-     &MUST; be treated as an error to prevent request or response smuggling.
+     multiple Content-Length header fields having differing field-values or
+     a single Content-Length header field having an invalid value, then the
+     message framing is invalid and &MUST; be treated as an error to
+     prevent request or response smuggling.
      If this is a request message, the server &MUST; respond with
      a 400 (Bad Request) status code and then close the connection.
      If this is a response message received by a proxy or gateway, the proxy
      or gateway &MUST; discard the received response, send a 502 (Bad Gateway)
      status code as its downstream response, and then close the connection.
-     If this is a response message received by a user-agent, it &SHOULD; be
+     If this is a response message received by a user-agent, it &MUST; be
      treated as an error by discarding the message and closing the connection.
     </t></x:lt>
     <x:lt><t>
-     If a valid Content-Length header field (<xref target="header.content-length"/>)
+     If a valid Content-Length header field 
      is present without Transfer-Encoding, its decimal value defines the
      message-body length in octets.  If the actual number of octets sent in
      the message is less than the indicated Content-Length, the recipient
