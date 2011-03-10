@@ -1046,65 +1046,119 @@
   <iref primary="true" item="PUT method" x:for-anchor=""/>
   <iref primary="true" item="Methods" subitem="PUT" x:for-anchor=""/>
 <t>
-   The PUT method requests that the enclosed representation be stored at the
-   effective request URI. If the effective request URI refers to an already
-   existing resource, the enclosed representation &SHOULD; be considered a
-   modified version of the one residing on the origin server. Otherwise, if the
-   effective request URI does not point to an existing resource, and that URI is
-   capable of being defined as a new resource by the requesting user
-   agent, the origin server can create the resource with that URI.
+   The PUT method is used to request that the state of the target resource
+   be created or replaced with the state defined by the representation
+   enclosed in the request message payload.  A successful PUT of a given
+   representation would suggest that a subsequent GET on that same target
+   resource will result in an equivalent representation being returned in
+   a 200 (OK) response.  However, there is no guarantee that such a state
+   change will be observable, since the target resource might be acted
+   upon by other user agents in parallel, or might be subject to dynamic
+   processing by the origin server, before any subsequent GET is received.
+   A successful response only implies that the user agent's intent was
+   achieved at the time of its processing by the origin server.
 </t>
 <t>   
-   If a new resource is created at the effective request URI, the origin
-   server &MUST; inform the user agent
-   via the 201 (Created) response. If an existing resource is modified,
-   either the 200 (OK) or 204 (No Content) response codes &SHOULD; be sent
-   to indicate successful completion of the request.
+   If the target resource does not have a current representation and
+   the PUT successfully creates one, then the origin server &MUST; inform
+   the user agent by sending a 201 (Created) response.  If the target
+   resource does have a current representation and that representation is
+   successfully modified in accordance with the state of the enclosed
+   representation, then either a 200 (OK) or 204 (No Content) response
+   &SHOULD; be sent to indicate successful completion of the request.
 </t>
-<t>   
-   If the target resource could not be created or modified, an appropriate
-   error response &SHOULD; be given that reflects the nature of the problem.
-   The recipient of the representation &MUST-NOT; ignore any Content-*
-   header fields (headers starting with the prefix "Content-") that it does
-   not understand or implement
-   and &MUST; return a 501 (Not Implemented) response in such cases.
+<t>
+   Unrecognized header fields &SHOULD; be ignored (i.e., not saved
+   as part of the resource state).
+</t>
+<t>
+   An origin server &SHOULD; verify that the PUT representation is
+   consistent with any constraints which the server has for the target
+   resource that cannot or will not be changed by the PUT.  This is
+   particularly important when the origin server uses internal
+   configuration information related to the URI in order to set the
+   values for representation metadata on GET responses.  When a PUT
+   representation is inconsistent with the target resource, the origin
+   server &SHOULD; either make them consistent, by transforming the
+   representation or changing the resource configuration, or respond
+   with a 409 (Conflict) status code and sufficient information
+   to explain why the representation is unsuitable.
+</t>
+<t>
+   For example, if the target resource is configured to always have a
+   Content-Type of "text/html" and the representation being PUT has a
+   Content-Type of "image/jpeg", then the origin server &SHOULD; do one of:
+   (a) reconfigure the target resource to reflect the new media type;
+   (b) transform the PUT representation to a format consistent with that
+   of the resource before saving it as the new resource state; or,
+   (c) reject the request with a 409 response indicating that the target
+   resource is limited to "text/html", perhaps including a link to a
+   different resource that would be a suitable target for the new
+   representation.
+</t>
+<t>
+   HTTP does not define exactly how a PUT method affects the state
+   of an origin server beyond what can be expressed by the intent of
+   the user agent request and the semantics of the origin server response.
+   It does not define what a resource might be, in any sense of that
+   word, beyond the interface provided via HTTP.  It does not define
+   how resource state is "stored", nor how such storage might change
+   as a result of a change in resource state, nor how the origin server
+   translates resource state into representations.  Generally speaking,
+   all implementation details behind the resource interface are
+   intentionally hidden by the server.
+</t>
+<t>
+   The fundamental difference between the POST and PUT methods is
+   highlighted by the different intent for the target resource.
+   The target resource in a POST request is intended to handle the
+   enclosed representation as a data-accepting process, such as for
+   a gateway to some other protocol or a document that accepts annotations.
+   In contrast, the target resource in a PUT request is intended to
+   take the enclosed representation as a new or replacement value.
+   Hence, the intent of PUT is idempotent and visible to intermediaries,
+   even though the exact effect is only known by the origin server.
+</t>
+<t>
+   Proper interpretation of a PUT request presumes that the user agent
+   knows what target resource is desired.  A service that is intended
+   to select a proper URI on behalf of the client, after receiving
+   a state-changing request, &SHOULD; be implemented using the POST
+   method rather than PUT.  If the origin server will not make the
+   requested PUT state change to the target resource and instead
+   wishes to have it applied to a different resource, such as when the
+   resource has been moved to a different URI, then the origin server
+   &MUST; send a 301 (Moved Permanently) response; the user agent &MAY;
+   then make its own decision regarding whether or not to redirect the
+   request.
+</t>
+<t>
+   A PUT request applied to the target resource &MAY; have side-effects
+   on other resources.  For example, an article might have a URI for
+   identifying "the current version" (a resource) which is separate
+   from the URIs identifying each particular version (different
+   resources that at one point shared the same state as the current version
+   resource).  A successful PUT request on "the current version" URI might
+   therefore create a new version resource in addition to changing the
+   state of the target resource, and might also cause links to be added
+   between the related resources.
+</t>
+<t>
+   An origin server &SHOULD; reject any PUT request that contains a
+   Content-Range header field, since it might be misinterpreted as
+   partial content (or might be partial content that is being mistakenly
+   PUT as a full representation).  Partial content updates are
+   possible by targeting a separately identified resource with state
+   that overlaps a portion of the larger resource, or by using a
+   different method that has been specifically defined for partial
+   updates (for example, the PATCH method defined in
+   <xref target="RFC5789"/>).
 </t>
 <t>
    Responses to the PUT method are not cacheable. If a PUT request passes 
    through a cache that has one or more stored responses for the effective 
    request URI, those stored responses will be invalidated (see
    &p6-invalid;).
-</t>
-<t>
-   The fundamental difference between the POST and PUT requests is
-   reflected in the different meaning of the effective request URI. The URI in a
-   POST request identifies the resource that will handle the enclosed
-   representation. That resource might be a data-accepting process, a gateway to
-   some other protocol, or a document that accepts annotations.
-   In contrast, the URI in a PUT request identifies the resource for
-   which enclosed representation is a new or replacement value; the
-   user agent knows what URI is intended and the server &MUST-NOT; attempt
-   to apply the request to some other resource.
-   If the server desires that the request be applied to a different URI,
-   it &MUST; send a 301 (Moved Permanently) response; the user agent &MAY;
-   then make its own decision regarding whether or not to redirect the
-   request.
-</t>
-<t>
-   A single resource &MAY; be identified by many different URIs. For
-   example, an article might have a URI for identifying "the current
-   version" which is separate from the URI identifying each particular
-   version. In this case, a PUT request on a general URI might result in
-   several other URIs being defined by the origin server.
-</t>
-<t>
-   HTTP/1.1 does not define how a PUT method affects the state of an
-   origin server.
-</t>
-<t>
-   Header fields in a PUT request that are recognized as representation
-   metadata &SHOULD; be applied to the resource created or modified by
-   the PUT.  Unrecognized header fields &SHOULD; be ignored.
 </t>
 </section>
 
@@ -3470,6 +3524,20 @@ Connection: Upgrade
     <date year="2008" month="October"/>
   </front> 
   <seriesInfo name="RFC" value="5322"/>
+</reference>
+
+<reference anchor='RFC5789'>
+  <front>
+    <title>PATCH Method for HTTP</title>
+    <author initials='L.' surname='Dusseault' fullname='L. Dusseault'>
+      <organization>Linden Lab</organization>
+    </author>
+    <author initials='J.' surname='Snell' fullname='J. Snell'>
+      <organization />
+    </author>
+    <date year='2010' month='March' />
+  </front>
+  <seriesInfo name='RFC' value='5789' />
 </reference>
 
 </references>
