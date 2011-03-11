@@ -1404,7 +1404,7 @@ Content-Type: text/plain
    Responses to the HEAD request method never include a message-body
    because the associated response header fields (e.g., Transfer-Encoding,
    Content-Length, etc.) only indicate what their values would have been
-   if the method had been GET.  All 1xx (Informational), 204 (No Content),
+   if the request method had been GET.  All 1xx (Informational), 204 (No Content),
    and 304 (Not Modified) responses &MUST-NOT; include a message-body.
    All other responses do include a message-body, although the body
    &MAY; be of zero length.
@@ -1603,8 +1603,8 @@ Content-Type: text/plain
 <section title="Method" anchor="method">
   <x:anchor-alias value="Method"/>
 <t>
-   The Method  token indicates the method to be performed on the
-   resource identified by the request-target. The method is case-sensitive.
+   The Method token indicates the request method to be performed on the
+   target resource. The request method is case-sensitive.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Method"/>
   <x:ref>Method</x:ref>         = <x:ref>token</x:ref>
@@ -1614,7 +1614,7 @@ Content-Type: text/plain
 <section title="request-target" anchor="request-target">
   <x:anchor-alias value="request-target"/>
 <t>
-   The request-target identifies the resource upon which to apply the request.
+   The request-target identifies the target resource upon which to apply the request.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/>
   <x:ref>request-target</x:ref> = "*"
@@ -1629,7 +1629,7 @@ Content-Type: text/plain
 <t><iref item="asterisk form (of request-target)"/>
    The asterisk "*" ("asterisk form") means that the request does not apply to a
    particular resource, but to the server itself. This is only allowed for the
-   OPTIONS method. Thus, the only valid example is
+   OPTIONS request method. Thus, the only valid example is
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 OPTIONS * HTTP/1.1
@@ -1654,7 +1654,7 @@ GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
    them in requests to proxies.
 </t>
 <t><iref item="authority form (of request-target)"/>
-   The "authority form" is only used by the CONNECT method (&CONNECT;).
+   The "authority form" is only used by the CONNECT request method (&CONNECT;).
 </t>
 <t><iref item="path-absolute form (of request-target)"/>
    The most common form of request-target is that used to identify a
@@ -1676,10 +1676,9 @@ Host: www.example.org
    given as "/" (the server root).
 </t>
 <t>
-   If a proxy receives a request without any path in the request-target and
-   the method specified is capable of supporting the asterisk form of
-   request-target, then the last proxy on the request chain &MUST; forward the
-   request with "*" as the final request-target.
+   If a proxy receives an OPTIONS request without any path in the
+   request-target, then the last proxy on the request chain &MUST;
+   forward the request with "*" as the final request-target.
 </t>
 <figure><preamble>   
    For example, the request
@@ -1687,7 +1686,7 @@ Host: www.example.org
 OPTIONS http://www.example.org:8001 HTTP/1.1
 </artwork></figure>
 <figure><preamble>   
-  would be forwarded by the proxy as
+  would be forwarded by the final proxy as
 </preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 OPTIONS * HTTP/1.1
 Host: www.example.org:8001
@@ -2524,8 +2523,8 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    corresponding responses.
 </t>
 <t>
-   Clients &SHOULD-NOT;  pipeline requests using non-idempotent methods or
-   non-idempotent sequences of methods (see &idempotent-methods;). Otherwise, a
+   Clients &SHOULD-NOT; pipeline requests using non-idempotent request methods or
+   non-idempotent sequences of request methods (see &idempotent-methods;). Otherwise, a
    premature termination of the transport connection could lead to
    indeterminate results. A client wishing to send a non-idempotent
    request &SHOULD; wait to send that request until it has received the
@@ -2695,7 +2694,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    from asynchronous close events. Client software &SHOULD; reopen the
    transport connection and retransmit the aborted sequence of requests
    without user interaction so long as the request sequence is
-   idempotent (see &idempotent-methods;). Non-idempotent methods or sequences
+   idempotent (see &idempotent-methods;). Non-idempotent request methods or sequences
    &MUST-NOT; be automatically retried, although user agents &MAY; offer a
    human operator the choice of retrying the request(s). Confirmation by
    user-agent software with semantic understanding of the application
@@ -2803,7 +2802,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
         the 100 (Continue) response. If it responds with a final status
         code, it &MAY; close the transport connection or it &MAY; continue
         to read and discard the rest of the request.  It &MUST-NOT;
-        perform the requested method if it returns a final status code.
+        perform the request method if it returns a final status code.
     </t>
     <t> An origin server &SHOULD-NOT;  send a 100 (Continue) response if
         the request message does not include an Expect request-header
@@ -3037,13 +3036,14 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <t>
    The "Content-Length" header field indicates the size of the
    message-body, in decimal number of octets, for any message other than
-   a response to the HEAD method or a response with a status code of 304.
-   In the case of responses to the HEAD method, it indicates the size of
-   the payload body (not including any potential transfer-coding) that
-   would have been sent had the request been a GET.
-   In the case of the 304 (Not Modified) response, it indicates the size of
-   the payload body (not including any potential transfer-coding) that
-   would have been sent in a 200 (OK) response.
+   a response to a HEAD request or a response with a status code of 304.
+   In the case of a response to a HEAD request, Content-Length indicates
+   the size of the payload body (not including any potential transfer-coding)
+   that would have been sent had the request been a GET.
+   In the case of a 304 (Not Modified) response to a GET request,
+   Content-Length indicates the size of the payload body (not including
+   any potential transfer-coding) that would have been sent in a 200 (OK)
+   response.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/><iref primary="true" item="Grammar" subitem="Content-Length-v"/>
   <x:ref>Content-Length</x:ref>   = "Content-Length" ":" <x:ref>OWS</x:ref> 1*<x:ref>Content-Length-v</x:ref>
@@ -3383,8 +3383,8 @@ Host: www.example.org
    allowing the client to initiate a request in the more commonly
    supported protocol while indicating to the server that it would like
    to use a "better" protocol if available (where "better" is determined
-   by the server, possibly according to the nature of the method and/or
-   resource being requested).
+   by the server, possibly according to the nature of the request method
+   or target resource).
 </t>
 <t>
    The Upgrade header field only applies to switching application-layer
@@ -4867,7 +4867,7 @@ Acknowledgements TODO list
    HTTP has been in use by the World-Wide Web global information initiative
    since 1990. The first version of HTTP, later referred to as HTTP/0.9,
    was a simple protocol for hypertext data transfer across the Internet
-   with only a single method and no metadata.
+   with only a single request method (GET) and no metadata.
    HTTP/1.0, as defined by <xref target="RFC1945"/>, added a range of request
    methods and MIME-like messaging that could include metadata about the data
    transferred and modifiers on the request/response semantics. However,
@@ -5022,7 +5022,7 @@ Acknowledgements TODO list
 <t>
   Update use of abs_path production from RFC 1808 to the path-absolute + query
   components of RFC 3986. State that the asterisk form is allowed for the OPTIONS
-  method only.
+  request method only.
   (<xref target="request-target"/>)
 </t>
 <t>
