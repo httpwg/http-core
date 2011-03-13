@@ -709,16 +709,15 @@ Content-Type: text/plain
    as a layer above some other server(s) and translates the received
    requests to the underlying server's protocol.  Gateways are often
    used for load balancing, "accelerator" caching, or partitioning
-   HTTP services across multiple machines.
-   Unlike a proxy, a gateway receives requests as if it were the
-   origin server for the target resource; the requesting client
-   will not be aware that it is communicating with a gateway.
-   A gateway communicates with the client as if the gateway is the
-   origin server and thus is subject to all of the requirements on
-   origin servers for that connection.  A gateway communicates
-   with inbound servers using any protocol it desires, including
-   private extensions to HTTP that are outside the scope of this
-   specification.
+   HTTP services across multiple machines.  Gateways behave as an origin
+   server on the outbound connection and as a proxy on the inbound
+   connection.  All HTTP requirements applicable to an origin server
+   also apply to the outbound communication of a gateway.  A gateway
+   communicates with inbound servers using any protocol it desires,
+   including private extensions to HTTP that are outside the scope of
+   this specification.  However, an HTTP-to-HTTP gateway that wishes
+   to interoperate with third-party HTTP servers &SHOULD; comply with
+   HTTP proxy requirements on the gateway's inbound connection.
 </t>
 <t><iref primary="true" item="tunnel"/>
    A "tunnel" acts as a blind relay between two connections
@@ -1429,8 +1428,8 @@ Content-Type: text/plain
      prevent request or response smuggling.
      If this is a request message, the server &MUST; respond with
      a 400 (Bad Request) status code and then close the connection.
-     If this is a response message received by a proxy or gateway, the proxy
-     or gateway &MUST; discard the received response, send a 502 (Bad Gateway)
+     If this is a response message received by a proxy, the proxy
+     &MUST; discard the received response, send a 502 (Bad Gateway)
      status code as its downstream response, and then close the connection.
      If this is a response message received by a user-agent, it &MUST; be
      treated as an error by discarding the message and closing the connection.
@@ -1633,7 +1632,7 @@ GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
 </t>
 <t><iref item="origin form (of request-target)"/>
    The most common form of request-target is that used when making
-   a request to an origin server or gateway ("origin form").
+   a request to an origin server ("origin form").
    In this case, the absolute path and query components of the URI
    &MUST; be transmitted as the request-target, and the authority component
    &MUST; be transmitted in a Host header field. For example, a client wishing
@@ -2384,7 +2383,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <section title="Purpose" anchor="persistent.purpose">
 <t>
    Prior to persistent connections, a separate TCP connection was
-   established to fetch each URL, increasing the load on HTTP servers
+   established for each request, increasing the load on HTTP servers
    and causing congestion on the Internet. The use of inline images and
    other associated data often requires a client to make multiple
    requests of the same server in a short amount of time. Analysis of
@@ -3093,7 +3092,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <t>
    A received message that does not have a Date header field &MUST; be
    assigned one by the recipient if the message will be cached by that
-   recipient or gatewayed via a protocol which requires a Date.
+   recipient.
 </t>
 <t>
    Clients can use the Date header field as well; in order to keep request
@@ -3132,41 +3131,63 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:anchor-alias value="Host"/>
   <x:anchor-alias value="Host-v"/>
 <t>
-   The "Host" header field specifies the Internet host and port
-   number of the resource being requested, allowing the origin server or
-   gateway to differentiate between internally-ambiguous URLs, such as the root
-   "/" URL of a server for multiple host names on a single IP address.
-</t>
-<t>    
-   The Host field value &MUST; represent the naming authority of the origin
-   server or gateway given by the original URL obtained from the user or
-   referring resource (generally an http URI, as described in
-   <xref target="http.uri"/>).
+   The "Host" header field in a request provides the host and port
+   information from the target resource's URI, enabling the origin
+   server to distinguish between resources while servicing requests
+   for multiple host names on a single IP address.  Since the Host
+   field-value is critical information for handling a request, it
+   &SHOULD; be sent as the first header field following the Request-Line.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Host"/><iref primary="true" item="Grammar" subitem="Host-v"/>
   <x:ref>Host</x:ref>   = "Host" ":" <x:ref>OWS</x:ref> <x:ref>Host-v</x:ref>
   <x:ref>Host-v</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="http.uri"/>
 </artwork></figure>
 <t>
-   A "host" without any trailing port information implies the default
-   port for the service requested (e.g., "80" for an HTTP URL). For
-   example, a request on the origin server for
-   &lt;http://www.example.org/pub/WWW/&gt; would properly include:
+   A client &MUST; send a Host header field in all HTTP/1.1 request
+   messages.  If the target resource's URI includes an authority
+   component, then the Host field-value &MUST; be identical to that
+   authority component after excluding any userinfo (<xref target="http.uri"/>).
+   If the authority component is missing or undefined for the target
+   resource's URI, then the Host header field &MUST; be sent with an
+   empty field-value.
+</t>
+<t>
+   For example, a GET request to the origin server for
+   &lt;http://www.example.org/pub/WWW/&gt; would begin with:
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 GET /pub/WWW/ HTTP/1.1
 Host: www.example.org
 </artwork></figure>
 <t>
-   A client &MUST; include a Host header field in all HTTP/1.1 request
-   messages. If the requested URI does not include an Internet host
-   name for the service being requested, then the Host header field &MUST;
-   be given with an empty value. An HTTP/1.1 proxy &MUST; ensure that any
-   request message it forwards does contain an appropriate Host header
-   field that identifies the service being requested by the proxy. All
-   Internet-based HTTP/1.1 servers &MUST; respond with a 400 (Bad Request)
-   status code to any HTTP/1.1 request message which lacks a Host header
-   field.
+   The Host header field &MUST; be sent in an HTTP/1.1 request even
+   if the request-target is in the form of an absolute-URI, since this
+   allows the Host information to be forwarded through ancient HTTP/1.0
+   proxies that might not have implemented Host.
+</t>
+<t>
+   When an HTTP/1.1 proxy receives a request with a request-target in
+   the form of an absolute-URI, the proxy &MUST; ignore the received
+   Host header field (if any) and instead replace it with the host
+   information of the request-target.  When a proxy forwards a request,
+   it &MUST; generate the Host header field based on the received
+   absolute-URI rather than the received Host.
+</t>
+<t>
+   Since the Host header field acts as an application-level routing
+   mechanism, it is a frequent target for malware seeking to poison
+   a shared cache or redirect a request to an unintended server.
+   An interception proxy is particularly vulnerable if it relies on
+   the Host header field value for redirecting requests to internal
+   servers, or for use as a cache key in a shared cache, without
+   first verifying that the intercepted connection is targeting a
+   valid IP address for that host.
+</t>
+<t>
+   A server &MUST; respond with a 400 (Bad Request) status code to
+   any HTTP/1.1 request message that lacks a Host header field and
+   to any request message that contains more than one Host header field
+   or a Host header field with an invalid field-value.
 </t>
 <t>
    See Sections <xref target="the.resource.identified.by.a.request" format="counter"/>
@@ -3448,7 +3469,7 @@ Host: www.example.org
   <x:anchor-alias value="Via"/>
   <x:anchor-alias value="Via-v"/>
 <t>
-   The "Via" header field &MUST; be used by gateways and proxies to
+   The "Via" header field &MUST; be sent by proxies to
    indicate the intermediate protocols and recipients between the user
    agent and the server on requests, and between the origin server and
    the client on responses. It is analogous to the "Received" field defined in
@@ -3483,14 +3504,14 @@ Host: www.example.org
    be assumed to be the default port of the received-protocol.
 </t>
 <t>
-   Multiple Via field values represent each proxy or gateway that has
+   Multiple Via field values represent each proxy that has
    forwarded the message. Each recipient &MUST; append its information
    such that the end result is ordered according to the sequence of
    forwarding applications.
 </t>
 <t>
    Comments &MAY; be used in the Via header field to identify the software
-   of the recipient proxy or gateway, analogous to the User-Agent and
+   of the recipient proxy, analogous to the User-Agent and
    Server header fields. However, all comments in the Via field are
    optional and &MAY; be removed by any recipient prior to forwarding the
    message.
@@ -3507,7 +3528,7 @@ Host: www.example.org
   Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
 </artwork></figure>
 <t>
-   Proxies and gateways used as a portal through a network firewall
+   Proxies used as a portal through a network firewall
    &SHOULD-NOT;, by default, forward the names and ports of hosts within
    the firewall region. This information &SHOULD; only be propagated if
    explicitly enabled. If not enabled, the received-by host of any host
@@ -4916,7 +4937,7 @@ Acknowledgements TODO list
    IP addresses to a single host has created serious problems. The
    Internet will also be able to recover the IP addresses that have been
    allocated for the sole purpose of allowing special-purpose domain
-   names to be used in root-level HTTP URLs. Given the rate of growth of
+   names to be used. Given the rate of growth of
    the Web, and the number of servers already deployed, it is extremely
    important that all implementations of HTTP (including updates to
    existing HTTP/1.0 applications) correctly implement these
