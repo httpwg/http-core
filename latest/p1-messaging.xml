@@ -228,7 +228,7 @@
    request/response protocol that uses extensible semantics and MIME-like
    message payloads for flexible interaction with network-based hypertext
    information systems. HTTP relies upon the Uniform Resource Identifier (URI)
-   standard <xref target="RFC3986"/> to indicate request targets and
+   standard <xref target="RFC3986"/> to indicate the target resource and
    relationships between resources.
    Messages are passed in a format similar to that used by Internet mail
    <xref target="RFC5322"/> and the Multipurpose Internet Mail Extensions
@@ -624,8 +624,8 @@ Content-Type: text/plain
 </t>
 <t>
    The specific connection protocols to be used for an interaction
-   are determined by client configuration and the identifier (if any)
-   provided for the request target.  For example, the "http" URI scheme
+   are determined by client configuration and the target resource's URI.
+   For example, the "http" URI scheme
    (<xref target="http.uri"/>) indicates a default connection of TCP
    over IP, with a default TCP port of 80, but the client might be
    configured to use a proxy via some other connection port or protocol
@@ -941,9 +941,10 @@ Content-Type: text/plain
 <t>
    This specification adopts the definitions of "URI-reference",
    "absolute-URI", "relative-part", "port", "host",
-   "path-abempty", "path-absolute", "query", and "authority" from
-   <xref target="RFC3986"/>. In addition, we define a partial-URI rule for
-   protocol elements that allow a relative URI without a fragment.
+   "path-abempty", "path-absolute", "query", and "authority" from the
+   URI generic syntax <xref target="RFC3986"/>.
+   In addition, we define a partial-URI rule for protocol elements
+   that allow a relative URI but not a fragment.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="URI-reference"/><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="path-absolute"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="uri-host"/>
   <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
@@ -959,12 +960,13 @@ Content-Type: text/plain
   <x:ref>partial-URI</x:ref>   = relative-part [ "?" query ]
 </artwork></figure>
 <t>
-   Each protocol element in HTTP that allows a URI reference will indicate in
-   its ABNF production whether the element allows only a URI in absolute form
-   (absolute-URI), any relative reference (relative-ref), or some other subset
-   of the URI-reference grammar. Unless otherwise indicated, URI references
-   are parsed relative to the request target (the default base URI for both
-   the request and its corresponding response).
+   Each protocol element in HTTP that allows a URI reference will indicate
+   in its ABNF production whether the element allows any form of reference
+   (URI-reference), only a URI in absolute form (absolute-URI), only the
+   path and optional query components, or some combination of the above.
+   Unless otherwise indicated, URI references are parsed relative to the
+   effective request URI, which defines the default base URI for references
+   in both the request and its corresponding response.
 </t>
 
 <section title="http URI scheme" anchor="http.uri">
@@ -976,23 +978,25 @@ Content-Type: text/plain
    identifiers according to their association with the hierarchical
    namespace governed by a potential HTTP origin server listening for
    TCP connections on a given port.
-   The HTTP server is identified via the generic syntax's 
-   <x:ref>authority</x:ref> component, which includes a host
-   identifier and optional TCP port, and the remainder of the URI is
-   considered to be identifying data corresponding to a resource for
-   which that server might provide an HTTP interface.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URI"/>
   <x:ref>http-URI</x:ref> = "http:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
 </artwork></figure>
 <t>
-   The host identifier within an <x:ref>authority</x:ref> component is
-   defined in <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>.  If host is
-   provided as an IP literal or IPv4 address, then the HTTP server is any
-   listener on the indicated TCP port at that IP address. If host is a
-   registered name, then that name is considered an indirect identifier
-   and the recipient might use a name resolution service, such as DNS,
-   to find the address of a listener for that host.
+   The HTTP origin server is identified by the generic syntax's 
+   <x:ref>authority</x:ref> component, which includes a host identifier
+   and optional TCP port (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
+   The remainder of the URI, consisting of both the hierarchical path
+   component and optional query component, serves as an identifier for
+   a potential resource within that origin server's name space.
+</t>
+<t>
+   If the host identifier is provided as an IP literal or IPv4 address,
+   then the origin server is any listener on the indicated TCP port at
+   that IP address. If host is a registered name, then that name is
+   considered an indirect identifier and the recipient might use a name
+   resolution service, such as DNS, to find the address of a listener
+   for that host.
    The host &MUST-NOT; be empty; if an "http" URI is received with an
    empty host, then it &MUST; be rejected as invalid. 
    If the port subcomponent is empty or not given, then TCP port 80 is
@@ -1069,18 +1073,21 @@ Content-Type: text/plain
 </artwork></figure>
 <t>
    Unlike the "http" scheme, responses to "https" identified requests
-   are never "public" and thus are ineligible for shared caching.
-   Their default is "private" and might be further constrained via use
-   of the Cache-Control header field (&header-cache-control;).
+   are never "public" and thus &MUST-NOT; be reused for shared caching.
+   They can, however, be reused in a private cache if the message is
+   cacheable by default in HTTP or specifically indicated as such by
+   the Cache-Control header field (&header-cache-control;).
 </t>
 <t>
    Resources made available via the "https" scheme have no shared
    identity with the "http" scheme even if their resource identifiers
-   only differ by the single "s" in the scheme name.  They are
-   different services governed by different authorities.  However,
-   some extensions to HTTP that apply to entire host domains, such
-   as the Cookie protocol, do allow one service to effect communication
-   with the other services based on host domain matching.
+   indicate the same authority (the same host listening to the same
+   TCP port).  They are distinct name spaces and are considered to be
+   distinct origin servers.  However, an extension to HTTP that is
+   defined to apply to entire host domains, such as the Cookie protocol 
+   <xref target="draft-ietf-httpstate-cookie"/>, can allow information
+   set by one service to impact communication with other services
+   within a matching group of host domains.
 </t>
 <t>
    The process for authoritative access to an "https" identified
@@ -1114,17 +1121,6 @@ Content-Type: text/plain
    http://EXAMPLE.com/%7Esmith/home.html
    http://EXAMPLE.com:/%7esmith/home.html
 </artwork></figure>
-<t>
-   <cref anchor="TODO-not-here" source="roy">This paragraph does not belong here.</cref>
-   If path-abempty is the empty string (i.e., there is no slash "/"
-   path separator following the authority), then the "http" URI
-   &MUST; be given as "/" when
-   used as a request-target (<xref target="request-target"/>). If a proxy
-   receives a host name which is not a fully qualified domain name, it
-   &MAY; add its domain to the host name it received. If a proxy receives
-   a fully qualified domain name, the proxy &MUST-NOT; change the host
-   name.
-</t>
 </section>
 </section>
 </section>
@@ -1581,7 +1577,11 @@ Content-Type: text/plain
 <section title="request-target" anchor="request-target">
   <x:anchor-alias value="request-target"/>
 <t>
-   The request-target identifies the target resource upon which to apply the request.
+   The request-target identifies the target resource upon which to apply
+   the request.  In most cases, the user agent is provided a URI reference
+   from which it determines an absolute URI for identifying the target
+   resource.  When a request to the resource is initiated, all or part
+   of that URI is used to construct the HTTP request-target.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/>
   <x:ref>request-target</x:ref> = "*"
@@ -1594,20 +1594,22 @@ Content-Type: text/plain
    request.
 </t>   
 <t><iref item="asterisk form (of request-target)"/>
-   The asterisk "*" ("asterisk form") means that the request does not apply to a
-   particular resource, but to the server itself. This is only allowed for the
-   OPTIONS request method. Thus, the only valid example is
+   The asterisk "*" form of request-target, which &MUST-NOT; be used
+   with any request method other than OPTIONS, means that the request
+   applies to the server as a whole (the listening process) rather than
+   to a specific named resource at that server.  For example,
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 OPTIONS * HTTP/1.1
 </artwork></figure>
 <t><iref item="absolute-URI form (of request-target)"/>
    The "absolute-URI" form is &REQUIRED; when the request is being made to a
-   proxy. The proxy is requested to forward the request or service it
-   from a valid cache, and return the response. Note that the proxy &MAY;
+   proxy. The proxy is requested to either forward the request or service it
+   from a valid cache, and then return the response. Note that the proxy &MAY;
    forward the request on to another proxy or directly to the server
    specified by the absolute-URI. In order to avoid request loops, a
-   proxy &MUST; be able to recognize all of its server names, including
+   proxy that forwards requests to other proxies &MUST; be able to
+   recognize and exclude all of its own server names, including
    any aliases, local variations, and the numeric IP address. An example
    Request-Line would be:
 </t>
@@ -1620,32 +1622,40 @@ GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
    form in requests, even though HTTP/1.1 clients will only generate
    them in requests to proxies.
 </t>
+<t>
+   If a proxy receives a host name that is not a fully qualified domain
+   name, it &MAY; add its domain to the host name it received. If a proxy
+   receives a fully qualified domain name, the proxy &MUST-NOT; change
+   the host name.
+</t>
 <t><iref item="authority form (of request-target)"/>
    The "authority form" is only used by the CONNECT request method (&CONNECT;).
 </t>
-<t><iref item="path-absolute form (of request-target)"/>
-   The most common form of request-target is that used to identify a
-   resource on an origin server or gateway ("path-absolute form"). In this case the absolute
-   path of the URI &MUST; be transmitted (see <xref target="http.uri"/>, path-absolute) as
-   the request-target, and the network location of the URI (authority) &MUST;
-   be transmitted in a Host header field. For example, a client wishing
-   to retrieve the resource above directly from the origin server would
-   create a TCP connection to port 80 of the host "www.example.org" and send
-   the lines:
+<t><iref item="origin form (of request-target)"/>
+   The most common form of request-target is that used when making
+   a request to an origin server or gateway ("origin form").
+   In this case, the absolute path and query components of the URI
+   &MUST; be transmitted as the request-target, and the authority component
+   &MUST; be transmitted in a Host header field. For example, a client wishing
+   to retrieve a representation of the resource, as identified above,
+   directly from the origin server would open (or reuse) a TCP connection
+   to port 80 of the host "www.example.org" and send the lines:
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 GET /pub/WWW/TheProject.html HTTP/1.1
 Host: www.example.org
 </artwork></figure>
 <t>
-   followed by the remainder of the Request. Note that the absolute path
-   cannot be empty; if none is present in the original URI, it &MUST; be
-   given as "/" (the server root).
+   followed by the remainder of the Request. Note that the origin form
+   of request-target always starts with an absolute path; if the target
+   resource's URI path is empty, then an absolute path of "/" &MUST; be
+   provided in the request-target.
 </t>
 <t>
-   If a proxy receives an OPTIONS request without any path in the
-   request-target, then the last proxy on the request chain &MUST;
-   forward the request with "*" as the final request-target.
+   If a proxy receives an OPTIONS request with an absolute-URI form of
+   request-target in which the URI has an empty path and no query component,
+   then the last proxy on the request chain &MUST; use a request-target
+   of "*" when it forwards the request to the indicated origin server.
 </t>
 <figure><preamble>   
    For example, the request
