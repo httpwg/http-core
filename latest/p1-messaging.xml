@@ -708,16 +708,24 @@ Content-Type: text/plain
    A "gateway" (a.k.a., "reverse proxy") is a receiving agent that acts
    as a layer above some other server(s) and translates the received
    requests to the underlying server's protocol.  Gateways are often
-   used for load balancing, "accelerator" caching, or partitioning
-   HTTP services across multiple machines.  Gateways behave as an origin
-   server on the outbound connection and as a proxy on the inbound
-   connection.  All HTTP requirements applicable to an origin server
-   also apply to the outbound communication of a gateway.  A gateway
-   communicates with inbound servers using any protocol it desires,
-   including private extensions to HTTP that are outside the scope of
-   this specification.  However, an HTTP-to-HTTP gateway that wishes
-   to interoperate with third-party HTTP servers &SHOULD; comply with
-   HTTP proxy requirements on the gateway's inbound connection.
+   used to encapsulate legacy or untrusted information services, to
+   improve server performance through "accelerator" caching, and to
+   enable partitioning or load-balancing of HTTP services across
+   multiple machines.
+</t>
+<t>
+   A gateway behaves as an origin server on its outbound connection and
+   as a user agent on its inbound connection.
+   All HTTP requirements applicable to an origin server
+   also apply to the outbound communication of a gateway.
+   A gateway communicates with inbound servers using any protocol that
+   it desires, including private extensions to HTTP that are outside
+   the scope of this specification.  However, an HTTP-to-HTTP gateway
+   that wishes to interoperate with third-party HTTP servers &MUST;
+   comply with HTTP user agent requirements on the gateway's inbound
+   connection and &MUST; implement the Connection
+   (<xref target="header.connection"/>) and Via (<xref target="header.via"/>)
+   header fields for both connections.
 </t>
 <t><iref primary="true" item="tunnel"/>
    A "tunnel" acts as a blind relay between two connections
@@ -2937,7 +2945,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
 <section title="Header Field Definitions" anchor="header.field.definitions">
 <t>
-   This section defines the syntax and semantics of HTTP/1.1 header fields
+   This section defines the syntax and semantics of HTTP header fields
    related to message framing and transport protocols.
 </t>
 
@@ -2949,8 +2957,16 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:anchor-alias value="Connection-v"/>
 <t>
    The "Connection" header field allows the sender to specify
-   options that are desired for that particular connection and &MUST-NOT;
-   be communicated by proxies over further connections.
+   options that are desired only for that particular connection.
+   Such connection options &MUST; be removed or replaced before the
+   message can be forwarded downstream by a proxy or gateway.
+   This mechanism also allows the sender to indicate which HTTP
+   header fields used in the message are only intended for the
+   immediate recipient ("hop-by-hop"), as opposed to all recipients
+   on the chain ("end-to-end"), enabling the message to be
+   self-descriptive and allowing future connection-specific extensions
+   to be deployed in HTTP without fear that they will be blindly
+   forwarded by previously deployed intermediaries.
 </t>
 <t>
    The Connection header field's value has the following grammar:
@@ -2961,18 +2977,41 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:ref>connection-token</x:ref> = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
-   HTTP/1.1 proxies &MUST; parse the Connection header field before a
-   message is forwarded and, for each connection-token in this field,
-   remove any header field(s) from the message with the same name as the
-   connection-token. Connection options are signaled by the presence of
-   a connection-token in the Connection header field, not by any
-   corresponding additional header field(s), since the additional header
-   field might not be sent if there are no parameters associated with that
-   connection option.
+   A proxy or gateway &MUST; parse a received Connection
+   header field before a message is forwarded and, for each
+   connection-token in this field, remove any header field(s) from
+   the message with the same name as the connection-token, and then
+   remove the Connection header field itself or replace it with the
+   sender's own connection options for the forwarded message.
 </t>
 <t>
-   Message header fields listed in the Connection header field &MUST-NOT; include
-   end-to-end header fields, such as Cache-Control (&header-cache-control;).
+   A sender &MUST-NOT; include field-names in the Connection header
+   field-value for fields that are defined as expressing constraints
+   for all recipients in the request or response chain, such as the
+   Cache-Control header field (&header-cache-control;).
+</t>
+<t>
+   The connection options do not have to correspond to a header field
+   present in the message, since a connection-specific header field
+   might not be needed if there are no parameters associated with that
+   connection option.  Recipients that trigger certain connection
+   behavior based on the presence of connection options &MUST; do so
+   based on the presence of the connection-token rather than only the
+   presence of the optional header field.  In other words, if the
+   connection option is received as a header field but not indicated
+   within the Connection field-value, then the recipient &MUST; ignore
+   the connection-specific header field because it has likely been
+   forwarded by an intermediary that is only partially compliant.
+</t>
+<t>
+   When defining new connection options, specifications ought to
+   carefully consider existing deployed header fields and ensure
+   that the new connection-token does not share the same name as
+   an unrelated header field that might already be deployed.
+   Defining a new connection-token essentially reserves that potential
+   field-name for carrying additional information related to the
+   connection option, since it would be unwise for senders to use
+   that field-name for anything else.
 </t>
 <t>
    HTTP/1.1 defines the "close" connection option for the sender to
@@ -2995,13 +3034,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    An HTTP/1.1 server that does not support persistent connections &MUST;
    include the "close" connection option in every response message that
    does not have a 1xx (Informational) status code.
-</t>
-<t>
-   A system receiving an HTTP/1.0 (or lower-version) message that
-   includes a Connection header field &MUST;, for each connection-token in this
-   field, remove and ignore any header field(s) from the message with
-   the same name as the connection-token. This protects against mistaken
-   forwarding of such header fields by pre-HTTP/1.1 proxies. See <xref target="compatibility.with.http.1.0.persistent.connections"/>.
 </t>
 </section>
 
@@ -3469,11 +3501,12 @@ Host: www.example.org
   <x:anchor-alias value="Via"/>
   <x:anchor-alias value="Via-v"/>
 <t>
-   The "Via" header field &MUST; be sent by proxies to
+   The "Via" header field &MUST; be sent by a proxy or gateway to
    indicate the intermediate protocols and recipients between the user
    agent and the server on requests, and between the origin server and
-   the client on responses. It is analogous to the "Received" field defined in
-   <xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/> and is intended to be used for tracking message forwards,
+   the client on responses. It is analogous to the "Received" field
+   used by email systems (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>)
+   and is intended to be used for tracking message forwards,
    avoiding request loops, and identifying the protocol capabilities of
    all senders along the request/response chain.
 </t>
@@ -3496,7 +3529,7 @@ Host: www.example.org
    visible to all recipients.
 </t>
 <t>
-   The protocol-name is optional if and only if it would be "HTTP". The
+   The protocol-name is excluded if and only if it would be "HTTP". The
    received-by field is normally the host and optional port number of a
    recipient server or client that subsequently forwarded the message.
    However, if the real host is considered to be sensitive information,
@@ -3504,17 +3537,16 @@ Host: www.example.org
    be assumed to be the default port of the received-protocol.
 </t>
 <t>
-   Multiple Via field values represent each proxy that has
+   Multiple Via field values represent each proxy or gateway that has
    forwarded the message. Each recipient &MUST; append its information
    such that the end result is ordered according to the sequence of
    forwarding applications.
 </t>
 <t>
    Comments &MAY; be used in the Via header field to identify the software
-   of the recipient proxy, analogous to the User-Agent and
-   Server header fields. However, all comments in the Via field are
-   optional and &MAY; be removed by any recipient prior to forwarding the
-   message.
+   of each recipient, analogous to the User-Agent and Server header fields.
+   However, all comments in the Via field are optional and &MAY; be removed
+   by any recipient prior to forwarding the message.
 </t>
 <t>
    For example, a request message could be sent from an HTTP/1.0 user
@@ -3528,18 +3560,17 @@ Host: www.example.org
   Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
 </artwork></figure>
 <t>
-   Proxies used as a portal through a network firewall
-   &SHOULD-NOT;, by default, forward the names and ports of hosts within
-   the firewall region. This information &SHOULD; only be propagated if
-   explicitly enabled. If not enabled, the received-by host of any host
-   behind the firewall &SHOULD; be replaced by an appropriate pseudonym
-   for that host.
+   A proxy or gateway used as a portal through a network firewall
+   &SHOULD-NOT; forward the names and ports of hosts within the firewall
+   region unless it is explicitly enabled to do so. If not enabled, the
+   received-by host of any host behind the firewall &SHOULD; be replaced
+   by an appropriate pseudonym for that host.
 </t>
 <t>
    For organizations that have strong privacy requirements for hiding
-   internal structures, a proxy &MAY; combine an ordered subsequence of
-   Via header field entries with identical received-protocol values into
-   a single such entry. For example,
+   internal structures, a proxy or gateway &MAY; combine an ordered
+   subsequence of Via header field entries with identical received-protocol
+   values into a single such entry. For example,
 </t>
 <figure><artwork type="example">
   Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
@@ -3551,9 +3582,9 @@ Host: www.example.org
   Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
 </artwork></figure>
 <t>
-   Applications &SHOULD-NOT;  combine multiple entries unless they are all
+   Senders &SHOULD-NOT; combine multiple entries unless they are all
    under the same organizational control and the hosts have already been
-   replaced by pseudonyms. Applications &MUST-NOT; combine entries which
+   replaced by pseudonyms. Senders &MUST-NOT; combine entries which
    have different received-protocol values.
 </t>
 </section>
