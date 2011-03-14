@@ -426,16 +426,16 @@
    BWS ("bad" whitespace). 
 </t>
 <t>
-   The OWS rule is used where zero or more linear whitespace characters might
-   appear. OWS &SHOULD; either not be produced or be produced as a single SP
-   character. Multiple OWS characters that occur within field-content &SHOULD;
+   The OWS rule is used where zero or more linear whitespace octets might
+   appear. OWS &SHOULD; either not be produced or be produced as a single
+   SP. Multiple OWS octets that occur within field-content &SHOULD;
    be replaced with a single SP before interpreting the field value or
    forwarding the message downstream.
 </t>
 <t>
-   RWS is used when at least one linear whitespace character is required to
-   separate field tokens. RWS &SHOULD; be produced as a single SP character.
-   Multiple RWS characters that occur within field-content &SHOULD; be
+   RWS is used when at least one linear whitespace octet is required to
+   separate field tokens. RWS &SHOULD; be produced as a single SP.
+   Multiple RWS octets that occur within field-content &SHOULD; be
    replaced with a single SP before interpreting the field value or
    forwarding the message downstream.
 </t>
@@ -502,15 +502,15 @@
 </artwork></figure>
 <t anchor="rule.quoted-pair">
   <x:anchor-alias value="quoted-pair"/>
-   The backslash character ("\") can be used as a single-character
+   The backslash octet ("\") can be used as a single-octet
    quoting mechanism within quoted-string constructs:
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
   <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
 </artwork></figure>
 <t>
-   Producers &SHOULD-NOT; escape characters that do not require escaping
-   (i.e., other than DQUOTE and the backslash character).
+   Senders &SHOULD-NOT; escape octets that do not require escaping
+   (i.e., other than DQUOTE and the backslash octet).
 </t>
 </section>
 
@@ -818,7 +818,7 @@ Content-Type: text/plain
 </artwork></figure>
 <t>
    The HTTP version number consists of two non-negative decimal integers
-   separated by the "." (period or decimal point) character.  The first
+   separated by a "." (period or decimal point).  The first
    number ("major version") indicates the HTTP messaging syntax, whereas
    the second number ("minor version") indicates the highest minor
    version to which the sender is at least conditionally compliant and
@@ -1132,7 +1132,7 @@ Content-Type: text/plain
 </section>
 </section>
 
-<section title="HTTP Message" anchor="http.message">
+<section title="Message Format" anchor="http.message">
 <x:anchor-alias value="generic-message"/>
 <x:anchor-alias value="message.types"/>
 <x:anchor-alias value="HTTP-message"/>
@@ -1142,7 +1142,7 @@ Content-Type: text/plain
 <iref item="header field"/>
 <t>
    All HTTP/1.1 messages consist of a start-line followed by a sequence of
-   characters in a format similar to the Internet Message Format
+   octets in a format similar to the Internet Message Format
    <xref target="RFC5322"/>: zero or more header fields (collectively
    referred to as the "headers" or the "header section"), an empty line
    indicating the end of the header section, and an optional message-body.
@@ -1167,13 +1167,14 @@ Content-Type: text/plain
   <x:ref>start-line</x:ref>      = <x:ref>Request-Line</x:ref> / <x:ref>Status-Line</x:ref>
 </artwork></figure>
 <t>
-   Whitespace (WSP) &MUST-NOT; be sent between the start-line and the first
-   header field. The presence of whitespace might be an attempt to trick a
-   noncompliant implementation of HTTP into ignoring that field or processing
-   the next line as a new request, either of which might result in security
-   issues when implementations within the request chain interpret the
-   same message differently. HTTP/1.1 servers &MUST; reject such a message
-   with a 400 (Bad Request) response.
+   Implementations &MUST-NOT; send whitespace between the start-line and
+   the first header field. The presence of such whitespace in a request
+   might be an attempt to trick a server into ignoring that field or
+   processing the line after it as a new request, either of which might
+   result in a security vulnerability if other implementations within
+   the request chain interpret the same message differently.
+   Likewise, the presence of such whitespace in a response might be
+   ignored by some clients or cause others to cease parsing.
 </t>
 
 <section title="Message Parsing Robustness" anchor="message.robustness">
@@ -1192,6 +1193,13 @@ Content-Type: text/plain
    the request message-body with a line-ending is desired, then the
    client &MUST; include the terminating CRLF octets as part of the
    message-body length. 
+</t>
+<t>
+   When a server listening only for HTTP request messages, or processing
+   what appears from the start-line to be an HTTP request message,
+   receives a sequence of octets that does not match the HTTP-message
+   grammar aside from the robustness exceptions listed above, the
+   server &MUST; respond with an HTTP/1.1 400 (Bad Request) response.  
 </t>
 <t>
    The normal procedure for parsing an HTTP message is to read the
@@ -1241,8 +1249,8 @@ Content-Type: text/plain
 <t>
    A field value &MAY; be preceded by optional whitespace (OWS); a single SP is
    preferred. The field value does not include any leading or trailing white
-   space: OWS occurring before the first non-whitespace character of the
-   field value or after the last non-whitespace character of the field value
+   space: OWS occurring before the first non-whitespace octet of the
+   field value or after the last non-whitespace octet of the field value
    is ignored and &SHOULD; be removed before further processing (as this does
    not change the meaning of the header field). 
 </t>
@@ -1282,7 +1290,7 @@ Content-Type: text/plain
 <t>
    Historically, HTTP header field values could be extended over multiple
    lines by preceding each extra line with at least one space or horizontal
-   tab character (line folding). This specification deprecates such line
+   tab octet (line folding). This specification deprecates such line
    folding except within the message/http media type
    (<xref target="internet.media.type.message.http"/>).
    HTTP/1.1 senders &MUST-NOT; produce messages that include line folding
@@ -1298,7 +1306,7 @@ Content-Type: text/plain
    character sets only through use of <xref target="RFC2047"/> encoding.
    In practice, most HTTP header field values use only a subset of the
    US-ASCII character encoding <xref target="USASCII"/>. Newly defined
-   header fields &SHOULD; limit their field values to US-ASCII characters.
+   header fields &SHOULD; limit their field values to US-ASCII octets.
    Recipients &SHOULD; treat other (obs-text) octets in field content as
    opaque data.
 </t>
@@ -1316,15 +1324,15 @@ Content-Type: text/plain
 </artwork></figure>
 <t anchor="rule.quoted-cpair">
   <x:anchor-alias value="quoted-cpair"/>
-   The backslash character ("\") can be used as a single-character
+   The backslash octet ("\") can be used as a single-octet
    quoting mechanism within comment constructs:
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-cpair"/>
   <x:ref>quoted-cpair</x:ref>    = "\" ( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
 </artwork></figure>
 <t>
-   Producers &SHOULD-NOT; escape characters that do not require escaping
-   (i.e., other than the backslash character "\" and the parentheses "(" and
+   Senders &SHOULD-NOT; escape octets that do not require escaping
+   (i.e., other than the backslash octet "\" and the parentheses "(" and
    ")").
 </t>
 </section>
@@ -1546,9 +1554,10 @@ Content-Type: text/plain
 <section title="Request" anchor="request">
   <x:anchor-alias value="Request"/>
 <t>
-   A request message from a client to a server includes, within the
-   first line of that message, the method to be applied to the resource,
-   the identifier of the resource, and the protocol version in use.
+   A request message from a client to a server begins with a
+   Request-Line, followed by zero or more header fields, an empty
+   line signifying the end of the header block, and an optional
+   message body.
 </t>
 <!--                 Host                      ; should be moved here eventually -->
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Request"/>
@@ -1561,10 +1570,9 @@ Content-Type: text/plain
 <section title="Request-Line" anchor="request-line">
   <x:anchor-alias value="Request-Line"/>
 <t>
-   The Request-Line begins with a method token, followed by the
-   request-target and the protocol version, and ending with CRLF. The
-   elements are separated by SP characters. No CR or LF is allowed
-   except in the final CRLF sequence.
+   The Request-Line begins with a method token, followed by a single
+   space (SP), the request-target, another single space (SP), the
+   protocol version, and ending with CRLF.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Request-Line"/>
   <x:ref>Request-Line</x:ref>   = <x:ref>Method</x:ref> <x:ref>SP</x:ref> <x:ref>request-target</x:ref> <x:ref>SP</x:ref> <x:ref>HTTP-Version</x:ref> <x:ref>CRLF</x:ref>
@@ -1786,7 +1794,7 @@ Host: www.example.org:8001
       connection,
     </t>
     <t>
-      the character sequence "://",
+      the octet sequence "://",
     </t>
     <t>
       the authority component, as specified in the Host header field
@@ -1862,9 +1870,9 @@ Host: www.example.org
   <x:anchor-alias value="Status-Line"/>
 <t>
    The first line of a Response message is the Status-Line, consisting
-   of the protocol version followed by a numeric status code and its
-   associated textual phrase, with each element separated by SP
-   characters. No CR or LF is allowed except in the final CRLF sequence.
+   of the protocol version, a space (SP), the status code, another space,
+   a possibly-empty textual phrase describing the status code, and
+   ending with CRLF.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Line"/>
   <x:ref>Status-Line</x:ref> = <x:ref>HTTP-Version</x:ref> <x:ref>SP</x:ref> <x:ref>Status-Code</x:ref> <x:ref>SP</x:ref> <x:ref>Reason-Phrase</x:ref> <x:ref>CRLF</x:ref>
@@ -2349,7 +2357,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <t>
    Product tokens &SHOULD; be short and to the point. They &MUST-NOT; be
    used for advertising or other non-essential information. Although any
-   token character &MAY; appear in a product-version, this token &SHOULD;
+   token octet &MAY; appear in a product-version, this token &SHOULD;
    only be used for a version identifier (i.e., successive versions of
    the same product &SHOULD; only differ in the product-version portion of
    the product value).
@@ -4846,18 +4854,12 @@ Acknowledgements TODO list
    interpreted unambiguously.
 </t>
 <t>
-   Clients &SHOULD; be tolerant in parsing the Status-Line and servers
-   &SHOULD; be tolerant when parsing the Request-Line. In particular, they
-   &SHOULD; accept any amount of WSP characters between fields, even though
-   only a single SP is required.
-</t>
-<t>
    The line terminator for header fields is the sequence CRLF.
    However, we recommend that applications, when parsing such headers fields,
    recognize a single LF as a line terminator and ignore the leading CR.
 </t>
 <t>
-   The character set of a representation &SHOULD; be labeled as the lowest
+   The character encoding of a representation &SHOULD; be labeled as the lowest
    common denominator of the character codes used within that representation, with
    the exception that not labeling the representation is preferred over labeling
    the representation with the labels US-ASCII or ISO-8859-1. See &payload;.
@@ -5026,7 +5028,7 @@ Acknowledgements TODO list
 <t>
   Rules about implicit linear whitespace between certain grammar productions
   have been removed; now it's only allowed when specifically pointed out
-  in the ABNF. The NUL character is no longer allowed in comment and quoted-string
+  in the ABNF. The NUL octet is no longer allowed in comment and quoted-string
   text. The quoted-pair rule no longer allows escaping control characters other than HTAB.
   Non-ASCII content in header fields and reason phrase has been obsoleted and
   made opaque (the TEXT rule was removed)
