@@ -13,7 +13,7 @@ echo ""
 for i in "$@"
 do
   $bap/bap -i $bap/core.abnf -n "$i" 
-done | tee foobar | \
+done | \
 	fgrep -v ", defined in [Part" | \
 	sort | uniq | \
 	$bap/bap -k -i $bap/core.abnf
