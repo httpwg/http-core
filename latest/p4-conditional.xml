@@ -224,6 +224,15 @@
    resource that has been changed unbeknownst to the requesting client.
 </t>
 <t>
+   We use the term "selected representation" to refer to the current
+   representation of the target resource that would have been selected
+   and sent as payload in a 200 (OK) response if the same request had used
+   the method GET and had excluded all of the conditional request header
+   fields.  The conditions found within conditional requests are evaluated
+   on the basis of either the state of the target resource as a whole or
+   the state of the target resource's selected representation.
+</t>
+<t>
    This document is currently disorganized in order to minimize the changes
    between drafts and enable reviewers to see the smaller errata changes.
    A future draft will reorganize the sections to better reflect the content.
@@ -328,17 +337,20 @@
 </t>
 <t>
    A "weak entity-tag", indicated by the "W/" prefix, &MAY; be shared by
-   two representations of a resource only if the representations are equivalent and
-   could be substituted for each other with no significant change in
-   semantics. A weak entity-tag can only be used for weak comparison.
+   two representations of a resource. A weak entity-tag can only be used
+   for weak comparison.
 </t>
 <t>
-   An entity-tag &MUST; be unique across all versions of all representations
-   associated with a particular resource. A given entity-tag value &MAY;
-   be used for representations obtained by requests on different URIs. The use
-   of the same entity-tag value in conjunction with representations obtained by
-   requests on different URIs does not imply the equivalence of those
-   representations.
+   Cache entries might persist for arbitrarily long periods, regardless
+   of expiration times, so it is inappropriate to expect that a cache will
+   never again attempt to validate an entry using a validator that it
+   obtained at some point in the past.
+   A strong entity-tag &MUST; be unique across all versions of all
+   representations associated with a particular resource over time.
+   However, there is no implication of uniqueness across entity-tags
+   of different resources (i.e., the same entity-tag value might be
+   in use for representations of multiple resources at the same time
+   and does not imply that those representations are equivalent).
 </t>
 
 <section title="Example: Entity-tags varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
@@ -401,11 +413,16 @@ Content-Encoding: gzip
   <iref primary="true" item="304 Not Modified (status code)" x:for-anchor=""/>
   <iref primary="true" item="Status Codes" subitem="304 Not Modified" x:for-anchor=""/>
 <t>
-   If the client has performed a conditional GET request and access is
-   allowed, but the document has not been modified, the server &SHOULD;
-   respond with this status code. The 304 response &MUST-NOT; contain a
-   message-body, and thus is always terminated by the first empty line
-   after the header fields.
+   The 304 status code indicates that a conditional GET request has been
+   received and would have resulted in a 200 (OK) response if it were not
+   for the fact that the condition has evaluated to false.  In other words,
+   there is no need for the server to transfer a representation of the
+   target resource because the client's request indicates that it already
+   has a valid representation, as indicated by the 304 response header
+   fields, and is therefore redirecting the client to make use of that
+   stored representation as if it were the payload of a 200 response.
+   The 304 response &MUST-NOT; contain a message-body, and thus is always
+   terminated by the first empty line after the header fields.
 </t>
 <t>
    A 304 response &MUST; include a Date header field (&header-date;)
@@ -422,13 +439,14 @@ Content-Encoding: gzip
    purpose of guiding cache updates (e.g., future HTTP extensions).
 </t>
 <t>
-   If a 304 response includes an entity-tag that indicates a
-   representation not currently cached, then the recipient &MUST-NOT;
-   use the 304 to update its own cache.  If that conditional request originated
-   with an outbound client, such as a user agent with its own cache sending a
-   conditional GET to a shared proxy, then the 304 response &MAY; be
-   forwarded to the outbound client.  Otherwise, disregard the response
-   and repeat the request without the conditional.
+   If the recipient of a 304 response does not have a cached representation
+   corresponding to the entity-tag indicated by the 304 response, then the
+   recipient &MUST-NOT; use the 304 to update its own cache.  If this
+   conditional request originated with an outbound client, such as a
+   user agent with its own cache sending a conditional GET to a shared
+   proxy, then the 304 response &MAY; be forwarded to the outbound client.
+   Otherwise, the recipient &MUST; disregard the 304 response and repeat
+   the request without any preconditions.
 </t>
 <t>
    If a cache uses a received 304 response to update a cache entry, the
@@ -441,11 +459,12 @@ Content-Encoding: gzip
   <iref primary="true" item="412 Precondition Failed (status code)" x:for-anchor=""/>
   <iref primary="true" item="Status Codes" subitem="412 Precondition Failed" x:for-anchor=""/>
 <t>
-   The precondition given in one or more of the header fields
-   evaluated to false when it was tested on the server. This response
-   code allows the client to place preconditions on the current resource
-   metadata (header field data) and thus prevent the requested
-   method from being applied to a resource other than the one intended.
+   The 412 status code indicates that one or more preconditions given in
+   the request header fields evaluated to false when tested on the server.
+   This response code allows the client to place preconditions on the
+   current resource state (its current representations and metadata)
+   and thus prevent the request method from being applied if the target
+   resource is in an unexpected state.
 </t>
 </section>
 </section>
@@ -453,31 +472,35 @@ Content-Encoding: gzip
 <section title="Weak and Strong Validators" anchor="weak.and.strong.validators">
 <t>
    Since both origin servers and caches will compare two validators to
-   decide if they represent the same or different representations, one normally
-   would expect that if the representation (including both representation
-   header fields and representation body) changes in any way, then the
-   associated validator would change as well. If this is true, then we
-   call this validator a "strong validator".
+   decide if they represent the same or different representations, one
+   normally would expect that if the representation (including both
+   representation header fields and representation body) changes in any
+   way, then the associated validator would change as well. If this is
+   true, then we call this validator a "strong validator".  One example
+   of a strong validator is an integer that is incremented in stable
+   storage every time a representation is changed.
 </t>
 <t>
    However, there might be cases when a server prefers to change the
-   validator only on semantically significant changes, and not when
-   insignificant aspects of the representation change. A validator that does not
-   always change when the representation changes is a "weak validator".
+   validator only when it desires cached representations to be invalidated.
+   For example, the representation of a weather report that changes in
+   content every second, based on dynamic measurements, might be grouped
+   into sets of equivalent representations (from the origin server's
+   perspective) in order to allow cached representations to be valid
+   for a reasonable period of time (perhaps adjusted dynamically based
+   on server load or weather quality).
+   A validator that does not always change when the representation
+   changes is a "weak validator".
 </t>
 <t>
    An entity-tag is normally a strong validator, but the protocol
-   provides a mechanism to tag an entity-tag as "weak". One can think of
-   a strong validator as one that changes whenever the sequence of bits
-   in a representation changes, while a weak value changes whenever the
-   meaning of a representation changes. Alternatively, one can think of
-   a strong validator as part of an identifier for a specific representation,
-   whereas a weak validator is part of an identifier for a set of semantically
-   equivalent representations.
+   provides a mechanism to tag an entity-tag as "weak". One can think
+   of a strong validator as part of an identifier for a specific
+   representation, whereas a weak validator is part of an identifier
+   for a set of equivalent representations (where this notion of
+   equivalence is entirely governed by the origin server and beyond
+   the scope of this specification).
   <list><t>
-      <x:h>Note:</x:h> One example of a strong validator is an integer that is
-      incremented in stable storage every time a representation is changed.
-    </t><t>
       A representation's modification time, if defined with only one-second
       resolution, could be a weak validator, since it is possible that
       the representation might be modified twice during a single second.
@@ -490,6 +513,13 @@ Content-Encoding: gzip
     </t></list>
 </t>
 <t>
+   A strong entity-tag &MUST; change whenever the associated representation
+   changes in any way. A weak entity-tag &SHOULD; change whenever the origin
+   server considers prior representations to be unacceptable as a substitute
+   for the current representation. In other words, a weak entity tag &SHOULD;
+   change whenever the origin server wants caches to invalidate old responses.
+</t>
+<t>
    A "use" of a validator is either when a client generates a request
    and includes the validator in a validating header field, or when a
    server compares two validators.
@@ -498,12 +528,10 @@ Content-Encoding: gzip
    Strong validators are usable in any context. Weak validators are only
    usable in contexts that do not depend on exact equality of a representation.
    For example, either kind is usable for a normal conditional GET.
-   However, only a strong validator is usable for a sub-range
-   retrieval, since otherwise the client might end up with an internally
-   inconsistent representation.
-</t>
-<t>
-   Clients &MUST-NOT; use weak validators in range requests (<xref target="Part5"/>). 
+   However, only a strong validator is usable for range retrieval
+   (<xref target="Part5"/>), since otherwise the client might end up
+   with an internally inconsistent representation.
+   Clients &MUST-NOT; use weak validators in range requests.
 </t>
 <t>
    The only function that HTTP/1.1 defines on validators is
@@ -634,34 +662,13 @@ Content-Encoding: gzip
         performance considerations support the use of weak entity-tags,
         or if it is unfeasible to send a strong entity-tag.</t>
 
-     <t>&SHOULD; send a Last-Modified value if it is feasible to send one,
-        unless the risk of a breakdown in semantic transparency that
-        could result from using this date in an If-Modified-Since header
-        field would lead to serious problems.</t>
+     <t>&SHOULD; send a Last-Modified value if it is feasible to send one.</t>
   </list>
 </t>
 <t>
    In other words, the preferred behavior for an HTTP/1.1 origin server
    is to send both a strong entity-tag and a Last-Modified value.
 </t>
-<t>
-   In order to be legitimate, a strong entity-tag &MUST; change whenever the
-   associated representation changes in any way. A weak entity-tag &SHOULD;
-   change whenever the associated representation changes in a semantically
-   significant way.
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> In order to provide semantically transparent caching, an
-    origin server must avoid reusing a specific strong entity-tag
-    value for two different representations, or reusing a specific weak
-    entity-tag value for two semantically different representations. Cache
-    entries might persist for arbitrarily long periods, regardless of
-    expiration times, so it might be inappropriate to expect that a
-    cache will never again attempt to validate an entry using a
-    validator that it obtained at some point in the past.
-  </t>
-</x:note>
 <t>
    HTTP/1.1 clients:
   <list style="symbols">
@@ -773,37 +780,32 @@ Content-Encoding: gzip
   <x:anchor-alias value="If-Match"/>
   <x:anchor-alias value="If-Match-v"/>
 <t>
-   The "If-Match" header field is used to make a request method
-   conditional. A client that has one or more representations previously
-   obtained from the resource can verify that one of those representations is
-   current by including a list of their associated entity-tags in the
-   If-Match header field.
-</t>
-<t>
-   This allows efficient updates of cached information with a minimum amount of
-   transaction overhead. It is also used when updating resources, to prevent
-   inadvertent modification of the wrong version of a resource. As a special
-   case, the value "*" matches any current representation of the resource.
+   The "If-Match" header field &MAY; be used to make a request method
+   conditional on the current existence or value of an entity-tag for
+   one or more representations of the target resource.  If-Match is
+   generally useful for resource update requests, such as PUT requests,
+   as a means for protecting against accidental overwrites when multiple
+   clients are acting in parallel on the same resource (i.e., the
+   "lost update" problem).  An If-Match field-value of "*" places the
+   precondition on the existence of any current representation for the
+   target resource.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Match"/><iref primary="true" item="Grammar" subitem="If-Match-v"/>
   <x:ref>If-Match</x:ref>   = "If-Match" ":" <x:ref>OWS</x:ref> <x:ref>If-Match-v</x:ref>
   <x:ref>If-Match-v</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
 </artwork></figure>
 <t>
-   If any of the entity-tags match the entity-tag of the representation that
-   would have been returned in the response to a similar GET request
-   (without the If-Match header field) on that resource, or if "*" is given
-   and any current representation exists for that resource, then the server &MAY;
-   perform the requested method as if the If-Match header field did not
-   exist.
+   If any of the entity-tags listed in the If-Match field value match
+   the entity-tag of the selected representation for the target resource,
+   or if "*" is given and any current representation exists for the
+   target resource, then the server &MAY; perform the request method
+   as if the If-Match header field was not present.
 </t>
 <t>
    If none of the entity-tags match, or if "*" is given and no current
-   representation exists, the server &MUST-NOT; perform the requested method, and
-   &MUST; return a 412 (Precondition Failed) response. This behavior is
-   most useful when the client wants to prevent an updating request method,
-   such as PUT, from modifying a resource that has changed since the client
-   last retrieved it.
+   representation exists, the server &MUST-NOT; perform the requested method.
+   Instead, the server &MUST; respond with the 412 (Precondition Failed)
+   status code.
 </t>
 <t>
    If the request would, without the If-Match header field, result in
@@ -811,18 +813,6 @@ Content-Encoding: gzip
    &MUST; be ignored.
 </t>
 <t>
-   The meaning of "If-Match: *" is that the request method &SHOULD; be performed
-   if the representation selected by the origin server (or by a cache,
-   possibly using the Vary mechanism, see &header-vary;) exists, and
-   &MUST-NOT; be performed if the representation does not exist.
-</t>
-<t>
-   A request intended to update a resource (e.g., a PUT) &MAY; include an
-   If-Match header field to signal that the request method &MUST-NOT; be
-   applied if the representation corresponding to the If-Match value (a single
-   entity-tag) is no longer a representation of that resource. This
-   allows the user to indicate that they do not wish the request to be
-   successful if the resource has been changed without their knowledge.
    Examples:
 </t>
 <figure><artwork type="example">
@@ -843,11 +833,10 @@ Content-Encoding: gzip
   <x:anchor-alias value="If-Modified-Since"/>
   <x:anchor-alias value="If-Modified-Since-v"/>
 <t>
-   The "If-Modified-Since" header field is used to make a request 
-   method conditional by date: if the representation that would have been
-   transferred in a 200 response to a GET request has not been modified since
-   the time specified in this field, then do not perform the method;
-   instead, respond as detailed below.
+   The "If-Modified-Since" header field &MAY; be used to make a request 
+   method conditional by modification date: if the selected representation
+   has not been modified since the time specified in this field, then
+   do not perform the request method; instead, respond as detailed below.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Modified-Since"/><iref primary="true" item="Grammar" subitem="If-Modified-Since-v"/>
   <x:ref>If-Modified-Since</x:ref>   = "If-Modified-Since" ":" <x:ref>OWS</x:ref>
@@ -862,8 +851,9 @@ Content-Encoding: gzip
 </artwork></figure>
 <t>
    A GET method with an If-Modified-Since header field and no Range header
-   field requests that the representation be transferred only if it has
-   been modified since the date given by the If-Modified-Since header field.
+   field requests that the selected representation be transferred only if
+   it has been modified since the date given by the If-Modified-Since
+   header field.
    The algorithm for determining this includes the following cases:
   <list style="numbers">
       <t>If the request would normally result in anything other than a
@@ -872,10 +862,11 @@ Content-Encoding: gzip
          A date which is later than the server's current time is
          invalid.</t>
 
-      <t>If the representation has been modified since the If-Modified-Since
-         date, the response is exactly the same as for a normal GET.</t>
+      <t>If the selected representation has been modified since the
+         If-Modified-Since date, the response is exactly the same as for
+         a normal GET.</t>
 
-      <t>If the representation has not been modified since a valid
+      <t>If the selected representation has not been modified since a valid
          If-Modified-Since date, the server &SHOULD; return a
          304 (Not Modified) response.</t>
   </list>
@@ -928,39 +919,38 @@ Content-Encoding: gzip
   <x:anchor-alias value="If-None-Match"/>
   <x:anchor-alias value="If-None-Match-v"/>
 <t>
-   The "If-None-Match" header field is used to make a request method
-   conditional. A client that has one or more representations previously
-   obtained from the resource can verify that none of those representations is
-   current by including a list of their associated entity-tags in the
-   If-None-Match header field.
+   The "If-None-Match" header field &MAY; be used to make a request method
+   conditional on not matching any of the current entity-tag values for
+   representations of the target resource.  If-None-Match is primarily
+   used in conditional GET requests to enable efficient updates of cached
+   information with a minimum amount of transaction overhead.  A client
+   that has one or more representations previously obtained from the
+   target resource can send If-None-Match with a list of the associated
+   entity-tags in the hope of receiving a 304 response if at least one
+   of those representations matches the selected representation.
 </t>
 <t>
-   This allows efficient updates of cached information with a minimum amount of
-   transaction overhead. It is also used to prevent a request method (e.g., PUT)
-   from inadvertently modifying an existing resource when the client
-   believes that the resource does not exist.
-</t>
-<t>
-   As a special case, the value "*" matches any current representation of the
-   resource.
+   If-None-Match MAY also be used with a value of "*" to prevent an unsafe
+   request method (e.g., PUT) from inadvertently modifying an existing
+   representation of the target resource when the client believes that
+   the resource does not have a current representation.  This is a variation
+   on the "lost update" problem that might arise if more than one client
+   attempts to create an initial representation for the target resource.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-None-Match"/><iref primary="true" item="Grammar" subitem="If-None-Match-v"/>
   <x:ref>If-None-Match</x:ref>   = "If-None-Match" ":" <x:ref>OWS</x:ref> <x:ref>If-None-Match-v</x:ref>
   <x:ref>If-None-Match-v</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
 </artwork></figure>
 <t>
-   If any of the entity-tags match the entity-tag of the representation that
-   would have been returned in the response to a similar GET request
-   (without the If-None-Match header field) on that resource, or if "*" is
+   If any of the entity-tags listed in the If-None-Match field-value match
+   the entity-tag of the selected representation, or if "*" is
    given and any current representation exists for that resource, then the
-   server &MUST-NOT; perform the requested method, unless required to do
-   so because the resource's modification date fails to match that
-   supplied in an If-Modified-Since header field in the request.
+   server &MUST-NOT; perform the requested method.
    Instead, if the request method was GET or HEAD, the server &SHOULD;
-   respond with a 304 (Not Modified) response, including the cache-related
-   header fields (particularly ETag) of one of the representations that
-   matched. For all other request methods, the server &MUST; respond with
-   a 412 (Precondition Failed) status code.
+   respond with a 304 (Not Modified) status code, including the cache-related
+   header fields (particularly ETag) of the selected representation that has
+   a matching entity-tag.  For all other request methods, the server &MUST;
+   respond with a 412 (Precondition Failed) status code.
 </t>
 <t>
    If none of the entity-tags match, then the server &MAY; perform the
@@ -972,17 +962,10 @@ Content-Encoding: gzip
 <t>
    If the request would, without the If-None-Match header field, result
    in anything other than a 2xx or 304 status code, then the If-None-Match
-   header field &MUST; be ignored. (See <xref target="rules.for.when.to.use.entity.tags.and.last-modified.dates"/> for a discussion of
-   server behavior when both If-Modified-Since and If-None-Match appear
-   in the same request.)
-</t>
-<t>
-   The meaning of "If-None-Match: *" is that the request method &MUST-NOT; be
-   performed if the representation selected by the origin server (or by
-   a cache, possibly using the Vary mechanism, see &header-vary;)
-   exists, and &SHOULD; be performed if the representation does not exist.
-   This feature is intended to be useful in preventing races between PUT
-   operations.
+   header field &MUST; be ignored. (See <xref
+   target="rules.for.when.to.use.entity.tags.and.last-modified.dates"/> for
+   a discussion of server behavior when both If-Modified-Since and
+   If-None-Match appear in the same request.)
 </t>
 <t>
    Examples:
@@ -1007,17 +990,14 @@ Content-Encoding: gzip
   <x:anchor-alias value="If-Unmodified-Since"/>
   <x:anchor-alias value="If-Unmodified-Since-v"/>
 <t>
-   The "If-Unmodified-Since" header field is used to make a request
-   method conditional.  If the representation that would have been transferred
-   in a 200 response to a GET request on the same resource has not been modified
-   since the time specified in this field, the server &SHOULD; perform the
-   requested operation as if the If-Unmodified-Since header field were not
-   present.
-</t>
-<t>
-   If the representation has been modified since the specified time,
-   the server &MUST-NOT; perform the requested operation, and &MUST; return
-   a 412 (Precondition Failed).
+   The "If-Unmodified-Since" header field &MAY; be used to make a request
+   method conditional by modification date: if the selected representation
+   has been modified since the time specified in this field, then the
+   server &MUST-NOT; perform the requested operation and &MUST; instead
+   respond with the 412 (Precondition Failed) status code.
+   If the selected representation has not been modified since the time
+   specified in this field, the server &SHOULD; perform the request
+   method as if the If-Unmodified-Since header field were not present.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Unmodified-Since"/><iref primary="true" item="Grammar" subitem="If-Unmodified-Since-v"/>
   <x:ref>If-Unmodified-Since</x:ref>   = "If-Unmodified-Since" ":" <x:ref>OWS</x:ref>
@@ -1036,7 +1016,7 @@ Content-Encoding: gzip
    the If-Unmodified-Since header field &SHOULD; be ignored.
 </t>
 <t>
-   If the specified date is invalid, the header field is ignored.
+   If the specified date is invalid, the header field &MUST; be ignored.
 </t>
 <t>
    The result of a request having both an If-Unmodified-Since header
