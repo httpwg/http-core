@@ -215,34 +215,36 @@
 <middle>
 <section title="Introduction" anchor="introduction">
 <t>
-   This document defines HTTP/1.1 response metadata for indicating potential
-   changes to payload content, including modification time stamps and opaque
-   entity-tags, and the HTTP conditional request mechanisms that allow
-   preconditions to be placed on a request method.  Conditional GET requests
-   allow for efficient cache updates.  Other conditional request methods are
-   used to protect against overwriting or misunderstanding the state of a
-   resource that has been changed unbeknownst to the requesting client.
-</t>
-<t><iref primary="true" item="selected representation"/>
-   We use the term "<x:dfn>selected representation</x:dfn>" to refer to the current
-   representation of the target resource that would have been selected
-   and sent as payload in a 200 (OK) response if the same request had used
-   the method GET and had excluded all of the conditional request header
-   fields.  The conditions found within conditional requests are evaluated
-   on the basis of either the state of the target resource as a whole or
-   the state of the target resource's selected representation.
+   This document defines the HTTP/1.1 conditional request mechanisms,
+   including both response metadata that can be used to indicate or
+   observe changes to resource state and request header fields that
+   specify preconditions to be checked before performing the action
+   given by the request method.  Conditional GET requests are the most
+   efficient mechanism for HTTP cache updates.  Conditionals can be
+   applied to state-changing methods, such as PUT and DELETE, to prevent
+   the "lost update" problem: one client accidentally overwriting
+   the work of another client that has been acting in parallel.
 </t>
 <t>
-   This document is currently disorganized in order to minimize the changes
-   between drafts and enable reviewers to see the smaller errata changes.
-   A future draft will reorganize the sections to better reflect the content.
-   In particular, the sections on resource metadata will be discussed first
-   and then followed by each conditional request header field, concluding with a
-   definition of precedence and the expectation of ordering strong validator
-   checks before weak validator checks.  It is likely that more content from
-   &caching; will migrate to this part, where appropriate.
-   The current mess reflects how widely dispersed these topics and associated
-   requirements had become in <xref target="RFC2616"/>.
+   Conditional request preconditions are based on the state of the target
+   resource as a whole (its current value set) or the state as observed
+   in a previously obtained representation (one value in that set).
+   A resource might have multiple current representations, each with its
+   own observable state.  The conditional request mechanisms assume that
+   the mapping of requests to corresponding representations will be
+   consistent over time if the server intends to take advantage of
+   conditionals.  Regardless, if the mapping is inconsistent and
+   the server is unable to select the appropriate representation, then
+   no harm will result when the precondition evaluates to false.
+</t>
+<t><iref primary="true" item="selected representation"/>
+   We use the term "<x:dfn>selected representation</x:dfn>" to refer to
+   the current representation of the target resource that would have been
+   selected in a successful response if the same request had used the method
+   GET and had excluded all of the conditional request header fields.
+   The conditional request preconditions are evaluated by comparing the
+   values provided in the request header fields to the current metadata
+   for the selected representation.
 </t>
 
 <section title="Requirements" anchor="intro.requirements">
@@ -270,6 +272,10 @@
   <x:anchor-alias value="OCTET"/>
   <x:anchor-alias value="VCHAR"/>
   <x:anchor-alias value="WSP"/>
+  <x:anchor-alias value="core.rules"/>
+  <x:anchor-alias value="quoted-string"/>
+  <x:anchor-alias value="OWS"/>
+  <x:anchor-alias value="HTTP-date"/>
 <t>
   This specification uses the ABNF syntax defined in &notation; (which
   extends the syntax defined in <xref target="RFC5234"/> with a list rule).
@@ -286,34 +292,27 @@
   VCHAR (any visible USASCII character),
   and WSP (whitespace).
 </t>
-
-<section title="Core Rules" anchor="core.rules">
-  <x:anchor-alias value="quoted-string"/>
-  <x:anchor-alias value="OWS"/>
 <t>
-  The core rules below are defined in &basic-rules;:
+  The ABNF rules below are defined in other parts:
 </t>
 <figure><artwork type="abnf2616">
   <x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in &basic-rules;&gt;
   <x:ref>OWS</x:ref>           = &lt;OWS, defined in &basic-rules;&gt;
-</artwork></figure>
-</section>
-
-<section title="ABNF Rules defined in other Parts of the Specification" anchor="abnf.dependencies">
-  <x:anchor-alias value="HTTP-date"/>
-<t>
-  The ABNF rules below are defined in other parts: 
-</t>
-<figure><!--Part1--><artwork type="abnf2616">
   <x:ref>HTTP-date</x:ref>     = &lt;HTTP-date, defined in &full-date;&gt;
 </artwork></figure>
 </section>
-
 </section>
 
-</section>
+<section title="Resource State Metadata" anchor="resource.metadata">
+<t>
+   This specification defines two forms of metadata that are commonly used
+   to observe resource state and test for preconditions: modification dates
+   and opaque entity tags.  Additional metadata that reflects resource state
+   has been defined by various extensions of HTTP, such as WebDAV
+   <xref target="RFC4918"/>, that are beyond the scope of this specification.
+</t>
 
-<section title="Entity-Tags" anchor="entity.tags">
+<section title="Entity Tags" anchor="entity.tags">
   <x:anchor-alias value="entity-tag"/>
   <x:anchor-alias value="opaque-tag"/>
   <x:anchor-alias value="weak"/>
@@ -405,6 +404,7 @@ Content-Encoding: gzip
     apply only during message transfer and do not require distinct entity-tags.
   </t>
 </x:note>
+</section>
 </section>
 </section>
 
@@ -1444,6 +1444,17 @@ Content-Encoding: gzip
   <seriesInfo name='RFC' value='3864' />
 </reference>
 
+<reference anchor='RFC4918'>
+  <front>
+    <title>HTTP Extensions for Web Distributed Authoring and Versioning (WebDAV)</title>
+    <author initials="L.M." surname="Dusseault" fullname="Lisa Dusseault" role="editor" >
+      <organization abbrev="CommerceNet">CommerceNet</organization>
+      <address><email>ldusseault@commerce.net</email></address>
+    </author>
+    <date month="June" year="2007" />
+  </front>
+  <seriesInfo name='RFC' value='4918' />
+</reference>
 </references>
 
 <section title="Changes from RFC 2616" anchor="changes.from.rfc.2616">
