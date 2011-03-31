@@ -220,7 +220,7 @@
    observe changes to resource state and request header fields that
    specify preconditions to be checked before performing the action
    given by the request method.  Conditional GET requests are the most
-   efficient mechanism for HTTP cache updates.  Conditionals can be
+   efficient mechanism for HTTP cache updates &caching;.  Conditionals can be
    applied to state-changing methods, such as PUT and DELETE, to prevent
    the "lost update" problem: one client accidentally overwriting
    the work of another client that has been acting in parallel.
@@ -303,14 +303,69 @@
 </section>
 </section>
 
-<section title="Resource State Metadata" anchor="resource.metadata">
+<section title="Resource State Metadata (Validators)" anchor="resource.metadata">
+   <iref primary="true" item="metadata"/>
+   <iref primary="true" item="validator"/>
 <t>
    This specification defines two forms of metadata that are commonly used
    to observe resource state and test for preconditions: modification dates
    and opaque entity tags.  Additional metadata that reflects resource state
    has been defined by various extensions of HTTP, such as WebDAV
    <xref target="RFC4918"/>, that are beyond the scope of this specification.
+   Such metadata is referred to as a "<x:dfn>validator</x:dfn>" when it is
+   used within a precondition.
 </t>
+
+<section title="Last-Modified" anchor="header.last-modified">
+  <iref primary="true" item="Last-Modified header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Last-Modified" x:for-anchor=""/>
+  <x:anchor-alias value="Last-Modified"/>
+<t>
+   The "Last-Modified" header field indicates the date and time at
+   which the origin server believes the representation was last modified.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
+  <x:ref>Last-Modified</x:ref> = <x:ref>HTTP-date</x:ref>
+</artwork></figure>
+<t>
+   An example of its use is
+</t>
+<figure><artwork type="example">
+  Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
+</artwork></figure>
+<t>
+   A representation is typically the sum of many parts behind the
+   resource interface.  The last-modified time would usually be
+   the most recent time that any of those parts were changed.
+   How that value is determined for any given resource is an
+   implementation detail beyond the scope of this specification.
+   What matters to HTTP is how recipients of the Last-Modified
+   header field can use its value to make conditional requests
+   and test the validity of locally cached responses.
+</t>
+<t>
+   An origin server &MUST-NOT; send a Last-Modified date which is later
+   than the server's time of message origination. In such cases, where
+   the resource's last modification would indicate some time in the
+   future, the server &MUST; replace that date with the message
+   origination date.
+</t>
+<t>
+   An origin server &SHOULD; obtain the Last-Modified value of the representation
+   as close as possible to the time that it generates the Date value of
+   its response. This allows a recipient to make an accurate assessment
+   of the representation's modification time, especially if the representation changes
+   near the time that the response is generated.
+</t>
+<t>
+   HTTP/1.1 servers &SHOULD; send Last-Modified whenever feasible.
+</t>
+<t>
+   The Last-Modified header field value is often used as a cache
+   validator. In simple terms, a cache entry is considered to be valid
+   if the representation has not been modified since the Last-Modified value.
+</t>
+</section>
 
 <section title="Entity Tags" anchor="entity.tags">
   <x:anchor-alias value="entity-tag"/>
@@ -351,6 +406,48 @@
    in use for representations of multiple resources at the same time
    and does not imply that those representations are equivalent).
 </t>
+
+<section title="ETag" anchor="header.etag">
+  <iref primary="true" item="ETag header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/>
+  <x:anchor-alias value="ETag"/>
+<t>
+   The "ETag" header field provides the current value of the
+   entity-tag (see <xref target="entity.tags"/>) for one representation of
+   the target resource.  An entity-tag
+   is intended for use as a resource-local identifier for differentiating
+   between representations of the same resource that vary over time or via
+   content negotiation (see <xref target="weak.and.strong.validators"/>).
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/>
+  <x:ref>ETag</x:ref> = <x:ref>entity-tag</x:ref>
+</artwork></figure>
+<figure><preamble>
+  Examples:
+</preamble>
+<artwork type="example">
+  ETag: "xyzzy"
+  ETag: W/"xyzzy"
+  ETag: ""
+</artwork></figure>
+<t>
+   An entity-tag provides an "opaque" cache validator that allows for
+   more reliable validation than modification dates in situations where
+   it is inconvenient to store modification dates,
+   where the one-second resolution of HTTP date values is not
+   sufficient, or where the origin server wishes to avoid certain
+   paradoxes that might arise from the use of modification dates.
+</t>
+<t>
+   The principle behind entity-tags is that only the service author
+   knows the semantics of a resource well enough to select an
+   appropriate cache validation mechanism, and the specification of any
+   validator comparison function more complex than byte-equality would
+   open up a can of worms. Thus, comparisons of any other header fields
+   (except Last-Modified, for compatibility with HTTP/1.0) are never
+   used for purposes of validating a cache entry.
+</t>
+</section>
 
 <section title="Example: Entity-tags varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
 <t>
@@ -404,68 +501,6 @@ Content-Encoding: gzip
     apply only during message transfer and do not require distinct entity-tags.
   </t>
 </x:note>
-</section>
-</section>
-</section>
-
-<section title="Status Code Definitions" anchor="status.code.definitions">
-<section title="304 Not Modified" anchor="status.304">
-  <iref primary="true" item="304 Not Modified (status code)" x:for-anchor=""/>
-  <iref primary="true" item="Status Codes" subitem="304 Not Modified" x:for-anchor=""/>
-<t>
-   The 304 status code indicates that a conditional GET request has been
-   received and would have resulted in a 200 (OK) response if it were not
-   for the fact that the condition has evaluated to false.  In other words,
-   there is no need for the server to transfer a representation of the
-   target resource because the client's request indicates that it already
-   has a valid representation, as indicated by the 304 response header
-   fields, and is therefore redirecting the client to make use of that
-   stored representation as if it were the payload of a 200 response.
-   The 304 response &MUST-NOT; contain a message-body, and thus is always
-   terminated by the first empty line after the header fields.
-</t>
-<t>
-   A 304 response &MUST; include a Date header field (&header-date;)
-   unless its omission is required by &clockless;.  If a 200 response
-   to the same request would have included any of the header fields
-   Cache-Control, Content-Location, ETag, Expires, Last-Modified, or
-   Vary, then those same header fields &MUST; be sent in a 304 response.
-</t>
-<t>
-   Since the goal of a 304 response is to minimize information transfer
-   when the recipient already has one or more cached representations,
-   the response &SHOULD-NOT; include representation metadata other
-   than the above listed fields unless said metadata exists for the
-   purpose of guiding cache updates (e.g., future HTTP extensions).
-</t>
-<t>
-   If the recipient of a 304 response does not have a cached representation
-   corresponding to the entity-tag indicated by the 304 response, then the
-   recipient &MUST-NOT; use the 304 to update its own cache.  If this
-   conditional request originated with an outbound client, such as a
-   user agent with its own cache sending a conditional GET to a shared
-   proxy, then the 304 response &MAY; be forwarded to the outbound client.
-   Otherwise, the recipient &MUST; disregard the 304 response and repeat
-   the request without any preconditions.
-</t>
-<t>
-   If a cache uses a received 304 response to update a cache entry, the
-   cache &MUST; update the entry to reflect any new field values given in
-   the response.
-</t>
-</section>
-
-<section title="412 Precondition Failed" anchor="status.412">
-  <iref primary="true" item="412 Precondition Failed (status code)" x:for-anchor=""/>
-  <iref primary="true" item="Status Codes" subitem="412 Precondition Failed" x:for-anchor=""/>
-<t>
-   The 412 status code indicates that one or more preconditions given in
-   the request header fields evaluated to false when tested on the server.
-   This response code allows the client to place preconditions on the
-   current resource state (its current representations and metadata)
-   and thus prevent the request method from being applied if the target
-   resource is in an unexpected state.
-</t>
 </section>
 </section>
 
@@ -724,53 +759,13 @@ Content-Encoding: gzip
 </t>
 </section>
 
-<section title="Header Field Definitions" anchor="header.fields">
+</section>
+
+<section title="Precondition Header Fields" anchor="header.fields">
 <t>
    This section defines the syntax and semantics of HTTP/1.1 header fields
-   related to conditional requests.
+   for applying preconditions on requests.
 </t>
-
-<section title="ETag" anchor="header.etag">
-  <iref primary="true" item="ETag header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/>
-  <x:anchor-alias value="ETag"/>
-<t>
-   The "ETag" header field provides the current value of the
-   entity-tag (see <xref target="entity.tags"/>) for one representation of
-   the target resource.  An entity-tag
-   is intended for use as a resource-local identifier for differentiating
-   between representations of the same resource that vary over time or via
-   content negotiation (see <xref target="weak.and.strong.validators"/>).
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/>
-  <x:ref>ETag</x:ref> = <x:ref>entity-tag</x:ref>
-</artwork></figure>
-<figure><preamble>
-  Examples:
-</preamble>
-<artwork type="example">
-  ETag: "xyzzy"
-  ETag: W/"xyzzy"
-  ETag: ""
-</artwork></figure>
-<t>
-   An entity-tag provides an "opaque" cache validator that allows for
-   more reliable validation than modification dates in situations where
-   it is inconvenient to store modification dates,
-   where the one-second resolution of HTTP date values is not
-   sufficient, or where the origin server wishes to avoid certain
-   paradoxes that might arise from the use of modification dates.
-</t>
-<t>
-   The principle behind entity-tags is that only the service author
-   knows the semantics of a resource well enough to select an
-   appropriate cache validation mechanism, and the specification of any
-   validator comparison function more complex than byte-equality would
-   open up a can of worms. Thus, comparisons of any other header fields
-   (except Last-Modified, for compatibility with HTTP/1.0) are never
-   used for purposes of validating a cache entry.
-</t>
-</section>
 
 <section title="If-Match" anchor="header.if-match">
   <iref primary="true" item="If-Match header field" x:for-anchor=""/>
@@ -819,6 +814,75 @@ Content-Encoding: gzip
 <t>
    The result of a request having both an If-Match header field and
    either an If-None-Match or an If-Modified-Since header fields is
+   undefined by this specification.
+</t>
+</section>
+
+<section title="If-None-Match" anchor="header.if-none-match">
+  <iref primary="true" item="If-None-Match header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="If-None-Match" x:for-anchor=""/>
+  <x:anchor-alias value="If-None-Match"/>
+<t>
+   The "If-None-Match" header field &MAY; be used to make a request method
+   conditional on not matching any of the current entity-tag values for
+   representations of the target resource.  If-None-Match is primarily
+   used in conditional GET requests to enable efficient updates of cached
+   information with a minimum amount of transaction overhead.  A client
+   that has one or more representations previously obtained from the
+   target resource can send If-None-Match with a list of the associated
+   entity-tags in the hope of receiving a 304 response if at least one
+   of those representations matches the selected representation.
+</t>
+<t>
+   If-None-Match MAY also be used with a value of "*" to prevent an unsafe
+   request method (e.g., PUT) from inadvertently modifying an existing
+   representation of the target resource when the client believes that
+   the resource does not have a current representation.  This is a variation
+   on the "lost update" problem that might arise if more than one client
+   attempts to create an initial representation for the target resource.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-None-Match"/>
+  <x:ref>If-None-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
+</artwork></figure>
+<t>
+   If any of the entity-tags listed in the If-None-Match field-value match
+   the entity-tag of the selected representation, or if "*" is
+   given and any current representation exists for that resource, then the
+   server &MUST-NOT; perform the requested method.
+   Instead, if the request method was GET or HEAD, the server &SHOULD;
+   respond with a 304 (Not Modified) status code, including the cache-related
+   header fields (particularly ETag) of the selected representation that has
+   a matching entity-tag.  For all other request methods, the server &MUST;
+   respond with a 412 (Precondition Failed) status code.
+</t>
+<t>
+   If none of the entity-tags match, then the server &MAY; perform the
+   requested method as if the If-None-Match header field did not exist,
+   but &MUST; also ignore any If-Modified-Since header field(s) in the
+   request. That is, if no entity-tags match, then the server &MUST-NOT;
+   return a 304 (Not Modified) response.
+</t>
+<t>
+   If the request would, without the If-None-Match header field, result
+   in anything other than a 2xx or 304 status code, then the If-None-Match
+   header field &MUST; be ignored. (See <xref
+   target="rules.for.when.to.use.entity.tags.and.last-modified.dates"/> for
+   a discussion of server behavior when both If-Modified-Since and
+   If-None-Match appear in the same request.)
+</t>
+<t>
+   Examples:
+</t>
+<figure><artwork type="example">
+  If-None-Match: "xyzzy"
+  If-None-Match: W/"xyzzy"
+  If-None-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
+  If-None-Match: W/"xyzzy", W/"r2d2xxxx", W/"c3piozzzz"
+  If-None-Match: *
+</artwork></figure>
+<t>
+   The result of a request having both an If-None-Match header field and
+   either an If-Match or an If-Unmodified-Since header fields is
    undefined by this specification.
 </t>
 </section>
@@ -906,75 +970,6 @@ Content-Encoding: gzip
 </t>
 </section>
 
-<section title="If-None-Match" anchor="header.if-none-match">
-  <iref primary="true" item="If-None-Match header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="If-None-Match" x:for-anchor=""/>
-  <x:anchor-alias value="If-None-Match"/>
-<t>
-   The "If-None-Match" header field &MAY; be used to make a request method
-   conditional on not matching any of the current entity-tag values for
-   representations of the target resource.  If-None-Match is primarily
-   used in conditional GET requests to enable efficient updates of cached
-   information with a minimum amount of transaction overhead.  A client
-   that has one or more representations previously obtained from the
-   target resource can send If-None-Match with a list of the associated
-   entity-tags in the hope of receiving a 304 response if at least one
-   of those representations matches the selected representation.
-</t>
-<t>
-   If-None-Match MAY also be used with a value of "*" to prevent an unsafe
-   request method (e.g., PUT) from inadvertently modifying an existing
-   representation of the target resource when the client believes that
-   the resource does not have a current representation.  This is a variation
-   on the "lost update" problem that might arise if more than one client
-   attempts to create an initial representation for the target resource.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-None-Match"/>
-  <x:ref>If-None-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
-</artwork></figure>
-<t>
-   If any of the entity-tags listed in the If-None-Match field-value match
-   the entity-tag of the selected representation, or if "*" is
-   given and any current representation exists for that resource, then the
-   server &MUST-NOT; perform the requested method.
-   Instead, if the request method was GET or HEAD, the server &SHOULD;
-   respond with a 304 (Not Modified) status code, including the cache-related
-   header fields (particularly ETag) of the selected representation that has
-   a matching entity-tag.  For all other request methods, the server &MUST;
-   respond with a 412 (Precondition Failed) status code.
-</t>
-<t>
-   If none of the entity-tags match, then the server &MAY; perform the
-   requested method as if the If-None-Match header field did not exist,
-   but &MUST; also ignore any If-Modified-Since header field(s) in the
-   request. That is, if no entity-tags match, then the server &MUST-NOT;
-   return a 304 (Not Modified) response.
-</t>
-<t>
-   If the request would, without the If-None-Match header field, result
-   in anything other than a 2xx or 304 status code, then the If-None-Match
-   header field &MUST; be ignored. (See <xref
-   target="rules.for.when.to.use.entity.tags.and.last-modified.dates"/> for
-   a discussion of server behavior when both If-Modified-Since and
-   If-None-Match appear in the same request.)
-</t>
-<t>
-   Examples:
-</t>
-<figure><artwork type="example">
-  If-None-Match: "xyzzy"
-  If-None-Match: W/"xyzzy"
-  If-None-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
-  If-None-Match: W/"xyzzy", W/"r2d2xxxx", W/"c3piozzzz"
-  If-None-Match: *
-</artwork></figure>
-<t>
-   The result of a request having both an If-None-Match header field and
-   either an If-Match or an If-Unmodified-Since header fields is
-   undefined by this specification.
-</t>
-</section>
-
 <section title="If-Unmodified-Since" anchor="header.if-unmodified-since">
   <iref primary="true" item="If-Unmodified-Since header field" x:for-anchor=""/>
   <iref primary="true" item="Header Fields" subitem="If-Unmodified-Since" x:for-anchor=""/>
@@ -1013,57 +1008,67 @@ Content-Encoding: gzip
 </t>
 </section>
 
-<section title="Last-Modified" anchor="header.last-modified">
-  <iref primary="true" item="Last-Modified header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Last-Modified" x:for-anchor=""/>
-  <x:anchor-alias value="Last-Modified"/>
+</section>
+
+<section title="Status Code Definitions" anchor="status.code.definitions">
+<section title="304 Not Modified" anchor="status.304">
+  <iref primary="true" item="304 Not Modified (status code)" x:for-anchor=""/>
+  <iref primary="true" item="Status Codes" subitem="304 Not Modified" x:for-anchor=""/>
 <t>
-   The "Last-Modified" header field indicates the date and time at
-   which the origin server believes the representation was last modified.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
-  <x:ref>Last-Modified</x:ref> = <x:ref>HTTP-date</x:ref>
-</artwork></figure>
-<t>
-   An example of its use is
-</t>
-<figure><artwork type="example">
-  Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
-</artwork></figure>
-<t>
-   A representation is typically the sum of many parts behind the
-   resource interface.  The last-modified time would usually be
-   the most recent time that any of those parts were changed.
-   How that value is determined for any given resource is an
-   implementation detail beyond the scope of this specification.
-   What matters to HTTP is how recipients of the Last-Modified
-   header field can use its value to make conditional requests
-   and test the validity of locally cached responses.
+   The 304 status code indicates that a conditional GET request has been
+   received and would have resulted in a 200 (OK) response if it were not
+   for the fact that the condition has evaluated to false.  In other words,
+   there is no need for the server to transfer a representation of the
+   target resource because the client's request indicates that it already
+   has a valid representation, as indicated by the 304 response header
+   fields, and is therefore redirecting the client to make use of that
+   stored representation as if it were the payload of a 200 response.
+   The 304 response &MUST-NOT; contain a message-body, and thus is always
+   terminated by the first empty line after the header fields.
 </t>
 <t>
-   An origin server &MUST-NOT; send a Last-Modified date which is later
-   than the server's time of message origination. In such cases, where
-   the resource's last modification would indicate some time in the
-   future, the server &MUST; replace that date with the message
-   origination date.
+   A 304 response &MUST; include a Date header field (&header-date;)
+   unless its omission is required by &clockless;.  If a 200 response
+   to the same request would have included any of the header fields
+   Cache-Control, Content-Location, ETag, Expires, Last-Modified, or
+   Vary, then those same header fields &MUST; be sent in a 304 response.
 </t>
 <t>
-   An origin server &SHOULD; obtain the Last-Modified value of the representation
-   as close as possible to the time that it generates the Date value of
-   its response. This allows a recipient to make an accurate assessment
-   of the representation's modification time, especially if the representation changes
-   near the time that the response is generated.
+   Since the goal of a 304 response is to minimize information transfer
+   when the recipient already has one or more cached representations,
+   the response &SHOULD-NOT; include representation metadata other
+   than the above listed fields unless said metadata exists for the
+   purpose of guiding cache updates (e.g., future HTTP extensions).
 </t>
 <t>
-   HTTP/1.1 servers &SHOULD; send Last-Modified whenever feasible.
+   If the recipient of a 304 response does not have a cached representation
+   corresponding to the entity-tag indicated by the 304 response, then the
+   recipient &MUST-NOT; use the 304 to update its own cache.  If this
+   conditional request originated with an outbound client, such as a
+   user agent with its own cache sending a conditional GET to a shared
+   proxy, then the 304 response &MAY; be forwarded to the outbound client.
+   Otherwise, the recipient &MUST; disregard the 304 response and repeat
+   the request without any preconditions.
 </t>
 <t>
-   The Last-Modified header field value is often used as a cache
-   validator. In simple terms, a cache entry is considered to be valid
-   if the representation has not been modified since the Last-Modified value.
+   If a cache uses a received 304 response to update a cache entry, the
+   cache &MUST; update the entry to reflect any new field values given in
+   the response.
 </t>
 </section>
 
+<section title="412 Precondition Failed" anchor="status.412">
+  <iref primary="true" item="412 Precondition Failed (status code)" x:for-anchor=""/>
+  <iref primary="true" item="Status Codes" subitem="412 Precondition Failed" x:for-anchor=""/>
+<t>
+   The 412 status code indicates that one or more preconditions given in
+   the request header fields evaluated to false when tested on the server.
+   This response code allows the client to place preconditions on the
+   current resource state (its current representations and metadata)
+   and thus prevent the request method from being applied if the target
+   resource is in an unexpected state.
+</t>
+</section>
 </section>
 
 <section title="IANA Considerations" anchor="IANA.considerations">
