@@ -220,7 +220,8 @@
    observe changes to resource state and request header fields that
    specify preconditions to be checked before performing the action
    given by the request method.  Conditional GET requests are the most
-   efficient mechanism for HTTP cache updates &caching;.  Conditionals can be
+   efficient mechanism for HTTP cache updates &caching;.  Conditionals
+   can also be
    applied to state-changing methods, such as PUT and DELETE, to prevent
    the "lost update" problem: one client accidentally overwriting
    the work of another client that has been acting in parallel.
@@ -312,8 +313,8 @@
    and opaque entity tags.  Additional metadata that reflects resource state
    has been defined by various extensions of HTTP, such as WebDAV
    <xref target="RFC4918"/>, that are beyond the scope of this specification.
-   Such metadata is referred to as a "<x:dfn>validator</x:dfn>" when it is
-   used within a precondition.
+   A resource metadata value is referred to as a "<x:dfn>validator</x:dfn>"
+   when it is used within a precondition.
 </t>
 
 <section title="Last-Modified" anchor="header.last-modified">
@@ -322,7 +323,8 @@
   <x:anchor-alias value="Last-Modified"/>
 <t>
    The "Last-Modified" header field indicates the date and time at
-   which the origin server believes the representation was last modified.
+   which the origin server believes the selected representation was
+   last modified.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
   <x:ref>Last-Modified</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -333,6 +335,16 @@
 <figure><artwork type="example">
   Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
 </artwork></figure>
+
+<section title="Generation" anchor="lastmod.generation">
+<t>
+   Origin servers &SHOULD; send Last-Modified for any selected
+   representation for which a last modification date can be reasonably
+   and consistently determined, since its use in conditional requests
+   and evaluating cache freshness (&caching;) results in a substantial
+   reduction of HTTP traffic on the Internet and can be a significant
+   factor in improving service scalability and reliability.
+</t>
 <t>
    A representation is typically the sum of many parts behind the
    resource interface.  The last-modified time would usually be
@@ -344,279 +356,25 @@
    and test the validity of locally cached responses.
 </t>
 <t>
-   An origin server &MUST-NOT; send a Last-Modified date which is later
-   than the server's time of message origination. In such cases, where
-   the resource's last modification would indicate some time in the
-   future, the server &MUST; replace that date with the message
-   origination date.
+   An origin server &SHOULD; obtain the Last-Modified value of the
+   representation as close as possible to the time that it generates
+   the Date field-value for its response. This allows a recipient to
+   make an accurate assessment of the representation's modification time,
+   especially if the representation changes near the time that the
+   response is generated.
 </t>
 <t>
-   An origin server &SHOULD; obtain the Last-Modified value of the representation
-   as close as possible to the time that it generates the Date value of
-   its response. This allows a recipient to make an accurate assessment
-   of the representation's modification time, especially if the representation changes
-   near the time that the response is generated.
-</t>
-<t>
-   HTTP/1.1 servers &SHOULD; send Last-Modified whenever feasible.
-</t>
-<t>
-   The Last-Modified header field value is often used as a cache
-   validator. In simple terms, a cache entry is considered to be valid
-   if the representation has not been modified since the Last-Modified value.
+   An origin server with a clock &MUST-NOT; send a Last-Modified date
+   that is later than the server's time of message origination (Date).
+   If the last modification time is derived from implementation-specific
+   metadata that evaluates to some time in the future, according to the
+   origin server's clock, then the origin server &MUST; replace that
+   value with the message origination date. This prevents a future
+   modification date from having an adverse impact on cache validation.
 </t>
 </section>
 
-<section title="Entity Tags" anchor="entity.tags">
-  <x:anchor-alias value="entity-tag"/>
-  <x:anchor-alias value="opaque-tag"/>
-  <x:anchor-alias value="weak"/>
-<t>
-   Entity-tags are used for comparing two or more representations of the same
-   resource. HTTP/1.1 uses entity-tags in the ETag (<xref target="header.etag"/>),
-   If-Match (<xref target="header.if-match"/>), If-None-Match (<xref target="header.if-none-match"/>), and
-   If-Range (&header-if-range;) header fields. The definition of how they
-   are used and compared as cache validators is in <xref target="weak.and.strong.validators"/>. An
-   entity-tag consists of an opaque quoted string, possibly prefixed by
-   a weakness indicator.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/>
-  <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
-  <x:ref>weak</x:ref>       = <x:abnf-char-sequence>"W/"</x:abnf-char-sequence> ; "W/", case-sensitive
-  <x:ref>opaque-tag</x:ref> = <x:ref>quoted-string</x:ref>
-</artwork></figure>
-<t>
-   A "strong entity-tag" &MAY; be shared by two representations of a resource
-   only if they are equivalent by octet equality.
-</t>
-<t>
-   A "weak entity-tag", indicated by the "W/" prefix, &MAY; be shared by
-   two representations of a resource. A weak entity-tag can only be used
-   for weak comparison.
-</t>
-<t>
-   Cache entries might persist for arbitrarily long periods, regardless
-   of expiration times, so it is inappropriate to expect that a cache will
-   never again attempt to validate an entry using a validator that it
-   obtained at some point in the past.
-   A strong entity-tag &MUST; be unique across all versions of all
-   representations associated with a particular resource over time.
-   However, there is no implication of uniqueness across entity-tags
-   of different resources (i.e., the same entity-tag value might be
-   in use for representations of multiple resources at the same time
-   and does not imply that those representations are equivalent).
-</t>
-
-<section title="ETag" anchor="header.etag">
-  <iref primary="true" item="ETag header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/>
-  <x:anchor-alias value="ETag"/>
-<t>
-   The "ETag" header field provides the current value of the
-   entity-tag (see <xref target="entity.tags"/>) for one representation of
-   the target resource.  An entity-tag
-   is intended for use as a resource-local identifier for differentiating
-   between representations of the same resource that vary over time or via
-   content negotiation (see <xref target="weak.and.strong.validators"/>).
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/>
-  <x:ref>ETag</x:ref> = <x:ref>entity-tag</x:ref>
-</artwork></figure>
-<figure><preamble>
-  Examples:
-</preamble>
-<artwork type="example">
-  ETag: "xyzzy"
-  ETag: W/"xyzzy"
-  ETag: ""
-</artwork></figure>
-<t>
-   An entity-tag provides an "opaque" cache validator that allows for
-   more reliable validation than modification dates in situations where
-   it is inconvenient to store modification dates,
-   where the one-second resolution of HTTP date values is not
-   sufficient, or where the origin server wishes to avoid certain
-   paradoxes that might arise from the use of modification dates.
-</t>
-<t>
-   The principle behind entity-tags is that only the service author
-   knows the semantics of a resource well enough to select an
-   appropriate cache validation mechanism, and the specification of any
-   validator comparison function more complex than byte-equality would
-   open up a can of worms. Thus, comparisons of any other header fields
-   (except Last-Modified, for compatibility with HTTP/1.0) are never
-   used for purposes of validating a cache entry.
-</t>
-</section>
-
-<section title="Example: Entity-tags varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
-<t>
-   Consider a resource that is subject to content negotiation (&content-negotiation;),
-   and where the representations returned upon a GET request vary based on
-   the Accept-Encoding request header field (&header-accept-encoding;):
-</t>
-<figure><preamble>>> Request:</preamble><artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
-GET /index HTTP/1.1
-Host: www.example.com
-Accept-Encoding: gzip
-
-</artwork></figure>
-<t>
-   In this case, the response might or might not use the gzip content coding.
-   If it does not, the response might look like:
-</t>
-<figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
-HTTP/1.1 200 OK
-Date: Thu, 26 Mar 2010 00:05:00 GMT
-ETag: "123-a"
-Content-Length: <x:length-of target="exbody"/>
-Vary: Accept-Encoding
-Content-Type: text/plain
-
-<x:span anchor="exbody">Hello World!
-Hello World!
-Hello World!
-Hello World!
-Hello World!
-</x:span></artwork></figure>
-<t>
-   An alternative representation that does use gzip content coding would be:
-</t>
-<figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
-HTTP/1.1 200 OK
-Date: Thu, 26 Mar 2010 00:05:00 GMT
-ETag: "123-b"
-Content-Length: 43
-Vary: Accept-Encoding
-Content-Type: text/plain
-Content-Encoding: gzip
-
-<spanx>...binary data...</spanx></artwork></figure>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> Content codings are a property of the representation,
-    so therefore an entity-tag of an encoded representation must be distinct
-    from an unencoded representation to prevent conflicts during cache updates
-    and range requests.  In contrast, transfer codings (&transfer-codings;)
-    apply only during message transfer and do not require distinct entity-tags.
-  </t>
-</x:note>
-</section>
-</section>
-
-<section title="Weak and Strong Validators" anchor="weak.and.strong.validators">
-<t>
-   Since both origin servers and caches will compare two validators to
-   decide if they represent the same or different representations, one
-   normally would expect that if the representation (including both
-   representation header fields and representation body) changes in any
-   way, then the associated validator would change as well. If this is
-   true, then we call this validator a "strong validator".  One example
-   of a strong validator is an integer that is incremented in stable
-   storage every time a representation is changed.
-</t>
-<t>
-   However, there might be cases when a server prefers to change the
-   validator only when it desires cached representations to be invalidated.
-   For example, the representation of a weather report that changes in
-   content every second, based on dynamic measurements, might be grouped
-   into sets of equivalent representations (from the origin server's
-   perspective) in order to allow cached representations to be valid
-   for a reasonable period of time (perhaps adjusted dynamically based
-   on server load or weather quality).
-   A validator that does not always change when the representation
-   changes is a "weak validator".
-</t>
-<t>
-   An entity-tag is normally a strong validator, but the protocol
-   provides a mechanism to tag an entity-tag as "weak". One can think
-   of a strong validator as part of an identifier for a specific
-   representation, whereas a weak validator is part of an identifier
-   for a set of equivalent representations (where this notion of
-   equivalence is entirely governed by the origin server and beyond
-   the scope of this specification).
-  <list><t>
-      A representation's modification time, if defined with only one-second
-      resolution, could be a weak validator, since it is possible that
-      the representation might be modified twice during a single second.
-    </t><t>
-      Support for weak validators is optional. However, weak validators
-      allow for more efficient caching of equivalent objects; for
-      example, a hit counter on a site is probably good enough if it is
-      updated every few days or weeks, and any value during that period
-      is likely "good enough" to be equivalent.
-    </t></list>
-</t>
-<t>
-   A strong entity-tag &MUST; change whenever the associated representation
-   changes in any way. A weak entity-tag &SHOULD; change whenever the origin
-   server considers prior representations to be unacceptable as a substitute
-   for the current representation. In other words, a weak entity tag &SHOULD;
-   change whenever the origin server wants caches to invalidate old responses.
-</t>
-<t>
-   A "use" of a validator is either when a client generates a request
-   and includes the validator in a validating header field, or when a
-   server compares two validators.
-</t>
-<t>
-   Strong validators are usable in any context. Weak validators are only
-   usable in contexts that do not depend on exact equality of a representation.
-   For example, either kind is usable for a normal conditional GET.
-   However, only a strong validator is usable for range retrieval
-   (<xref target="Part5"/>), since otherwise the client might end up
-   with an internally inconsistent representation.
-   Clients &MUST-NOT; use weak validators in range requests.
-</t>
-<t>
-   The only function that HTTP/1.1 defines on validators is
-   comparison. There are two validator comparison functions, depending
-   on whether the comparison context allows the use of weak validators
-   or not:
-  <list style="symbols">
-     <t>The strong comparison function: in order to be considered equal,
-        both opaque-tags &MUST; be identical character-by-character, and both
-        &MUST-NOT; be weak.</t>
-     <t>The weak comparison function: in order to be considered equal, both
-        opaque-tags &MUST; be identical character-by-character, but
-        either or both of them &MAY; be tagged as "weak" without affecting
-        the result.</t>
-  </list>
-</t>
-<t>
-   The example below shows the results for a set of entity-tag pairs,
-   and both the weak and strong comparison function results:
-</t>
-<texttable align="left">
-  <ttcol>ETag 1</ttcol>
-  <ttcol>ETag 2</ttcol>
-  <ttcol>Strong Comparison</ttcol>
-  <ttcol>Weak Comparison</ttcol>
-
-  <c>W/"1"</c>
-  <c>W/"1"</c>
-  <c>no match</c>
-  <c>match</c>
-  
-  <c>W/"1"</c>
-  <c>W/"2"</c>
-  <c>no match</c>
-  <c>no match</c>
-
-  <c>W/"1"</c>
-  <c>"1"</c>
-  <c>no match</c>
-  <c>match</c>
-
-  <c>"1"</c>
-  <c>"1"</c>
-  <c>match</c>
-  <c>match</c>
-</texttable>
-<t>
-   An entity-tag is strong unless it is explicitly tagged as weak.
-   <xref target="entity.tags"/> gives the syntax for entity-tags.
-</t>
+<section title="Comparison" anchor="lastmod.comparison">
 <t>
    A Last-Modified time, when used as a validator in a request, is
    implicitly weak unless it is possible to deduce that it is strong,
@@ -663,21 +421,209 @@ Content-Encoding: gzip
    implementation &MAY; use a value larger than 60 seconds, if it is
    believed that 60 seconds is too short.
 </t>
+</section>
+</section>
+
+<section title="ETag" anchor="header.etag">
+  <iref primary="true" item="ETag header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/>
+  <x:anchor-alias value="ETag"/>
+  <x:anchor-alias value="entity-tag"/>
+  <x:anchor-alias value="entity.tags"/>
+  <x:anchor-alias value="opaque-tag"/>
+  <x:anchor-alias value="weak"/>
 <t>
-   If a client wishes to perform a sub-range retrieval on a value for
-   which it has only a Last-Modified time and no opaque validator, it
-   &MAY; do this only if the Last-Modified time is strong in the sense
-   described here.
+   The ETag header field provides the current entity-tag for the
+   selected representation.
+   An entity-tag is an opaque validator for differentiating between
+   multiple representations of the same resource, regardless of whether
+   those multiple representations are due to resource state changes over
+   time, content negotiation resulting in multiple representations being
+   valid at the same time, or both. An entity-tag consists of an opaque
+   quoted string, possibly prefixed by a weakness indicator.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/>
+  <x:ref>ETag</x:ref>       = <x:ref>entity-tag</x:ref>
+
+  <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
+  <x:ref>weak</x:ref>       = <x:abnf-char-sequence>"W/"</x:abnf-char-sequence> ; "W/", case-sensitive
+  <x:ref>opaque-tag</x:ref> = <x:ref>quoted-string</x:ref>
+</artwork></figure>
+<t>
+   An entity-tag can be more reliable for validation than a modification
+   date in situations where it is inconvenient to store modification
+   dates, where the one-second resolution of HTTP date values is not
+   sufficient, or where modification dates are not consistently maintained.
+</t>
+<figure><preamble>
+  Examples:
+</preamble>
+<artwork type="example">
+  ETag: "xyzzy"
+  ETag: W/"xyzzy"
+  ETag: ""
+</artwork></figure>
+
+<section title="Generation" anchor="entity.tag.generation">
+<t>
+   The principle behind entity-tags is that only the service author
+   knows the implementation of a resource well enough to select the
+   most accurate and efficient validation mechanism for that resource,
+   and that any such mechanism can be mapped to a simple sequence of
+   octets for easy comparison.  Since the value is opaque, there is no
+   need for the client to be aware of how each entity-tag is constructed.
 </t>
 <t>
-   A cache or origin server receiving a conditional range request
-   (<xref target="Part5"/>) &MUST; use the strong comparison function to
-   evaluate the condition.
+   For example, a resource that has implementation-specific versioning
+   applied to all changes might use an internal revision number, perhaps
+   combined with a variance identifier for content negotiation, to
+   accurately differentiate between representations.
+   Other implementations might use a stored hash of representation content,
+   a combination of various filesystem attributes, or a modification
+   timestamp that has sub-second resolution.
 </t>
 <t>
-   These rules allow HTTP/1.1 caches and clients to safely perform sub-range
-   retrievals on values that have been obtained from HTTP/1.0
-   servers.
+   Origin servers &SHOULD; send ETag for any selected representation
+   for which detection of changes can be reasonably and consistently
+   determined, since the entity-tag's use in conditional requests and
+   evaluating cache freshness (&caching;) can result in a substantial
+   reduction of HTTP network traffic and can be a significant factor in
+   improving service scalability and reliability.
+</t>
+</section>
+
+<section title="Weak versus Strong" anchor="weak.and.strong.validators">
+<t>
+   Since both origin servers and caches will compare two validators to
+   decide if they indicate the same or different representations, one
+   normally would expect that if the representation (including both
+   representation header fields and representation body) changes in any
+   way, then the associated validator would change as well. If this is
+   true, then we call that validator a "strong validator".  One example
+   of a strong validator is an integer that is incremented in stable
+   storage every time a representation is changed.
+</t>
+<t>
+   However, there might be cases when a server prefers to change the
+   validator only when it desires cached representations to be invalidated.
+   For example, the representation of a weather report that changes in
+   content every second, based on dynamic measurements, might be grouped
+   into sets of equivalent representations (from the origin server's
+   perspective) in order to allow cached representations to be valid
+   for a reasonable period of time (perhaps adjusted dynamically based
+   on server load or weather quality).
+   A validator that does not always change when the representation
+   changes is a "weak validator".
+</t>
+<t>
+   One can think of a strong validator as part of an identifier for a
+   specific representation, whereas a weak validator is part of an
+   identifier for a set of equivalent representations (where this notion
+   of equivalence is entirely governed by the origin server and beyond
+   the scope of this specification).
+</t>
+<t>
+   An entity-tag is normally a strong validator, but the protocol
+   provides a mechanism to tag an entity-tag as "weak". 
+  <list><t>
+      A representation's modification time, if defined with only one-second
+      resolution, could be a weak validator, since it is possible that
+      the representation might be modified twice during a single second.
+    </t><t>
+      Support for weak validators is optional. However, weak validators
+      allow for more efficient caching of equivalent objects; for
+      example, a hit counter on a site is probably good enough if it is
+      updated every few days or weeks, and any value during that period
+      is likely "good enough" to be equivalent.
+    </t></list>
+</t>
+<t>
+   A strong entity-tag &MUST; change whenever the associated representation
+   changes in any way. A weak entity-tag &SHOULD; change whenever the origin
+   server considers prior representations to be unacceptable as a substitute
+   for the current representation. In other words, a weak entity tag &SHOULD;
+   change whenever the origin server wants caches to invalidate old responses.
+</t>
+<t>
+   A "strong entity-tag" &MAY; be shared by two representations of a resource
+   only if they are equivalent by octet equality.
+</t>
+<t>
+   A "weak entity-tag", indicated by the "W/" prefix, &MAY; be shared by
+   two representations of a resource. A weak entity-tag can only be used
+   for weak comparison.
+</t>
+<t>
+   Cache entries might persist for arbitrarily long periods, regardless
+   of expiration times.  Thus, a cache might attempt to validate an
+   entry using a validator that it obtained in the distant past.
+   A strong entity-tag &MUST; be unique across all versions of all
+   representations associated with a particular resource over time.
+   However, there is no implication of uniqueness across entity-tags
+   of different resources (i.e., the same entity-tag value might be
+   in use for representations of multiple resources at the same time
+   and does not imply that those representations are equivalent).
+</t>
+</section>
+
+<section title="Comparison" anchor="entity.tag.comparison">
+  <x:anchor-alias value="validator.comparison"/>
+<t>
+   There are two entity-tag comparison functions, depending
+   on whether the comparison context allows the use of weak validators
+   or not:
+  <list style="symbols">
+     <t>The strong comparison function: in order to be considered equal,
+        both opaque-tags &MUST; be identical character-by-character, and both
+        &MUST-NOT; be weak.</t>
+     <t>The weak comparison function: in order to be considered equal, both
+        opaque-tags &MUST; be identical character-by-character, but
+        either or both of them &MAY; be tagged as "weak" without affecting
+        the result.</t>
+  </list>
+</t>
+<t>
+   A "use" of a validator is either when a client generates a request
+   and includes the validator in a precondition, or when a server
+   compares two validators.
+</t>
+<t>
+   Strong validators are usable in any context. Weak validators are only
+   usable in contexts that do not depend on exact equality of a representation.
+   For example, either kind is usable for a normal conditional GET.
+</t>
+<t>
+   The example below shows the results for a set of entity-tag pairs,
+   and both the weak and strong comparison function results:
+</t>
+<texttable align="left">
+  <ttcol>ETag 1</ttcol>
+  <ttcol>ETag 2</ttcol>
+  <ttcol>Strong Comparison</ttcol>
+  <ttcol>Weak Comparison</ttcol>
+
+  <c>W/"1"</c>
+  <c>W/"1"</c>
+  <c>no match</c>
+  <c>match</c>
+  
+  <c>W/"1"</c>
+  <c>W/"2"</c>
+  <c>no match</c>
+  <c>no match</c>
+
+  <c>W/"1"</c>
+  <c>"1"</c>
+  <c>no match</c>
+  <c>match</c>
+
+  <c>"1"</c>
+  <c>"1"</c>
+  <c>match</c>
+  <c>match</c>
+</texttable>
+<t>
+   An entity-tag is strong unless it is explicitly tagged as weak.
 </t>
 </section>
 
@@ -759,6 +705,60 @@ Content-Encoding: gzip
 </t>
 </section>
 
+<section title="Example: Entity-tags varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
+<t>
+   Consider a resource that is subject to content negotiation (&content-negotiation;),
+   and where the representations returned upon a GET request vary based on
+   the Accept-Encoding request header field (&header-accept-encoding;):
+</t>
+<figure><preamble>>> Request:</preamble><artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
+GET /index HTTP/1.1
+Host: www.example.com
+Accept-Encoding: gzip
+
+</artwork></figure>
+<t>
+   In this case, the response might or might not use the gzip content coding.
+   If it does not, the response might look like:
+</t>
+<figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+HTTP/1.1 200 OK
+Date: Thu, 26 Mar 2010 00:05:00 GMT
+ETag: "123-a"
+Content-Length: <x:length-of target="exbody"/>
+Vary: Accept-Encoding
+Content-Type: text/plain
+
+<x:span anchor="exbody">Hello World!
+Hello World!
+Hello World!
+Hello World!
+Hello World!
+</x:span></artwork></figure>
+<t>
+   An alternative representation that does use gzip content coding would be:
+</t>
+<figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+HTTP/1.1 200 OK
+Date: Thu, 26 Mar 2010 00:05:00 GMT
+ETag: "123-b"
+Content-Length: 43
+Vary: Accept-Encoding
+Content-Type: text/plain
+Content-Encoding: gzip
+
+<spanx>...binary data...</spanx></artwork></figure>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> Content codings are a property of the representation,
+    so therefore an entity-tag of an encoded representation must be distinct
+    from an unencoded representation to prevent conflicts during cache updates
+    and range requests.  In contrast, transfer codings (&transfer-codings;)
+    apply only during message transfer and do not require distinct entity-tags.
+  </t>
+</x:note>
+</section>
+</section>
 </section>
 
 <section title="Precondition Header Fields" anchor="header.fields">
@@ -1005,6 +1005,14 @@ Content-Encoding: gzip
    The result of a request having both an If-Unmodified-Since header
    field and either an If-None-Match or an If-Modified-Since header
    fields is undefined by this specification.
+</t>
+</section>
+
+<section title="If-Range" anchor="header.if-range">
+<t>
+   The If-Range header field provides a special conditional request
+   mechanism that is similar to If-Match and If-Unmodified-Since but
+   specific to HTTP range requests. If-Range is defined in &header-if-range;.
 </t>
 </section>
 
