@@ -1501,11 +1501,16 @@
    <x:anchor-alias value="Pragma"/>
    <x:anchor-alias value="pragma-directive"/>
 <t>
-   The "Pragma" header field is used to include
-   implementation-specific directives that might apply to any recipient along
-   the request/response chain. All pragma directives specify optional behavior
-   from the viewpoint of the protocol; however, some systems &MAY; require
-   that behavior be consistent with the directives.
+	 The "Pragma" header field allows backwards compatibility with HTTP/1.0
+   caches, so that clients can specify a "no-cache" request that they will
+   understand (as Cache-Control was not defined until HTTP/1.1). When the
+   Cache-Control header is also present and understood in a request, Pragma is
+   ignored.
+</t>
+<t>
+	 In HTTP/1.0, Pragma was defined as an extensible field for
+   implementation-specified directives for recipients. This specification
+   deprecates such extensions to improve interoperability.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Pragma"/><iref primary="true" item="Grammar" subitem="pragma-directive"/><iref primary="true" item="Grammar" subitem="extension-pragma"/>
   <x:ref>Pragma</x:ref>           = 1#<x:ref>pragma-directive</x:ref>
@@ -1513,27 +1518,37 @@
   <x:ref>extension-pragma</x:ref> = <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) ]
 </artwork></figure>
 <t>
-   When the no-cache directive is present in a request message, a cache
-   &SHOULD; forward the request toward the origin server even if it has a
-   stored copy of what is being requested. This pragma directive has the same
-   semantics as the no-cache request directive (see <xref
-   target="cache-request-directive" />) and is defined here for backward
-   compatibility with HTTP/1.0. A client &SHOULD; include both header fields
-   when a no-cache request is sent to a server not known to be HTTP/1.1
-   compliant. A cache &SHOULD; treat "Pragma: no-cache" as if the
-   client had sent "Cache-Control: no-cache".
+	 When the Cache-Control header is not present in a request, the no-cache
+   request pragma-directive &MUST; have the same effect on caches as if
+   "Cache-Control: no-cache" were present (see <xref
+   target="cache-request-directive" />).
+</t>
+<t>
+   When sending a no-cache request, a client &SHOULD; include both pragma and
+   cache-control directives unless Cache-Control: no-cache is purposefully
+   omitted to target other Cache-Control response directives at HTTP/1.1
+   caches. For example:
+</t>
+<figure>
+<artwork type="code">
+GET / HTTP/1.1
+Host: www.example.com
+Cache-Control: max-age=30
+Pragma: no-cache
+</artwork>
+</figure>
+<t>
+   will constrain HTTP/1.1 caches to serve a response no older than 30
+   seconds, while precluding implementations that do not understand
+   Cache-Control from serving a cached response.
 </t>
 <x:note>
    <t>
-      <x:h>Note:</x:h> Because the meaning of "Pragma: no-cache" as a
-      header field is not actually specified, it does not provide a
-      reliable replacement for "Cache-Control: no-cache" in a response.
-   </t>
+      Note: Because the meaning of "Pragma: no-cache" in responses is not
+      specified, it does not provide a reliable replacement for
+      "Cache-Control: no-cache" in them.
+	 </t>
 </x:note>
-<t>
-   This mechanism is deprecated; no new Pragma directives will be defined in
-   HTTP.
-</t>
 </section>
 
 <section anchor="header.vary" title="Vary">
@@ -2683,7 +2698,13 @@
 
 <section title="Since draft-ietf-httpbis-p6-cache-14" anchor="changes.since.14">
 <t>
-  None yet.
+  Closed issues:
+	<list style="symbols">
+		<t>
+			<eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/292"/>:
+			"Pragma"
+		</t>
+	</list>
 </t>
 </section>
 
