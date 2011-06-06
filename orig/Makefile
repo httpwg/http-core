@@ -6,7 +6,7 @@ stylesheet = ../myxml2rfc.xslt
 reduction  = ../../rfc2629xslt/clean-for-DTD.xslt
 
 TARGETS = rfc2145.html rfc2616.html rfc2617.html rfc2817.html rfc2818.html rfc2965.html rfc4234.html rfc5234.html \
-          rfc2616-symrefs.html
+          rfc2616-symrefs.html rfc6266.html
 
 all: $(TARGETS)
 
