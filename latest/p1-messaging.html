@@ -676,7 +676,8 @@ ul.ind li li {
                <li>11.3&nbsp;&nbsp;&nbsp;<a href="#attack.pathname">Attacks Based On File and Path Names</a></li>
                <li>11.4&nbsp;&nbsp;&nbsp;<a href="#dns.spoofing">DNS Spoofing</a></li>
                <li>11.5&nbsp;&nbsp;&nbsp;<a href="#attack.proxies">Proxies and Caching</a></li>
-               <li>11.6&nbsp;&nbsp;&nbsp;<a href="#attack.DoS">Denial of Service Attacks on Proxies</a></li>
+               <li>11.6&nbsp;&nbsp;&nbsp;<a href="#attack.protocol.element.size.overflows">Protocol Element Size Overflows</a></li>
+               <li>11.7&nbsp;&nbsp;&nbsp;<a href="#attack.DoS">Denial of Service Attacks on Proxies</a></li>
             </ul>
          </li>
          <li>12.&nbsp;&nbsp;&nbsp;<a href="#ack">Acknowledgments</a></li>
@@ -1274,6 +1275,12 @@ Content-Type: text/plain
       </div>
       <div id="rfc.figure.u.25"></div><pre class="inline"><span id="rfc.iref.g.43"></span>  <a href="#rule.quoted-cpair" class="smpl">quoted-cpair</a>    = "\" ( <a href="#core.rules" class="smpl">WSP</a> / <a href="#core.rules" class="smpl">VCHAR</a> / <a href="#rule.quoted-string" class="smpl">obs-text</a> ) 
 </pre><p id="rfc.section.3.2.p.14">Senders <em class="bcp14">SHOULD NOT</em> escape octets that do not require escaping (i.e., other than the backslash octet "\" and the parentheses "(" and ")").
+      </p>
+      <p id="rfc.section.3.2.p.15">HTTP does not place a pre-defined limit on the length of header fields, either in isolation or as a set. A server <em class="bcp14">MUST</em> be prepared to receive request header fields of unbounded length and respond with a 4xx status code if the received header
+         field(s) would be longer than the server wishes to handle.
+      </p>
+      <p id="rfc.section.3.2.p.16">A client that receives response headers that are longer than it wishes to handle can only treat it as a server error.</p>
+      <p id="rfc.section.3.2.p.17">Various ad-hoc limitations on header length are found in practice. It is <em class="bcp14">RECOMMENDED</em> that all HTTP senders and recipients support messages whose combined header fields have 4000 or more octets.
       </p>
       <h2 id="rfc.section.3.3"><a href="#rfc.section.3.3">3.3</a>&nbsp;<a id="message.body" href="#message.body">Message Body</a></h2>
       <p id="rfc.section.3.3.p.1">The message-body (if any) of an HTTP message is used to carry the payload body associated with the request or response.</p>
@@ -2735,8 +2742,19 @@ Host: www.example.org
       <p id="rfc.section.11.5.p.5">The judicious use of cryptography, when appropriate, might suffice to protect against a broad range of security and privacy
          attacks. Such cryptography is beyond the scope of the HTTP/1.1 specification.
       </p>
-      <h2 id="rfc.section.11.6"><a href="#rfc.section.11.6">11.6</a>&nbsp;<a id="attack.DoS" href="#attack.DoS">Denial of Service Attacks on Proxies</a></h2>
-      <p id="rfc.section.11.6.p.1">They exist. They are hard to defend against. Research continues. Beware.</p>
+      <h2 id="rfc.section.11.6"><a href="#rfc.section.11.6">11.6</a>&nbsp;<a id="attack.protocol.element.size.overflows" href="#attack.protocol.element.size.overflows">Protocol Element Size Overflows</a></h2>
+      <p id="rfc.section.11.6.p.1">Because HTTP uses mostly textual, character-delimited fields, attackers can overflow buffers in implementations, and/or perform
+         a Denial of Service against implementations that accept fields with unlimited lengths.
+      </p>
+      <p id="rfc.section.11.6.p.2">To promote interoperability, this specification makes specific recommendations for size limits on request-targets (<a href="#request-target" title="request-target">Section&nbsp;4.1.2</a>) and blocks of header fields (<a href="#header.fields" title="Header Fields">Section&nbsp;3.2</a>). These are minimum recommendations, chosen to be supportable even by implementations with limited resources; it is expected
+         that most implementations will choose substantially higher limits.
+      </p>
+      <p id="rfc.section.11.6.p.3">This specification also provides a way for servers to reject messages that have request-targets that are too long (<a href="p2-semantics.html#status.414" title="414 URI Too Long">Section 8.4.15</a> of <a href="#Part2" id="rfc.xref.Part2.12"><cite title="HTTP/1.1, part 2: Message Semantics">[Part2]</cite></a>) or request entities that are too large (<a href="p2-semantics.html#status.4xx" title="Client Error 4xx">Section 8.4</a> of <a href="#Part2" id="rfc.xref.Part2.13"><cite title="HTTP/1.1, part 2: Message Semantics">[Part2]</cite></a>).
+      </p>
+      <p id="rfc.section.11.6.p.4">Other fields (including but not limited to request methods, response status phrases, header field-names, and body chunks) <em class="bcp14">SHOULD</em> be limited by implementations carefully, so as to not impede interoperability.
+      </p>
+      <h2 id="rfc.section.11.7"><a href="#rfc.section.11.7">11.7</a>&nbsp;<a id="attack.DoS" href="#attack.DoS">Denial of Service Attacks on Proxies</a></h2>
+      <p id="rfc.section.11.7.p.1">They exist. They are hard to defend against. Research continues. Beware.</p>
       <h1 id="rfc.section.12"><a href="#rfc.section.12">12.</a>&nbsp;<a id="ack" href="#ack">Acknowledgments</a></h1>
       <p id="rfc.section.12.p.1">HTTP has evolved considerably over the years. It has benefited from a large and active developer community — the many people
          who have participated on the www-talk mailing list — and it is that community which has been most responsible for the success
@@ -3594,6 +3612,8 @@ Host: www.example.org
       <ul>
          <li> &lt;<a href="http://tools.ietf.org/wg/httpbis/trac/ticket/273">http://tools.ietf.org/wg/httpbis/trac/ticket/273</a>&gt;: "HTTP-Version should be redefined as fixed length pair of DIGIT . DIGIT"
          </li>
+         <li> &lt;<a href="http://tools.ietf.org/wg/httpbis/trac/ticket/282">http://tools.ietf.org/wg/httpbis/trac/ticket/282</a>&gt;: "Recommend minimum sizes for protocol elements"
+         </li>
          <li> &lt;<a href="http://tools.ietf.org/wg/httpbis/trac/ticket/283">http://tools.ietf.org/wg/httpbis/trac/ticket/283</a>&gt;: "Set expectations around buffering"
          </li>
          <li> &lt;<a href="http://tools.ietf.org/wg/httpbis/trac/ticket/288">http://tools.ietf.org/wg/httpbis/trac/ticket/288</a>&gt;: "Considering messages in isolation"
@@ -3819,7 +3839,7 @@ Host: www.example.org
             </li>
             <li><a id="rfc.index.P" href="#rfc.index.P"><b>P</b></a><ul>
                   <li><em>Pad1995</em>&nbsp;&nbsp;<a href="#rfc.xref.Pad1995.1">7.1.1</a>, <a href="#Pad1995"><b>13.2</b></a></li>
-                  <li><em>Part2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.1">2.4</a>, <a href="#rfc.xref.Part2.2">4.1.2</a>, <a href="#rfc.xref.Part2.3">4.1.2</a>, <a href="#rfc.xref.Part2.4">5.1.1</a>, <a href="#rfc.xref.Part2.5">7.1.2.2</a>, <a href="#rfc.xref.Part2.6">7.1.4</a>, <a href="#rfc.xref.Part2.7">7.2.3</a>, <a href="#rfc.xref.Part2.8">7.2.3</a>, <a href="#rfc.xref.Part2.9">7.2.3</a>, <a href="#rfc.xref.Part2.10">7.2.3</a>, <a href="#rfc.xref.Part2.11">9.8</a>, <a href="#Part2"><b>13.1</b></a><ul>
+                  <li><em>Part2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.1">2.4</a>, <a href="#rfc.xref.Part2.2">4.1.2</a>, <a href="#rfc.xref.Part2.3">4.1.2</a>, <a href="#rfc.xref.Part2.4">5.1.1</a>, <a href="#rfc.xref.Part2.5">7.1.2.2</a>, <a href="#rfc.xref.Part2.6">7.1.4</a>, <a href="#rfc.xref.Part2.7">7.2.3</a>, <a href="#rfc.xref.Part2.8">7.2.3</a>, <a href="#rfc.xref.Part2.9">7.2.3</a>, <a href="#rfc.xref.Part2.10">7.2.3</a>, <a href="#rfc.xref.Part2.11">9.8</a>, <a href="#rfc.xref.Part2.12">11.6</a>, <a href="#rfc.xref.Part2.13">11.6</a>, <a href="#Part2"><b>13.1</b></a><ul>
                         <li><em>Section 7.1.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.5">7.1.2.2</a>, <a href="#rfc.xref.Part2.6">7.1.4</a></li>
                         <li><em>Section 7.9</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.2">4.1.2</a></li>
                         <li><em>Section 8</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.4">5.1.1</a></li>
@@ -3827,7 +3847,8 @@ Host: www.example.org
                         <li><em>Section 8.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.10">7.2.3</a></li>
                         <li><em>Section 8.2.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.1">2.4</a></li>
                         <li><em>Section 8.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.11">9.8</a></li>
-                        <li><em>Section 8.4.15</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.3">4.1.2</a></li>
+                        <li><em>Section 8.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.13">11.6</a></li>
+                        <li><em>Section 8.4.15</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.3">4.1.2</a>, <a href="#rfc.xref.Part2.12">11.6</a></li>
                         <li><em>Section 9.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part2.8">7.2.3</a>, <a href="#rfc.xref.Part2.9">7.2.3</a></li>
                      </ul>
                   </li>
