@@ -284,6 +284,8 @@
 </section>
 
 <section title="Access Authentication Framework" anchor="access.authentication.framework">
+
+<section title="Challenge and Response" anchor="challenge.and.response">
   <x:anchor-alias value="auth-scheme"/>
   <x:anchor-alias value="auth-param"/>
   <x:anchor-alias value="challenge"/>
@@ -305,8 +307,10 @@
    The 401 (Unauthorized) response message is used by an origin server
    to challenge the authorization of a user agent. This response &MUST;
    include a WWW-Authenticate header field containing at least one
-   challenge applicable to the requested resource. The 407 (Proxy
-   Authentication Required) response message is used by a proxy to
+   challenge applicable to the requested resource.
+</t>
+<t>   
+   The 407 (Proxy Authentication Required) response message is used by a proxy to
    challenge the authorization of a client and &MUST; include a Proxy-Authenticate
    header field containing at least one challenge
    applicable to the proxy for the requested resource.
@@ -327,9 +331,62 @@
   <t>
      <x:h>Note:</x:h> Many browsers fail to parse challenges containing unknown
      schemes. A workaround for this problem is to list well-supported schemes
-     (such as "basic") first.
+     (such as "basic") first.<!-- see http://greenbytes.de/tech/tc/httpauth/#multibasicunknown2 -->
   </t>
 </x:note>
+<t>
+   A user agent that wishes to authenticate itself with an origin server
+   &mdash; usually, but not necessarily, after receiving a 401 (Unauthorized)
+   &mdash; &MAY; do so by including an Authorization header field with the
+   request.
+</t>
+<t>   
+   A client that wishes to authenticate itself with a proxy &mdash; usually,
+   but not necessarily, after receiving a 407 (Proxy Authentication Required)
+   &mdash; &MAY; do so by including a Proxy-Authorization header field with the
+   request.
+</t>
+<t>   
+   Both the Authorization field value and the Proxy-Authorization field value
+   consist of credentials containing the authentication information of the
+   client for the realm of the resource being requested. The user agent &MUST;
+   choose to use one of the challenges with the strongest auth-scheme it
+   understands and request credentials from the user based upon that challenge.
+</t>
+<figure><artwork type="abnf2616"><iref item="credentials" primary="true"/>
+  <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> ( <x:ref>token</x:ref>
+                            / <x:ref>quoted-string</x:ref>
+                            / #<x:ref>auth-param</x:ref> )
+</artwork></figure>
+<t>
+   If the origin server does not wish to accept the credentials sent
+   with a request, it &SHOULD; return a 401 (Unauthorized) response. The
+   response &MUST; include a WWW-Authenticate header field containing at
+   least one (possibly new) challenge applicable to the requested
+   resource.
+</t>
+<t>
+   If a proxy does not accept the credentials sent with a
+   request, it &SHOULD; return a 407 (Proxy Authentication Required). The
+   response &MUST; include a Proxy-Authenticate header field containing a
+   (possibly new) challenge applicable to the proxy for the requested
+   resource.
+</t>
+<t>
+   The HTTP protocol does not restrict applications to this simple
+   challenge-response mechanism for access authentication. Additional
+   mechanisms &MAY; be used, such as encryption at the transport level or
+   via message encapsulation, and with additional header fields
+   specifying authentication information. However, such additional
+   mechanisms are not defined by this specification.
+</t>
+<t>
+   Proxies &MUST; forward the WWW-Authenticate and Authorization headers
+   unmodified and follow the rules found in <xref target="header.authorization"/>.
+</t>
+</section>
+
+<section title="Protection Space (Realm)" anchor="protection.space">
 <t>
    The authentication parameter realm is defined for all authentication
    schemes:
@@ -353,26 +410,6 @@
    different realms.
 </t>
 <t>
-   A user agent that wishes to authenticate itself with an origin
-   server &mdash; usually, but not necessarily, after receiving a 401
-   (Unauthorized) &mdash; &MAY; do so by including an Authorization header field
-   with the request. A client that wishes to authenticate itself with a
-   proxy &mdash; usually, but not necessarily, after receiving a 407 (Proxy
-   Authentication Required) &mdash; &MAY; do so by including a Proxy-Authorization
-   header field with the request.  Both the Authorization
-   field value and the Proxy-Authorization field value consist of
-   credentials containing the authentication information of the client
-   for the realm of the resource being requested. The user agent &MUST;
-   choose to use one of the challenges with the strongest auth-scheme it
-   understands and request credentials from the user based upon that
-   challenge.
-</t>
-<figure><artwork type="abnf2616"><iref item="credentials" primary="true"/>
-  <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> ( <x:ref>token</x:ref>
-                            / <x:ref>quoted-string</x:ref>
-                            / #<x:ref>auth-param</x:ref> )
-</artwork></figure>
-<t>
    The protection space determines the domain over which credentials can
    be automatically applied. If a prior request has been authorized, the
    same credentials &MAY; be reused for all other requests within that
@@ -381,29 +418,7 @@
    otherwise defined by the authentication scheme, a single protection
    space cannot extend outside the scope of its server.
 </t>
-<t>
-   If the origin server does not wish to accept the credentials sent
-   with a request, it &SHOULD; return a 401 (Unauthorized) response. The
-   response &MUST; include a WWW-Authenticate header field containing at
-   least one (possibly new) challenge applicable to the requested
-   resource. If a proxy does not accept the credentials sent with a
-   request, it &SHOULD; return a 407 (Proxy Authentication Required). The
-   response &MUST; include a Proxy-Authenticate header field containing a
-   (possibly new) challenge applicable to the proxy for the requested
-   resource.
-</t>
-<t>
-   The HTTP protocol does not restrict applications to this simple
-   challenge-response mechanism for access authentication. Additional
-   mechanisms &MAY; be used, such as encryption at the transport level or
-   via message encapsulation, and with additional header fields
-   specifying authentication information. However, such additional
-   mechanisms are not defined by this specification.
-</t>
-<t>
-   Proxies &MUST; forward the WWW-Authenticate and Authorization headers
-   unmodified and follow the rules found in <xref target="header.authorization"/>.
-</t>
+</section>
 
 <section title="Authentication Scheme Registry" anchor="authentication.scheme.registry">
 <t>
