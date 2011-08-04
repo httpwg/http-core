@@ -610,7 +610,7 @@ ul.ind li li {
          <li><a href="#rfc.index">Index</a></li>
       </ul>
       <h1 id="rfc.section.1" class="np"><a href="#rfc.section.1">1.</a>&nbsp;<a id="introduction" href="#introduction">Introduction</a></h1>
-      <p id="rfc.section.1.p.1">HTTP clients often encounter interrupted data transfers as a result of cancelled requests or dropped connections. When a cache
+      <p id="rfc.section.1.p.1">HTTP clients often encounter interrupted data transfers as a result of cancelled requests or dropped connections. When a client
          has stored a partial representation, it is desirable to request the remainder of that representation in a subsequent request
          rather than transfer the entire representation. There are also a number of Web applications that benefit from being able to
          request only a subset of a larger representation, such as a single page of a very large document or only part of an image
@@ -693,12 +693,6 @@ ul.ind li li {
       </ul>
       <p id="rfc.section.3.1.p.3">If the 206 response is the result of an If-Range request, the response <em class="bcp14">SHOULD NOT</em> include other representation header fields. Otherwise, the response <em class="bcp14">MUST</em> include all of the representation header fields that would have been returned with a 200 (OK) response to the same request.
       </p>
-      <p id="rfc.section.3.1.p.4">A cache <em class="bcp14">MUST NOT</em> combine a 206 response with other previously cached content if the ETag or Last-Modified header fields do not match exactly,
-         see <a href="#combining.byte.ranges" title="Combining Ranges">Section&nbsp;4</a>.
-      </p>
-      <p id="rfc.section.3.1.p.5">A cache that does not support the Range and Content-Range header fields <em class="bcp14">MUST NOT</em> cache 206 (Partial Content) responses. Furthermore, if a response uses a range unit that is not understood by the cache, then
-         it <em class="bcp14">MUST NOT</em> be cached either.
-      </p>
       <div id="rfc.iref.4"></div>
       <div id="rfc.iref.s.2"></div>
       <h2 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2</a>&nbsp;<a id="status.416" href="#status.416">416 Requested Range Not Satisfiable</a></h2>
@@ -709,20 +703,28 @@ ul.ind li li {
       <p id="rfc.section.3.2.p.2">When this status code is returned for a byte-range request, the response <em class="bcp14">SHOULD</em> include a Content-Range header field specifying the current length of the representation (see <a href="#header.content-range" id="rfc.xref.header.content-range.3" title="Content-Range">Section&nbsp;5.2</a>). This response <em class="bcp14">MUST NOT</em> use the multipart/byteranges content-type.
       </p>
       <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a>&nbsp;<a id="combining.byte.ranges" href="#combining.byte.ranges">Combining Ranges</a></h1>
-      <p id="rfc.section.4.p.1">A response might transfer only a subrange of a representation, either because the request included one or more Range specifications,
-         or because a connection closed prematurely. After several such transfers, a cache might have received several ranges of the
-         same representation.
+      <p id="rfc.section.4.p.1">A response might transfer only a subrange of a representation if the connection closed prematurely or if the request used
+         one or more Range specifications. After several such transfers, a client might have received several ranges of the same representation.
+         These ranges can only be safely combined if they all have in common the same strong validator, where "strong validator" is
+         defined to be either an entity-tag that is not marked as weak (<a href="p4-conditional.html#header.etag" title="ETag">Section 2.2</a> of <a href="#Part4" id="rfc.xref.Part4.2"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>) or, if no entity-tag is provided, a Last-Modified value that is strong in the sense defined by <a href="p4-conditional.html#lastmod.comparison" title="Comparison">Section 2.1.2</a> of <a href="#Part4" id="rfc.xref.Part4.3"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>.
       </p>
-      <p id="rfc.section.4.p.2">If a cache has a stored non-empty set of subranges for a representation, and an incoming response transfers another subrange,
-         the cache <em class="bcp14">MAY</em> combine the new subrange with the existing set if both the following conditions are met: 
+      <p id="rfc.section.4.p.2">When a client receives an incomplete 200 (OK) or 206 (Partial Content) response and already has one or more stored responses
+         for the same method and effective request URI, all of the stored responses with the same strong validator <em class="bcp14">MAY</em> be combined with the partial content in this new response. If none of the stored responses contain the same strong validator,
+         then this new response corresponds to a new representation and <em class="bcp14">MUST NOT</em> be combined with the existing stored responses.
       </p>
-      <ul>
-         <li>Both the incoming response and the cache entry have a cache validator.</li>
-         <li>The two cache validators match using the strong comparison function (see <a href="p4-conditional.html#weak.and.strong.validators" title="Weak versus Strong">Section 2.2.2</a> of <a href="#Part4" id="rfc.xref.Part4.2"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>).
-         </li>
-      </ul>
-      <p id="rfc.section.4.p.3">If either requirement is not met, the cache <em class="bcp14">MUST</em> use only the most recent partial response (based on the Date values transmitted with every response, and using the incoming
-         response if these values are equal or missing), and <em class="bcp14">MUST</em> discard the other partial information.
+      <p id="rfc.section.4.p.3">If the new response is an incomplete 200 (OK) response, then the header fields of that new response are used for any combined
+         response and replace those of the matching stored responses.
+      </p>
+      <p id="rfc.section.4.p.4">If the new response is a 206 (Partial Content) response and at least one of the matching stored responses is a 200 (OK), then
+         the combined response header fields consist of the most recent 200 response's header fields. If all of the matching stored
+         responses are 206 responses, then the stored response with the most header fields is used as the source of header fields for
+         the combined response, except that the client <em class="bcp14">MUST</em> use other header fields provided in the new response, aside from Content-Range, to replace all instances of the corresponding
+         header fields in the stored response.
+      </p>
+      <p id="rfc.section.4.p.5">The combined response message-body consists of the union of partial content ranges in the new response and each of the selected
+         responses. If the union consists of the entire range of the representation, then the combined response <em class="bcp14">MUST</em> be recorded as a complete 200 (OK) response with a Content-Length header field that reflects the complete length. Otherwise,
+         the combined response(s) <em class="bcp14">MUST</em> include a Content-Range header field describing the included range(s) and be recorded as incomplete. If the union consists
+         of a discontinuous range of the representation, then the client <em class="bcp14">MAY</em> store it as either a multipart range response or as multiple 206 responses with one continuous range each.
       </p>
       <h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a>&nbsp;<a id="header.fields" href="#header.fields">Header Field Definitions</a></h1>
       <p id="rfc.section.5.p.1">This section defines the syntax and semantics of HTTP/1.1 header fields related to range requests and partial responses.</p>
@@ -824,26 +826,26 @@ ul.ind li li {
       <div id="rfc.iref.i.1"></div>
       <div id="rfc.iref.h.3"></div>
       <h2 id="rfc.section.5.3"><a href="#rfc.section.5.3">5.3</a>&nbsp;<a id="header.if-range" href="#header.if-range">If-Range</a></h2>
-      <p id="rfc.section.5.3.p.1">If a client has a partial copy of a representation in its cache, and wishes to have an up-to-date copy of the entire representation
-         in its cache, it could use the Range header field with a conditional GET (using either or both of If-Unmodified-Since and
-         If-Match.) However, if the condition fails because the representation has been modified, the client would then have to make
-         a second request to obtain the entire current representation.
+      <p id="rfc.section.5.3.p.1">If a client has a partial copy of a representation and wishes to have an up-to-date copy of the entire representation, it
+         could use the Range header field with a conditional GET (using either or both of If-Unmodified-Since and If-Match.) However,
+         if the condition fails because the representation has been modified, the client would then have to make a second request to
+         obtain the entire current representation.
       </p>
       <p id="rfc.section.5.3.p.2">The "If-Range" header field allows a client to "short-circuit" the second request. Informally, its meaning is "if the representation
          is unchanged, send me the part(s) that I am missing; otherwise, send me the entire new representation".
       </p>
       <div id="rfc.figure.u.14"></div><pre class="inline"><span id="rfc.iref.g.11"></span>  <a href="#header.if-range" class="smpl">If-Range</a> = <a href="#abnf.dependencies" class="smpl">entity-tag</a> / <a href="#abnf.dependencies" class="smpl">HTTP-date</a>
-</pre><p id="rfc.section.5.3.p.4">Only a strong validator (<a href="p4-conditional.html#weak.and.strong.validators" title="Weak versus Strong">Section 2.2.2</a> of <a href="#Part4" id="rfc.xref.Part4.3"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>) is usable for range retrieval, since otherwise the client might end up with an internally inconsistent representation. Clients <em class="bcp14">MUST NOT</em> use weak validators in range requests. A cache or origin server receiving a conditional range request <em class="bcp14">MUST</em> use the strong comparison function to evaluate the condition.
+</pre><p id="rfc.section.5.3.p.4">Clients <em class="bcp14">MUST NOT</em> use an entity-tag marked as weak in an If-Range field value and <em class="bcp14">MUST NOT</em> use a Last-Modified date in an If-Range field value unless it has no entity-tag for the representation and the Last-Modified
+         date it does have for the representation is strong in the sense defined by <a href="p4-conditional.html#lastmod.comparison" title="Comparison">Section 2.1.2</a> of <a href="#Part4" id="rfc.xref.Part4.4"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>.
       </p>
-      <p id="rfc.section.5.3.p.5">If the client has no entity-tag for a representation, but does have a Last-Modified date, it <em class="bcp14">MAY</em> use that date in an If-Range header field. (The server can distinguish between a valid HTTP-date and any form of entity-tag
-         by examining no more than two characters.) The If-Range header field <em class="bcp14">SHOULD</em> only be used together with a Range header field, and <em class="bcp14">MUST</em> be ignored if the request does not include a Range header field, or if the server does not support the sub-range operation.
+      <p id="rfc.section.5.3.p.5">A server that evaluates a conditional range request that is applicable to one of its representations <em class="bcp14">MUST</em> evaluate the condition as false if the entity-tag used as a validator is marked as weak or, when an HTTP-date is used as the
+         validator, if the date value is not strong in the sense defined by <a href="p4-conditional.html#lastmod.comparison" title="Comparison">Section 2.1.2</a> of <a href="#Part4" id="rfc.xref.Part4.5"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>. (A server can distinguish between a valid HTTP-date and any form of entity-tag by examining the first two characters.)
       </p>
-      <p id="rfc.section.5.3.p.6">If a client wishes to perform a sub-range retrieval on a value for which it has only a Last-Modified time and no opaque validator,
-         it <em class="bcp14">MAY</em> do this only if the Last-Modified time is strong in the sense described in <a href="p4-conditional.html#lastmod.comparison" title="Comparison">Section 2.1.2</a> of <a href="#Part4" id="rfc.xref.Part4.4"><cite title="HTTP/1.1, part 4: Conditional Requests">[Part4]</cite></a>.
+      <p id="rfc.section.5.3.p.6">The If-Range header field <em class="bcp14">SHOULD</em> only be sent by clients together with a Range header field. The If-Range header field <em class="bcp14">MUST</em> be ignored if it is received in a request that does not include a Range header field. The If-Range header field <em class="bcp14">MUST</em> be ignored by a server that does not support the sub-range operation.
       </p>
-      <p id="rfc.section.5.3.p.7">If the entity-tag given in the If-Range header field matches the current cache validator for the representation, then the
-         server <em class="bcp14">SHOULD</em> provide the specified sub-range of the representation using a 206 (Partial Content) response. If the cache validator does
-         not match, then the server <em class="bcp14">SHOULD</em> return the entire representation using a 200 (OK) response.
+      <p id="rfc.section.5.3.p.7">If the validator given in the If-Range header field matches the current validator for the selected representation of the target
+         resource, then the server <em class="bcp14">SHOULD</em> send the specified sub-range of the representation using a 206 (Partial Content) response. If the validator does not match,
+         then the server <em class="bcp14">SHOULD</em> send the entire representation using a 200 (OK) response.
       </p>
       <div id="rfc.iref.r.1"></div>
       <div id="rfc.iref.h.4"></div>
@@ -912,9 +914,9 @@ ul.ind li li {
       <div id="rfc.figure.u.23"></div><pre class="inline"><span id="rfc.iref.g.20"></span>  <a href="#range.retrieval.requests" class="smpl">Range</a> = <a href="#rule.ranges-specifier" class="smpl">byte-ranges-specifier</a> / <a href="#range.retrieval.requests" class="smpl">other-ranges-specifier</a>
   <a href="#range.retrieval.requests" class="smpl">other-ranges-specifier</a> = <a href="#range.units" class="smpl">other-range-unit</a> "=" <a href="#range.retrieval.requests" class="smpl">other-range-set</a>
   <a href="#range.retrieval.requests" class="smpl">other-range-set</a> = 1*<a href="#notation" class="smpl">CHAR</a>
-</pre><p id="rfc.section.5.4.2.p.3">A server <em class="bcp14">MAY</em> ignore the Range header field. However, HTTP/1.1 origin servers and intermediate caches ought to support byte ranges when
-         possible, since Range supports efficient recovery from partially failed transfers, and supports efficient partial retrieval
-         of large representations.
+</pre><p id="rfc.section.5.4.2.p.3">A server <em class="bcp14">MAY</em> ignore the Range header field. However, origin servers and intermediate caches ought to support byte ranges when possible,
+         since Range supports efficient recovery from partially failed transfers, and supports efficient partial retrieval of large
+         representations.
       </p>
       <p id="rfc.section.5.4.2.p.4">If the server supports the Range header field and the specified range or ranges are appropriate for the representation: </p>
       <ul>
@@ -1216,7 +1218,7 @@ ul.ind li li {
       </ol>
       <h1 id="rfc.section.B"><a href="#rfc.section.B">B.</a>&nbsp;<a id="compatibility" href="#compatibility">Compatibility with Previous Versions</a></h1>
       <h2 id="rfc.section.B.1"><a href="#rfc.section.B.1">B.1</a>&nbsp;<a id="changes.from.rfc.2616" href="#changes.from.rfc.2616">Changes from RFC 2616</a></h2>
-      <p id="rfc.section.B.1.p.1">Clarify that it is not ok to use a weak cache validator in a 206 response. (<a href="#status.206" id="rfc.xref.status.206.2" title="206 Partial Content">Section&nbsp;3.1</a>)
+      <p id="rfc.section.B.1.p.1">Clarify that it is not ok to use a weak validator in a 206 response. (<a href="#status.206" id="rfc.xref.status.206.2" title="206 Partial Content">Section&nbsp;3.1</a>)
       </p>
       <p id="rfc.section.B.1.p.2">Change ABNF productions for header fields to only define the field value. (<a href="#header.fields" title="Header Field Definitions">Section&nbsp;5</a>)
       </p>
@@ -1485,10 +1487,9 @@ ul.ind li li {
                         <li><em>Section 12</em>&nbsp;&nbsp;<a href="#rfc.xref.Part1.6">8</a></li>
                      </ul>
                   </li>
-                  <li><em>Part4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.1">1.2.2</a>, <a href="#rfc.xref.Part4.2">4</a>, <a href="#rfc.xref.Part4.3">5.3</a>, <a href="#rfc.xref.Part4.4">5.3</a>, <a href="#Part4"><b>9.1</b></a><ul>
-                        <li><em>Section 2.1.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.4">5.3</a></li>
-                        <li><em>Section 2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.1">1.2.2</a></li>
-                        <li><em>Section 2.2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.2">4</a>, <a href="#rfc.xref.Part4.3">5.3</a></li>
+                  <li><em>Part4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.1">1.2.2</a>, <a href="#rfc.xref.Part4.2">4</a>, <a href="#rfc.xref.Part4.3">4</a>, <a href="#rfc.xref.Part4.4">5.3</a>, <a href="#rfc.xref.Part4.5">5.3</a>, <a href="#Part4"><b>9.1</b></a><ul>
+                        <li><em>Section 2.1.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.3">4</a>, <a href="#rfc.xref.Part4.4">5.3</a>, <a href="#rfc.xref.Part4.5">5.3</a></li>
+                        <li><em>Section 2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.1">1.2.2</a>, <a href="#rfc.xref.Part4.2">4</a></li>
                      </ul>
                   </li>
                </ul>
