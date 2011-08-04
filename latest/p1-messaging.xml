@@ -16,7 +16,7 @@
   <!ENTITY ID-YEAR "2011">
   <!ENTITY mdash "&#8212;">
   <!ENTITY caching-overview       "<xref target='Part6' x:rel='#caching.overview' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY cache-incomplete       "<xref target='Part6' x:rel='#errors.or.incomplete.response.cache.behavior' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY cache-incomplete       "<xref target='Part6' x:rel='#response.cacheability' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY payload                "<xref target='Part3' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY media-types            "<xref target='Part3' x:rel='#media.types' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY content-codings        "<xref target='Part3' x:rel='#content.codings' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -1560,18 +1560,39 @@ Content-Type: text/plain
    of specific user configuration or by remembering the version of a prior
    received response.
 </t>
+</section>
+
+<section anchor="incomplete.messages" title="Incomplete Messages">
 <t>
    Request messages that are prematurely terminated, possibly due to a
    cancelled connection or a server-imposed time-out exception, &MUST;
    result in closure of the connection; sending an HTTP/1.1 error response
    prior to closing the connection is &OPTIONAL;.
+</t>
+<t>
    Response messages that are prematurely terminated, usually by closure
    of the connection prior to receiving the expected number of octets or by
    failure to decode a transfer-encoded message-body, &MUST; be recorded
-   as incomplete.  A user agent &MUST-NOT; render an incomplete response
-   message-body as if it were complete (i.e., some indication must be given
-   to the user that an error occurred).  Cache requirements for incomplete
-   responses are defined in &cache-incomplete;.
+   as incomplete.  A response that terminates in the middle of the header
+   block (before the empty line is received) cannot be assumed to convey the
+   full semantics of the response and &MUST-NOT; be stored by a cache.
+</t>
+<t>
+   A message-body that uses the chunked transfer encoding is
+   incomplete if the zero-sized chunk that terminates the encoding has not
+   been received.  A message that uses a valid Content-Length is incomplete
+   if the size of the message-body received (in octets) is less than the
+   value given by Content-Length.  A response that has neither chunked
+   transfer encoding nor Content-Length is terminated by closure of the
+   connection, and thus is considered complete regardless of the number of
+   message-body octets received, provided that the header block was received
+   intact.
+</t>
+<t>
+   A user agent &MUST-NOT; render an incomplete response message-body as if
+   it were complete (i.e., some indication must be given to the user that an
+   error occurred).  Cache requirements for incomplete responses are defined
+   in &cache-incomplete;.
 </t>
 <t>
    A server &MUST; read the entire request message-body or close

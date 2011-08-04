@@ -20,6 +20,7 @@
   <!ENTITY uri                         "<xref target='Part1' x:rel='#uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY effective-request-uri      "<xref target='Part1' x:rel='#effective.request.uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY messaging                   "<xref target='Part1' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY semantics                   "<xref target='Part2' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY conditional                 "<xref target='Part4' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY partial                     "<xref target='Part5' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY combining-byte-ranges       "<xref target='Part5' x:rel='#combining.byte.ranges' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -31,7 +32,9 @@
   <!ENTITY header-last-modified        "<xref target='Part4' x:rel='#header.last-modified' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-fields               "<xref target='Part1' x:rel='#header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY safe-methods                "<xref target='Part2' x:rel='#safe.methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY entity-tags                 "<xref target='Part4' x:rel='#header.etag' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY weak-and-strong             "<xref target='Part4' x:rel='#weak.and.strong.validators' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY lastmod-comparison          "<xref target='Part4' x:rel='#lastmod.comparison' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-codes                "<xref target='Part2' x:rel='#status.codes' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status.2xx                  "<xref target='Part2' x:rel='#status.2xx' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
 ]>
@@ -251,16 +254,16 @@
    is acting as a tunnel.
 </t>
 <t>
-   Caching would be useless if it did not significantly improve performance.
-   The goal of caching in HTTP/1.1 is to reuse a prior response message to
-   satisfy a current request. In some cases, a stored response can be reused
-   without the need for a network request, reducing latency and network
-   round-trips; a "freshness" mechanism is used for this purpose (see <xref
-   target="expiration.model" />). Even when a new request is required, it is
-   often possible to reuse all or parts of the payload of a prior response to
-   satisfy the request, thereby reducing network bandwidth usage; a
-   "validation" mechanism is used for this purpose (see <xref
-   target="validation.model" />).
+   The goal of caching in HTTP/1.1 is to significantly improve performance
+   by reusing a prior response message to satisfy a current request.
+   A stored response is considered "fresh", as defined in
+   <xref target="expiration.model" />, if the response can be reused without
+   "validation" (checking with the origin server to see if the cached response
+   remains valid for this request).  A fresh cache response can therefore
+   reduce both latency and network transfers each time it is reused.
+   When a cached response is not fresh, it might still be reusable if it can
+   be freshened by validation (<xref target="validation.model" />) or if the
+   origin is unavailable.
 </t>
 </section>
 
@@ -282,8 +285,8 @@
    <iref item="shared cache" />
    <x:dfn>shared cache</x:dfn>
    <list>
-      <t>A cache that is accessible to more than one user; usually (but
-        not always) deployed as part of an intermediary.</t>
+      <t>A cache that stores responses to be reused by more than one user;
+         usually (but not always) deployed as part of an intermediary.</t>
    </list>
 </t>
 <t>
@@ -365,7 +368,19 @@
    <list>
       <t>A protocol element (e.g., an entity-tag or a Last-Modified time) that
       is used to find out whether a stored response is an equivalent copy of
-      a representation.</t>
+      a representation. See &weak-and-strong;.</t>
+   </list>
+</t>
+<t>
+   <iref item="strong validator" />
+   <iref item="validator, strong" />
+   <x:dfn>strong validator</x:dfn>
+   <list>
+      <t>A validator that is defined by the origin server such that its
+         current value will change if the representation body changes; i.e.,
+         an entity-tag that is not marked as weak (&entity-tags;) or,
+         if no entity-tag is provided, a Last-Modified value that is strong
+         in the sense defined by &lastmod-comparison;.</t>
    </list>
 </t>
 </section>
@@ -467,6 +482,41 @@
 </section>
 
 <section anchor="caching.overview" title="Cache Operation">
+<iref item="cache entry" />
+<iref item="cache key" />
+<t>
+   Proper cache operation preserves the semantics of HTTP transfers
+   (&semantics;) while eliminating the transfer of information already held
+   in the cache.  Although caching is an entirely &OPTIONAL; feature of HTTP,
+   we assume that reusing the cached response is desirable and that such
+   reuse is the default behavior when no requirement or locally-desired
+   configuration prevents it.  Therefore, HTTP cache requirements are focused
+   on preventing a cache from either storing a non-reusable response or
+   reusing a stored response inappropriately.
+</t>
+<t>
+   Each <x:dfn>cache entry</x:dfn> consists of a cache key and one or more
+   HTTP responses corresponding to prior requests that used the same key.
+   The most common form of cache entry is a successful result of a retrieval
+   request: i.e., a 200 (OK) response containing a representation of the
+   resource identified by the request target.  However, it is also possible
+   to cache negative results (e.g., 404 not found), incomplete results
+   (e.g., 206 partial content), and responses to safe methods other than
+   GET if the method's definition allows such caching and defines something
+   suitable for use as a cache key.
+</t>
+<t>
+   The default <x:dfn>cache key</x:dfn> consists of the request method and
+   target URI.  However, since HTTP caches in common use today are typically
+   limited to caching responses to GET, most implementations simply decline
+   other methods and use only the URI as the key.
+</t>
+<t>
+   If a request target is subject to content negotiation, its cache entry
+   might consist of multiple stored responses, each differentiated by a
+   secondary key for the values of the original request's selecting header
+   fields (<xref target="caching.negotiated.responses"/>).
+</t>
 
 <section anchor="response.cacheability" title="Response Cacheability">
 <t>
@@ -508,35 +558,38 @@
 </t>
 <t>
    In this context, a cache has "understood" a request method or a response
-   status code if it recognises it and implements any cache-specific
-   behavior. In particular, 206 Partial Content responses cannot be cached by
-   an implementation that does not handle partial content (see <xref
-   target="errors.or.incomplete.response.cache.behavior" />).
+   status code if it recognizes it and implements any cache-specific
+   behavior.
 </t>
 <t>
-   Note that in normal operation, most caches will not store a response that
+   Note that, in normal operation, most caches will not store a response that
    has neither a cache validator nor an explicit expiration time, as such
    responses are not usually useful to store. However, caches are not
    prohibited from storing such responses.
 </t>
-
-<section anchor="errors.or.incomplete.response.cache.behavior" 
-   title="Storing Partial and Incomplete Responses">
 <t>
-   A cache that receives an incomplete response (for example, with fewer bytes
-   of data than specified in a Content-Length header field) can store the response,
-   but &MUST; treat it as a partial response &partial;. Partial responses can
-   be combined as described in &combining-byte-ranges;; the result might be a
-   full response or might still be partial. A cache &MUST-NOT; return a
-   partial response to a client without explicitly marking it as such using
-   the 206 (Partial Content) status code.
+   A response message is considered complete when all of the octets
+   indicated by the message framing (&messaging;) are received
+   prior to the connection being closed.
+   If the request is GET, the response status is 200 (OK), and the entire
+   response header block has been received, a cache &MAY; store an incomplete
+   response message-body if the cache entry is recorded as incomplete.
+   Likewise, a 206 (Partial Content) response &MAY; be stored as if it were
+   an incomplete 200 (OK) cache entry.  However, a cache &MUST-NOT; store
+   incomplete or partial content responses if it does not support the Range
+   and Content-Range header fields or if it does not understand the
+   range units used in those fields.
 </t>
 <t>
-   A cache that does not support the Range and Content-Range header fields
-   &MUST-NOT; store incomplete or partial responses.
+   A cache &MAY; complete a stored incomplete response by making a subsequent
+   range request (&partial;) and combining the successful response with the
+   stored entry, as defined in <xref target="combining.responses"/>.
+   A cache &MUST-NOT; use an incomplete response to answer requests
+   unless the response has been made complete or the request is partial and
+   specifies a range that is wholly within the incomplete response.
+   A cache &MUST-NOT; send a partial response to a client without explicitly
+   marking it as such using the 206 (Partial Content) status code.
 </t>
-</section>
-
 </section>
 
 
@@ -880,13 +933,13 @@
 </t>
 <t>
    A 304 (Not Modified) response status code indicates that the stored
-   response can be updated and reused; see <xref target="combining.responses"/>.
+   response can be updated and reused; see <xref target="freshening.responses"/>.
 </t>
 <t>
    A full response (i.e., one with a response body) indicates that none of the
    stored responses nominated in the conditional request is suitable. Instead,
    a cache &SHOULD; use the full response to satisfy the request and &MAY; 
-   replace the stored response.
+   replace the stored response(s).
 </t>
 <t>
    If a cache receives a 5xx response while attempting to validate a response,
@@ -1015,43 +1068,70 @@
 </t>
 </section>
 
-<section anchor="combining.responses" title="Combining Responses">
+<section anchor="combining.responses" title="Combining Partial Content">
 <t>
-   When a cache receives a 304 (Not Modified) response or a 206 (Partial
-   Content) response (in this section, the "new" response"), it needs to
-   create an updated response by combining the stored response with the new
-   one, so that the updated response can be used to satisfy the request, and
-   potentially update the cached response.
+   A response might transfer only a partial representation if the
+   connection closed prematurely or if the request used one or more Range
+   specifiers (&partial;).  After several such transfers, a cache might have
+   received several ranges of the same representation.  A cache &MAY; combine
+   these ranges into a single stored response, and reuse that response to
+   satisfy later requests, if they all share the same strong validator and
+   the cache complies with the client requirements in &combining-byte-ranges;.
 </t>
 <t>
-   If the new response contains an ETag, it identifies the stored response to
-   use. <cref anchor="TODO-mention-CL">might need language about
-   Content-Location here</cref><cref
-   anchor="TODO-select-for-combine">Shouldn't this be the selected
-   response?</cref>
-</t>
-<t>
-   When the new response's status code is 206 (partial content), a cache
-   &MUST-NOT; combine it with the old response if either response does not
-   have a validator, and &MUST-NOT; combine it with the old response when
-   those validators do not match with the strong comparison function
-   (see &weak-and-strong;).
-</t>
-<t>
-   The stored response header fields are used as those of the updated response,
-   except that
+   When combining the new response with one or more stored responses, a
+   cache &MUST;:
    <list style="symbols">
-      <t>a cache &MUST; delete any stored Warning header fields with warn-code 1xx (see <xref
-      target="header.warning" />).</t>
-      <t>a cache &MUST; retain any stored Warning header fields with warn-code 2xx.</t>
-      <t>a cache &MUST; use other header fields provided in the new response to replace all
-      instances of the corresponding header fields from the stored response.</t>
+      <t>delete any Warning header fields in the stored response with
+         warn-code 1xx (see <xref target="header.warning" />);</t>
+      <t>retain any Warning header fields in the stored response with
+         warn-code 2xx; and,</t>
+      <t>use other header fields provided in the new response, aside
+         from Content-Range, to replace all instances of the corresponding
+         header fields in the stored response.</t>
+   </list>
+</t>
+</section>
+
+<section anchor="freshening.responses" title="Freshening Responses">
+<t>
+   When a cache receives a 304 (Not Modified) response and already has one
+   or more stored 200 (OK) responses for the same cache key, the cache needs
+   to identify which of the stored responses are updated by this new response
+   and then update the stored response(s) with the new information provided in
+   the 304 response.
+   <list style="symbols">
+    <t>
+     If the new response contains a strong validator, then that strong
+     validator identifies the selected representation.  All of the stored
+     responses with the same strong validator are selected.
+     If none of the stored responses contain the same strong validator, then
+     this new response corresponds to a new selected representation and
+     &MUST-NOT; update the existing stored responses.
+    </t>
+    <t>
+     If the new response contains a weak validator and that validator
+     corresponds to one of the cache's stored responses, then the most
+     recent of those matching stored responses is selected.
+    </t>
+    <t>
+     If the new response does not include any form of validator, there is
+     only one stored response, and that stored response also lacks a
+     validator, then that stored response is selected.
+    </t>
    </list>
 </t>
 <t>
-   A cache &MUST; use the updated response header fields to replace those of the stored
-   response (unless the stored response is removed). In
-   the case of a 206 response, a cache &MAY; store the combined representation.
+   If a stored response is selected for update, the cache &MUST;:
+   <list style="symbols">
+      <t>delete any Warning header fields in the stored response with
+         warn-code 1xx (see <xref target="header.warning" />);</t>
+      <t>retain any Warning header fields in the stored response with
+         warn-code 2xx; and,</t>
+      <t>use other header fields provided in the 304 response to replace
+         all instances of the corresponding header fields in the stored
+         response.</t>
+   </list>
 </t>
 </section>
 
