@@ -222,12 +222,11 @@
 <section title="Introduction" anchor="introduction">
 <t>
    This document defines the HTTP/1.1 conditional request mechanisms,
-   including both response metadata that can be used to indicate or
-   observe changes to resource state and request header fields that
-   specify preconditions to be checked before performing the action
-   given by the request method.  Conditional GET requests are the most
-   efficient mechanism for HTTP cache updates &caching;.  Conditionals
-   can also be
+   including both metadata for indicating/observing changes in resource
+   representations and request header fields that specify preconditions
+   on that metadata be checked before performing the request method.
+   Conditional GET requests are the most efficient mechanism for HTTP
+   cache updates &caching;.  Conditionals can also be
    applied to state-changing methods, such as PUT and DELETE, to prevent
    the "lost update" problem: one client accidentally overwriting
    the work of another client that has been acting in parallel.
@@ -310,7 +309,7 @@
 </section>
 </section>
 
-<section title="Resource State Metadata (Validators)" anchor="resource.metadata">
+<section title="Validators" anchor="validators">
    <iref primary="true" item="metadata"/>
    <iref primary="true" item="validator"/>
 <t>
@@ -324,82 +323,90 @@
 </t>
 
 <section title="Weak versus Strong" anchor="weak.and.strong.validators">
+   <iref primary="true" item="validator" subitem="weak"/>
+   <iref primary="true" item="validator" subitem="strong"/>
 <t>
-   Since both origin servers and caches will compare two validators to
-   decide if they indicate the same or different representations, one
-   normally would expect that if the representation (including both
-   representation header fields and representation body) changes in any
-   way, then the associated validator would change as well. If this is
-   true, then we call that validator a "strong validator".  One example
-   of a strong validator is an integer that is incremented in stable
-   storage every time a representation is changed.
+   Validators come in two flavors: strong or weak.  Weak validators are easy
+   to generate but are far less useful for comparisons.  Strong validators
+   are ideal for comparisons but can be very difficult (and occasionally
+   impossible) to generate efficiently.  Rather than impose that all forms
+   of resource adhere to the same strength of validator, HTTP exposes the
+   type of validator in use and imposes restrictions on when weak validators
+   can be used as preconditions.
 </t>
 <t>
-   However, there might be cases when a server prefers to change the
-   validator only when it desires cached representations to be invalidated.
-   For example, the representation of a weather report that changes in
-   content every second, based on dynamic measurements, might be grouped
-   into sets of equivalent representations (from the origin server's
-   perspective) in order to allow cached representations to be valid
-   for a reasonable period of time (perhaps adjusted dynamically based
-   on server load or weather quality).
-   A validator that does not always change when the representation
-   changes is a "weak validator".
-</t>
-<t>
-   One can think of a strong validator as part of an identifier for a
-   specific representation, whereas a weak validator is part of an
-   identifier for a set of equivalent representations (where this notion
-   of equivalence is entirely governed by the origin server and beyond
-   the scope of this specification).
-</t>
-<t>
-      A representation's modification time, if defined with only one-second
-      resolution, could be a weak validator, since it is possible that
-      the representation might be modified twice during a single second.
-</t><t>
-      Support for weak validators is optional. However, weak validators
-      allow for more efficient caching of equivalent objects; for
-      example, a hit counter on a site is probably good enough if it is
-      updated every few days or weeks, and any value during that period
-      is likely "good enough" to be equivalent.
-</t>
-<t>
-   A strong entity-tag &MUST; change whenever the associated representation
-   changes in any way. A weak entity-tag &SHOULD; change whenever the origin
-   server considers prior representations to be unacceptable as a substitute
-   for the current representation. In other words, a weak entity tag &SHOULD;
-   change whenever the origin server wants caches to invalidate old responses.
-</t>
-<t>
-   A "strong entity-tag" &MAY; be shared by two representations of a resource
-   only if they are equivalent by octet equality.
-</t>
-<t>
-   A "weak entity-tag", indicated by the "W/" prefix, &MAY; be shared by
-   two representations of a resource. A weak entity-tag can only be used
-   for weak comparison.
+   A "strong validator" is a representation metadata value that &MUST; be
+   changed to a new, previously unused or guaranteed unique, value whenever
+   a change occurs to the representation data such that a change would be
+   observable in the payload body of a 200 response to GET.  A strong
+   validator &MAY; be changed for other reasons, such as when a semantically
+   significant part of the representation metadata is changed (e.g.,
+   Content-Type), but it is in the best interests of the origin server to only
+   change the value when it is necessary to invalidate the stored responses
+   held by remote caches and authoring tools.  A strong validator &MUST; be
+   unique across all representations of a given resource, such that no two
+   representations of that resource share the same validator unless
+   their payload body would be identical.
 </t>
 <t>
    Cache entries might persist for arbitrarily long periods, regardless
    of expiration times.  Thus, a cache might attempt to validate an
    entry using a validator that it obtained in the distant past.
-   A strong entity-tag &MUST; be unique across all versions of all
+   A strong validator &MUST; be unique across all versions of all
    representations associated with a particular resource over time.
-   However, there is no implication of uniqueness across entity-tags
-   of different resources (i.e., the same entity-tag value might be
+   However, there is no implication of uniqueness across representations
+   of different resources (i.e., the same strong validator might be
    in use for representations of multiple resources at the same time
    and does not imply that those representations are equivalent).
 </t>
 <t>
-   A "use" of a validator is either when a client generates a request
-   and includes the validator in a precondition, or when a server
-   compares two validators.
+   There are a variety of strong validators used in practice.  The best are
+   based on strict revision control, wherein each change to a representation
+   always results in a unique node name and revision identifier being assigned
+   before the representation is made accessible to GET.  A cryptographic hash
+   function applied to the representation data is also sufficient if the data
+   is available prior to the response header fields being sent and the digest
+   does not need to be recalculated every time a validation request is
+   received.  However, if a resource has distinct representations that differ
+   only in their metadata, such as might occur with content negotiation over
+   media types that happen to share the same data format, then a server
+   &SHOULD; incorporate additional information in the validator to
+   distinguish those representations and avoid confusing cache behavior.
 </t>
 <t>
-   Strong validators are usable in any context. Weak validators are only
-   usable in contexts that do not depend on exact equality of a representation.
-   For example, either kind is usable for a normal conditional GET.
+   In contrast, a "weak validator" is a representation metadata value that
+   might not be changed for every change to the representation data.  This
+   weakness might be due to limitations in how the value is calculated, such
+   as clock resolution or an inability to ensure uniqueness for all possible
+   representations of the resource, or due to a desire by the resource owner
+   to group representations by some self-determined set of equivalency
+   rather than unique sequences of data.  A weak entity-tag &SHOULD; change
+   whenever the origin server considers prior representations to be
+   unacceptable as a substitute for the current representation. In other
+   words, a weak entity-tag &SHOULD; change whenever the origin server wants
+   caches to invalidate old responses.
+</t>
+<t>
+   For example, the representation of a weather report that changes in
+   content every second, based on dynamic measurements, might be grouped
+   into sets of equivalent representations (from the origin server's
+   perspective) with the same weak validator in order to allow cached
+   representations to be valid for a reasonable period of time (perhaps
+   adjusted dynamically based on server load or weather quality).
+   Likewise, a representation's modification time, if defined with only
+   one-second resolution, might be a weak validator if it is possible
+   for the representation to be modified twice during a single second and
+   retrieved between those modifications.
+</t>
+<t>
+   A "use" of a validator occurs when either a client generates a request
+   and includes the validator in a precondition or when a server
+   compares two validators.
+   Weak validators are only usable in contexts that do not depend on exact
+   equality of a representation's payload body.
+   Strong validators are usable and preferred for all conditional requests,
+   including cache validation, partial content ranges, and "lost update"
+   avoidance.
 </t>
 </section>
 
@@ -767,7 +774,6 @@ Content-Encoding: gzip
   </t></list>
 </t>
 </section>
-
 </section>
 
 <section title="Precondition Header Fields" anchor="header.fields">
