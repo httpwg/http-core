@@ -294,21 +294,33 @@
 <section title="Challenge and Response" anchor="challenge.and.response">
   <x:anchor-alias value="auth-scheme"/>
   <x:anchor-alias value="auth-param"/>
+  <x:anchor-alias value="b64token"/>
   <x:anchor-alias value="challenge"/>
   <x:anchor-alias value="credentials"/>
 <t>
    HTTP provides a simple challenge-response authentication mechanism
    that can be used by a server to challenge a client request and by a
    client to provide authentication information. It uses an extensible,
-   case-insensitive token to identify the authentication scheme,
-   followed by a comma-separated list of attribute-value pairs which
-   carry the parameters necessary for achieving authentication via that
-   scheme.
+   case-insensitive token to identify the authentication scheme, followed
+   by additional information necessary for achieving authentication via that
+   scheme. The latter can either be a comma-separated list of attribute-value
+   pairs or a single sequence of characters capable of holding base64-encoded
+   information.
 </t>
-<figure><artwork type="abnf2616"><iref item="auth-scheme" primary="true"/><iref item="auth-param" primary="true"/><iref primary="true" item="Grammar" subitem="auth-scheme"/><iref primary="true" item="Grammar" subitem="auth-param"/>
+<figure><artwork type="abnf2616"><iref item="auth-scheme" primary="true"/><iref item="auth-param" primary="true"/><iref primary="true" item="Grammar" subitem="auth-scheme"/><iref primary="true" item="Grammar" subitem="auth-param"/><iref item="b64token" primary="true"/><iref primary="true" item="Grammar" subitem="b64token"/>
   auth-scheme    = <x:ref>token</x:ref>
+  
   auth-param     = <x:ref>token</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
+
+  b64token       = 1*( <x:ref>ALPHA</x:ref> / <x:ref>DIGIT</x:ref> /
+                       "-" / "." / "_" / "~" / "+" / "/" ) *"=" 
 </artwork></figure>
+<t>
+   The "b64token" syntax allows the 66 unreserved URI characters (<xref target="RFC3986"/>),
+   plus a few others, so that it can hold a base64, base64url (URL and filename
+   safe alphabet), base32, or base16 (hex) encoding, with or without padding, but
+   excluding whitespace (<xref target="RFC4648"/>). 
+</t>
 <t>
    The 401 (Unauthorized) response message is used by an origin server
    to challenge the authorization of a user agent. This response &MUST;
@@ -322,7 +334,7 @@
    applicable to the proxy for the requested resource.
 </t>
 <figure><artwork type="abnf2616"><iref item="challenge" primary="true"/><iref primary="true" item="Grammar" subitem="challenge"/>
-  <x:ref>challenge</x:ref>   = <x:ref>auth-scheme</x:ref> 1*<x:ref>SP</x:ref> #<x:ref>auth-param</x:ref>
+  <x:ref>challenge</x:ref>   = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>b64token</x:ref> / #<x:ref>auth-param</x:ref> ) ]
 </artwork></figure>
 <x:note>
   <t>
@@ -360,9 +372,7 @@
    understands and request credentials from the user based upon that challenge.
 </t>
 <figure><artwork type="abnf2616"><iref item="credentials" primary="true"/><iref primary="true" item="Grammar" subitem="credentials"/>
-  <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> 1*<x:ref>SP</x:ref> ( <x:ref>token</x:ref>
-                                 / <x:ref>quoted-string</x:ref>
-                                 / #<x:ref>auth-param</x:ref> )
+  <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>b64token</x:ref> / #<x:ref>auth-param</x:ref> ) ]
 </artwork></figure>
 <t>
    If the origin server does not wish to accept the credentials sent
@@ -469,6 +479,14 @@
       The authentication parameter "realm" is reserved for defining Protection
       Spaces as defined in <xref target="protection.space"/>. New schemes
       &MUST-NOT; use it in a way incompatible with that definition.
+    </t>
+    </x:lt>
+    <x:lt>
+    <t>
+      The "b64token" notation was introduced for compatibility with existing
+      authentication schemes and can only be used once per challenge/credentials.
+      New schemes thus ought to use the "auth-param" syntax instead, because
+      otherwise future extensions will be impossible.
     </t>
     </x:lt>
     <x:lt>
@@ -1035,6 +1053,45 @@
   <seriesInfo name='RFC' value='3864' />
 </reference>
 
+<reference anchor="RFC3986">
+ <front>
+  <title abbrev='URI Generic Syntax'>Uniform Resource Identifier (URI): Generic Syntax</title>
+  <author initials='T.' surname='Berners-Lee' fullname='Tim Berners-Lee'>
+    <organization abbrev="W3C/MIT">World Wide Web Consortium</organization>
+    <address>
+       <email>timbl@w3.org</email>
+       <uri>http://www.w3.org/People/Berners-Lee/</uri>
+    </address>
+  </author>
+  <author initials='R.' surname='Fielding' fullname='Roy T. Fielding'>
+    <organization abbrev="Day Software">Day Software</organization>
+    <address>
+      <email>fielding@gbiv.com</email>
+      <uri>http://roy.gbiv.com/</uri>
+    </address>
+  </author>
+  <author initials='L.' surname='Masinter' fullname='Larry Masinter'>
+    <organization abbrev="Adobe Systems">Adobe Systems Incorporated</organization>
+    <address>
+      <email>LMM@acm.org</email>
+      <uri>http://larry.masinter.net/</uri>
+    </address>
+  </author>
+  <date month='January' year='2005'></date>
+ </front>
+ <seriesInfo name="STD" value="66"/>
+ <seriesInfo name="RFC" value="3986"/>
+</reference>
+
+<reference anchor="RFC4648">
+  <front>
+    <title>The Base16, Base32, and Base64 Data Encodings</title>
+    <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+    <date year="2006" month="October"/>
+  </front>
+  <seriesInfo value="4648" name="RFC"/>
+</reference>
+
 <reference anchor='RFC5226'>
   <front>
     <title>Guidelines for Writing an IANA Considerations Section in RFCs</title>
@@ -1058,6 +1115,11 @@
 <t>
   The "realm" parameter isn't required anymore in general; consequently, the
   ABNF allows challenges without any auth parameters.
+  (<xref target="access.authentication.framework"/>)
+</t>
+<t>
+  The "b64token" alternative to auth-param lists has been added for consistency
+  with legacy authentication schemes such as "Basic".
   (<xref target="access.authentication.framework"/>)
 </t>
 <t>
@@ -1086,10 +1148,13 @@
 <x:ref>auth-param</x:ref> = token BWS "=" BWS ( token / quoted-string )
 <x:ref>auth-scheme</x:ref> = token
 
-<x:ref>challenge</x:ref> = auth-scheme 1*SP [ ( "," / auth-param ) *( OWS "," [ OWS
- auth-param ] ) ]
-<x:ref>credentials</x:ref> = auth-scheme 1*SP ( token / quoted-string / [ ( "," /
- auth-param ) *( OWS "," [ OWS auth-param ] ) ] )
+<x:ref>b64token</x:ref> = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" )
+ *"="
+
+<x:ref>challenge</x:ref> = auth-scheme [ 1*SP ( b64token / [ ( "," / auth-param ) *(
+ OWS "," [ OWS auth-param ] ) ] ) ]
+<x:ref>credentials</x:ref> = auth-scheme [ 1*SP ( b64token / [ ( "," / auth-param )
+ *( OWS "," [ OWS auth-param ] ) ] ) ]
 
 <x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in [Part1], Section 1.2.2&gt;
 
@@ -1300,6 +1365,10 @@ realm-value = quoted-string
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/177"/>:
       "Realm required on challenges"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/195"/>:
+      "auth-param syntax"
     </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/257"/>:
