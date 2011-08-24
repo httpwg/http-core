@@ -421,15 +421,6 @@
     </t>
   </list>
 </t>
-<t>
-   identity<iref item="identity (Coding Format)"/><iref item="Coding Format" subitem="identity"/>
-  <list><t>
-        The default (identity) encoding; the use of no transformation
-        whatsoever. This content-coding is used only in the Accept-Encoding
-        header field, and &SHOULD-NOT;  be used in the Content-Encoding
-        header field.
-  </t></list>
-</t>
 
 <section title="Content Coding Registry" anchor="content.coding.registry">
 <t>
@@ -985,11 +976,14 @@
    type if it is the best available after an 80% mark-down in quality".
 </t>
 <t>
-   If no Accept header field is present, then it is assumed that the
-   client accepts all media types. If an Accept header field is present in a
-   request, but the server cannot send a response which is acceptable, then
-   the server can either send a response in another format, or a 406 (Not
-   Acceptable) response. 
+   A request without any Accept header field implies that the user agent
+   will accept any media type in response.
+   If an Accept header field is present in a request and none of the
+   available representations for the response have a media type that is
+   listed as acceptable, the origin server &MAY; either
+   honor the Accept header field by sending a 406 (Not Acceptable) response
+   or disregard the Accept header field by treating the response as if
+   it is not subject to content negotiation.
 </t>
 <t>
    A more elaborate example is
@@ -1082,11 +1076,14 @@
    all character encodings not explicitly mentioned get a quality value of 0.
 </t>
 <t>
-   If no Accept-Charset header field is present, the default is that any
-   character encoding is acceptable. If an Accept-Charset header field is
-   present in a request, but the server cannot send a response which is
-   acceptable, then the server can either use another character encoding, or
-   send a 406 (Not Acceptable) response.
+   A request without any Accept-Charset header field implies that the user
+   agent will accept any character encoding in response.
+   If an Accept-Charset header field is present in a request and none of the
+   available representations for the response have a character encoding that
+   is listed as acceptable, the origin server &MAY; either honor the
+   Accept-Charset header field by sending a 406 (Not Acceptable) response or
+   disregard the Accept-Charset header field by treating the response as if
+   it is not subject to content negotiation.
 </t>
 </section>
 
@@ -1098,18 +1095,21 @@
 <t>
    The "Accept-Encoding" header field can be used by user agents to
    indicate what response content-codings (<xref target="content.codings"/>)
-   are acceptable in the response.
+   are acceptable in the response.  An "identity" token is used as a synonym
+   for "no encoding" in order to communicate when no encoding is preferred.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Encoding"/><iref primary="true" item="Grammar" subitem="codings"/>
   <x:ref>Accept-Encoding</x:ref>  = #( <x:ref>codings</x:ref> [ <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> ] )
-  <x:ref>codings</x:ref>          = ( <x:ref>content-coding</x:ref> / "*" )
+  <x:ref>codings</x:ref>          = <x:ref>content-coding</x:ref>
+                                  / "identity"
+                                  / "*"
 </artwork></figure>
 <t>
    Each codings value &MAY; be given an associated quality value which
    represents the preference for that encoding. The default value is q=1.
 </t>
 <t>
-   Examples of its use are:
+   For example,
 </t>
 <figure><artwork type="example">
   Accept-Encoding: compress, gzip
@@ -1119,53 +1119,41 @@
   Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0
 </artwork></figure>
 <t>
-   A server tests whether a content-coding is acceptable, according to
-   an Accept-Encoding field, using these rules:
+   A server tests whether a content-coding for a given representation is
+   acceptable, according to an Accept-Encoding field, using these rules:
   <list style="numbers">
-      <t>If the content-coding is one of the content-codings listed in
-         the Accept-Encoding field, then it is acceptable, unless it is
-         accompanied by a qvalue of 0. (As defined in &qvalue;, a
-         qvalue of 0 means "not acceptable".)</t>
-
       <t>The special "*" symbol in an Accept-Encoding field matches any
          available content-coding not explicitly listed in the header
          field.</t>
 
+      <t>If the representation has no content-coding, then it is acceptable
+         by default unless specifically excluded by the Accept-Encoding field
+         stating either "identity;q=0" or "*;q=0" without a more specific
+         entry for "identity".</t>
+
+      <t>If the representation's content-coding is one of the content-codings
+         listed in the Accept-Encoding field, then it is acceptable unless
+         it is accompanied by a qvalue of 0. (As defined in &qvalue;, a
+         qvalue of 0 means "not acceptable".)</t>
+
       <t>If multiple content-codings are acceptable, then the acceptable
          content-coding with the highest non-zero qvalue is preferred.</t>
-
-      <t>The "identity" content-coding is always acceptable, unless
-         specifically refused because the Accept-Encoding field includes
-         "identity;q=0", or because the field includes "*;q=0" and does
-         not explicitly include the "identity" content-coding. If the
-         Accept-Encoding field-value is empty, then only the "identity"
-         encoding is acceptable.</t>
   </list>
 </t>
 <t>
-   If an Accept-Encoding field is present in a request, but the server cannot
-   send a response which is acceptable, then the server &SHOULD; send a
-   response without any encoding (i.e., the "identity" encoding).
+   An Accept-Encoding header field with a combined field-value that is empty
+   implies that the user agent does not want any content-coding in response.
+   If an Accept-Encoding header field is present in a request and none of the
+   available representations for the response have a content-coding that
+   is listed as acceptable, the origin server &SHOULD; send a response
+   without any content-coding.
 </t>
 <t>
-   If no Accept-Encoding field is present in a request, the server &MAY;
-   assume that the client will accept any content coding. In this case,
-   if "identity" is one of the available content-codings, then the
-   server &SHOULD; use the "identity" content-coding, unless it has
-   additional information that a different content-coding is meaningful
-   to the client.
+   A request without an Accept-Encoding header field implies that the user
+   agent will accept any content-coding in response, but a representation
+   without content-coding is preferred for compatibility with the widest
+   variety of user agents.
 </t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> If the request does not include an Accept-Encoding field,
-    and if the "identity" content-coding is unavailable, then
-    content-codings commonly understood by HTTP/1.0 clients (i.e.,
-    "gzip" and "compress") are preferred; some older clients
-    improperly display messages sent with other content-codings.  The
-    server might also make this decision based on information about
-    the particular user-agent or client.
-  </t>
-</x:note>
 <x:note>
   <t>
     <x:h>Note:</x:h> Most HTTP/1.0 applications do not recognize or obey qvalues
@@ -1250,11 +1238,11 @@
   <x:anchor-alias value="Content-Encoding"/>
 <t>
    The "Content-Encoding" header field indicates what content-codings 
-   have been applied to the representation, and thus what decoding mechanisms
-   must be applied in order to obtain the media-type referenced by the 
-   Content-Type header field. Content-Encoding is primarily used to allow a
-   representation to be compressed without losing the identity of its underlying
-   media type.
+   have been applied to the representation beyond those inherent in the media
+   type, and thus what decoding mechanisms must be applied in order to obtain
+   the media-type referenced by the Content-Type header field.
+   Content-Encoding is primarily used to allow a representation to be
+   compressed without losing the identity of its underlying media type.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
   <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
@@ -1274,21 +1262,33 @@
    "no-transform" cache-control directive is present in the message.
 </t>
 <t>
-   If the content-coding of a representation is not "identity", then the
-   representation metadata &MUST; include a Content-Encoding header
-   field (<xref target="header.content-encoding"/>)
-   that lists the non-identity content-coding(s) used.
+   If the media type includes an inherent encoding, such as a data format
+   that is always compressed, then that encoding would not be restated as 
+   a Content-Encoding even if it happens to be the same algorithm as one
+   of the content-codings.  Such a content-coding would only be listed if,
+   for some bizarre reason, it is applied a second time to form the
+   representation.  Likewise, an origin server might choose to publish the
+   same payload data as multiple representations that differ only in whether
+   the coding is defined as part of Content-Type or Content-Encoding, since
+   some user agents will behave differently in their handling of each
+   response (e.g., open a "Save as ..." dialog instead of automatic
+   decompression and rendering of content).
 </t>
 <t>
-   If the content-coding of a representation in a request message is not
-   acceptable to the origin server, the server &SHOULD; respond with a
-   status code of 415 (Unsupported Media Type).
+   A representation that has a content-coding applied to it &MUST; include
+   a Content-Encoding header field (<xref target="header.content-encoding"/>)
+   that lists the content-coding(s) applied.
 </t>
 <t>
    If multiple encodings have been applied to a representation, the content
    codings &MUST; be listed in the order in which they were applied.
    Additional information about the encoding parameters &MAY; be provided
    by other header fields not defined by this specification.
+</t>
+<t>
+   If the content-coding of a representation in a request message is not
+   acceptable to the origin server, the server &SHOULD; respond with a
+   status code of 415 (Unsupported Media Type).
 </t>
 </section>
 
@@ -1559,11 +1559,6 @@
    <c>Same as GNU zip <xref target="RFC1952"/></c>
    <c>
       &gzip-coding;
-   </c>
-   <c>identity</c>
-   <c>No transformation</c>
-   <c>
-      <xref target="content.codings"/>
    </c>
 </texttable>
 </section>

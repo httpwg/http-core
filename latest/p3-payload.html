@@ -731,13 +731,6 @@ ul.ind li li {
          <li>See <a href="p1-messaging.html#gzip.coding" title="Gzip Coding">Section 6.2.2.3</a> of <a href="#Part1" id="rfc.xref.Part1.11"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>.
          </li>
       </ul>
-      <p id="rfc.section.2.2.p.7">identity<span id="rfc.iref.i.1"></span><span id="rfc.iref.c.6"></span>  
-      </p>
-      <ul class="empty">
-         <li>The default (identity) encoding; the use of no transformation whatsoever. This content-coding is used only in the Accept-Encoding
-            header field, and <em class="bcp14">SHOULD NOT</em> be used in the Content-Encoding header field.
-         </li>
-      </ul>
       <h3 id="rfc.section.2.2.1"><a href="#rfc.section.2.2.1">2.2.1</a>&nbsp;<a id="content.coding.registry" href="#content.coding.registry">Content Coding Registry</a></h3>
       <p id="rfc.section.2.2.1.p.1">The HTTP Content Coding Registry defines the name space for the content coding names.</p>
       <p id="rfc.section.2.2.1.p.2">Registrations <em class="bcp14">MUST</em> include the following fields: 
@@ -1060,9 +1053,10 @@ ul.ind li li {
 </pre><p id="rfc.section.6.1.p.8"> <em class="bcp14">SHOULD</em> be interpreted as "I prefer audio/basic, but send me any audio type if it is the best available after an 80% mark-down in
          quality".
       </p>
-      <p id="rfc.section.6.1.p.9">If no Accept header field is present, then it is assumed that the client accepts all media types. If an Accept header field
-         is present in a request, but the server cannot send a response which is acceptable, then the server can either send a response
-         in another format, or a 406 (Not Acceptable) response.
+      <p id="rfc.section.6.1.p.9">A request without any Accept header field implies that the user agent will accept any media type in response. If an Accept
+         header field is present in a request and none of the available representations for the response have a media type that is
+         listed as acceptable, the origin server <em class="bcp14">MAY</em> either honor the Accept header field by sending a 406 (Not Acceptable) response or disregard the Accept header field by treating
+         the response as if it is not subject to content negotiation.
       </p>
       <p id="rfc.section.6.1.p.10">A more elaborate example is</p>
       <div id="rfc.figure.u.12"></div><pre class="text">  Accept: text/plain; q=0.5, text/html,
@@ -1143,53 +1137,52 @@ ul.ind li li {
          in the Accept-Charset field. If no "*" is present in an Accept-Charset field, then all character encodings not explicitly
          mentioned get a quality value of 0.
       </p>
-      <p id="rfc.section.6.2.p.6">If no Accept-Charset header field is present, the default is that any character encoding is acceptable. If an Accept-Charset
-         header field is present in a request, but the server cannot send a response which is acceptable, then the server can either
-         use another character encoding, or send a 406 (Not Acceptable) response.
+      <p id="rfc.section.6.2.p.6">A request without any Accept-Charset header field implies that the user agent will accept any character encoding in response.
+         If an Accept-Charset header field is present in a request and none of the available representations for the response have
+         a character encoding that is listed as acceptable, the origin server <em class="bcp14">MAY</em> either honor the Accept-Charset header field by sending a 406 (Not Acceptable) response or disregard the Accept-Charset header
+         field by treating the response as if it is not subject to content negotiation.
       </p>
       <div id="rfc.iref.a.3"></div>
       <div id="rfc.iref.h.3"></div>
       <h2 id="rfc.section.6.3"><a href="#rfc.section.6.3">6.3</a>&nbsp;<a id="header.accept-encoding" href="#header.accept-encoding">Accept-Encoding</a></h2>
-      <p id="rfc.section.6.3.p.1">The "Accept-Encoding" header field can be used by user agents to indicate what response content-codings (<a href="#content.codings" title="Content Codings">Section&nbsp;2.2</a>) are acceptable in the response.
+      <p id="rfc.section.6.3.p.1">The "Accept-Encoding" header field can be used by user agents to indicate what response content-codings (<a href="#content.codings" title="Content Codings">Section&nbsp;2.2</a>) are acceptable in the response. An "identity" token is used as a synonym for "no encoding" in order to communicate when
+         no encoding is preferred.
       </p>
       <div id="rfc.figure.u.17"></div><pre class="inline"><span id="rfc.iref.g.16"></span><span id="rfc.iref.g.17"></span>  <a href="#header.accept-encoding" class="smpl">Accept-Encoding</a>  = #( <a href="#header.accept-encoding" class="smpl">codings</a> [ <a href="#core.rules" class="smpl">OWS</a> ";" <a href="#core.rules" class="smpl">OWS</a> "q=" <a href="#abnf.dependencies" class="smpl">qvalue</a> ] )
-  <a href="#header.accept-encoding" class="smpl">codings</a>          = ( <a href="#content.codings" class="smpl">content-coding</a> / "*" )
+  <a href="#header.accept-encoding" class="smpl">codings</a>          = <a href="#content.codings" class="smpl">content-coding</a>
+                                  / "identity"
+                                  / "*"
 </pre><p id="rfc.section.6.3.p.3">Each codings value <em class="bcp14">MAY</em> be given an associated quality value which represents the preference for that encoding. The default value is q=1.
       </p>
-      <p id="rfc.section.6.3.p.4">Examples of its use are:</p>
+      <p id="rfc.section.6.3.p.4">For example,</p>
       <div id="rfc.figure.u.18"></div><pre class="text">  Accept-Encoding: compress, gzip
   Accept-Encoding:
   Accept-Encoding: *
   Accept-Encoding: compress;q=0.5, gzip;q=1.0
   Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0
-</pre><p id="rfc.section.6.3.p.6">A server tests whether a content-coding is acceptable, according to an Accept-Encoding field, using these rules: </p>
+</pre><p id="rfc.section.6.3.p.6">A server tests whether a content-coding for a given representation is acceptable, according to an Accept-Encoding field, using
+         these rules: 
+      </p>
       <ol>
-         <li>If the content-coding is one of the content-codings listed in the Accept-Encoding field, then it is acceptable, unless it
-            is accompanied by a qvalue of 0. (As defined in <a href="p1-messaging.html#quality.values" title="Quality Values">Section 6.4</a> of <a href="#Part1" id="rfc.xref.Part1.18"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>, a qvalue of 0 means "not acceptable".)
-         </li>
          <li>The special "*" symbol in an Accept-Encoding field matches any available content-coding not explicitly listed in the header
             field.
          </li>
-         <li>If multiple content-codings are acceptable, then the acceptable content-coding with the highest non-zero qvalue is preferred.</li>
-         <li>The "identity" content-coding is always acceptable, unless specifically refused because the Accept-Encoding field includes
-            "identity;q=0", or because the field includes "*;q=0" and does not explicitly include the "identity" content-coding. If the
-            Accept-Encoding field-value is empty, then only the "identity" encoding is acceptable.
+         <li>If the representation has no content-coding, then it is acceptable by default unless specifically excluded by the Accept-Encoding
+            field stating either "identity;q=0" or "*;q=0" without a more specific entry for "identity".
          </li>
+         <li>If the representation's content-coding is one of the content-codings listed in the Accept-Encoding field, then it is acceptable
+            unless it is accompanied by a qvalue of 0. (As defined in <a href="p1-messaging.html#quality.values" title="Quality Values">Section 6.4</a> of <a href="#Part1" id="rfc.xref.Part1.18"><cite title="HTTP/1.1, part 1: URIs, Connections, and Message Parsing">[Part1]</cite></a>, a qvalue of 0 means "not acceptable".)
+         </li>
+         <li>If multiple content-codings are acceptable, then the acceptable content-coding with the highest non-zero qvalue is preferred.</li>
       </ol>
-      <p id="rfc.section.6.3.p.7">If an Accept-Encoding field is present in a request, but the server cannot send a response which is acceptable, then the server <em class="bcp14">SHOULD</em> send a response without any encoding (i.e., the "identity" encoding).
+      <p id="rfc.section.6.3.p.7">An Accept-Encoding header field with a combined field-value that is empty implies that the user agent does not want any content-coding
+         in response. If an Accept-Encoding header field is present in a request and none of the available representations for the
+         response have a content-coding that is listed as acceptable, the origin server <em class="bcp14">SHOULD</em> send a response without any content-coding.
       </p>
-      <p id="rfc.section.6.3.p.8">If no Accept-Encoding field is present in a request, the server <em class="bcp14">MAY</em> assume that the client will accept any content coding. In this case, if "identity" is one of the available content-codings,
-         then the server <em class="bcp14">SHOULD</em> use the "identity" content-coding, unless it has additional information that a different content-coding is meaningful to the
-         client.
+      <p id="rfc.section.6.3.p.8">A request without an Accept-Encoding header field implies that the user agent will accept any content-coding in response,
+         but a representation without content-coding is preferred for compatibility with the widest variety of user agents.
       </p>
       <div class="note" id="rfc.section.6.3.p.9"> 
-         <p> <b>Note:</b> If the request does not include an Accept-Encoding field, and if the "identity" content-coding is unavailable, then content-codings
-            commonly understood by HTTP/1.0 clients (i.e., "gzip" and "compress") are preferred; some older clients improperly display
-            messages sent with other content-codings. The server might also make this decision based on information about the particular
-            user-agent or client.
-         </p> 
-      </div>
-      <div class="note" id="rfc.section.6.3.p.10"> 
          <p> <b>Note:</b> Most HTTP/1.0 applications do not recognize or obey qvalues associated with content-codings. This means that qvalues will
             not work and are not permitted with x-gzip or x-compress.
          </p> 
@@ -1229,12 +1222,13 @@ ul.ind li li {
             A user agent might suggest in such a case to add "en" to get the best matching behavior.
          </p> 
       </div>
-      <div id="rfc.iref.c.7"></div>
+      <div id="rfc.iref.c.6"></div>
       <div id="rfc.iref.h.5"></div>
       <h2 id="rfc.section.6.5"><a href="#rfc.section.6.5">6.5</a>&nbsp;<a id="header.content-encoding" href="#header.content-encoding">Content-Encoding</a></h2>
-      <p id="rfc.section.6.5.p.1">The "Content-Encoding" header field indicates what content-codings have been applied to the representation, and thus what
-         decoding mechanisms must be applied in order to obtain the media-type referenced by the Content-Type header field. Content-Encoding
-         is primarily used to allow a representation to be compressed without losing the identity of its underlying media type.
+      <p id="rfc.section.6.5.p.1">The "Content-Encoding" header field indicates what content-codings have been applied to the representation beyond those inherent
+         in the media type, and thus what decoding mechanisms must be applied in order to obtain the media-type referenced by the Content-Type
+         header field. Content-Encoding is primarily used to allow a representation to be compressed without losing the identity of
+         its underlying media type.
       </p>
       <div id="rfc.figure.u.21"></div><pre class="inline"><span id="rfc.iref.g.20"></span>  <a href="#header.content-encoding" class="smpl">Content-Encoding</a> = 1#<a href="#content.codings" class="smpl">content-coding</a>
 </pre><p id="rfc.section.6.5.p.3">Content codings are defined in <a href="#content.codings" title="Content Codings">Section&nbsp;2.2</a>. An example of its use is
@@ -1244,13 +1238,20 @@ ul.ind li li {
          and is only decoded before rendering or analogous usage. However, a transforming proxy <em class="bcp14">MAY</em> modify the content-coding if the new coding is known to be acceptable to the recipient, unless the "no-transform" cache-control
          directive is present in the message.
       </p>
-      <p id="rfc.section.6.5.p.6">If the content-coding of a representation is not "identity", then the representation metadata <em class="bcp14">MUST</em> include a Content-Encoding header field (<a href="#header.content-encoding" id="rfc.xref.header.content-encoding.3" title="Content-Encoding">Section&nbsp;6.5</a>) that lists the non-identity content-coding(s) used.
+      <p id="rfc.section.6.5.p.6">If the media type includes an inherent encoding, such as a data format that is always compressed, then that encoding would
+         not be restated as a Content-Encoding even if it happens to be the same algorithm as one of the content-codings. Such a content-coding
+         would only be listed if, for some bizarre reason, it is applied a second time to form the representation. Likewise, an origin
+         server might choose to publish the same payload data as multiple representations that differ only in whether the coding is
+         defined as part of Content-Type or Content-Encoding, since some user agents will behave differently in their handling of each
+         response (e.g., open a "Save as ..." dialog instead of automatic decompression and rendering of content).
       </p>
-      <p id="rfc.section.6.5.p.7">If the content-coding of a representation in a request message is not acceptable to the origin server, the server <em class="bcp14">SHOULD</em> respond with a status code of 415 (Unsupported Media Type).
+      <p id="rfc.section.6.5.p.7">A representation that has a content-coding applied to it <em class="bcp14">MUST</em> include a Content-Encoding header field (<a href="#header.content-encoding" id="rfc.xref.header.content-encoding.3" title="Content-Encoding">Section&nbsp;6.5</a>) that lists the content-coding(s) applied.
       </p>
       <p id="rfc.section.6.5.p.8">If multiple encodings have been applied to a representation, the content codings <em class="bcp14">MUST</em> be listed in the order in which they were applied. Additional information about the encoding parameters <em class="bcp14">MAY</em> be provided by other header fields not defined by this specification.
       </p>
-      <div id="rfc.iref.c.8"></div>
+      <p id="rfc.section.6.5.p.9">If the content-coding of a representation in a request message is not acceptable to the origin server, the server <em class="bcp14">SHOULD</em> respond with a status code of 415 (Unsupported Media Type).
+      </p>
+      <div id="rfc.iref.c.7"></div>
       <div id="rfc.iref.h.6"></div>
       <h2 id="rfc.section.6.6"><a href="#rfc.section.6.6">6.6</a>&nbsp;<a id="header.content-language" href="#header.content-language">Content-Language</a></h2>
       <p id="rfc.section.6.6.p.1">The "Content-Language" header field describes the natural language(s) of the intended audience for the representation. Note
@@ -1276,7 +1277,7 @@ ul.ind li li {
       </p>
       <p id="rfc.section.6.6.p.9">Content-Language <em class="bcp14">MAY</em> be applied to any media type — it is not limited to textual documents.
       </p>
-      <div id="rfc.iref.c.9"></div>
+      <div id="rfc.iref.c.8"></div>
       <div id="rfc.iref.h.7"></div>
       <h2 id="rfc.section.6.7"><a href="#rfc.section.6.7">6.7</a>&nbsp;<a id="header.content-location" href="#header.content-location">Content-Location</a></h2>
       <p id="rfc.section.6.7.p.1">The "Content-Location" header field supplies a URI that can be used as a specific identifier for the representation in this
@@ -1318,7 +1319,7 @@ ul.ind li li {
          to respond to later requests on that Content-Location URI.
       </p>
       <p id="rfc.section.6.7.p.9">If the Content-Location value is a partial URI, the partial URI is interpreted relative to the effective request URI.</p>
-      <div id="rfc.iref.c.10"></div>
+      <div id="rfc.iref.c.9"></div>
       <div id="rfc.iref.h.8"></div>
       <h2 id="rfc.section.6.8"><a href="#rfc.section.6.8">6.8</a>&nbsp;<a id="header.content-type" href="#header.content-type">Content-Type</a></h2>
       <p id="rfc.section.6.8.p.1">The "Content-Type" header field indicates the media type of the representation. In the case of responses to the HEAD method,
@@ -2034,7 +2035,7 @@ ul.ind li li {
       <h2 id="rfc.section.E.18"><a href="#rfc.section.E.18">E.18</a>&nbsp;<a id="changes.since.16" href="#changes.since.16">Since draft-ietf-httpbis-p3-payload-16</a></h2>
       <p id="rfc.section.E.18.p.1">None yet.</p>
       <h1 id="rfc.index"><a href="#rfc.index">Index</a></h1>
-      <p class="noprint"><a href="#rfc.index.A">A</a> <a href="#rfc.index.B">B</a> <a href="#rfc.index.C">C</a> <a href="#rfc.index.D">D</a> <a href="#rfc.index.G">G</a> <a href="#rfc.index.H">H</a> <a href="#rfc.index.I">I</a> <a href="#rfc.index.M">M</a> <a href="#rfc.index.P">P</a> <a href="#rfc.index.R">R</a> 
+      <p class="noprint"><a href="#rfc.index.A">A</a> <a href="#rfc.index.B">B</a> <a href="#rfc.index.C">C</a> <a href="#rfc.index.D">D</a> <a href="#rfc.index.G">G</a> <a href="#rfc.index.H">H</a> <a href="#rfc.index.M">M</a> <a href="#rfc.index.P">P</a> <a href="#rfc.index.R">R</a> 
       </p>
       <div class="print2col">
          <ul class="ind">
@@ -2055,15 +2056,14 @@ ul.ind li li {
                         <li>compress&nbsp;&nbsp;<a href="#rfc.iref.c.3">2.2</a></li>
                         <li>deflate&nbsp;&nbsp;<a href="#rfc.iref.c.4">2.2</a></li>
                         <li>gzip&nbsp;&nbsp;<a href="#rfc.iref.c.5">2.2</a></li>
-                        <li>identity&nbsp;&nbsp;<a href="#rfc.iref.c.6">2.2</a></li>
                      </ul>
                   </li>
                   <li>compress (Coding Format)&nbsp;&nbsp;<a href="#rfc.iref.c.2">2.2</a></li>
                   <li>content negotiation&nbsp;&nbsp;<a href="#rfc.iref.c.1">1.1</a></li>
-                  <li>Content-Encoding header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-encoding.1">2.2</a>, <a href="#rfc.xref.header.content-encoding.2">4.1</a>, <a href="#rfc.iref.c.7"><b>6.5</b></a>, <a href="#rfc.xref.header.content-encoding.3">6.5</a>, <a href="#rfc.xref.header.content-encoding.4">7.1</a></li>
-                  <li>Content-Language header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-language.1">4.1</a>, <a href="#rfc.iref.c.8"><b>6.6</b></a>, <a href="#rfc.xref.header.content-language.2">7.1</a></li>
-                  <li>Content-Location header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-location.1">4.1</a>, <a href="#rfc.iref.c.9"><b>6.7</b></a>, <a href="#rfc.xref.header.content-location.2">7.1</a>, <a href="#rfc.xref.header.content-location.3">C</a></li>
-                  <li>Content-Type header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-type.1">2.3</a>, <a href="#rfc.xref.header.content-type.2">4.1</a>, <a href="#rfc.iref.c.10"><b>6.8</b></a>, <a href="#rfc.xref.header.content-type.3">7.1</a></li>
+                  <li>Content-Encoding header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-encoding.1">2.2</a>, <a href="#rfc.xref.header.content-encoding.2">4.1</a>, <a href="#rfc.iref.c.6"><b>6.5</b></a>, <a href="#rfc.xref.header.content-encoding.3">6.5</a>, <a href="#rfc.xref.header.content-encoding.4">7.1</a></li>
+                  <li>Content-Language header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-language.1">4.1</a>, <a href="#rfc.iref.c.7"><b>6.6</b></a>, <a href="#rfc.xref.header.content-language.2">7.1</a></li>
+                  <li>Content-Location header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-location.1">4.1</a>, <a href="#rfc.iref.c.8"><b>6.7</b></a>, <a href="#rfc.xref.header.content-location.2">7.1</a>, <a href="#rfc.xref.header.content-location.3">C</a></li>
+                  <li>Content-Type header field&nbsp;&nbsp;<a href="#rfc.xref.header.content-type.1">2.3</a>, <a href="#rfc.xref.header.content-type.2">4.1</a>, <a href="#rfc.iref.c.9"><b>6.8</b></a>, <a href="#rfc.xref.header.content-type.3">7.1</a></li>
                </ul>
             </li>
             <li><a id="rfc.index.D" href="#rfc.index.D"><b>D</b></a><ul>
@@ -2115,10 +2115,6 @@ ul.ind li li {
                         <li>MIME-Version&nbsp;&nbsp;<a href="#rfc.xref.mime-version.1">7.1</a>, <a href="#rfc.iref.h.9"><b>A.1</b></a></li>
                      </ul>
                   </li>
-               </ul>
-            </li>
-            <li><a id="rfc.index.I" href="#rfc.index.I"><b>I</b></a><ul>
-                  <li>identity (Coding Format)&nbsp;&nbsp;<a href="#rfc.iref.i.1">2.2</a></li>
                </ul>
             </li>
             <li><a id="rfc.index.M" href="#rfc.index.M"><b>M</b></a><ul>
