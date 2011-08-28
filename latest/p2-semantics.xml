@@ -30,6 +30,7 @@
   <!ENTITY uri                        "<xref target='Part1' x:rel='#uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY effective-request-uri      "<xref target='Part1' x:rel='#effective.request.uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY intermediaries             "<xref target='Part1' x:rel='#intermediaries' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY chunked-encoding           "<xref target='Part1' x:rel='#chunked.encoding' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY full-date                  "<xref target='Part1' x:rel='#date.time.formats.full.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY http-url                   "<xref target='Part1' x:rel='#http-url' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY http-version               "<xref target='Part1' x:rel='#http.version' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -44,6 +45,7 @@
   <!ENTITY header-age                 "<xref target='Part6' x:rel='#header.age' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-authorization       "<xref target='Part7' x:rel='#header.authorization' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-cache-control       "<xref target='Part6' x:rel='#header.cache-control' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY header-connection          "<xref target='Part1' x:rel='#header.connection' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-content-location    "<xref target='Part3' x:rel='#header.content-location' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-content-range       "<xref target='Part5' x:rel='#header.content-range' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-etag                "<xref target='Part4' x:rel='#header.etag' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -479,6 +481,67 @@
 </section>
 
 <section title="Header Fields" anchor="header.fields">
+<t>
+   Header fields are key value pairs that can be used to communicate data about
+   the message, its payload, the target resource, or about the connection
+   itself (i.e., control data).  See &header-fields; for a general definition
+   of their syntax.
+</t>
+
+<section title="Considerations for Creating Header Fields" anchor="considerations.for.creating.header.fields">
+<t>
+   New header fields are registered using the procedures described in
+   <xref target="RFC3864"/>.
+</t>
+<t>
+   The requirements for header field names are defined in
+   <xref target="RFC3864" x:fmt="of" x:sec="4.1"/>.  Authors of specifications
+   defining new fields are advised to keep the name as short as practical, and
+   not to prefix them with "X-" if they are to be registered (either
+   immediately or in the future).
+</t>
+<t>
+   New header field values typically have their syntax defined using ABNF
+   (<xref target="RFC5234"/>), using the extensions defined in &notation-abnf;
+   as necessary, and are usually constrained to the range of ASCII characters.
+   Header fields needing a greater range of characters can use an encoding
+   such as the one defined in <xref target="RFC5987"/>. 
+</t>
+<t>
+   Because commas (",") are used as a generic delimiter between field-values,
+   they need to be treated with care if they are allowed in the field-value's
+   payload. Typically, components that might contain a comma are protected with
+   double-quotes using the quoted-string ABNF production (&field-rules;). 
+</t>
+<t>
+   For example, a textual date and a URI (either of which might contain a comma)
+   could be safely carried in field-values like these:
+</t>
+<figure><artwork type="example">
+  Example-URI-Field: "http://example.com/a.html,foo",
+                     "http://without-a-comma.example.com/"
+  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+</artwork></figure>
+<t>
+   Authors of specifications defining new header fields are advised to consider
+   documenting:
+  <list style="symbols">
+    <t>Whether the field is a single value, or whether it can be a list
+    (delimited by commas; see &header-fields;).</t>
+    <t>Under what conditions the header field can be used; e.g., only i
+    responses or requests, in all messages, only on responses to a particular
+    request method.</t>
+    <t>Whether it is appropriate to list the field-name in the Connection header
+    (i.e., if the header is to be hop-by-hop, see &header-connection;).</t>
+    <t>Under what conditions intermediaries are allowed to modify the header
+    field's value, insert or delete it.</t>
+    <t>How the header might interact with caching (see <xref target="Part6"/>).</t>
+    <t>Whether the header field is useful or allowable in trailers (see
+    &chunked-encoding;).</t>
+    <t>Whether the header field should be preserved across redirects.</t>
+  </list>
+</t>
+</section>
 
 <section title="Request Header Fields" anchor="request.header.fields">
   <x:anchor-alias value="request-header"/>
@@ -3504,6 +3567,26 @@ Connection: Upgrade
   <seriesInfo name='RFC' value='5789' />
 </reference>
 
+<reference anchor="RFC5987">
+	<front>
+    <title>Character Set and Language Encoding for Hypertext Transfer Protocol (HTTP) Header Field Parameters</title>
+    <author initials="J. F." surname="Reschke" fullname="Julian F. Reschke">
+      <organization abbrev="greenbytes">greenbytes GmbH</organization>
+      <address>
+        <postal>
+          <street>Hafenweg 16</street>
+          <city>Muenster</city><region>NW</region><code>48155</code>
+          <country>Germany</country>
+        </postal>
+        <email>julian.reschke@greenbytes.de</email>	
+        <uri>http://greenbytes.de/tech/webdav/</uri>	
+      </address>
+    </author>
+    <date month="August" year="2010"/>
+  </front>
+  <seriesInfo name="RFC" value="5987"/>
+</reference>
+
 </references>
 
 <section title="Changes from RFC 2616" anchor="changes.from.rfc.2616">
@@ -4183,7 +4266,13 @@ Connection: Upgrade
 
 <section title="Since draft-ietf-httpbis-p2-semantics-16" anchor="changes.since.16">
 <t>
-  None yet.
+  Work-in-progress:
+  <list style="symbols"> 
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/231"/>:
+      "Considerations for new headers"
+    </t>
+  </list>
 </t>
 </section>
 
