@@ -959,22 +959,74 @@
    header field unless the request is for a range that would be fully
    satisfied by that stored response.
 </t>
+
+<t>Cache handling of a response to a conditional request is dependent upon its status code:</t>
+
 <t>
-   A 304 (Not Modified) response status code indicates that the stored
-   response can be updated and reused; see <xref target="freshening.responses"/>.
+   <list style="symbols">
+      <t>
+         A 304 (Not Modified) response status code indicates that the stored
+         response can be updated and reused; see <xref
+         target="freshening.responses"/>.
+      </t>
+      <t>
+         A full response (i.e., one with a response body) indicates that none
+         of the stored responses nominated in the conditional request is
+         suitable. Instead, a cache &SHOULD; use the full response to satisfy
+         the request and &MAY; replace the stored response(s).
+      </t>
+      <t>
+         However, if a cache receives a 5xx response while attempting to
+         validate a response, it &MAY; either forward this response to the
+         requesting client, or act as if the server failed to respond. In the
+         latter case, it &MAY; return a previously stored response (see <xref
+         target="serving.stale.responses" />).
+      </t>
+   </list>
+</t>
+
+<section anchor="freshening.responses" title="Freshening Responses">
+<t>
+   When a cache receives a 304 (Not Modified) response and already has one
+   or more stored 200 (OK) responses for the same cache key, the cache needs
+   to identify which of the stored responses are updated by this new response
+   and then update the stored response(s) with the new information provided in
+   the 304 response.
+   <list style="symbols">
+    <t>
+     If the new response contains a strong validator, then that strong
+     validator identifies the selected representation.  All of the stored
+     responses with the same strong validator are selected.
+     If none of the stored responses contain the same strong validator, then
+     this new response corresponds to a new selected representation and
+     &MUST-NOT; update the existing stored responses.
+    </t>
+    <t>
+     If the new response contains a weak validator and that validator
+     corresponds to one of the cache's stored responses, then the most
+     recent of those matching stored responses is selected.
+    </t>
+    <t>
+     If the new response does not include any form of validator, there is
+     only one stored response, and that stored response also lacks a
+     validator, then that stored response is selected.
+    </t>
+   </list>
 </t>
 <t>
-   A full response (i.e., one with a response body) indicates that none of the
-   stored responses nominated in the conditional request is suitable. Instead,
-   a cache &SHOULD; use the full response to satisfy the request and &MAY; 
-   replace the stored response(s).
+   If a stored response is selected for update, the cache &MUST;:
+   <list style="symbols">
+      <t>delete any Warning header fields in the stored response with
+         warn-code 1xx (see <xref target="header.warning" />);</t>
+      <t>retain any Warning header fields in the stored response with
+         warn-code 2xx; and,</t>
+      <t>use other header fields provided in the 304 response to replace
+         all instances of the corresponding header fields in the stored
+         response.</t>
+   </list>
 </t>
-<t>
-   If a cache receives a 5xx response while attempting to validate a response,
-   it &MAY; either forward this response to the requesting client, or act as
-   if the server failed to respond. In the latter case, it &MAY; return a
-   previously stored response (see <xref target="serving.stale.responses" />).
-</t>
+</section>
+
 </section>
 
 <section anchor="invalidation.after.updates.or.deletions" 
@@ -1121,47 +1173,6 @@
 </t>
 </section>
 
-<section anchor="freshening.responses" title="Freshening Responses">
-<t>
-   When a cache receives a 304 (Not Modified) response and already has one
-   or more stored 200 (OK) responses for the same cache key, the cache needs
-   to identify which of the stored responses are updated by this new response
-   and then update the stored response(s) with the new information provided in
-   the 304 response.
-   <list style="symbols">
-    <t>
-     If the new response contains a strong validator, then that strong
-     validator identifies the selected representation.  All of the stored
-     responses with the same strong validator are selected.
-     If none of the stored responses contain the same strong validator, then
-     this new response corresponds to a new selected representation and
-     &MUST-NOT; update the existing stored responses.
-    </t>
-    <t>
-     If the new response contains a weak validator and that validator
-     corresponds to one of the cache's stored responses, then the most
-     recent of those matching stored responses is selected.
-    </t>
-    <t>
-     If the new response does not include any form of validator, there is
-     only one stored response, and that stored response also lacks a
-     validator, then that stored response is selected.
-    </t>
-   </list>
-</t>
-<t>
-   If a stored response is selected for update, the cache &MUST;:
-   <list style="symbols">
-      <t>delete any Warning header fields in the stored response with
-         warn-code 1xx (see <xref target="header.warning" />);</t>
-      <t>retain any Warning header fields in the stored response with
-         warn-code 2xx; and,</t>
-      <t>use other header fields provided in the 304 response to replace
-         all instances of the corresponding header fields in the stored
-         response.</t>
-   </list>
-</t>
-</section>
 
 </section>
 
