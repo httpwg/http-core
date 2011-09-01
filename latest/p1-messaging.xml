@@ -323,11 +323,11 @@
 <iref primary="true" item="Grammar" subitem="DIGIT"/>
 <iref primary="true" item="Grammar" subitem="DQUOTE"/>
 <iref primary="true" item="Grammar" subitem="HEXDIG"/>
+<iref primary="true" item="Grammar" subitem="HTAB"/>
 <iref primary="true" item="Grammar" subitem="LF"/>
 <iref primary="true" item="Grammar" subitem="OCTET"/>
 <iref primary="true" item="Grammar" subitem="SP"/>
 <iref primary="true" item="Grammar" subitem="VCHAR"/>
-<iref primary="true" item="Grammar" subitem="WSP"/>
 <t>
    This specification uses the Augmented Backus-Naur Form (ABNF) notation
    of <xref target="RFC5234"/>.
@@ -340,19 +340,18 @@
   <x:anchor-alias value="DIGIT"/>
   <x:anchor-alias value="DQUOTE"/>
   <x:anchor-alias value="HEXDIG"/>
+  <x:anchor-alias value="HTAB"/>
   <x:anchor-alias value="LF"/>
   <x:anchor-alias value="OCTET"/>
   <x:anchor-alias value="SP"/>
   <x:anchor-alias value="VCHAR"/>
-  <x:anchor-alias value="WSP"/>
    The following core rules are included by
    reference, as defined in <xref target="RFC5234" x:fmt="," x:sec="B.1"/>:
    ALPHA (letters), CR (carriage return), CRLF (CR LF), CTL (controls),
    DIGIT (decimal 0-9), DQUOTE (double quote),
-   HEXDIG (hexadecimal 0-9/A-F/a-f), LF (line feed),
-   OCTET (any 8-bit sequence of data), SP (space),
-   VCHAR (any visible <xref target="USASCII"/> character),
-   and WSP (whitespace).
+   HEXDIG (hexadecimal 0-9/A-F/a-f), HTAB (horizontal tab), LF (line feed),
+   OCTET (any 8-bit sequence of data), SP (space), and
+   VCHAR (any visible <xref target="USASCII"/> character).
 </t>
 <t>
    As a syntactic convention, ABNF rule names prefixed with "obs-" denote
@@ -440,7 +439,7 @@
    The OWS rule is used where zero or more linear whitespace octets might
    appear. OWS &SHOULD; either not be produced or be produced as a single
    SP. Multiple OWS octets that occur within field-content &SHOULD; either
-   be replaced with a single SP or transformed to all SP octets (each WSP
+   be replaced with a single SP or transformed to all SP octets (each
    octet other than SP replaced with SP) before interpreting the field value
    or forwarding the message downstream.
 </t>
@@ -464,14 +463,15 @@
   <x:anchor-alias value="obs-fold"/>
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
-  <x:ref>OWS</x:ref>            = *( [ obs-fold ] <x:ref>WSP</x:ref> )
+  <x:ref>OWS</x:ref>            = *( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / obs-fold )
                  ; "optional" whitespace
-  <x:ref>RWS</x:ref>            = 1*( [ obs-fold ] <x:ref>WSP</x:ref> )
+  <x:ref>RWS</x:ref>            = 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / obs-fold )
                  ; "required" whitespace
   <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
                  ; "bad" whitespace
-  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref>
-                 ; see <xref target="header.fields"/>
+  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref> ( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
+                 ; obsolete line folding
+                 ; see <xref target="field.parsing"/>
 </artwork></figure>
 </section>
 </section>
@@ -1224,10 +1224,10 @@ Content-Type: text/plain
    followed by a colon (":"), optional whitespace, and the field value.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="header-field"/><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-content"/>
-  <x:ref>header-field</x:ref>   = <x:ref>field-name</x:ref> ":" <x:ref>OWS</x:ref> <x:ref>field-value</x:ref> <x:ref>OWS</x:ref>
+  <x:ref>header-field</x:ref>   = <x:ref>field-name</x:ref> ":" <x:ref>OWS</x:ref> <x:ref>field-value</x:ref> <x:ref>BWS</x:ref>
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
-  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>OWS</x:ref> )
-  <x:ref>field-content</x:ref>  = *( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
+  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
+  <x:ref>field-content</x:ref>  = *( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
 </artwork></figure>
 <t>
    The field-name token labels the corresponding field-value as having the
@@ -1309,7 +1309,7 @@ Content-Type: text/plain
 <t>
    Historically, HTTP header field values could be extended over multiple
    lines by preceding each extra line with at least one space or horizontal
-   tab octet (line folding). This specification deprecates such line
+   tab (obs-fold). This specification deprecates such line
    folding except within the message/http media type
    (<xref target="internet.media.type.message.http"/>).
    HTTP senders &MUST-NOT; produce messages that include line folding
@@ -1396,7 +1396,7 @@ Content-Type: text/plain
    quoting mechanism within quoted-string constructs:
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
-  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
+  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> /<x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
 </artwork></figure>
 <t>
    Recipients that process the value of the quoted-string &MUST; handle a
@@ -1423,7 +1423,7 @@ Content-Type: text/plain
    quoting mechanism within comment constructs:
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-cpair"/>
-  <x:ref>quoted-cpair</x:ref>    = "\" ( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
+  <x:ref>quoted-cpair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> /<x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
 </artwork></figure>
 <t>
    Senders &SHOULD-NOT; escape octets in comments that do not require escaping
@@ -2043,7 +2043,7 @@ Host: www.example.org
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Code"/><iref primary="true" item="Grammar" subitem="Reason-Phrase"/>
   <x:ref>Status-Code</x:ref>    = 3<x:ref>DIGIT</x:ref>
-  <x:ref>Reason-Phrase</x:ref>  = *( <x:ref>WSP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
+  <x:ref>Reason-Phrase</x:ref>  = *( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
 </artwork></figure>
 </section>
 </section>
@@ -2279,13 +2279,13 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
                    <x:ref>trailer-part</x:ref>
                    <x:ref>CRLF</x:ref>
   
-  <x:ref>chunk</x:ref>          = <x:ref>chunk-size</x:ref> *WSP [ <x:ref>chunk-ext</x:ref> ] <x:ref>CRLF</x:ref>
+  <x:ref>chunk</x:ref>          = <x:ref>chunk-size</x:ref> [ <x:ref>chunk-ext</x:ref> ] <x:ref>CRLF</x:ref>
                    <x:ref>chunk-data</x:ref> <x:ref>CRLF</x:ref>
   <x:ref>chunk-size</x:ref>     = 1*<x:ref>HEXDIG</x:ref>
-  <x:ref>last-chunk</x:ref>     = 1*("0") *WSP [ <x:ref>chunk-ext</x:ref> ] <x:ref>CRLF</x:ref>
+  <x:ref>last-chunk</x:ref>     = 1*("0") [ <x:ref>chunk-ext</x:ref> ] <x:ref>CRLF</x:ref>
   
-  <x:ref>chunk-ext</x:ref>      = *( ";" *WSP <x:ref>chunk-ext-name</x:ref>
-                      [ "=" <x:ref>chunk-ext-val</x:ref> ] *WSP )
+  <x:ref>chunk-ext</x:ref>      = *( ";" <x:ref>chunk-ext-name</x:ref>
+                      [ "=" <x:ref>chunk-ext-val</x:ref> ] )
   <x:ref>chunk-ext-name</x:ref> = <x:ref>token</x:ref>
   <x:ref>chunk-ext-val</x:ref>  = <x:ref>token</x:ref> / <x:ref>quoted-str-nf</x:ref>
   <x:ref>chunk-data</x:ref>     = 1*<x:ref>OCTET</x:ref> ; a sequence of chunk-size octets
@@ -2293,8 +2293,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   
   <x:ref>quoted-str-nf</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext-nf</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
                  ; like <x:ref>quoted-string</x:ref>, but disallowing line folding
-  <x:ref>qdtext-nf</x:ref>      = <x:ref>WSP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-                 ; <x:ref>WSP</x:ref> / &lt;<x:ref>VCHAR</x:ref> except <x:ref>DQUOTE</x:ref> and "\"&gt; / <x:ref>obs-text</x:ref> 
+  <x:ref>qdtext-nf</x:ref>      = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
 </artwork></figure>
 <t>
    The chunk-size field is a string of hex digits indicating the size of
@@ -5306,10 +5305,10 @@ Zed A. Shaw<!--zedshaw@zedshaw.com-->.
 
 <x:ref>Method</x:ref> = token
 
-<x:ref>OWS</x:ref> = *( [ obs-fold ] WSP )
+<x:ref>OWS</x:ref> = *( SP / HTAB / obs-fold )
 
-<x:ref>RWS</x:ref> = 1*( [ obs-fold ] WSP )
-<x:ref>Reason-Phrase</x:ref> = *( WSP / VCHAR / obs-text )
+<x:ref>RWS</x:ref> = 1*( SP / HTAB / obs-fold )
+<x:ref>Reason-Phrase</x:ref> = *( HTAB / SP / VCHAR / obs-text )
 <x:ref>Request</x:ref> = Request-Line *( header-field CRLF ) CRLF [ message-body ]
 <x:ref>Request-Line</x:ref> = Method SP request-target SP HTTP-Version CRLF
 <x:ref>Response</x:ref> = Status-Line *( header-field CRLF ) CRLF [ message-body ]
@@ -5334,9 +5333,9 @@ Zed A. Shaw<!--zedshaw@zedshaw.com-->.
 <x:ref>attribute</x:ref> = token
 <x:ref>authority</x:ref> = &lt;authority, defined in [RFC3986], Section 3.2&gt;
 
-<x:ref>chunk</x:ref> = chunk-size *WSP [ chunk-ext ] CRLF chunk-data CRLF
+<x:ref>chunk</x:ref> = chunk-size [ chunk-ext ] CRLF chunk-data CRLF
 <x:ref>chunk-data</x:ref> = 1*OCTET
-<x:ref>chunk-ext</x:ref> = *( ";" *WSP chunk-ext-name [ "=" chunk-ext-val ] *WSP )
+<x:ref>chunk-ext</x:ref> = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
 <x:ref>chunk-ext-name</x:ref> = token
 <x:ref>chunk-ext-val</x:ref> = token / quoted-str-nf
 <x:ref>chunk-size</x:ref> = 1*HEXDIG
@@ -5366,16 +5365,16 @@ Zed A. Shaw<!--zedshaw@zedshaw.com-->.
  / %x53.61.74.75.72.64.61.79 ; Saturday
  / %x53.75.6E.64.61.79 ; Sunday
 
-<x:ref>field-content</x:ref> = *( WSP / VCHAR / obs-text )
+<x:ref>field-content</x:ref> = *( HTAB / SP / VCHAR / obs-text )
 <x:ref>field-name</x:ref> = token
-<x:ref>field-value</x:ref> = *( field-content / OWS )
+<x:ref>field-value</x:ref> = *( field-content / obs-fold )
 
-<x:ref>header-field</x:ref> = field-name ":" OWS field-value OWS
+<x:ref>header-field</x:ref> = field-name ":" OWS field-value BWS
 <x:ref>hour</x:ref> = 2DIGIT
 <x:ref>http-URI</x:ref> = "http://" authority path-abempty [ "?" query ]
 <x:ref>https-URI</x:ref> = "https://" authority path-abempty [ "?" query ]
 
-<x:ref>last-chunk</x:ref> = 1*"0" *WSP [ chunk-ext ] CRLF
+<x:ref>last-chunk</x:ref> = 1*"0" [ chunk-ext ] CRLF
 
 <x:ref>message-body</x:ref> = *OCTET
 <x:ref>minute</x:ref> = 2DIGIT
@@ -5393,7 +5392,7 @@ Zed A. Shaw<!--zedshaw@zedshaw.com-->.
  / %x44.65.63 ; Dec
 
 <x:ref>obs-date</x:ref> = rfc850-date / asctime-date
-<x:ref>obs-fold</x:ref> = CRLF
+<x:ref>obs-fold</x:ref> = CRLF ( SP / HTAB )
 <x:ref>obs-text</x:ref> = %x80-FF
 
 <x:ref>partial-URI</x:ref> = relative-part [ "?" query ]
@@ -5409,12 +5408,12 @@ Zed A. Shaw<!--zedshaw@zedshaw.com-->.
 <x:ref>qdtext</x:ref> = OWS / "!" / %x23-5B ; '#'-'['
  / %x5D-7E ; ']'-'~'
  / obs-text
-<x:ref>qdtext-nf</x:ref> = WSP / "!" / %x23-5B ; '#'-'['
+<x:ref>qdtext-nf</x:ref> = HTAB / SP / "!" / %x23-5B ; '#'-'['
  / %x5D-7E ; ']'-'~'
  / obs-text
 <x:ref>query</x:ref> = &lt;query, defined in [RFC3986], Section 3.4&gt;
-<x:ref>quoted-cpair</x:ref> = "\" ( WSP / VCHAR / obs-text )
-<x:ref>quoted-pair</x:ref> = "\" ( WSP / VCHAR / obs-text )
+<x:ref>quoted-cpair</x:ref> = "\" ( HTAB / SP / VCHAR / obs-text )
+<x:ref>quoted-pair</x:ref> = "\" ( HTAB / SP / VCHAR / obs-text )
 <x:ref>quoted-str-nf</x:ref> = DQUOTE *( qdtext-nf / quoted-pair ) DQUOTE
 <x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
 <x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
@@ -5581,7 +5580,7 @@ Zed A. Shaw<!--zedshaw@zedshaw.com-->.
       Update media type registrations to use RFC4288 template.
     </t>
     <t>
-      Use names of RFC4234 core rules DQUOTE and WSP,
+      Use names of RFC4234 core rules DQUOTE and HTAB,
       fix broken ABNF for chunk-data
       (work in progress on <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/36"/>)
     </t>
