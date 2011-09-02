@@ -477,7 +477,7 @@
 </section>
 </section>
 
-<section title="HTTP-related architecture" anchor="architecture">
+<section title="Architecture" anchor="architecture">
 <t>
    HTTP was created for the World Wide Web architecture
    and has evolved over time to support the scalability needs of a worldwide
@@ -1134,37 +1134,12 @@ Content-Type: text/plain
    referred to as the "headers" or the "header section"), an empty line
    indicating the end of the header section, and an optional message-body.
 </t>
-<t>
-   An HTTP message can either be a request from client to server or a
-   response from server to client.  Syntactically, the two types of message
-   differ only in the start-line, which is either a Request-Line (for requests)
-   or a Status-Line (for responses), and in the algorithm for determining
-   the length of the message-body (<xref target="message.body"/>).
-   In theory, a client could receive requests and a server could receive
-   responses, distinguishing them by their different start-line formats,
-   but in practice servers are implemented to only expect a request
-   (a response is interpreted as an unknown or invalid request method)
-   and clients are implemented to only expect a response.
-</t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-message"/>
   <x:ref>HTTP-message</x:ref>    = <x:ref>start-line</x:ref>
                     *( <x:ref>header-field</x:ref> <x:ref>CRLF</x:ref> )
                     <x:ref>CRLF</x:ref>
                     [ <x:ref>message-body</x:ref> ]
-  <x:ref>start-line</x:ref>      = <x:ref>Request-Line</x:ref> / <x:ref>Status-Line</x:ref>
 </artwork></figure>
-<t>
-   Implementations &MUST-NOT; send whitespace between the start-line and
-   the first header field. The presence of such whitespace in a request
-   might be an attempt to trick a server into ignoring that field or
-   processing the line after it as a new request, either of which might
-   result in a security vulnerability if other implementations within
-   the request chain interpret the same message differently.
-   Likewise, the presence of such whitespace in a response might be
-   ignored by some clients or cause others to cease parsing.
-</t>
-
-<section title="Message Parsing and Robustness" anchor="message.robustness">
 <t>
    The normal procedure for parsing an HTTP message is to read the
    start-line into a structure, read each header field into a hash
@@ -1185,31 +1160,34 @@ Content-Type: text/plain
    has been extracted from the message, such as within a header field-value
    after message parsing has delineated the individual fields.
 </t>
+
+<section anchor="start.line" title="Start Line">
 <t>
-   Older HTTP/1.0 client implementations might send an extra CRLF
-   after a POST request as a lame workaround for some early server
-   applications that failed to read message-body content that was
-   not terminated by a line-ending. An HTTP/1.1 client &MUST-NOT;
-   preface or follow a request with an extra CRLF.  If terminating
-   the request message-body with a line-ending is desired, then the
-   client &MUST; include the terminating CRLF octets as part of the
-   message-body length. 
+   An HTTP message can either be a request from client to server or a
+   response from server to client.  Syntactically, the two types of message
+   differ only in the start-line, which is either a Request-Line (for requests)
+   or a Status-Line (for responses), and in the algorithm for determining
+   the length of the message-body (<xref target="message.body"/>).
+   In theory, a client could receive requests and a server could receive
+   responses, distinguishing them by their different start-line formats,
+   but in practice servers are implemented to only expect a request
+   (a response is interpreted as an unknown or invalid request method)
+   and clients are implemented to only expect a response.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="start-line"/>
+  <x:ref>start-line</x:ref>      = <x:ref>Request-Line</x:ref> / <x:ref>Status-Line</x:ref>
+</artwork></figure>
+<t>
 </t>
 <t>
-   In the interest of robustness, servers &SHOULD; ignore at least one
-   empty line received where a Request-Line is expected. In other words, if
-   the server is reading the protocol stream at the beginning of a
-   message and receives a CRLF first, it &SHOULD; ignore the CRLF.
-   Likewise, although the line terminator for the start-line and header
-   fields is the sequence CRLF, we recommend that recipients recognize a
-   single LF as a line terminator and ignore any CR.
-</t>
-<t>
-   When a server listening only for HTTP request messages, or processing
-   what appears from the start-line to be an HTTP request message,
-   receives a sequence of octets that does not match the HTTP-message
-   grammar aside from the robustness exceptions listed above, the
-   server &MUST; respond with an HTTP/1.1 400 (Bad Request) response.  
+   Implementations &MUST-NOT; send whitespace between the start-line and
+   the first header field. The presence of such whitespace in a request
+   might be an attempt to trick a server into ignoring that field or
+   processing the line after it as a new request, either of which might
+   result in a security vulnerability if other implementations within
+   the request chain interpret the same message differently.
+   Likewise, the presence of such whitespace in a response might be
+   ignored by some clients or cause others to cease parsing.
 </t>
 </section>
 
@@ -1603,7 +1581,7 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section anchor="incomplete.messages" title="Incomplete Messages">
+<section anchor="incomplete.messages" title="Handling Incomplete Messages">
 <t>
    Request messages that are prematurely terminated, possibly due to a
    cancelled connection or a server-imposed time-out exception, &MUST;
@@ -1646,25 +1624,33 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="General Header Fields" anchor="general.header.fields">
-  <x:anchor-alias value="general-header"/>
+<section title="Message Parsing Robustness" anchor="message.robustness">
 <t>
-   There are a few header fields which have general applicability for
-   both request and response messages, but which do not apply to the
-   payload being transferred. These header fields apply only to the
-   message being transmitted.
+   Older HTTP/1.0 client implementations might send an extra CRLF
+   after a POST request as a lame workaround for some early server
+   applications that failed to read message-body content that was
+   not terminated by a line-ending. An HTTP/1.1 client &MUST-NOT;
+   preface or follow a request with an extra CRLF.  If terminating
+   the request message-body with a line-ending is desired, then the
+   client &MUST; include the terminating CRLF octets as part of the
+   message-body length. 
 </t>
-<texttable align="left">
-  <ttcol>Header Field Name</ttcol>
-  <ttcol>Defined in...</ttcol>
-  
-  <c>Connection</c> <c><xref target="header.connection"/></c>
-  <c>Date</c> <c><xref target="header.date"/></c>
-  <c>Trailer</c> <c><xref target="header.trailer"/></c>
-  <c>Transfer-Encoding</c> <c><xref target="header.transfer-encoding"/></c>
-  <c>Upgrade</c> <c><xref target="header.upgrade"/></c>
-  <c>Via</c> <c><xref target="header.via"/></c>
-</texttable>
+<t>
+   In the interest of robustness, servers &SHOULD; ignore at least one
+   empty line received where a Request-Line is expected. In other words, if
+   the server is reading the protocol stream at the beginning of a
+   message and receives a CRLF first, it &SHOULD; ignore the CRLF.
+   Likewise, although the line terminator for the start-line and header
+   fields is the sequence CRLF, we recommend that recipients recognize a
+   single LF as a line terminator and ignore any CR.
+</t>
+<t>
+   When a server listening only for HTTP request messages, or processing
+   what appears from the start-line to be an HTTP request message,
+   receives a sequence of octets that does not match the HTTP-message
+   grammar aside from the robustness exceptions listed above, the
+   server &MUST; respond with an HTTP/1.1 400 (Bad Request) response.  
+</t>
 </section>
 </section>
 
@@ -3080,8 +3066,22 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <section title="Header Field Definitions" anchor="header.field.definitions">
 <t>
    This section defines the syntax and semantics of HTTP header fields
-   related to message framing and transport protocols.
+   related to message origination, framing, and routing.
 </t>
+<texttable align="left">
+  <ttcol>Header Field Name</ttcol>
+  <ttcol>Defined in...</ttcol>
+  
+  <c>Connection</c> <c><xref target="header.connection"/></c>
+  <c>Content-Length</c> <c><xref target="header.content-length"/></c>
+  <c>Date</c> <c><xref target="header.date"/></c>
+  <c>Host</c> <c><xref target="header.host"/></c>
+  <c>TE</c> <c><xref target="header.te"/></c>
+  <c>Trailer</c> <c><xref target="header.trailer"/></c>
+  <c>Transfer-Encoding</c> <c><xref target="header.transfer-encoding"/></c>
+  <c>Upgrade</c> <c><xref target="header.upgrade"/></c>
+  <c>Via</c> <c><xref target="header.via"/></c>
+</texttable>
 
 <section title="Connection" anchor="header.connection">
   <iref primary="true" item="Connection header field" x:for-anchor=""/>
