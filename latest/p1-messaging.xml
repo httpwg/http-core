@@ -1189,6 +1189,134 @@ Content-Type: text/plain
    Likewise, the presence of such whitespace in a response might be
    ignored by some clients or cause others to cease parsing.
 </t>
+
+<section title="Request-Line" anchor="request-line">
+  <x:anchor-alias value="Request-Line"/>
+<t>
+   The Request-Line begins with a method token, followed by a single
+   space (SP), the request-target, another single space (SP), the
+   protocol version, and ending with CRLF.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Request-Line"/>
+  <x:ref>Request-Line</x:ref>   = <x:ref>Method</x:ref> <x:ref>SP</x:ref> <x:ref>request-target</x:ref> <x:ref>SP</x:ref> <x:ref>HTTP-Version</x:ref> <x:ref>CRLF</x:ref>
+</artwork></figure>
+
+<section title="Method" anchor="method">
+  <x:anchor-alias value="Method"/>
+<t>
+   The Method token indicates the request method to be performed on the
+   target resource. The request method is case-sensitive.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Method"/>
+  <x:ref>Method</x:ref>         = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   See &method; for further information, such as the list of methods defined
+   by this specification, the IANA registry, and considerations for new methods.
+</t>
+</section>
+
+<section title="request-target" anchor="request-target">
+  <x:anchor-alias value="request-target"/>
+<t>
+   The request-target identifies the target resource upon which to apply
+   the request.  The four options for request-target are described in
+   <xref target="request-target-types"/>.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/>
+  <x:ref>request-target</x:ref> = "*"
+                 / <x:ref>absolute-URI</x:ref>
+                 / ( <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ] )
+                 / <x:ref>authority</x:ref>
+</artwork></figure>
+<t>
+   HTTP does not place a pre-defined limit on the length of a request-target.
+   A server &MUST; be prepared to receive URIs of unbounded length and
+   respond with the 414 (URI Too Long) status code if the received
+   request-target would be longer than the server wishes to handle
+   (see &status-414;).
+</t>
+<t>
+   Various ad-hoc limitations on request-target length are found in practice.
+   It is &RECOMMENDED; that all HTTP senders and recipients support
+   request-target lengths of 8000 or more octets.
+</t>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> Fragments (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>)
+    are not part of the request-target and thus will not be transmitted
+    in an HTTP request.
+  </t>
+</x:note>
+</section>
+</section>
+
+<section title="Status-Line" anchor="status-line">
+  <x:anchor-alias value="Status-Line"/>
+<t>
+   The first line of a Response message is the Status-Line, consisting
+   of the protocol version, a space (SP), the status code, another space,
+   a possibly-empty textual phrase describing the status code, and
+   ending with CRLF.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Line"/>
+  <x:ref>Status-Line</x:ref> = <x:ref>HTTP-Version</x:ref> <x:ref>SP</x:ref> <x:ref>Status-Code</x:ref> <x:ref>SP</x:ref> <x:ref>Reason-Phrase</x:ref> <x:ref>CRLF</x:ref>
+</artwork></figure>
+
+<section title="Status Code" anchor="status.code">
+  <x:anchor-alias value="Status-Code"/>
+<t>
+   The Status-Code element is a 3-digit integer result code of the attempt to
+   understand and satisfy the request. See &status-code-reasonphr; for
+   further information, such as the list of status codes defined by this
+   specification, the IANA registry, and considerations for new status codes.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Code"/>
+  <x:ref>Status-Code</x:ref>    = 3<x:ref>DIGIT</x:ref>
+</artwork></figure>
+<t>
+   The first digit of the Status-Code defines the class of response. The
+   last two digits do not have any categorization role. There are 5
+   values for the first digit:
+  <list style="symbols">
+    <t>
+      1xx: Informational - Request received, continuing process
+    </t>
+    <t>
+      2xx: Success - The action was successfully received,
+        understood, and accepted
+    </t>
+    <t>
+      3xx: Redirection - Further action must be taken in order to
+        complete the request
+    </t>
+    <t>
+      4xx: Client Error - The request contains bad syntax or cannot
+        be fulfilled
+    </t>
+    <t>
+      5xx: Server Error - The server failed to fulfill an apparently
+        valid request
+    </t>
+  </list>
+</t>
+</section>
+
+<section title="Reason Phrase" anchor="reason.phrase">
+  <x:anchor-alias value="Reason-Phrase"/>
+<t>   
+   The Reason Phrase exists for the sole purpose of providing a textual
+   description associated with the numeric status code, out of deference to
+   earlier Internet application protocols that were more frequently used with
+   interactive text clients. A client &SHOULD; ignore the content of the Reason
+   Phrase.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Reason-Phrase"/>
+  <x:ref>Reason-Phrase</x:ref>  = *( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
+</artwork></figure>
+</section>
+</section>
+
 </section>
 
 <section title="Header Fields" anchor="header.fields">
@@ -1462,7 +1590,7 @@ Content-Type: text/plain
 <t>
    For response messages, whether or not a message-body is included with
    a message is dependent on both the request method and the response
-   status code (<xref target="status.code.and.reason.phrase"/>).
+   status code (<xref target="status.code"/>).
    Responses to the HEAD request method never include a message-body
    because the associated response header fields (e.g., Transfer-Encoding,
    Content-Length, etc.) only indicate what their values would have been
@@ -1670,47 +1798,13 @@ Content-Type: text/plain
                   [ <x:ref>message-body</x:ref> ]          ; <xref target="message.body"/>
 </artwork></figure>
 
-<section title="Request-Line" anchor="request-line">
-  <x:anchor-alias value="Request-Line"/>
+<section title="Types of Request Target" anchor="request-target-types">
 <t>
-   The Request-Line begins with a method token, followed by a single
-   space (SP), the request-target, another single space (SP), the
-   protocol version, and ending with CRLF.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Request-Line"/>
-  <x:ref>Request-Line</x:ref>   = <x:ref>Method</x:ref> <x:ref>SP</x:ref> <x:ref>request-target</x:ref> <x:ref>SP</x:ref> <x:ref>HTTP-Version</x:ref> <x:ref>CRLF</x:ref>
-</artwork></figure>
-
-<section title="Method" anchor="method">
-  <x:anchor-alias value="Method"/>
-<t>
-   The Method token indicates the request method to be performed on the
-   target resource. The request method is case-sensitive.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Method"/>
-  <x:ref>Method</x:ref>         = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   See &method; for further information, such as the list of methods defined
-   by this specification, the IANA registry, and considerations for new methods.
-</t>
-</section>
-
-<section title="request-target" anchor="request-target">
-  <x:anchor-alias value="request-target"/>
-<t>
-   The request-target identifies the target resource upon which to apply
-   the request.  In most cases, the user agent is provided a URI reference
+   In most cases, the user agent is provided a URI reference
    from which it determines an absolute URI for identifying the target
    resource.  When a request to the resource is initiated, all or part
    of that URI is used to construct the HTTP request-target.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/>
-  <x:ref>request-target</x:ref> = "*"
-                 / <x:ref>absolute-URI</x:ref>
-                 / ( <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ] )
-                 / <x:ref>authority</x:ref>
-</artwork></figure>
 <t>
    The four options for request-target are dependent on the nature of the
    request.
@@ -1816,26 +1910,6 @@ Host: www.example.org:8001
     rewrite the request-target.
   </t>
 </x:note>
-<t>
-   HTTP does not place a pre-defined limit on the length of a request-target.
-   A server &MUST; be prepared to receive URIs of unbounded length and
-   respond with the 414 (URI Too Long) status code if the received
-   request-target would be longer than the server wishes to handle
-   (see &status-414;).
-</t>
-<t>
-   Various ad-hoc limitations on request-target length are found in practice.
-   It is &RECOMMENDED; that all HTTP senders and recipients support
-   request-target lengths of 8000 or more octets.
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> Fragments (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>)
-    are not part of the request-target and thus will not be transmitted
-    in an HTTP request.
-  </t>
-</x:note>
-</section>
 </section>
 
 <section title="The Resource Identified by a Request" anchor="the.resource.identified.by.a.request">
@@ -1972,67 +2046,6 @@ Host: www.example.org
                   <x:ref>CRLF</x:ref>
                   [ <x:ref>message-body</x:ref> ]          ; <xref target="message.body"/>
 </artwork></figure>
-
-<section title="Status-Line" anchor="status-line">
-  <x:anchor-alias value="Status-Line"/>
-<t>
-   The first line of a Response message is the Status-Line, consisting
-   of the protocol version, a space (SP), the status code, another space,
-   a possibly-empty textual phrase describing the status code, and
-   ending with CRLF.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Line"/>
-  <x:ref>Status-Line</x:ref> = <x:ref>HTTP-Version</x:ref> <x:ref>SP</x:ref> <x:ref>Status-Code</x:ref> <x:ref>SP</x:ref> <x:ref>Reason-Phrase</x:ref> <x:ref>CRLF</x:ref>
-</artwork></figure>
-
-<section title="Status Code and Reason Phrase" anchor="status.code.and.reason.phrase">
-  <x:anchor-alias value="Reason-Phrase"/>
-  <x:anchor-alias value="Status-Code"/>
-<t>
-   The Status-Code element is a 3-digit integer result code of the attempt to
-   understand and satisfy the request. See &status-code-reasonphr; for
-   further information, such as the list of status codes defined by this
-   specification, the IANA registry, and considerations for new status codes.
-</t>
-<t>   
-   The Reason Phrase exists for the sole purpose of providing a textual
-   description associated with the numeric status code, out of deference to
-   earlier Internet application protocols that were more frequently used with
-   interactive text clients. A client &SHOULD; ignore the content of the Reason
-   Phrase.
-</t>
-<t>
-   The first digit of the Status-Code defines the class of response. The
-   last two digits do not have any categorization role. There are 5
-   values for the first digit:
-  <list style="symbols">
-    <t>
-      1xx: Informational - Request received, continuing process
-    </t>
-    <t>
-      2xx: Success - The action was successfully received,
-        understood, and accepted
-    </t>
-    <t>
-      3xx: Redirection - Further action must be taken in order to
-        complete the request
-    </t>
-    <t>
-      4xx: Client Error - The request contains bad syntax or cannot
-        be fulfilled
-    </t>
-    <t>
-      5xx: Server Error - The server failed to fulfill an apparently
-        valid request
-    </t>
-  </list>
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Status-Code"/><iref primary="true" item="Grammar" subitem="Reason-Phrase"/>
-  <x:ref>Status-Code</x:ref>    = 3<x:ref>DIGIT</x:ref>
-  <x:ref>Reason-Phrase</x:ref>  = *( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
-</artwork></figure>
-</section>
-</section>
 
 </section>
 
