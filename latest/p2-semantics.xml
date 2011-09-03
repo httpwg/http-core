@@ -32,7 +32,6 @@
   <!ENTITY effective-request-uri      "<xref target='Part1' x:rel='#effective.request.uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY intermediaries             "<xref target='Part1' x:rel='#intermediaries' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY chunked-encoding           "<xref target='Part1' x:rel='#chunked.encoding' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY full-date                  "<xref target='Part1' x:rel='#date.time.formats.full.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY http-url                   "<xref target='Part1' x:rel='#http-url' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY http-version               "<xref target='Part1' x:rel='#http.version' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY use100                     "<xref target='Part1' x:rel='#use.of.the.100.status' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -360,7 +359,6 @@
 <section title="ABNF Rules defined in other Parts of the Specification" anchor="abnf.dependencies">
   <x:anchor-alias value="absolute-URI"/>
   <x:anchor-alias value="comment"/>
-  <x:anchor-alias value="HTTP-date"/>
   <x:anchor-alias value="partial-URI"/>
   <x:anchor-alias value="product"/>
   <x:anchor-alias value="URI-reference"/>
@@ -370,7 +368,6 @@
 <figure><!--Part1--><artwork type="abnf2616">
   <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, defined in &uri;&gt;
   <x:ref>comment</x:ref>       = &lt;comment, defined in &header-fields;&gt;
-  <x:ref>HTTP-date</x:ref>     = &lt;HTTP-date, defined in &full-date;&gt;
   <x:ref>partial-URI</x:ref>   = &lt;partial-URI, defined in &uri;&gt;
   <x:ref>product</x:ref>       = &lt;product, defined in &product-tokens;&gt;
   <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in &uri;&gt;
@@ -593,6 +590,7 @@
   <c>Accept-Ranges</c> <c>&header-accept-ranges;</c>
   <c>Age</c> <c>&header-age;</c>
   <c>Allow</c> <c><xref target="header.allow"/></c>
+  <c>Date</c> <c><xref target="header.date"/></c>
   <c>ETag</c> <c>&header-etag;</c>
   <c>Location</c> <c><xref target="header.location"/></c>
   <c>Proxy-Authenticate</c> <c>&header-proxy-authenticate;</c>
@@ -2279,6 +2277,153 @@ Connection: Upgrade
 </section>
 
 
+<section title="Date/Time Formats" anchor="http.date">
+  <x:anchor-alias value="HTTP-date"/>
+<t>
+   HTTP applications have historically allowed three different formats
+   for date/time stamps. However, the preferred format is a fixed-length subset
+   of that defined by <xref target="RFC1123"/>:
+</t>
+<figure><artwork type="example" x:indent-with="  ">
+Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 1123
+</artwork></figure>
+<t>
+   The other formats are described here only for compatibility with obsolete
+   implementations.
+</t>
+<figure><artwork type="example" x:indent-with="  ">
+Sunday, 06-Nov-94 08:49:37 GMT ; obsolete RFC 850 format
+Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
+</artwork></figure>
+<t>
+   HTTP/1.1 clients and servers that parse a date value &MUST; accept
+   all three formats (for compatibility with HTTP/1.0), though they &MUST;
+   only generate the RFC 1123 format for representing HTTP-date values
+   in header fields.
+</t>
+<t>
+   All HTTP date/time stamps &MUST; be represented in Greenwich Mean Time
+   (GMT), without exception. For the purposes of HTTP, GMT is exactly
+   equal to UTC (Coordinated Universal Time). This is indicated in the
+   first two formats by the inclusion of "GMT" as the three-letter
+   abbreviation for time zone, and &MUST; be assumed when reading the
+   asctime format. HTTP-date is case sensitive and &MUST-NOT; include
+   additional whitespace beyond that specifically included as SP in the
+   grammar.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
+  <x:ref>HTTP-date</x:ref>    = <x:ref>rfc1123-date</x:ref> / <x:ref>obs-date</x:ref>
+</artwork></figure>
+<t anchor="preferred.date.format">
+  <x:anchor-alias value="rfc1123-date"/>
+  <x:anchor-alias value="time-of-day"/>
+  <x:anchor-alias value="hour"/>
+  <x:anchor-alias value="minute"/>
+  <x:anchor-alias value="second"/>
+  <x:anchor-alias value="day-name"/>
+  <x:anchor-alias value="day"/>
+  <x:anchor-alias value="month"/>
+  <x:anchor-alias value="year"/>
+  <x:anchor-alias value="GMT"/>
+  Preferred format:
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc1123-date"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
+  <x:ref>rfc1123-date</x:ref> = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
+  ; fixed length subset of the format defined in
+  ; <xref target="RFC1123" x:fmt="of" x:sec="5.2.14"/>
+  
+  <x:ref>day-name</x:ref>     = <x:abnf-char-sequence>"Mon"</x:abnf-char-sequence> ; "Mon", case-sensitive
+               / <x:abnf-char-sequence>"Tue"</x:abnf-char-sequence> ; "Tue", case-sensitive
+               / <x:abnf-char-sequence>"Wed"</x:abnf-char-sequence> ; "Wed", case-sensitive
+               / <x:abnf-char-sequence>"Thu"</x:abnf-char-sequence> ; "Thu", case-sensitive
+               / <x:abnf-char-sequence>"Fri"</x:abnf-char-sequence> ; "Fri", case-sensitive
+               / <x:abnf-char-sequence>"Sat"</x:abnf-char-sequence> ; "Sat", case-sensitive
+               / <x:abnf-char-sequence>"Sun"</x:abnf-char-sequence> ; "Sun", case-sensitive
+               
+  <x:ref>date1</x:ref>        = <x:ref>day</x:ref> <x:ref>SP</x:ref> <x:ref>month</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
+               ; e.g., 02 Jun 1982
+
+  <x:ref>day</x:ref>          = 2<x:ref>DIGIT</x:ref>
+  <x:ref>month</x:ref>        = <x:abnf-char-sequence>"Jan"</x:abnf-char-sequence> ; "Jan", case-sensitive
+               / <x:abnf-char-sequence>"Feb"</x:abnf-char-sequence> ; "Feb", case-sensitive
+               / <x:abnf-char-sequence>"Mar"</x:abnf-char-sequence> ; "Mar", case-sensitive
+               / <x:abnf-char-sequence>"Apr"</x:abnf-char-sequence> ; "Apr", case-sensitive
+               / <x:abnf-char-sequence>"May"</x:abnf-char-sequence> ; "May", case-sensitive
+               / <x:abnf-char-sequence>"Jun"</x:abnf-char-sequence> ; "Jun", case-sensitive
+               / <x:abnf-char-sequence>"Jul"</x:abnf-char-sequence> ; "Jul", case-sensitive
+               / <x:abnf-char-sequence>"Aug"</x:abnf-char-sequence> ; "Aug", case-sensitive
+               / <x:abnf-char-sequence>"Sep"</x:abnf-char-sequence> ; "Sep", case-sensitive
+               / <x:abnf-char-sequence>"Oct"</x:abnf-char-sequence> ; "Oct", case-sensitive
+               / <x:abnf-char-sequence>"Nov"</x:abnf-char-sequence> ; "Nov", case-sensitive
+               / <x:abnf-char-sequence>"Dec"</x:abnf-char-sequence> ; "Dec", case-sensitive
+  <x:ref>year</x:ref>         = 4<x:ref>DIGIT</x:ref>
+
+  <x:ref>GMT</x:ref>   = <x:abnf-char-sequence>"GMT"</x:abnf-char-sequence> ; "GMT", case-sensitive
+
+  <x:ref>time-of-day</x:ref>  = <x:ref>hour</x:ref> ":" <x:ref>minute</x:ref> ":" <x:ref>second</x:ref>
+                 ; 00:00:00 - 23:59:59
+                 
+  <x:ref>hour</x:ref>         = 2<x:ref>DIGIT</x:ref>               
+  <x:ref>minute</x:ref>       = 2<x:ref>DIGIT</x:ref>               
+  <x:ref>second</x:ref>       = 2<x:ref>DIGIT</x:ref>               
+</artwork></figure>
+<t>
+  The semantics of <x:ref>day-name</x:ref>, <x:ref>day</x:ref>,
+  <x:ref>month</x:ref>, <x:ref>year</x:ref>, and <x:ref>time-of-day</x:ref> are the
+  same as those defined for the RFC 5322 constructs
+  with the corresponding name (<xref target="RFC5322" x:fmt="," x:sec="3.3"/>).
+</t>
+<t anchor="obsolete.date.formats">
+  <x:anchor-alias value="obs-date"/>
+  <x:anchor-alias value="rfc850-date"/>
+  <x:anchor-alias value="asctime-date"/>
+  <x:anchor-alias value="date1"/>
+  <x:anchor-alias value="date2"/>
+  <x:anchor-alias value="date3"/>
+  <x:anchor-alias value="rfc1123-date"/>
+  <x:anchor-alias value="day-name-l"/>
+  Obsolete formats:
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="obs-date"/>
+  <x:ref>obs-date</x:ref>     = <x:ref>rfc850-date</x:ref> / <x:ref>asctime-date</x:ref> 
+</artwork></figure>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
+  <x:ref>rfc850-date</x:ref>  = <x:ref>day-name-l</x:ref> "," <x:ref>SP</x:ref> <x:ref>date2</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
+  <x:ref>date2</x:ref>        = <x:ref>day</x:ref> "-" <x:ref>month</x:ref> "-" 2<x:ref>DIGIT</x:ref>
+                 ; day-month-year (e.g., 02-Jun-82)
+
+  <x:ref>day-name-l</x:ref>   = <x:abnf-char-sequence>"Monday"</x:abnf-char-sequence> ; "Monday", case-sensitive
+         / <x:abnf-char-sequence>"Tuesday"</x:abnf-char-sequence> ; "Tuesday", case-sensitive
+         / <x:abnf-char-sequence>"Wednesday"</x:abnf-char-sequence> ; "Wednesday", case-sensitive
+         / <x:abnf-char-sequence>"Thursday"</x:abnf-char-sequence> ; "Thursday", case-sensitive
+         / <x:abnf-char-sequence>"Friday"</x:abnf-char-sequence> ; "Friday", case-sensitive
+         / <x:abnf-char-sequence>"Saturday"</x:abnf-char-sequence> ; "Saturday", case-sensitive
+         / <x:abnf-char-sequence>"Sunday"</x:abnf-char-sequence> ; "Sunday", case-sensitive
+</artwork></figure>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="asctime-date"/>
+  <x:ref>asctime-date</x:ref> = <x:ref>day-name</x:ref> <x:ref>SP</x:ref> <x:ref>date3</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
+  <x:ref>date3</x:ref>        = <x:ref>month</x:ref> <x:ref>SP</x:ref> ( 2<x:ref>DIGIT</x:ref> / ( <x:ref>SP</x:ref> 1<x:ref>DIGIT</x:ref> ))
+                 ; month day (e.g., Jun  2)
+</artwork></figure>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> Recipients of date values are encouraged to be robust in
+    accepting date values that might have been sent by non-HTTP
+    applications, as is sometimes the case when retrieving or posting
+    messages via proxies/gateways to SMTP or NNTP.
+  </t>
+</x:note>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> HTTP requirements for the date/time stamp format apply only
+    to their usage within the protocol stream. Clients and servers are
+    not required to use these formats for user presentation, request
+    logging, etc.
+  </t>
+</x:note>
+</section>
+
+
 <section title="Header Field Definitions" anchor="header.field.definitions">
 <t>
    This section defines the syntax and semantics of HTTP/1.1 header fields
@@ -2311,6 +2456,66 @@ Connection: Upgrade
    A proxy &MUST-NOT; modify the Allow header field &mdash; it does not need to
    understand all the methods specified in order to handle them according to
    the generic message handling rules.
+</t>
+</section>
+
+<section title="Date" anchor="header.date">
+  <iref primary="true" item="Date header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Date" x:for-anchor=""/>
+  <x:anchor-alias value="Date"/>
+<t>
+   The "Date" header field represents the date and time at which
+   the message was originated, having the same semantics as the Origination
+   Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
+   The field value is an HTTP-date, as defined in <xref target="http.date"/>;
+   it &MUST; be sent in rfc1123-date format.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Date"/>
+  <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
+</artwork></figure>
+<t>
+   An example is
+</t>
+<figure><artwork type="example">
+  Date: Tue, 15 Nov 1994 08:12:31 GMT
+</artwork></figure>
+<t>
+   Origin servers &MUST; include a Date header field in all responses,
+   except in these cases:
+  <list style="numbers">
+      <t>If the response status code is 100 (Continue) or 101 (Switching
+         Protocols), the response &MAY; include a Date header field, at
+         the server's option.</t>
+
+      <t>If the response status code conveys a server error, e.g., 500
+         (Internal Server Error) or 503 (Service Unavailable), and it is
+         inconvenient or impossible to generate a valid Date.</t>
+
+      <t>If the server does not have a clock that can provide a
+         reasonable approximation of the current time, its responses
+         &MUST-NOT; include a Date header field.</t>
+  </list>
+</t>
+<t>
+   A received message that does not have a Date header field &MUST; be
+   assigned one by the recipient if the message will be cached by that
+   recipient.
+</t>
+<t>
+   Clients can use the Date header field as well; in order to keep request
+   messages small, they are advised not to include it when it doesn't convey
+   any useful information (as it is usually the case for requests that do not
+   contain a payload).
+</t>
+<t>
+   The HTTP-date sent in a Date header field &SHOULD-NOT; represent a date and
+   time subsequent to the generation of the message. It &SHOULD; represent
+   the best available approximation of the date and time of message
+   generation, unless the implementation has no means of generating a
+   reasonably accurate date and time. In theory, the date ought to
+   represent the moment just before the payload is generated. In
+   practice, the date can be generated at any time during the message
+   origination without affecting its semantic value.
 </t>
 </section>
 
@@ -2955,6 +3160,12 @@ Connection: Upgrade
    <c>
       <xref target="header.allow"/>
    </c>
+   <c>Date</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.date"/>
+   </c>
    <c>Expect</c>
    <c>http</c>
    <c>standard</c>
@@ -3483,6 +3694,19 @@ Connection: Upgrade
 
 <references title="Informative References">
 
+<reference anchor="RFC1123">
+  <front>
+    <title>Requirements for Internet Hosts - Application and Support</title>
+    <author initials="R." surname="Braden" fullname="Robert Braden">
+      <organization>University of Southern California (USC), Information Sciences Institute</organization>
+      <address><email>Braden@ISI.EDU</email></address>
+    </author>
+    <date month="October" year="1989"/>
+  </front>
+  <seriesInfo name="STD" value="3"/>
+  <seriesInfo name="RFC" value="1123"/>
+</reference>
+
 <reference anchor="RFC1945">
   <front>
     <title abbrev="HTTP/1.0">Hypertext Transfer Protocol -- HTTP/1.0</title>
@@ -3753,11 +3977,15 @@ Connection: Upgrade
 <artwork type="abnf" name="p2-semantics.parsed-abnf">
 <x:ref>Allow</x:ref> = [ ( "," / Method ) *( OWS "," [ OWS Method ] ) ]
 
+<x:ref>Date</x:ref> = HTTP-date
+
 <x:ref>Expect</x:ref> = *( "," OWS ) expectation *( OWS "," [ OWS expectation ] )
 
 <x:ref>From</x:ref> = mailbox
 
-<x:ref>HTTP-date</x:ref> = &lt;HTTP-date, defined in [Part1], Section 5.1&gt;
+<x:ref>GMT</x:ref> = %x47.4D.54 ; GMT
+
+<x:ref>HTTP-date</x:ref> = rfc1123-date / obs-date
 
 <x:ref>Location</x:ref> = URI-reference
 
@@ -3778,9 +4006,28 @@ Connection: Upgrade
 <x:ref>User-Agent</x:ref> = product *( RWS ( product / comment ) )
 
 <x:ref>absolute-URI</x:ref> = &lt;absolute-URI, defined in [Part1], Section 2.7&gt;
+<x:ref>asctime-date</x:ref> = day-name SP date3 SP time-of-day SP year
 
 <x:ref>comment</x:ref> = &lt;comment, defined in [Part1], Section 3.2&gt;
 
+<x:ref>date1</x:ref> = day SP month SP year
+<x:ref>date2</x:ref> = day "-" month "-" 2DIGIT
+<x:ref>date3</x:ref> = month SP ( 2DIGIT / ( SP DIGIT ) )
+<x:ref>day</x:ref> = 2DIGIT
+<x:ref>day-name</x:ref> = %x4D.6F.6E ; Mon
+ / %x54.75.65 ; Tue
+ / %x57.65.64 ; Wed
+ / %x54.68.75 ; Thu
+ / %x46.72.69 ; Fri
+ / %x53.61.74 ; Sat
+ / %x53.75.6E ; Sun
+<x:ref>day-name-l</x:ref> = %x4D.6F.6E.64.61.79 ; Monday
+ / %x54.75.65.73.64.61.79 ; Tuesday
+ / %x57.65.64.6E.65.73.64.61.79 ; Wednesday
+ / %x54.68.75.72.73.64.61.79 ; Thursday
+ / %x46.72.69.64.61.79 ; Friday
+ / %x53.61.74.75.72.64.61.79 ; Saturday
+ / %x53.75.6E.64.61.79 ; Sunday
 <x:ref>delta-seconds</x:ref> = 1*DIGIT
 
 <x:ref>expect-params</x:ref> = ";" token [ "=" ( token / quoted-string ) ]
@@ -3788,20 +4035,45 @@ Connection: Upgrade
 <x:ref>expectation-extension</x:ref> = token [ "=" ( token / quoted-string )
  *expect-params ]
 
-<x:ref>mailbox</x:ref> = &lt;mailbox, defined in [RFC5322], Section 3.4&gt;
+<x:ref>hour</x:ref> = 2DIGIT
 
+<x:ref>mailbox</x:ref> = &lt;mailbox, defined in [RFC5322], Section 3.4&gt;
+<x:ref>minute</x:ref> = 2DIGIT
+<x:ref>month</x:ref> = %x4A.61.6E ; Jan
+ / %x46.65.62 ; Feb
+ / %x4D.61.72 ; Mar
+ / %x41.70.72 ; Apr
+ / %x4D.61.79 ; May
+ / %x4A.75.6E ; Jun
+ / %x4A.75.6C ; Jul
+ / %x41.75.67 ; Aug
+ / %x53.65.70 ; Sep
+ / %x4F.63.74 ; Oct
+ / %x4E.6F.76 ; Nov
+ / %x44.65.63 ; Dec
+
+<x:ref>obs-date</x:ref> = rfc850-date / asctime-date
 <x:ref>obs-text</x:ref> = &lt;obs-text, defined in [Part1], Section 1.2.2&gt;
 
 <x:ref>partial-URI</x:ref> = &lt;partial-URI, defined in [Part1], Section 2.7&gt;
-<x:ref>product</x:ref> = &lt;product, defined in [Part1], Section 5.3&gt;
+<x:ref>product</x:ref> = &lt;product, defined in [Part1], Section 5.2&gt;
 
 <x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in [Part1], Section 3.2.3&gt;
 
+<x:ref>rfc1123-date</x:ref> = day-name "," SP date1 SP time-of-day SP GMT
+<x:ref>rfc850-date</x:ref> = day-name-l "," SP date2 SP time-of-day SP GMT
+
+<x:ref>second</x:ref> = 2DIGIT
+
+<x:ref>time-of-day</x:ref> = hour ":" minute ":" second
 <x:ref>token</x:ref> = &lt;token, defined in [Part1], Section 3.2.3&gt;
+
+<x:ref>year</x:ref> = 4DIGIT
 </artwork>
 </figure>
 <figure><preamble>ABNF diagnostics:</preamble><artwork type="inline">
 ; Allow defined but not used
+; Date defined but not used
 ; Expect defined but not used
 ; From defined but not used
 ; Location defined but not used
