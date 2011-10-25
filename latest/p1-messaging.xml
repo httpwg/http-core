@@ -2634,18 +2634,6 @@ Host: www.example.org
    request is in progress.
 </t>
 <t>
-   This means that clients, servers, and proxies &MUST; be able to recover
-   from asynchronous close events. Client software &SHOULD; reopen the
-   transport connection and retransmit the aborted sequence of requests
-   without user interaction so long as the request sequence is
-   idempotent (see &idempotent-methods;). Non-idempotent request methods or sequences
-   &MUST-NOT; be automatically retried, although user agents &MAY; offer a
-   human operator the choice of retrying the request(s). Confirmation by
-   user-agent software with semantic understanding of the application
-   &MAY; substitute for user confirmation. The automatic retry &SHOULD-NOT; 
-   be repeated if the second sequence of requests fails.
-</t>
-<t>
    Servers &SHOULD; always respond to at least one request per connection,
    if at all possible. Servers &SHOULD-NOT;  close a connection in the
    middle of transmitting a response, unless a network or client failure
@@ -2675,6 +2663,23 @@ Host: www.example.org
    excessive number of connections from a client.
 </t>
 </section>
+
+<section title="Retrying Requests" anchor="persistent.retrying.requests">
+<t>
+   Senders can close the transport connection at any time. Therefore, 
+   clients, servers, and proxies &MUST; be able to recover
+   from asynchronous close events. Client software &MAY; reopen the
+   transport connection and retransmit the aborted sequence of requests
+   without user interaction so long as the request sequence is
+   idempotent (see &idempotent-methods;). Non-idempotent request methods or sequences
+   &MUST-NOT; be automatically retried, although user agents &MAY; offer a
+   human operator the choice of retrying the request(s). Confirmation by
+   user-agent software with semantic understanding of the application
+   &MAY; substitute for user confirmation. The automatic retry &SHOULD-NOT; 
+   be repeated if the second sequence of requests fails.
+</t>
+</section>
+
 </section>
 
 <section title="Message Transmission Requirements" anchor="message.transmission.requirements">
@@ -2812,60 +2817,6 @@ Host: www.example.org
 </t>
 </section>
 
-<section title="Client Behavior if Server Prematurely Closes Connection" anchor="connection.premature">
-<t>
-   If an HTTP/1.1 client sends a request which includes a request body,
-   but which does not include an Expect header field with the
-   "100-continue" expectation, and if the client is not directly
-   connected to an HTTP/1.1 origin server, and if the client sees the
-   connection close before receiving a status line from the server, the
-   client &SHOULD; retry the request.  If the client does retry this
-   request, it &MAY; use the following "binary exponential backoff"
-   algorithm to be assured of obtaining a reliable response:
-  <list style="numbers">
-    <t>
-      Initiate a new connection to the server
-    </t>
-    <t>
-      Transmit the request-line, header fields, and the CRLF that
-      indicates the end of header fields.
-    </t>
-    <t>
-      Initialize a variable R to the estimated round-trip time to the
-         server (e.g., based on the time it took to establish the
-         connection), or to a constant value of 5 seconds if the round-trip
-         time is not available.
-    </t>
-    <t>
-       Compute T = R * (2**N), where N is the number of previous
-         retries of this request.
-    </t>
-    <t>
-       Wait either for an error response from the server, or for T
-         seconds (whichever comes first)
-    </t>
-    <t>
-       If no error response is received, after T seconds transmit the
-         body of the request.
-    </t>
-    <t>
-       If client sees that the connection is closed prematurely,
-         repeat from step 1 until the request is accepted, an error
-         response is received, or the user becomes impatient and
-         terminates the retry process.
-    </t>
-  </list>
-</t>
-<t>
-   If at any point an error status code is received, the client
-  <list style="symbols">
-      <t>&SHOULD-NOT;  continue and</t>
-
-      <t>&SHOULD; close the connection if it has not completed sending the
-        request message.</t>
-    </list>
-</t>
-</section>
 </section>
 </section>
 
@@ -5020,7 +4971,13 @@ Zed A. Shaw.
 </t>
 <t>
   Remove hard limit of two connections per server.
+  Remove requirement to retry a sequence of requests as long it was idempotent.
   (<xref target="persistent.practical"/>)
+</t>
+<t>
+  Remove requirement to retry requests under certain cirumstances when the
+  server prematurely closes the connection.
+  (<xref target="message.transmission.requirements"/>)
 </t>
 <t>
   Change ABNF productions for header fields to only define the field value.
@@ -5887,6 +5844,10 @@ Zed A. Shaw.
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/219"/>:
       "Revise Acknowledgements Sections"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/297"/>:
+      "Retrying Requests"
     </t>
   </list>
 </t>
