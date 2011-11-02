@@ -292,11 +292,12 @@
   <x:anchor-alias value="ALPHA"/>
   <x:anchor-alias value="CR"/>
   <x:anchor-alias value="DIGIT"/>
+  <x:anchor-alias value="DQUOTE"/>
   <x:anchor-alias value="LF"/>
   <x:anchor-alias value="OCTET"/>
   <x:anchor-alias value="VCHAR"/>
   <x:anchor-alias value="core.rules"/>
-  <x:anchor-alias value="quoted-string"/>
+  <x:anchor-alias value="obs-text"/>
   <x:anchor-alias value="OWS"/>
   <x:anchor-alias value="HTTP-date"/>
 <t>
@@ -320,7 +321,7 @@
 </t>
 <figure><artwork type="abnf2616">
   <x:ref>OWS</x:ref>           = &lt;OWS, defined in &basic-rules;&gt;
-  <x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in &field-rules;&gt;
+  <x:ref>obs-text</x:ref>      = &lt;obs-text, defined in &field-rules;&gt;
   <x:ref>HTTP-date</x:ref>     = &lt;HTTP-date, defined in &http-date;&gt;
 </artwork></figure>
 </section>
@@ -547,6 +548,7 @@
   <x:anchor-alias value="entity.tags"/>
   <x:anchor-alias value="opaque-tag"/>
   <x:anchor-alias value="weak"/>
+  <x:anchor-alias value="etagc"/>
 <t>
    The ETag header field provides the current entity-tag for the
    selected representation.
@@ -557,13 +559,23 @@
    valid at the same time, or both. An entity-tag consists of an opaque
    quoted string, possibly prefixed by a weakness indicator.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/><iref primary="true" item="Grammar" subitem="etagc"/>
   <x:ref>ETag</x:ref>       = <x:ref>entity-tag</x:ref>
 
   <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
   <x:ref>weak</x:ref>       = <x:abnf-char-sequence>"W/"</x:abnf-char-sequence> ; "W/", case-sensitive
-  <x:ref>opaque-tag</x:ref> = <x:ref>quoted-string</x:ref>
+  <x:ref>opaque-tag</x:ref> = <x:ref>DQUOTE</x:ref> *<x:ref>etagc</x:ref> <x:ref>DQUOTE</x:ref>
+  <x:ref>etagc</x:ref>      = %x21 / %x23-7E / <x:ref>obs-text</x:ref>
+             ; <xref>VCHAR</xref> except double quotes, plus obs-text
 </artwork></figure>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> Previously, opaque-tag was defined to be a quoted-string
+    (<xref target="RFC2616" x:fmt="," x:sec="3.11"/>), thus some recipients
+    might perform backslash unescaping. Servers therefore ought to avoid
+    backslash characters in entity tags.
+  </t>
+</x:note>
 <t>
    An entity-tag can be more reliable for validation than a modification
    date in situations where it is inconvenient to store modification
@@ -1566,6 +1578,11 @@ Content-Encoding: gzip
   <xref target="header.if-none-match" format="counter"/>).
 </t>
 <t>
+  Change ETag header field ABNF not to use quoted-string, thus avoiding
+  escaping issues.
+  (<xref target="header.etag"/>)
+</t>
+<t>
   Change ABNF productions for header fields to only define the field value.
   (<xref target="header.field.definitions"/>)
 </t>
@@ -1591,10 +1608,11 @@ Content-Encoding: gzip
 <x:ref>OWS</x:ref> = &lt;OWS, defined in [Part1], Section 1.2.2&gt;
 
 <x:ref>entity-tag</x:ref> = [ weak ] opaque-tag
+<x:ref>etagc</x:ref> = "!" / %x23-7E ; '#'-'~'
+ / obs-text
 
-<x:ref>opaque-tag</x:ref> = quoted-string
-
-<x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in [Part1], Section 3.2.3&gt;
+<x:ref>obs-text</x:ref> = &lt;obs-text, defined in [Part1], Section 3.2.3&gt;
+<x:ref>opaque-tag</x:ref> = DQUOTE *etagc DQUOTE
 
 <x:ref>weak</x:ref> = %x57.2F ; W/
 </artwork>
@@ -1854,7 +1872,13 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-p4-conditional-17" anchor="changes.since.17">
 <t>
-  No changes yet.
+  Closed issues:
+  <list style="symbols"> 
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/306"/>:
+      "does etag value really use quoted-string"
+    </t>
+  </list>
 </t>
 </section>
 
