@@ -38,6 +38,7 @@ TARGETS = $(TARGETS_HTML) \
           p5-range.iana-headers \
           p5-range.iana-status-codes \
           p6-cache.iana-headers \
+          p6-cache.iana-warn-codes \
           p6-cache.cache-directives \
           p7-auth.iana-headers \
           p7-auth.iana-status-codes \
@@ -77,6 +78,9 @@ clean:
 
 %.iana-status-codes: %.xml extract-status-code-defs.xslt
 	$(saxon) $< extract-status-code-defs.xslt > $@
+
+%.iana-warn-codes: %.xml extract-warn-code-defs.xslt
+	$(saxon) $< extract-warn-code-defs.xslt > $@
 
 %.cache-directives: %.xml extract-cache-directives.xslt
 	$(saxon) $< extract-cache-directives.xslt > $@
