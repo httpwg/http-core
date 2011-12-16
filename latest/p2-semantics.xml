@@ -364,12 +364,14 @@
   <x:anchor-alias value="obs-text"/>
   <x:anchor-alias value="quoted-string"/>
   <x:anchor-alias value="token"/>
+  <x:anchor-alias value="BWS"/>
   <x:anchor-alias value="OWS"/>
   <x:anchor-alias value="RWS"/>
 <t>
   The core rules below are defined in <xref target="Part1"/>:
 </t>
 <figure><artwork type="abnf2616">
+  <x:ref>BWS</x:ref>           = &lt;BWS, defined in &basic-rules;&gt;
   <x:ref>OWS</x:ref>           = &lt;OWS, defined in &basic-rules;&gt;
   <x:ref>RWS</x:ref>           = &lt;RWS, defined in &basic-rules;&gt;
   <x:ref>obs-text</x:ref>      = &lt;obs-text, defined in &basic-rules;&gt;
@@ -2578,52 +2580,54 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <iref primary="true" item="Header Fields" subitem="Expect" x:for-anchor=""/>
   <x:anchor-alias value="Expect"/>
   <x:anchor-alias value="expectation"/>
-  <x:anchor-alias value="expectation-extension"/>
   <x:anchor-alias value="expect-param"/>
+  <x:anchor-alias value="expect-name"/>
+  <x:anchor-alias value="expect-value"/>
 <t>
    The "Expect" header field is used to indicate that particular
    server behaviors are required by the client.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Expect"/><iref primary="true" item="Grammar" subitem="expectation"/><iref primary="true" item="Grammar" subitem="expectation-extension"/><iref primary="true" item="Grammar" subitem="expect-param"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Expect"/><iref primary="true" item="Grammar" subitem="expectation"/><iref primary="true" item="Grammar" subitem="expect-param"/><iref primary="true" item="Grammar" subitem="expect-value"/><iref primary="true" item="Grammar" subitem="expect-name"/>
   <x:ref>Expect</x:ref>       = 1#<x:ref>expectation</x:ref>
   
-  <x:ref>expectation</x:ref>  = "100-continue" / <x:ref>expectation-extension</x:ref>
-  <x:ref>expectation-extension</x:ref> = <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
-                           *(";" <x:ref>expect-param</x:ref>) ]
-  <x:ref>expect-param</x:ref> = <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) ]
+  <x:ref>expectation</x:ref>  = <x:ref>expect-name</x:ref> [ <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> <x:ref>expect-value</x:ref> ]
+                             *( <x:ref>OWS</x:ref> ";" [ <x:ref>OWS</x:ref> <x:ref>expect-param</x:ref> ] )
+  <x:ref>expect-param</x:ref> = <x:ref>expect-name</x:ref> [ <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> <x:ref>expect-value</x:ref> ]
+  
+  <x:ref>expect-name</x:ref>  = <x:ref>token</x:ref>
+  <x:ref>expect-value</x:ref> = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
 </artwork></figure>
 <t>
-   A server that does not understand or is unable to comply with any of
-   the expectation values in the Expect field of a request &MUST; respond
-   with appropriate error status code. The server &MUST; respond with a 417
-   (Expectation Failed) status code if any of the expectations cannot be met
-   or, if there are other problems with the request, some other 4xx
-   status code.
+   If all received Expect header field(s) are syntactically valid but contain
+   an expectation that the recipient does not understand or cannot comply with,
+   the recipient &MUST; respond with a 417 (Expectation Failed) status code. A
+   recipient of a syntactically invalid Expectation header field &MUST; respond
+   with a 4xx status code other than 417.
 </t>
 <t>
-   This header field is defined with extensible syntax to allow for
-   future extensions. If a server receives a request containing an
-   Expect field that includes an expectation-extension that it does not
-   support, it &MUST; respond with a 417 (Expectation Failed) status code.
+   The only expectation defined by this specification is:
+</t>
+<t><iref primary="true" item="100-continue (expect value)"/><iref primary="true" item="Expect Values" subitem="100-continue"/>
+  100-continue
+   <list>
+      <t>
+        The "100-continue" expectation is defined &use100;. It does not support
+        any expect-params.
+      </t>
+   </list>
 </t>
 <t>
-   Comparison of expectation values is case-insensitive for unquoted
-   tokens (including the 100-continue token), and is case-sensitive for
-   quoted-string expectation-extensions.
+   Comparison is case-insensitive for names (expect-name), and case-sensitive
+   for values (expect-value).
 </t>
 <t>
-   The Expect mechanism is hop-by-hop: that is, an HTTP/1.1 proxy &MUST;
-   return a 417 (Expectation Failed) status code if it receives a request
-   with an expectation that it cannot meet. However, the Expect
-   header field itself is end-to-end; it &MUST; be forwarded if the
-   request is forwarded.
+   The Expect mechanism is hop-by-hop: the above requirements apply to any
+   server, including proxies. However, the Expect header field itself is
+   end-to-end; it &MUST; be forwarded if the request is forwarded.
 </t>
 <t>
-   Many older HTTP/1.0 and HTTP/1.1 applications do not understand the
-   Expect header field.
-</t>
-<t>
-   See &use100; for the use of the 100 (Continue) status code.
+   Many older HTTP/1.0 and HTTP/1.1 applications do not understand the Expect
+   header field.
 </t>
 </section>
 
@@ -4032,6 +4036,8 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <artwork type="abnf" name="p2-semantics.parsed-abnf">
 <x:ref>Allow</x:ref> = [ ( "," / Method ) *( OWS "," [ OWS Method ] ) ]
 
+<x:ref>BWS</x:ref> = &lt;BWS, defined in [Part1], Section 1.2.2&gt;
+
 <x:ref>Date</x:ref> = HTTP-date
 
 <x:ref>Expect</x:ref> = *( "," OWS ) expectation *( OWS "," [ OWS expectation ] )
@@ -4085,10 +4091,11 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
  / %x53.75.6E.64.61.79 ; Sunday
 <x:ref>delta-seconds</x:ref> = 1*DIGIT
 
-<x:ref>expect-param</x:ref> = token [ "=" ( token / quoted-string ) ]
-<x:ref>expectation</x:ref> = "100-continue" / expectation-extension
-<x:ref>expectation-extension</x:ref> = token [ "=" ( token / quoted-string ) *( ";"
- expect-param ) ]
+<x:ref>expect-name</x:ref> = token
+<x:ref>expect-param</x:ref> = expect-name [ BWS "=" BWS expect-value ]
+<x:ref>expect-value</x:ref> = token / quoted-string
+<x:ref>expectation</x:ref> = expect-name [ BWS "=" BWS expect-value ] *( OWS ";" [
+ OWS expect-param ] )
 
 <x:ref>hour</x:ref> = 2DIGIT
 
@@ -4705,6 +4712,10 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/312"/>:
       "should there be a permanent variant of 307"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/327"/>:
+      "'expect' grammar missing OWS"
     </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/329"/>:
