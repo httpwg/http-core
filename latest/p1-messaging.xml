@@ -300,37 +300,11 @@
    message-forwarding intermediaries.
 </t>
 
-<section title="Conformance and Error Handling" anchor="intro.conformance.and.error.handling">
+<section title="Requirement Notation" anchor="intro.requirements">
 <t>
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
    document are to be interpreted as described in <xref target="RFC2119"/>.
-</t>
-<t>
-   This document defines conformance criteria for several roles in HTTP
-   communication, including Senders, Recipients, Clients, Servers, User-Agents,
-   Origin Servers, Intermediaries, Proxies and Gateways. See <xref target="architecture"/>
-   for definitions of these terms.
-</t>
-<t>
-   An implementation is considered conformant if it complies with all of the
-   requirements associated with its role(s). Note that SHOULD-level requirements
-   are relevant here, unless one of the documented exceptions is applicable.
-</t>
-<t>
-   This document also uses ABNF to define valid protocol elements
-   (<xref target="notation"/>). In addition to the prose requirements placed
-   upon them, Senders &MUST-NOT; generate protocol elements that are invalid.
-</t>
-<t>
-   Unless noted otherwise, Recipients &MAY; take steps to recover a usable
-   protocol element from an invalid construct. However, HTTP does not define
-   specific error handling mechanisms, except in cases where it has direct
-   impact on security. This is because different uses of the protocol require
-   different error handling strategies; for example, a Web browser may wish to
-   transparently recover from a response where the Location header field
-   doesn't parse according to the ABNF, whereby in a systems control protocol
-   using HTTP, this type of error recovery could lead to dangerous consequences.
 </t>
 </section>
 
@@ -349,7 +323,9 @@
 <iref primary="true" item="Grammar" subitem="VCHAR"/>
 <t>
    This specification uses the Augmented Backus-Naur Form (ABNF) notation
-   of <xref target="RFC5234"/>.
+   of <xref target="RFC5234"/> with the list rule extension defined in
+   <xref target="abnf.extension"/>.  <xref target="collected.abnf"/> shows
+   the collected ABNF with the list rule expanded.
 </t>
 <t anchor="core.rules">
   <x:anchor-alias value="ALPHA"/>
@@ -373,125 +349,9 @@
    VCHAR (any visible <xref target="USASCII"/> character).
 </t>
 <t>
-   As a syntactic convention, ABNF rule names prefixed with "obs-" denote
+   As a convention, ABNF rule names prefixed with "obs-" denote
    "obsolete" grammar rules that appear for historical reasons.
 </t>
-
-<section title="ABNF Extension: #rule" anchor="notation.abnf">
-<t>
-  The #rule extension to the ABNF rules of <xref target="RFC5234"/> is used to
-  improve readability. 
-</t>
-<t>
-  A construct "#" is defined, similar to "*", for defining comma-delimited
-  lists of elements. The full form is "&lt;n&gt;#&lt;m&gt;element" indicating
-  at least &lt;n&gt; and at most &lt;m&gt; elements, each separated by a single
-  comma (",") and optional whitespace (OWS, <xref target="basic.rules"/>).   
-</t>
-<figure><preamble>
-  Thus,
-</preamble><artwork type="example">
-  1#element =&gt; element *( OWS "," OWS element )
-</artwork></figure>
-<figure><preamble>
-  and:
-</preamble><artwork type="example">
-  #element =&gt; [ 1#element ]
-</artwork></figure>
-<figure><preamble>
-  and for n &gt;= 1 and m &gt; 1:
-</preamble><artwork type="example">
-  &lt;n&gt;#&lt;m&gt;element =&gt; element &lt;n-1&gt;*&lt;m-1&gt;( OWS "," OWS element )
-</artwork></figure>
-<t>
-  For compatibility with legacy list rules, recipients &SHOULD; accept empty
-  list elements. In other words, consumers would follow the list productions:
-</t>
-<figure><artwork type="example">
-  #element =&gt; [ ( "," / element ) *( OWS "," [ OWS element ] ) ]
-  
-  1#element =&gt; *( "," OWS ) element *( OWS "," [ OWS element ] )
-</artwork></figure>
-<t>
-  Note that empty elements do not contribute to the count of elements present,
-  though.
-</t>
-<t>
-  For example, given these ABNF productions: 
-</t>
-<figure><artwork type="example">
-  example-list      = 1#example-list-elmt
-  example-list-elmt = token ; see <xref target="field.rules"/> 
-</artwork></figure>
-<t>
-  Then these are valid values for example-list (not including the double
-  quotes, which are present for delimitation only):
-</t>
-<figure><artwork type="example">
-  "foo,bar"
-  "foo ,bar,"
-  "foo , ,bar,charlie   "
-</artwork></figure>
-<t>
-  But these values would be invalid, as at least one non-empty element is
-  required:
-</t>
-<figure><artwork type="example">
-  ""
-  ","
-  ",   ,"
-</artwork></figure>
-<t>
-  <xref target="collected.abnf"/> shows the collected ABNF, with the list rules
-  expanded as explained above.
-</t>
-</section>
-
-<section title="Basic Rules" anchor="basic.rules">
-<t anchor="rule.LWS">
-   This specification uses three rules to denote the use of linear
-   whitespace: OWS (optional whitespace), RWS (required whitespace), and
-   BWS ("bad" whitespace). 
-</t>
-<t anchor="rule.OWS">
-   The OWS rule is used where zero or more linear whitespace octets might
-   appear. OWS &SHOULD; either not be produced or be produced as a single
-   SP. Multiple OWS octets that occur within field-content &SHOULD; either
-   be replaced with a single SP or transformed to all SP octets (each
-   octet other than SP replaced with SP) before interpreting the field value
-   or forwarding the message downstream.
-</t>
-<t anchor="rule.RWS">
-   RWS is used when at least one linear whitespace octet is required to
-   separate field tokens. RWS &SHOULD; be produced as a single SP.
-   Multiple RWS octets that occur within field-content &SHOULD; either
-   be replaced with a single SP or transformed to all SP octets before
-   interpreting the field value or forwarding the message downstream.
-</t>
-<t anchor="rule.BWS">
-   BWS is used where the grammar allows optional whitespace for historical
-   reasons but senders &SHOULD-NOT; produce it in messages. HTTP/1.1
-   recipients &MUST; accept such bad optional whitespace and remove it before
-   interpreting the field value or forwarding the message downstream.
-</t>
-<t anchor="rule.whitespace">
-  <x:anchor-alias value="BWS"/>
-  <x:anchor-alias value="OWS"/>
-  <x:anchor-alias value="RWS"/>
-  <x:anchor-alias value="obs-fold"/>
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
-  <x:ref>OWS</x:ref>            = *( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / obs-fold )
-                 ; "optional" whitespace
-  <x:ref>RWS</x:ref>            = 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / obs-fold )
-                 ; "required" whitespace
-  <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
-                 ; "bad" whitespace
-  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref> ( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
-                 ; obsolete line folding
-                 ; see <xref target="field.parsing"/>
-</artwork></figure>
-</section>
 </section>
 </section>
 
@@ -614,34 +474,6 @@ Content-Type: text/plain
 
 <x:span anchor="exbody">Hello World!
 </x:span></artwork></figure>
-</section>
-
-<section title="Message Orientation and Buffering" anchor="message-orientation-and-buffering">
-<t>
-   Fundamentally, HTTP is a message-based protocol. Although message bodies can
-   be chunked (<xref target="chunked.encoding"/>) and implementations often
-   make parts of a message available progressively, this is not required, and
-   some widely-used implementations only make a message available when it is
-   complete. Furthermore, while most proxies will progressively stream messages,
-   some amount of buffering will take place, and some proxies might buffer
-   messages to perform transformations, check content or provide other services.
-</t>
-<t>
-   Therefore, extensions to and uses of HTTP cannot rely on the availability of
-   a partial message, or assume that messages will not be buffered. There are
-   strategies that can be used to test for buffering in a given connection, but
-   it should be understood that behaviors can differ across connections, and
-   between requests and responses. 
-</t>
-<t>
-   Recipients &MUST; consider every message in a connection in isolation;
-   because HTTP is a stateless protocol, it cannot be assumed that two requests
-   on the same connection are from the same client or share any other common
-   attributes. In particular, intermediaries might mix requests from different
-   clients into a single server connection. Note that some existing HTTP
-   extensions (e.g., <xref target="RFC4559"/>) violate this requirement, thereby
-   potentially causing interoperability and security problems.
-</t>
 </section>
 
 <section title="Connections and Transport Independence" anchor="transport-independence">
@@ -789,6 +621,17 @@ Content-Type: text/plain
    network usage policies.
    They are indistinguishable from a man-in-the-middle attack.
 </t>
+<t>
+   HTTP is defined as a stateless protocol, meaning that each request message
+   can be understood in isolation.  Many implementations depend on HTTP's
+   stateless design in order to reuse proxied connections or dynamically
+   load balance requests across multiple servers.  Hence, servers &MUST-NOT;
+   assume that two requests on the same connection are from the same user
+   agent unless the connection is secured and specific to that agent.
+   Some non-standard HTTP extensions (e.g., <xref target="RFC4559"/>) have
+   been known to violate this requirement, resulting in security and
+   interoperability problems.
+</t>
 </section>
 
 <section title="Caches" anchor="caches">
@@ -829,6 +672,34 @@ Content-Type: text/plain
    of proxy caches to save transoceanic bandwidth, systems that
    broadcast or multicast cache entries, organizations that distribute
    subsets of cached data via optical media, and so on.
+</t>
+</section>
+
+<section title="Conformance and Error Handling" anchor="intro.conformance.and.error.handling">
+<t>
+   This specification targets conformance criteria according to the role of
+   a participant in HTTP communication.  Hence, HTTP requirements are placed
+   on senders, recipients, clients, servers, user agents, intermediaries,
+   origin servers, proxies, gateways, or caches, depending on what behavior
+   is being constrained by the requirement.
+</t>
+<t>
+   An implementation is considered conformant if it complies with all of the
+   requirements associated with the roles it partakes in HTTP.
+</t>
+<t>
+   Senders &MUST-NOT; generate protocol elements that do not match the grammar
+   defined by the ABNF rules for those protocol elements.
+</t>
+<t>
+   Unless otherwise noted, recipients &MAY; attempt to recover a usable
+   protocol element from an invalid construct.  HTTP does not define
+   specific error handling mechanisms except when they have a direct impact
+   on security, since different applications of the protocol require
+   different error handling strategies.  For example, a Web browser might
+   wish to transparently recover from a response where the Location header
+   field doesn't parse according to the ABNF, whereas a systems control
+   client might consider any form of error recovery to be dangerous.
 </t>
 </section>
 
@@ -1201,6 +1072,13 @@ Content-Type: text/plain
    has been extracted from the message, such as within a header field-value
    after message parsing has delineated the individual fields.
 </t>
+<t>
+   An HTTP message can be parsed as a stream for incremental processing or
+   forwarding downstream.  However, recipients cannot rely on incremental
+   delivery of partial messages, since some implementations will buffer or
+   delay message forwarding for the sake of network efficiency, security
+   checks, or payload transformations.
+</t>
 
 <section title="Start Line" anchor="start.line">
   <x:anchor-alias value="Start-Line"/>
@@ -1334,7 +1212,6 @@ Content-Type: text/plain
 </artwork></figure>
 </section>
 </section>
-
 </section>
 
 <section title="Header Fields" anchor="header.fields">
@@ -1412,6 +1289,52 @@ Content-Type: text/plain
   </t>
 </x:note>
 
+<section title="Whitespace" anchor="whitespace">
+<t anchor="rule.LWS">
+   This specification uses three rules to denote the use of linear
+   whitespace: OWS (optional whitespace), RWS (required whitespace), and
+   BWS ("bad" whitespace). 
+</t>
+<t anchor="rule.OWS">
+   The OWS rule is used where zero or more linear whitespace octets might
+   appear. OWS &SHOULD; either not be produced or be produced as a single
+   SP. Multiple OWS octets that occur within field-content &SHOULD; either
+   be replaced with a single SP or transformed to all SP octets (each
+   octet other than SP replaced with SP) before interpreting the field value
+   or forwarding the message downstream.
+</t>
+<t anchor="rule.RWS">
+   RWS is used when at least one linear whitespace octet is required to
+   separate field tokens. RWS &SHOULD; be produced as a single SP.
+   Multiple RWS octets that occur within field-content &SHOULD; either
+   be replaced with a single SP or transformed to all SP octets before
+   interpreting the field value or forwarding the message downstream.
+</t>
+<t anchor="rule.BWS">
+   BWS is used where the grammar allows optional whitespace for historical
+   reasons but senders &SHOULD-NOT; produce it in messages. HTTP/1.1
+   recipients &MUST; accept such bad optional whitespace and remove it before
+   interpreting the field value or forwarding the message downstream.
+</t>
+<t anchor="rule.whitespace">
+  <x:anchor-alias value="BWS"/>
+  <x:anchor-alias value="OWS"/>
+  <x:anchor-alias value="RWS"/>
+  <x:anchor-alias value="obs-fold"/>
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
+  <x:ref>OWS</x:ref>            = *( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / obs-fold )
+                 ; "optional" whitespace
+  <x:ref>RWS</x:ref>            = 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / obs-fold )
+                 ; "required" whitespace
+  <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
+                 ; "bad" whitespace
+  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref> ( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
+                 ; obsolete line folding
+                 ; see <xref target="field.parsing"/>
+</artwork></figure>
+</section>
+
 <section title="Field Parsing" anchor="field.parsing">
 <t>
    No whitespace is allowed between the header field-name and colon.
@@ -1475,7 +1398,7 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Common Field ABNF Rules" anchor="field.rules">
+<section title="Field value components" anchor="field.components">
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
@@ -1552,6 +1475,76 @@ Content-Type: text/plain
 <t>
    Senders &SHOULD-NOT; escape octets in comments that do not require escaping
    (i.e., other than the backslash octet "\" and the parentheses "(" and ")").
+</t>
+</section>
+
+<section title="ABNF list extension: #rule" anchor="abnf.extension">
+<t>
+  A #rule extension to the ABNF rules of <xref target="RFC5234"/> is used to
+  improve readability in the definitions of some header field values.
+</t>
+<t>
+  A construct "#" is defined, similar to "*", for defining comma-delimited
+  lists of elements. The full form is "&lt;n&gt;#&lt;m&gt;element" indicating
+  at least &lt;n&gt; and at most &lt;m&gt; elements, each separated by a single
+  comma (",") and optional whitespace (OWS).   
+</t>
+<figure><preamble>
+  Thus,
+</preamble><artwork type="example">
+  1#element =&gt; element *( OWS "," OWS element )
+</artwork></figure>
+<figure><preamble>
+  and:
+</preamble><artwork type="example">
+  #element =&gt; [ 1#element ]
+</artwork></figure>
+<figure><preamble>
+  and for n &gt;= 1 and m &gt; 1:
+</preamble><artwork type="example">
+  &lt;n&gt;#&lt;m&gt;element =&gt; element &lt;n-1&gt;*&lt;m-1&gt;( OWS "," OWS element )
+</artwork></figure>
+<t>
+  For compatibility with legacy list rules, recipients &SHOULD; accept empty
+  list elements. In other words, consumers would follow the list productions:
+</t>
+<figure><artwork type="example">
+  #element =&gt; [ ( "," / element ) *( OWS "," [ OWS element ] ) ]
+  
+  1#element =&gt; *( "," OWS ) element *( OWS "," [ OWS element ] )
+</artwork></figure>
+<t>
+  Note that empty elements do not contribute to the count of elements present,
+  though.
+</t>
+<t>
+  For example, given these ABNF productions: 
+</t>
+<figure><artwork type="example">
+  example-list      = 1#example-list-elmt
+  example-list-elmt = token ; see <xref target="field.components"/> 
+</artwork></figure>
+<t>
+  Then these are valid values for example-list (not including the double
+  quotes, which are present for delimitation only):
+</t>
+<figure><artwork type="example">
+  "foo,bar"
+  "foo ,bar,"
+  "foo , ,bar,charlie   "
+</artwork></figure>
+<t>
+  But these values would be invalid, as at least one non-empty element is
+  required:
+</t>
+<figure><artwork type="example">
+  ""
+  ","
+  ",   ,"
+</artwork></figure>
+<t>
+  <xref target="collected.abnf"/> shows the collected ABNF, with the list rules
+  expanded as explained above.
 </t>
 </section>
 </section>
@@ -1810,28 +1803,55 @@ Content-Type: text/plain
 
 <section title="Types of Request Target" anchor="request-target-types">
 <t>
-   The four options for request-target are dependent on the nature of the
-   request.
+   The proper format choice of the four options available to request-target
+   depends on the method being requested and if the request is being made to
+   a proxy.
 </t>   
-<t anchor="asterix-form"><iref item="asterisk form (of request-target)"/>
-   The asterisk "*" form of request-target, which &MUST-NOT; be used
-   with any request method other than OPTIONS, means that the request
-   applies to the server as a whole (the listening process) rather than
-   to a specific named resource at that server.  For example,
+<t anchor="origin-form"><iref item="origin form (of request-target)"/>
+   The most common form of request-target is that used when making
+   a request to an origin server ("origin form") to access a resource
+   identified by an "http" (<xref target="http.uri"/>) or
+   "https" (<xref target="https.uri"/>) URI.
+   In this case, the absolute path and query components of the URI
+   &MUST; be transmitted as the request-target and the authority component
+   (excluding any userinfo) &MUST; be transmitted in a Host header field.
+   For example, a client wishing to retrieve a representation of the resource
+   identified as
+</t>
+<figure><artwork x:indent-with="  ">
+http://www.example.org/where?q=now
+</artwork></figure>
+<t>
+   directly from the origin server would open (or reuse) a TCP connection
+   to port 80 of the host "www.example.org" and send the lines:
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-OPTIONS * HTTP/1.1
+GET /where?q=now HTTP/1.1
+Host: www.example.org
 </artwork></figure>
+<t>
+   followed by the remainder of the request. Note that the origin form
+   of request-target always starts with an absolute path. If the target
+   resource's URI path is empty, then an absolute path of "/" &MUST; be
+   provided in the request-target.
+</t>
+<t>
+   If the request-target is percent-encoded
+   (<xref target="RFC3986" x:fmt="," x:sec="2.1"/>), the origin server
+   &MUST; decode the request-target in order to
+   properly interpret the request. Servers &SHOULD; respond to invalid
+   request-targets with an appropriate status code.
+</t>
 <t anchor="absolute-URI-form"><iref item="absolute-URI form (of request-target)"/>
-   The "absolute-URI" form is &REQUIRED; when the request is being made to a
-   proxy. The proxy is requested to either forward the request or service it
-   from a valid cache, and then return the response. Note that the proxy &MAY;
-   forward the request on to another proxy or directly to the server
-   specified by the absolute-URI. In order to avoid request loops, a
-   proxy that forwards requests to other proxies &MUST; be able to
-   recognize and exclude all of its own server names, including
-   any aliases, local variations, and the numeric IP address. An example
-   Request-Line would be:
+   The "absolute-URI" form of request-target is &REQUIRED; when the request
+   is being made to a proxy.  The proxy is requested to either forward the
+   request or service it from a valid cache, and then return the response.
+   Note that the proxy &MAY; forward the request on to another proxy or
+   directly to the server specified by the absolute-URI.
+   In order to avoid request loops, a proxy that forwards requests to other
+   proxies &MUST; be able to recognize and exclude all of its own server
+   names, including any aliases, local variations, or literal IP addresses.
+   An example Request-Line would be:
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
@@ -1849,28 +1869,22 @@ GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
    the host name.
 </t>
 <t anchor="authority-form"><iref item="authority form (of request-target)"/>
-   The "authority form" is only used by the CONNECT request method (&CONNECT;).
-</t>
-<t anchor="origin-form"><iref item="origin form (of request-target)"/>
-   The most common form of request-target is that used when making
-   a request to an origin server ("origin form").
-   In this case, the absolute path and query components of the URI
-   &MUST; be transmitted as the request-target, and the authority component
-   &MUST; be transmitted in a Host header field. For example, a client wishing
-   to retrieve a representation of the resource, as identified above,
-   directly from the origin server would open (or reuse) a TCP connection
-   to port 80 of the host "www.example.org" and send the lines:
+   The "authority form" of request-target, which &MUST-NOT; be used
+   with any request method other than CONNECT, is used to establish a
+   tunnel through one or more proxies (&CONNECT;).  For example,
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET /pub/WWW/TheProject.html HTTP/1.1
-Host: www.example.org
+CONNECT www.example.com:80 HTTP/1.1
 </artwork></figure>
-<t>
-   followed by the remainder of the Request. Note that the origin form
-   of request-target always starts with an absolute path; if the target
-   resource's URI path is empty, then an absolute path of "/" &MUST; be
-   provided in the request-target.
+<t anchor="asterix-form"><iref item="asterisk form (of request-target)"/>
+   The asterisk ("*") form of request-target, which &MUST-NOT; be used
+   with any request method other than OPTIONS, means that the request
+   applies to the server as a whole (the listening process) rather than
+   to a specific named resource at that server.  For example,
 </t>
+<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+OPTIONS * HTTP/1.1
+</artwork></figure>
 <t>
    If a proxy receives an OPTIONS request with an absolute-URI form of
    request-target in which the URI has an empty path and no query component,
@@ -1893,28 +1907,11 @@ Host: www.example.org:8001
 </postamble>
 </figure>
 <t>
-   The request-target is transmitted in the format specified in 
-   <xref target="http.uri"/>. If the request-target is percent-encoded
-   (<xref target="RFC3986" x:fmt="," x:sec="2.1"/>), the origin server
-   &MUST; decode the request-target in order to
-   properly interpret the request. Servers &SHOULD; respond to invalid
-   request-targets with an appropriate status code.
-</t>
-<t>
    A non-transforming proxy &MUST-NOT; rewrite the "path-absolute" and "query"
    parts of the received request-target when forwarding it to the next inbound
    server, except as noted above to replace a null path-absolute with "/" or
    "*".
 </t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> The "no rewrite" rule above prevents the proxy from
-    changing the meaning of the request when the origin server is improperly
-    using a non-reserved URI character for a reserved purpose.  Implementors
-    need to be aware that some pre-HTTP/1.1 proxies have been known to
-    rewrite the request-target.
-  </t>
-</x:note>
 </section>
 
 <section title="The Resource Identified by a Request" anchor="the.resource.identified.by.a.request">
@@ -4940,13 +4937,13 @@ Zhong Yu.
 <section title="Changes from RFC 2616" anchor="changes.from.rfc.2616">
 <t>
   Empty list elements in list productions have been deprecated.
-  (<xref target="notation.abnf"/>)
+  (<xref target="abnf.extension"/>)
 </t>
 <t>
   Rules about implicit linear whitespace between certain grammar productions
-  have been removed; now it's only allowed when specifically pointed out
-  in the ABNF.
-  (<xref target="basic.rules"/>)
+  have been removed; now whitespace is only allowed where specifically
+  defined in the ABNF.
+  (<xref target="whitespace"/>)
 </t>
 <t>
   Clarify that the string "HTTP" in the HTTP-Version ABFN production is case
@@ -4964,7 +4961,7 @@ Zhong Yu.
   text. The quoted-pair rule no longer allows escaping control characters other than HTAB.
   Non-ASCII content in header fields and reason phrase has been obsoleted and
   made opaque (the TEXT rule was removed).
-  (<xref target="field.rules"/>)
+  (<xref target="field.components"/>)
 </t>
 <t>
   Require recipients to handle bogus Content-Length header fields as errors.
