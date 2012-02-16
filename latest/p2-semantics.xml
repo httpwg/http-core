@@ -2585,10 +2585,13 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <iref primary="true" item="Header Fields" subitem="Location" x:for-anchor=""/>
   <x:anchor-alias value="Location"/>
 <t>
-   The "Location" header field is used to identify a newly created
-   resource, or to redirect the recipient to a different location for
-   completion of the request.
+   The "Location" header field &MAY; be sent in responses to refer to
+   a specific resource in accordance with the semantics of the status
+   code.
 </t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Location"/>
+  <x:ref>Location</x:ref> = <x:ref>URI-reference</x:ref>
+</artwork></figure>
 <t>
    For 201 (Created) responses, the Location is the URI of the new resource
    which was created by the request. For 3xx responses, the location &SHOULD;
@@ -2599,17 +2602,25 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    The field value consists of a single URI-reference. When it has the form
    of a relative reference (<xref target="RFC3986" x:fmt="," x:sec="4.2"/>),
    the final value is computed by resolving it against the effective request
-   URI (<xref target="RFC3986" x:fmt="," x:sec="5"/>).
+   URI (<xref target="RFC3986" x:fmt="," x:sec="5"/>). If the original URI, as
+   navigated to by the user agent, did contain a fragment identifier, and the
+   final value does not, then the original URI's fragment identifier is added
+   to the final value.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Location"/>
-  <x:ref>Location</x:ref> = <x:ref>URI-reference</x:ref>
-</artwork></figure>
 <figure>
-<preamble>Examples are:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
+<preamble>For example, the original URI "http://www.example.org/~tim", combined with a field value given as:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
 <artwork type="example">
-  Location: http://www.example.org/pub/WWW/People.html#tim
-</artwork></figure><figure><artwork type="example">  Location: /index.html
-</artwork></figure>
+  Location: /pub/WWW/People.html#tim
+</artwork>
+<postamble>would result in a final value of "http://www.example.org/pub/WWW/People.html#tim"</postamble>
+</figure>
+<figure>
+<preamble>An original URI "http://www.example.org/index.html#larry", combined with a field value given as:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
+<artwork type="example">
+  Location: http://www.example.net/index.html
+</artwork>
+<postamble>would result in a final value of "http://www.example.net/index.html#larry", preserving the original fragment identifier.</postamble>
+</figure>
 <x:note>
   <t>
     <x:h>Note:</x:h> Some recipients attempt to recover from Location fields
@@ -2623,16 +2634,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    response, where the Location header field specifies the URI for the entire
    created resource.
 </t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> This specification does not define precedence rules
-    for the case where the original URI, as navigated to by the user
-    agent, and the Location header field value both contain fragment
-    identifiers. Thus be aware that including fragment identifiers might
-    inconvenience anyone relying on the semantics of the original URI's
-    fragment identifier.
-  </t>
-</x:note>
 <x:note>
   <t>
     <x:h>Note:</x:h> The Content-Location header field (&header-content-location;) differs
@@ -3283,13 +3284,20 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </t>
 </section>
 
-<section title="Location Headers and Spoofing" anchor="location.spoofing">
+<section title="Location Header Fields: Spoofing and Information Leakage" anchor="location.spoofing-leakage">
 <t>
    If a single server supports multiple organizations that do not trust
    one another, then it &MUST; check the values of Location and Content-Location
    header fields in responses that are generated under control of
    said organizations to make sure that they do not attempt to
    invalidate resources over which they have no authority.
+</t>
+<t>
+   Furthermore, appending the fragment identifier from one URI to another
+   one obtained from a Location header field might leak confidential
+   information to the target server &mdash; although the fragment identifier is
+   not transmitted in the final request, it might be visible to the user agent
+   through other means, such as scripting.
 </t>
 </section>
 
@@ -4655,6 +4663,10 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/238"/>:
       "Requirements for user intervention during redirects"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/295"/>:
+      "Applying original fragment to 'plain' redirected URI"
     </t>
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/302"/>:
