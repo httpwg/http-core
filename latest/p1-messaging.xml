@@ -1558,31 +1558,7 @@ Content-Type: text/plain
 <t>
    The message-body differs from the payload body only when a transfer-coding
    has been applied, as indicated by the Transfer-Encoding header field
-   (<xref target="header.transfer-encoding"/>).  If more than one
-   Transfer-Encoding header field is present in a message, the multiple
-   field-values &MUST; be combined into one field-value, according to the
-   algorithm defined in <xref target="header.fields"/>, before determining
-   the message-body length.
-</t>
-<t>
-   When one or more transfer-codings are applied to a payload in order to
-   form the message-body, the Transfer-Encoding header field &MUST; contain
-   the list of transfer-codings applied. Transfer-Encoding is a property of
-   the message, not of the payload, and thus &MAY; be added or removed by
-   any implementation along the request/response chain under the constraints
-   found in <xref target="transfer.codings"/>.
-</t>
-<t>
-   If a message is received that has multiple Content-Length header fields
-   (<xref target="header.content-length"/>) with field-values consisting
-   of the same decimal value, or a single Content-Length header field with
-   a field value containing a list of identical decimal values (e.g.,
-   "Content-Length: 42, 42"), indicating that duplicate Content-Length
-   header fields have been generated or combined by an upstream message
-   processor, then the recipient &MUST; either reject the message as invalid
-   or replace the duplicated field-values with a single valid Content-Length
-   field containing that decimal value prior to determining the message-body
-   length.
+   (<xref target="header.transfer-encoding"/>).
 </t>
 <t>
    The rules for when a message-body is allowed in a message differ for
@@ -1607,6 +1583,109 @@ Content-Type: text/plain
    All other responses do include a message-body, although the body
    &MAY; be of zero length.
 </t>
+
+<section title="Transfer-Encoding" anchor="header.transfer-encoding">
+  <iref primary="true" item="Transfer-Encoding header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Transfer-Encoding" x:for-anchor=""/>
+  <x:anchor-alias value="Transfer-Encoding"/>
+<t>
+   The "Transfer-Encoding" header field indicates what transfer-codings
+   (if any) have been applied to the message body. It differs from 
+   Content-Encoding (&content-codings;) in that transfer-codings are a property
+   of the message (and therefore are removed by intermediaries), whereas
+   content-codings are not.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
+  <x:ref>Transfer-Encoding</x:ref> = 1#<x:ref>transfer-coding</x:ref>
+</artwork></figure>
+<t>
+   Transfer-codings are defined in <xref target="transfer.codings"/>. An example is:
+</t>
+<figure><artwork type="example">
+  Transfer-Encoding: chunked
+</artwork></figure>
+<t>
+   If multiple encodings have been applied to a representation, the transfer-codings
+   &MUST; be listed in the order in which they were applied.
+   Additional information about the encoding parameters &MAY; be provided
+   by other header fields not defined by this specification.
+</t>
+<t>
+   Many older HTTP/1.0 applications do not understand the Transfer-Encoding
+   header field.
+</t>
+<t>
+   If more than one
+   Transfer-Encoding header field is present in a message, the multiple
+   field-values &MUST; be combined into one field-value, according to the
+   algorithm defined in <xref target="header.fields"/>, before determining
+   the message-body length.
+</t>
+<t>
+   When one or more transfer-codings are applied to a payload in order to
+   form the message-body, the Transfer-Encoding header field &MUST; contain
+   the list of transfer-codings applied. Transfer-Encoding is a property of
+   the message, not of the payload, and thus &MAY; be added or removed by
+   any implementation along the request/response chain under the constraints
+   found in <xref target="transfer.codings"/>.
+</t>
+</section>
+
+<section title="Content-Length" anchor="header.content-length">
+  <iref primary="true" item="Content-Length header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Content-Length" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Length"/>
+<t>
+   The "Content-Length" header field indicates the size of the
+   message-body, in decimal number of octets, for any message other than
+   a response to a HEAD request or a response with a status code of 304.
+   In the case of a response to a HEAD request, Content-Length indicates
+   the size of the payload body (not including any potential transfer-coding)
+   that would have been sent had the request been a GET.
+   In the case of a 304 (Not Modified) response to a GET request,
+   Content-Length indicates the size of the payload body (not including
+   any potential transfer-coding) that would have been sent in a 200 (OK)
+   response.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/>
+  <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
+</artwork></figure>
+<t>
+   An example is
+</t>
+<figure><artwork type="example">
+  Content-Length: 3495
+</artwork></figure>
+<t>
+   Implementations &SHOULD; use this field to indicate the message-body
+   length when no transfer-coding is being applied and the
+   payload's body length can be determined prior to being transferred.
+   <xref target="message.body"/> describes how recipients determine the length
+   of a message-body.
+</t>
+<t>
+   Any Content-Length greater than or equal to zero is a valid value.
+</t>
+<t>
+   Note that the use of this field in HTTP is significantly different from
+   the corresponding definition in MIME, where it is an optional field
+   used within the "message/external-body" content-type.
+</t>
+<t>
+   If a message is received that has multiple Content-Length header fields
+   (<xref target="header.content-length"/>) with field-values consisting
+   of the same decimal value, or a single Content-Length header field with
+   a field value containing a list of identical decimal values (e.g.,
+   "Content-Length: 42, 42"), indicating that duplicate Content-Length
+   header fields have been generated or combined by an upstream message
+   processor, then the recipient &MUST; either reject the message as invalid
+   or replace the duplicated field-values with a single valid Content-Length
+   field containing that decimal value prior to determining the message-body
+   length.
+</t>
+</section>
+
+<section title="Message Body Length" anchor="message.body.length">
 <t>
    The length of the message-body is determined by one of the following
    (in order of precedence):
@@ -1715,6 +1794,7 @@ Content-Type: text/plain
    of specific user configuration or by remembering the version of a prior
    received response.
 </t>
+</section>
 </section>
 
 <section anchor="incomplete.messages" title="Handling Incomplete Messages">
@@ -2050,9 +2130,6 @@ Host: www.example.org
 </section>
 </section>
 
-
-<section title="Protocol Parameters" anchor="protocol.parameters">
-
 <section title="Transfer Codings" anchor="transfer.codings">
   <x:anchor-alias value="transfer-coding"/>
   <x:anchor-alias value="transfer-extension"/>
@@ -2312,39 +2389,87 @@ Host: www.example.org
    <eref target="http://www.iana.org/assignments/http-parameters"/>.
 </t>
 </section>
-</section>
 
-<section title="Product Tokens" anchor="product.tokens">
-  <x:anchor-alias value="product"/>
-  <x:anchor-alias value="product-version"/>
+<section title="TE" anchor="header.te">
+  <iref primary="true" item="TE header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="TE" x:for-anchor=""/>
+  <x:anchor-alias value="TE"/>
+  <x:anchor-alias value="t-codings"/>
+  <x:anchor-alias value="te-params"/>
+  <x:anchor-alias value="te-ext"/>
 <t>
-   Product tokens are used to allow communicating applications to
-   identify themselves by software name and version. Most fields using
-   product tokens also allow sub-products which form a significant part
-   of the application to be listed, separated by whitespace. By
-   convention, the products are listed in order of their significance
-   for identifying the application.
+   The "TE" header field indicates what extension transfer-codings
+   the client is willing to accept in the response, and whether or not it is
+   willing to accept trailer fields in a chunked transfer-coding.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
-  <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
-  <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
+<t>
+   Its value consists of the keyword "trailers" and/or a comma-separated
+   list of extension transfer-coding names with optional accept
+   parameters (as described in <xref target="transfer.codings"/>).
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="te-params"/><iref primary="true" item="Grammar" subitem="te-ext"/>
+  <x:ref>TE</x:ref>        = #<x:ref>t-codings</x:ref>
+  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-extension</x:ref> [ <x:ref>te-params</x:ref> ] )
+  <x:ref>te-params</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> *( <x:ref>te-ext</x:ref> )
+  <x:ref>te-ext</x:ref>    = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" <x:ref>word</x:ref> ]
 </artwork></figure>
 <t>
-   Examples:
+   The presence of the keyword "trailers" indicates that the client is
+   willing to accept trailer fields in a chunked transfer-coding, as
+   defined in <xref target="chunked.encoding"/>. This keyword is reserved for use with
+   transfer-coding values even though it does not itself represent a
+   transfer-coding.
+</t>
+<t>
+   Examples of its use are:
 </t>
 <figure><artwork type="example">
-  User-Agent: CERN-LineMode/2.15 libwww/2.17b3
-  Server: Apache/0.8.4
+  TE: deflate
+  TE:
+  TE: trailers, deflate;q=0.5
 </artwork></figure>
 <t>
-   Product tokens &SHOULD; be short and to the point. They &MUST-NOT; be
-   used for advertising or other non-essential information. Although any
-   token octet &MAY; appear in a product-version, this token &SHOULD;
-   only be used for a version identifier (i.e., successive versions of
-   the same product &SHOULD; only differ in the product-version portion of
-   the product value).
+   The TE header field only applies to the immediate connection.
+   Therefore, the keyword &MUST; be supplied within a Connection header
+   field (<xref target="header.connection"/>) whenever TE is present in an HTTP/1.1 message.
 </t>
-</section>
+<t>
+   A server tests whether a transfer-coding is acceptable, according to
+   a TE field, using these rules:
+  <list style="numbers">
+    <x:lt>
+      <t>The "chunked" transfer-coding is always acceptable. If the
+         keyword "trailers" is listed, the client indicates that it is
+         willing to accept trailer fields in the chunked response on
+         behalf of itself and any downstream clients. The implication is
+         that, if given, the client is stating that either all
+         downstream clients are willing to accept trailer fields in the
+         forwarded response, or that it will attempt to buffer the
+         response on behalf of downstream recipients.
+      </t><t>
+         <x:h>Note:</x:h> HTTP/1.1 does not define any means to limit the size of a
+         chunked response such that a client can be assured of buffering
+         the entire response.</t>
+    </x:lt>
+    <x:lt>
+      <t>If the transfer-coding being tested is one of the transfer-codings
+         listed in the TE field, then it is acceptable unless it
+         is accompanied by a qvalue of 0. (As defined in <xref target="quality.values"/>, a
+         qvalue of 0 means "not acceptable".)</t>
+    </x:lt>
+    <x:lt>
+      <t>If multiple transfer-codings are acceptable, then the
+         acceptable transfer-coding with the highest non-zero qvalue is
+         preferred.  The "chunked" transfer-coding always has a qvalue
+         of 1.</t>
+    </x:lt>
+  </list>
+</t>
+<t>
+   If the TE field-value is empty or if no TE field is present, the only
+   acceptable transfer-coding is "chunked". A message with no transfer-coding is
+   always acceptable.
+</t>
 
 <section title="Quality Values" anchor="quality.values">
   <x:anchor-alias value="qvalue"/>
@@ -2371,7 +2496,41 @@ Host: www.example.org
   </t>
 </x:note>
 </section>
+</section>
 
+<section title="Trailer" anchor="header.trailer">
+  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/>
+  <x:anchor-alias value="Trailer"/>
+<t>
+   The "Trailer" header field indicates that the given set of
+   header fields is present in the trailer of a message encoded with
+   chunked transfer-coding.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
+  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
+</artwork></figure>
+<t>
+   An HTTP/1.1 message &SHOULD; include a Trailer header field in a
+   message using chunked transfer-coding with a non-empty trailer. Doing
+   so allows the recipient to know which header fields to expect in the
+   trailer.
+</t>
+<t>
+   If no Trailer header field is present, the trailer &SHOULD-NOT;  include
+   any header fields. See <xref target="chunked.encoding"/> for restrictions on the use of
+   trailer fields in a "chunked" transfer-coding.
+</t>
+<t>
+   Message header fields listed in the Trailer header field &MUST-NOT;
+   include the following header fields:
+  <list style="symbols">
+    <t>Transfer-Encoding</t>
+    <t>Content-Length</t>
+    <t>Trailer</t>
+  </list>
+</t>
+</section>
 </section>
 
 <section title="Connections" anchor="connections">
@@ -2997,48 +3156,6 @@ Host: www.example.org
 </t>
 </section>
 
-<section title="Content-Length" anchor="header.content-length">
-  <iref primary="true" item="Content-Length header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Content-Length" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Length"/>
-<t>
-   The "Content-Length" header field indicates the size of the
-   message-body, in decimal number of octets, for any message other than
-   a response to a HEAD request or a response with a status code of 304.
-   In the case of a response to a HEAD request, Content-Length indicates
-   the size of the payload body (not including any potential transfer-coding)
-   that would have been sent had the request been a GET.
-   In the case of a 304 (Not Modified) response to a GET request,
-   Content-Length indicates the size of the payload body (not including
-   any potential transfer-coding) that would have been sent in a 200 (OK)
-   response.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/>
-  <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
-<t>
-   An example is
-</t>
-<figure><artwork type="example">
-  Content-Length: 3495
-</artwork></figure>
-<t>
-   Implementations &SHOULD; use this field to indicate the message-body
-   length when no transfer-coding is being applied and the
-   payload's body length can be determined prior to being transferred.
-   <xref target="message.body"/> describes how recipients determine the length
-   of a message-body.
-</t>
-<t>
-   Any Content-Length greater than or equal to zero is a valid value.
-</t>
-<t>
-   Note that the use of this field in HTTP is significantly different from
-   the corresponding definition in MIME, where it is an optional field
-   used within the "message/external-body" content-type.
-</t>
-</section>
-
 <section title="Host" anchor="header.host">
   <iref primary="true" item="Host header field" x:for-anchor=""/>
   <iref primary="true" item="Header Fields" subitem="Host" x:for-anchor=""/>
@@ -3108,158 +3225,13 @@ Host: www.example.org
 </t>
 </section>
 
-<section title="TE" anchor="header.te">
-  <iref primary="true" item="TE header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="TE" x:for-anchor=""/>
-  <x:anchor-alias value="TE"/>
-  <x:anchor-alias value="t-codings"/>
-  <x:anchor-alias value="te-params"/>
-  <x:anchor-alias value="te-ext"/>
-<t>
-   The "TE" header field indicates what extension transfer-codings
-   the client is willing to accept in the response, and whether or not it is
-   willing to accept trailer fields in a chunked transfer-coding.
-</t>
-<t>
-   Its value consists of the keyword "trailers" and/or a comma-separated
-   list of extension transfer-coding names with optional accept
-   parameters (as described in <xref target="transfer.codings"/>).
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="te-params"/><iref primary="true" item="Grammar" subitem="te-ext"/>
-  <x:ref>TE</x:ref>        = #<x:ref>t-codings</x:ref>
-  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-extension</x:ref> [ <x:ref>te-params</x:ref> ] )
-  <x:ref>te-params</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> *( <x:ref>te-ext</x:ref> )
-  <x:ref>te-ext</x:ref>    = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" <x:ref>word</x:ref> ]
-</artwork></figure>
-<t>
-   The presence of the keyword "trailers" indicates that the client is
-   willing to accept trailer fields in a chunked transfer-coding, as
-   defined in <xref target="chunked.encoding"/>. This keyword is reserved for use with
-   transfer-coding values even though it does not itself represent a
-   transfer-coding.
-</t>
-<t>
-   Examples of its use are:
-</t>
-<figure><artwork type="example">
-  TE: deflate
-  TE:
-  TE: trailers, deflate;q=0.5
-</artwork></figure>
-<t>
-   The TE header field only applies to the immediate connection.
-   Therefore, the keyword &MUST; be supplied within a Connection header
-   field (<xref target="header.connection"/>) whenever TE is present in an HTTP/1.1 message.
-</t>
-<t>
-   A server tests whether a transfer-coding is acceptable, according to
-   a TE field, using these rules:
-  <list style="numbers">
-    <x:lt>
-      <t>The "chunked" transfer-coding is always acceptable. If the
-         keyword "trailers" is listed, the client indicates that it is
-         willing to accept trailer fields in the chunked response on
-         behalf of itself and any downstream clients. The implication is
-         that, if given, the client is stating that either all
-         downstream clients are willing to accept trailer fields in the
-         forwarded response, or that it will attempt to buffer the
-         response on behalf of downstream recipients.
-      </t><t>
-         <x:h>Note:</x:h> HTTP/1.1 does not define any means to limit the size of a
-         chunked response such that a client can be assured of buffering
-         the entire response.</t>
-    </x:lt>
-    <x:lt>
-      <t>If the transfer-coding being tested is one of the transfer-codings
-         listed in the TE field, then it is acceptable unless it
-         is accompanied by a qvalue of 0. (As defined in <xref target="quality.values"/>, a
-         qvalue of 0 means "not acceptable".)</t>
-    </x:lt>
-    <x:lt>
-      <t>If multiple transfer-codings are acceptable, then the
-         acceptable transfer-coding with the highest non-zero qvalue is
-         preferred.  The "chunked" transfer-coding always has a qvalue
-         of 1.</t>
-    </x:lt>
-  </list>
-</t>
-<t>
-   If the TE field-value is empty or if no TE field is present, the only
-   acceptable transfer-coding is "chunked". A message with no transfer-coding is
-   always acceptable.
-</t>
-</section>
-
-<section title="Trailer" anchor="header.trailer">
-  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/>
-  <x:anchor-alias value="Trailer"/>
-<t>
-   The "Trailer" header field indicates that the given set of
-   header fields is present in the trailer of a message encoded with
-   chunked transfer-coding.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
-  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
-</artwork></figure>
-<t>
-   An HTTP/1.1 message &SHOULD; include a Trailer header field in a
-   message using chunked transfer-coding with a non-empty trailer. Doing
-   so allows the recipient to know which header fields to expect in the
-   trailer.
-</t>
-<t>
-   If no Trailer header field is present, the trailer &SHOULD-NOT;  include
-   any header fields. See <xref target="chunked.encoding"/> for restrictions on the use of
-   trailer fields in a "chunked" transfer-coding.
-</t>
-<t>
-   Message header fields listed in the Trailer header field &MUST-NOT;
-   include the following header fields:
-  <list style="symbols">
-    <t>Transfer-Encoding</t>
-    <t>Content-Length</t>
-    <t>Trailer</t>
-  </list>
-</t>
-</section>
-
-<section title="Transfer-Encoding" anchor="header.transfer-encoding">
-  <iref primary="true" item="Transfer-Encoding header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Transfer-Encoding" x:for-anchor=""/>
-  <x:anchor-alias value="Transfer-Encoding"/>
-<t>
-   The "Transfer-Encoding" header field indicates what transfer-codings
-   (if any) have been applied to the message body. It differs from 
-   Content-Encoding (&content-codings;) in that transfer-codings are a property
-   of the message (and therefore are removed by intermediaries), whereas
-   content-codings are not.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
-  <x:ref>Transfer-Encoding</x:ref> = 1#<x:ref>transfer-coding</x:ref>
-</artwork></figure>
-<t>
-   Transfer-codings are defined in <xref target="transfer.codings"/>. An example is:
-</t>
-<figure><artwork type="example">
-  Transfer-Encoding: chunked
-</artwork></figure>
-<t>
-   If multiple encodings have been applied to a representation, the transfer-codings
-   &MUST; be listed in the order in which they were applied.
-   Additional information about the encoding parameters &MAY; be provided
-   by other header fields not defined by this specification.
-</t>
-<t>
-   Many older HTTP/1.0 applications do not understand the Transfer-Encoding
-   header field.
-</t>
-</section>
-
 <section title="Upgrade" anchor="header.upgrade">
   <iref primary="true" item="Upgrade header field" x:for-anchor=""/>
   <iref primary="true" item="Header Fields" subitem="Upgrade" x:for-anchor=""/>
   <x:anchor-alias value="Upgrade"/>
+  <x:anchor-alias value="protocol"/>
+  <x:anchor-alias value="protocol-name"/>
+  <x:anchor-alias value="protocol-version"/>
 <t>
    The "Upgrade" header field allows the client to specify what
    additional communication protocols it would like to use, if the server 
@@ -3267,7 +3239,11 @@ Host: www.example.org
    they are willing to switch to.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Upgrade"/>
-  <x:ref>Upgrade</x:ref> = 1#<x:ref>product</x:ref>
+  <x:ref>Upgrade</x:ref>  = 1#<x:ref>protocol</x:ref>
+
+  <x:ref>protocol</x:ref> = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
+  <x:ref>protocol-name</x:ref>     = <x:ref>token</x:ref>
+  <x:ref>protocol-version</x:ref>  = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
    For example,
@@ -3327,9 +3303,9 @@ Host: www.example.org
 
 <section title="Upgrade Token Registry" anchor="upgrade.token.registry">
 <t>
-   The HTTP Upgrade Token Registry defines the name space for product
+   The HTTP Upgrade Token Registry defines the name space for protocol-name
    tokens used to identify protocols in the Upgrade header field.
-   Each registered token is associated with contact information and
+   Each registered protocol-name is associated with contact information and
    an optional set of specifications that details how the connection
    will be processed after it has been upgraded.
 </t>
@@ -3339,20 +3315,19 @@ Host: www.example.org
    specifications need not be IETF documents or be subject to IESG review.
    Registrations are subject to the following rules:
   <list style="numbers">
-    <t>A token, once registered, stays registered forever.</t>
+    <t>A protocol-name token, once registered, stays registered forever.</t>
     <t>The registration &MUST; name a responsible party for the
        registration.</t>
     <t>The registration &MUST; name a point of contact.</t>
-    <t>The registration &MAY; name a set of specifications associated with that
-       token. Such specifications need not be publicly available.</t>
+    <t>The registration &MAY; name a set of specifications associated with
+       that token. Such specifications need not be publicly available.</t>
+    <t>The registration &SHOULD; name a set of expected "protocol-version"
+       tokens associated with that token at the time of registration.</t>
     <t>The responsible party &MAY; change the registration at any time.
        The IANA will keep a record of all such changes, and make them
        available upon request.</t>
-    <t>The responsible party for the first registration of a "product"
-       token &MUST; approve later registrations of a "version" token
-       together with that "product" token before they can be registered.</t>
-    <t>If absolutely required, the IESG &MAY; reassign the responsibility
-       for a token. This will normally only be used in the case when a
+    <t>The IESG &MAY; reassign responsibility for a protocol token.
+       This will normally only be used in the case when a
        responsible party cannot be contacted.</t>
   </list>
 </t>
@@ -3364,8 +3339,6 @@ Host: www.example.org
 <section title="Via" anchor="header.via">
   <iref primary="true" item="Via header field" x:for-anchor=""/>
   <iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/>
-  <x:anchor-alias value="protocol-name"/>
-  <x:anchor-alias value="protocol-version"/>
   <x:anchor-alias value="pseudonym"/>
   <x:anchor-alias value="received-by"/>
   <x:anchor-alias value="received-protocol"/>
@@ -3384,8 +3357,6 @@ Host: www.example.org
   <x:ref>Via</x:ref>               = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref>
                           [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
   <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
-  <x:ref>protocol-name</x:ref>     = <x:ref>token</x:ref>
-  <x:ref>protocol-version</x:ref>  = <x:ref>token</x:ref>
   <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
   <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
 </artwork></figure>
@@ -5081,7 +5052,7 @@ Zhong Yu.
  transfer-coding ] )
 
 <x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in [RFC3986], Section 4.1&gt;
-<x:ref>Upgrade</x:ref> = *( "," OWS ) product *( OWS "," [ OWS product ] )
+<x:ref>Upgrade</x:ref> = *( "," OWS ) protocol *( OWS "," [ OWS protocol ] )
 
 <x:ref>Via</x:ref> = *( "," OWS ) received-protocol RWS received-by [ RWS comment ]
  *( OWS "," [ OWS received-protocol RWS received-by [ RWS comment ] ]
@@ -5123,8 +5094,7 @@ Zhong Yu.
 <x:ref>path-abempty</x:ref> = &lt;path-abempty, defined in [RFC3986], Section 3.3&gt;
 <x:ref>path-absolute</x:ref> = &lt;path-absolute, defined in [RFC3986], Section 3.3&gt;
 <x:ref>port</x:ref> = &lt;port, defined in [RFC3986], Section 3.2.3&gt;
-<x:ref>product</x:ref> = token [ "/" product-version ]
-<x:ref>product-version</x:ref> = token
+<x:ref>protocol</x:ref> = protocol-name [ "/" protocol-version ]
 <x:ref>protocol-name</x:ref> = token
 <x:ref>protocol-version</x:ref> = token
 <x:ref>pseudonym</x:ref> = token
