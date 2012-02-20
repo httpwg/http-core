@@ -1549,37 +1549,34 @@ Content-Type: text/plain
 <section title="Message Body" anchor="message.body">
   <x:anchor-alias value="message-body"/>
 <t>
-   The message-body (if any) of an HTTP message is used to carry the
-   payload body associated with the request or response.
+   The message body (if any) of an HTTP message is used to carry the
+   payload body of that request or response.  The message body is
+   identical to the payload body unless a transfer coding has been
+   applied, as described in <xref target="header.transfer-encoding"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="message-body"/>
   <x:ref>message-body</x:ref> = *OCTET
 </artwork></figure>
 <t>
-   The message-body differs from the payload body only when a transfer-coding
-   has been applied, as indicated by the Transfer-Encoding header field
-   (<xref target="header.transfer-encoding"/>).
-</t>
-<t>
-   The rules for when a message-body is allowed in a message differ for
+   The rules for when a message body is allowed in a message differ for
    requests and responses.
 </t>
 <t>
-   The presence of a message-body in a request is signaled by the
-   inclusion of a Content-Length or Transfer-Encoding header field in
-   the request's header fields, even if the request method does not
-   define any use for a message-body.  This allows the request
-   message framing algorithm to be independent of method semantics.
+   The presence of a message body in a request is signaled by a
+   a Content-Length or Transfer-Encoding header field.
+   Request message framing is independent of method semantics,
+   even if the method does not define any use for a message body.
 </t>
 <t>
-   For response messages, whether or not a message-body is included with
-   a message is dependent on both the request method and the response
+   The presence of a message body in a response depends on both
+   the request method to which it is responding and the response
    status code (<xref target="status.code"/>).
-   Responses to the HEAD request method never include a message-body
+   Responses to the HEAD request method never include a message body
    because the associated response header fields (e.g., Transfer-Encoding,
    Content-Length, etc.) only indicate what their values would have been
-   if the request method had been GET.  All 1xx (Informational), 204 (No Content),
-   and 304 (Not Modified) responses &MUST-NOT; include a message-body.
+   if the request method had been GET.
+   All 1xx (Informational), 204 (No Content), and 304 (Not Modified)
+   responses &MUST-NOT; include a message body.
    All other responses do include a message-body, although the body
    &MAY; be of zero length.
 </t>
@@ -1589,45 +1586,73 @@ Content-Type: text/plain
   <iref primary="true" item="Header Fields" subitem="Transfer-Encoding" x:for-anchor=""/>
   <x:anchor-alias value="Transfer-Encoding"/>
 <t>
-   The "Transfer-Encoding" header field indicates what transfer-codings
-   (if any) have been applied to the message body. It differs from 
-   Content-Encoding (&content-codings;) in that transfer-codings are a property
-   of the message (and therefore are removed by intermediaries), whereas
-   content-codings are not.
+   When one or more transfer encodings are applied to a payload body in order
+   to form the message-body, a Transfer-Encoding header field &MUST; be sent
+   in the message and &MUST; contain the list of corresponding
+   transfer-coding names in the same order that they were applied.
+   Transfer encodings are defined in <xref target="transfer.codings"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
   <x:ref>Transfer-Encoding</x:ref> = 1#<x:ref>transfer-coding</x:ref>
 </artwork></figure>
 <t>
-   Transfer-codings are defined in <xref target="transfer.codings"/>. An example is:
+   Transfer-Encoding is analogous to the Content-Transfer-Encoding field of
+   MIME, which was designed to enable safe transport of binary data over a
+   7-bit transport service (<xref target="RFC2045" x:fmt="," x:sec="6"/>).
+   However, safe transport has a different focus for an 8bit-clean transfer
+   protocol. In HTTP's case, Transfer-Encoding is primarily intended to
+   accurately delimit a dynamically generated payload and to distinguish
+   payload encodings that are only applied for transport efficiency or
+   security from those that are characteristics of the target resource.
+</t>
+<t>
+   The "chunked" transfer-coding (<xref target="chunked.encoding"/>)
+   &MUST; be implemented by all HTTP/1.1 recipients because it plays a
+   crucial role in delimiting messages when the payload body size is not
+   known in advance.
+   When the "chunked" transfer-coding is used, it &MUST; be the last
+   transfer-coding applied to form the message body and &MUST-NOT;
+   be applied more than once in a message-body.
+   If any transfer-coding is applied to a request payload body,
+   the final transfer-coding applied &MUST; be "chunked".
+   If any transfer-coding is applied to a response payload body, then either
+   the final transfer-coding applied &MUST; be "chunked" or
+   the message &MUST; be terminated by closing the connection.
+</t>
+<t>
+   For example,
 </t>
 <figure><artwork type="example">
   Transfer-Encoding: chunked
 </artwork></figure>
 <t>
-   If multiple encodings have been applied to a representation, the transfer-codings
-   &MUST; be listed in the order in which they were applied.
+   If more than one Transfer-Encoding header field is present in a message,
+   the multiple field-values &MUST; be combined into one field-value,
+   according to the algorithm defined in <xref target="header.fields"/>,
+   before determining the message-body length.
+</t>
+<t>
+   Unlike Content-Encoding (&content-codings;), Transfer-Encoding is a
+   property of the message, not of the payload, and thus &MAY; be added or
+   removed by any implementation along the request/response chain.
    Additional information about the encoding parameters &MAY; be provided
    by other header fields not defined by this specification.
 </t>
 <t>
-   Many older HTTP/1.0 applications do not understand the Transfer-Encoding
-   header field.
+   Transfer-Encoding was added in HTTP/1.1.  It is generally assumed that
+   implementations advertising only HTTP/1.0 support will not understand
+   how to process a transfer-encoded payload.
+   A client &MUST-NOT; send a request containing Transfer-Encoding unless it
+   knows the server will handle HTTP/1.1 (or later) requests; such knowledge
+   might be in the form of specific user configuration or by remembering the
+   version of a prior received response.
+   A server &MUST-NOT; send a response containing Transfer-Encoding unless
+   the corresponding request indicates HTTP/1.1 (or later).
 </t>
 <t>
-   If more than one
-   Transfer-Encoding header field is present in a message, the multiple
-   field-values &MUST; be combined into one field-value, according to the
-   algorithm defined in <xref target="header.fields"/>, before determining
-   the message-body length.
-</t>
-<t>
-   When one or more transfer-codings are applied to a payload in order to
-   form the message-body, the Transfer-Encoding header field &MUST; contain
-   the list of transfer-codings applied. Transfer-Encoding is a property of
-   the message, not of the payload, and thus &MAY; be added or removed by
-   any implementation along the request/response chain under the constraints
-   found in <xref target="transfer.codings"/>.
+   A server that receives a request message with a transfer-coding it does
+   not understand &SHOULD; respond with 501 (Not Implemented) and then
+   close the connection.
 </t>
 </section>
 
@@ -1687,7 +1712,7 @@ Content-Type: text/plain
 
 <section title="Message Body Length" anchor="message.body.length">
 <t>
-   The length of the message-body is determined by one of the following
+   The length of a message-body is determined by one of the following
    (in order of precedence):
 </t>
 <t>
@@ -1700,7 +1725,7 @@ Content-Type: text/plain
     </t></x:lt>
     <x:lt><t>
      If a Transfer-Encoding header field is present
-     and the "chunked" transfer-coding (<xref target="transfer.codings"/>)
+     and the "chunked" transfer-coding (<xref target="chunked.encoding"/>)
      is the final encoding, the message-body length is determined by reading
      and decoding the chunked data until the transfer-coding indicates the
      data is complete.
@@ -2110,7 +2135,7 @@ Host: www.example.org
 </t>  
 </section>
 
-<section title="Associating Response to Request" anchor="associating.request.response">
+<section title="Associating a Response to a Request" anchor="associating.response.to.request">
 <t>
    HTTP does not include a request identifier for associating a given
    request message with its corresponding one or more response messages.
@@ -2164,22 +2189,6 @@ Host: www.example.org
    All transfer-coding values are case-insensitive. HTTP/1.1 uses
    transfer-coding values in the TE header field (<xref target="header.te"/>) and in
    the Transfer-Encoding header field (<xref target="header.transfer-encoding"/>).
-</t>
-<t>
-   Transfer-codings are analogous to the Content-Transfer-Encoding values of
-   MIME, which were designed to enable safe transport of binary data over a
-   7-bit transport service (<xref target="RFC2045" x:fmt="," x:sec="6"/>).
-   However, safe transport
-   has a different focus for an 8bit-clean transfer protocol. In HTTP,
-   the only unsafe characteristic of message-bodies is the difficulty in
-   determining the exact message body length (<xref target="message.body"/>),
-   or the desire to encrypt data over a shared transport.
-</t>
-<t>
-   A server that receives a request message with a transfer-coding it does
-   not understand &SHOULD; respond with 501 (Not Implemented) and then
-   close the connection. A server &MUST-NOT; send transfer-codings to an HTTP/1.0
-   client.
 </t>
 
 <section title="Chunked Transfer Coding" anchor="chunked.encoding">
@@ -2290,18 +2299,6 @@ Host: www.example.org
 <t>
    Use of chunk-ext extensions by senders is deprecated; they &SHOULD-NOT; be
    sent and definition of new chunk-extensions is discouraged. 
-</t>
-<t>
-   Since "chunked" is the only transfer-coding required to be understood
-   by HTTP/1.1 recipients, it plays a crucial role in delimiting messages
-   on a persistent connection.  Whenever a transfer-coding is applied to
-   a payload body in a request, the final transfer-coding applied &MUST;
-   be "chunked".  If a transfer-coding is applied to a response payload
-   body, then either the final transfer-coding applied &MUST; be "chunked"
-   or the message &MUST; be terminated by closing the connection. When the
-   "chunked" transfer-coding is used, it &MUST; be the last transfer-coding
-   applied to form the message-body. The "chunked" transfer-coding &MUST-NOT;
-   be applied more than once in a message-body.
 </t>
 </section>
 
