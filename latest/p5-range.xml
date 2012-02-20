@@ -455,9 +455,66 @@
    When this status code is returned for a byte-range request, the
    response &SHOULD; include a Content-Range header field
    specifying the current length of the representation (see <xref target="header.content-range"/>).
-   This response &MUST-NOT; use the multipart/byteranges content-type.
+   This response &MUST-NOT; use the multipart/byteranges content-type. For example,
 </t>
+<figure><artwork type="example">
+  HTTP/1.1 416 Requested Range Not Satisfiable
+  Date: Mon, 20 Jan 2012 15:41:54 GMT
+  Content-Range: bytes */47022
+  Content-Type: image/gif
+</artwork></figure>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> Clients cannot depend on servers to send a 416 (Requested
+    range not satisfiable) response instead of a 200 (OK) response for
+    an unsatisfiable Range header field, since not all servers
+    implement this header field.
+  </t>
+</x:note>
 </section>
+</section>
+
+<section title="Responses to a Range Request">
+<section title="Response to a Single and Multiple Ranges Request">
+<t>
+   When an HTTP message includes the content of a single range (for
+   example, a response to a request for a single range, or to a request
+   for a set of ranges that overlap without any holes), this content is
+   transmitted with a Content-Range header field, and a Content-Length header
+   field showing the number of bytes actually transferred. For example,
+</t>
+<figure><artwork type="example">
+  HTTP/1.1 206 Partial Content
+  Date: Wed, 15 Nov 1995 06:25:24 GMT
+  Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
+  Content-Range: bytes 21010-47021/47022
+  Content-Length: 26012
+  Content-Type: image/gif
+</artwork></figure>
+<t>
+   When an HTTP message includes the content of multiple ranges (for
+   example, a response to a request for multiple non-overlapping
+   ranges), these are transmitted as a multipart message. The multipart
+   media type used for this purpose is "multipart/byteranges" as defined
+   in <xref target="internet.media.type.multipart.byteranges"/>.
+</t>
+<t>
+   A server &MAY; combine requested ranges when those ranges are overlapping
+   (See <xref target="security.considerations"/>).
+</t>
+<t>
+   A response to a request for a single range &MUST-NOT; be sent using the
+   multipart/byteranges media type.  A response to a request for
+   multiple ranges, whose result is a single range, &MAY; be sent as a
+   multipart/byteranges media type with one part. A client that cannot
+   decode a multipart/byteranges message &MUST-NOT; ask for multiple
+   ranges in a single request.
+</t>
+<t>
+   When a client requests multiple ranges in one request, the
+   server &SHOULD; return them in the order that they appeared in the
+   request.
+</t>
 </section>
 
 <section title="Combining Ranges" anchor="combining.byte.ranges">
@@ -509,6 +566,7 @@
    representation, then the client &MAY; store it as either a multipart range
    response or as multiple 206 responses with one continuous range each.
 </t>
+</section>
 </section>
 
 <section title="Header Field Definitions" anchor="header.field.definitions">
@@ -651,62 +709,12 @@
    </list>
 </t>
 <t>
-   When an HTTP message includes the content of a single range (for
-   example, a response to a request for a single range, or to a request
-   for a set of ranges that overlap without any holes), this content is
-   transmitted with a Content-Range header field, and a Content-Length header
-   field showing the number of bytes actually transferred. For example,
-</t>
-<figure><artwork type="example">
-  HTTP/1.1 206 Partial Content
-  Date: Wed, 15 Nov 1995 06:25:24 GMT
-  Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
-  Content-Range: bytes 21010-47021/47022
-  Content-Length: 26012
-  Content-Type: image/gif
-</artwork></figure>
-<t>
-   When an HTTP message includes the content of multiple ranges (for
-   example, a response to a request for multiple non-overlapping
-   ranges), these are transmitted as a multipart message. The multipart
-   media type used for this purpose is "multipart/byteranges" as defined
-   in <xref target="internet.media.type.multipart.byteranges"/>.
-</t>
-<t>
-   A response to a request for a single range &MUST-NOT; be sent using the
-   multipart/byteranges media type.  A response to a request for
-   multiple ranges, whose result is a single range, &MAY; be sent as a
-   multipart/byteranges media type with one part. A client that cannot
-   decode a multipart/byteranges message &MUST-NOT; ask for multiple
-   ranges in a single request.
-</t>
-<t>
-   When a client requests multiple ranges in one request, the
-   server &SHOULD; return them in the order that they appeared in the
-   request.
-</t>
-<t>
-   If the server ignores a byte-range-spec because it is syntactically
-   invalid, the server &SHOULD; treat the request as if the invalid Range
+   If the server ignores a byte-range-spec (for example if it is
+   syntactically invalid, or if it may be seen as a denial-of-service
+   attack), the server &SHOULD; treat the request as if the invalid Range
    header field did not exist. (Normally, this means return a 200
    response containing the full representation).
 </t>
-<t>
-   If the server receives a request (other than one including an If-Range
-   header field) with an unsatisfiable Range header
-   field (that is, all of whose byte-range-spec values have a
-   first-byte-pos value greater than the current length of the selected
-   resource), it &SHOULD; return a response code of 416 (Requested range
-   not satisfiable) (<xref target="status.416"/>).
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> Clients cannot depend on servers to send a 416 (Requested
-    range not satisfiable) response instead of a 200 (OK) response for
-    an unsatisfiable Range header field, since not all servers
-    implement this header field.
-  </t>
-</x:note>
 </section>
 
 <section title="If-Range" anchor="header.if-range">
@@ -1878,7 +1886,13 @@
 
 <section title="Since draft-ietf-httpbis-p5-range-18" anchor="changes.since.18">
 <t>
-  None yet.
+  Closed issues:
+  <list style="symbols"> 
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/311"/>:
+      "Add limitations to Range to reduce its use as a denial-of-service tool"
+    </t>
+  </list>
 </t>
 </section>
 
