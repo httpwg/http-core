@@ -1585,11 +1585,11 @@ Content-Type: text/plain
   <iref primary="true" item="Header Fields" subitem="Transfer-Encoding" x:for-anchor=""/>
   <x:anchor-alias value="Transfer-Encoding"/>
 <t>
-   When one or more transfer encodings are applied to a payload body in order
+   When one or more transfer codings are applied to a payload body in order
    to form the message body, a Transfer-Encoding header field &MUST; be sent
    in the message and &MUST; contain the list of corresponding
    transfer-coding names in the same order that they were applied.
-   Transfer encodings are defined in <xref target="transfer.codings"/>.
+   Transfer codings are defined in <xref target="transfer.codings"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
   <x:ref>Transfer-Encoding</x:ref> = 1#<x:ref>transfer-coding</x:ref>
@@ -1618,12 +1618,15 @@ Content-Type: text/plain
    the final transfer-coding applied &MUST; be "chunked" or
    the message &MUST; be terminated by closing the connection.
 </t>
-<t>
+<figure><preamble>
    For example,
-</t>
-<figure><artwork type="example">
-  Transfer-Encoding: chunked
-</artwork></figure>
+</preamble><artwork type="example">
+  Transfer-Encoding: gzip, chunked
+</artwork><postamble>
+   indicates that the payload body has been compressed using the gzip
+   coding and then chunked using the chunked coding while forming the
+   message body.
+</postamble></figure>
 <t>
    If more than one Transfer-Encoding header field is present in a message,
    the multiple field-values &MUST; be combined into one field-value,
@@ -1636,6 +1639,15 @@ Content-Type: text/plain
    removed by any implementation along the request/response chain.
    Additional information about the encoding parameters &MAY; be provided
    by other header fields not defined by this specification.
+</t>
+<t>
+   Transfer-Encoding &MAY; be sent in a response to a HEAD request or in a
+   304 response to a GET request, neither of which includes a message body,
+   to indicate that the origin server would have applied a transfer coding
+   to the message body if the request had been an unconditional GET.
+   This indication is not required, however, because any recipient on
+   the response chain (including the origin server) can remove transfer
+   codings when they are not needed.
 </t>
 <t>
    Transfer-Encoding was added in HTTP/1.1.  It is generally assumed that
@@ -1660,16 +1672,13 @@ Content-Type: text/plain
   <iref primary="true" item="Header Fields" subitem="Content-Length" x:for-anchor=""/>
   <x:anchor-alias value="Content-Length"/>
 <t>
-   The "Content-Length" header field indicates the size of the
-   message body, in decimal number of octets, for any message other than
-   a response to a HEAD request or a response with a status code of 304.
-   In the case of a response to a HEAD request, Content-Length indicates
-   the size of the payload body (not including any potential transfer-coding)
-   that would have been sent had the request been a GET.
-   In the case of a 304 (Not Modified) response to a GET request,
-   Content-Length indicates the size of the payload body (not including
-   any potential transfer-coding) that would have been sent in a 200 (OK)
-   response.
+   When a message does not have a Transfer-Encoding header field and the
+   payload body length can be determined prior to being transferred, a
+   Content-Length header field &SHOULD; be sent to indicate the length of the
+   payload body that is either present as the message body, for requests
+   and non-HEAD responses other than 304, or would have been present had
+   the request been an unconditional GET.  The length is expressed as a
+   decimal number of octets.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/>
   <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
@@ -1681,19 +1690,20 @@ Content-Type: text/plain
   Content-Length: 3495
 </artwork></figure>
 <t>
-   Implementations &SHOULD; use this field to indicate the message body
-   length when no transfer-coding is being applied and the
-   payload's body length can be determined prior to being transferred.
-   <xref target="message.body"/> describes how recipients determine the length
-   of a message body.
+   In the case of a response to a HEAD request, Content-Length indicates
+   the size of the payload body (not including any potential transfer-coding)
+   that would have been sent had the request been a GET.
+   In the case of a 304 (Not Modified) response to a GET request,
+   Content-Length indicates the size of the payload body (not including
+   any potential transfer-coding) that would have been sent in a 200 (OK)
+   response.
 </t>
 <t>
-   Any Content-Length greater than or equal to zero is a valid value.
-</t>
-<t>
-   Note that the use of this field in HTTP is significantly different from
-   the corresponding definition in MIME, where it is an optional field
-   used within the "message/external-body" content-type.
+   Any Content-Length field value greater than or equal to zero is valid.
+   Since there is no predefined limit to the length of an HTTP payload,
+   recipients &SHOULD; anticipate potentially large decimal numerals and
+   prevent parsing errors due to integer conversion overflows
+   (<xref target="attack.protocol.element.size.overflows"/>).
 </t>
 <t>
    If a message is received that has multiple Content-Length header fields
@@ -1706,6 +1716,11 @@ Content-Type: text/plain
    or replace the duplicated field-values with a single valid Content-Length
    field containing that decimal value prior to determining the message body
    length.
+</t>
+<t>
+   HTTP's use of Content-Length is significantly different from how it is
+   used in MIME, where it is an optional field used only within the
+   "message/external-body" media-type.
 </t>
 </section>
 
@@ -2693,7 +2708,7 @@ Host: www.example.org
   <list style="symbols">
       <t>End-to-end header fields, which are  transmitted to the ultimate
         recipient of a request or response. End-to-end header fields in
-        responses MUST be stored as part of a cache entry and &MUST; be
+        responses &MUST; be stored as part of a cache entry and &MUST; be
         transmitted in any response formed from a cache entry.</t>
 
       <t>Hop-by-hop header fields, which are meaningful only for a single
