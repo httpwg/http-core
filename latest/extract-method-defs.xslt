@@ -13,8 +13,8 @@
       <ttcol>Method</ttcol>
       <ttcol>Safe</ttcol>
       <ttcol>Reference</ttcol>
-      <xsl:apply-templates select="//section[iref/@item='Methods']">
-        <xsl:sort select="iref[@item='Methods']/@subitem"/>
+      <xsl:apply-templates select="//section[iref/@item='methods']">
+        <xsl:sort select="iref[@item='methods']/@subitem"/>
       </xsl:apply-templates>
     </texttable>
     <xsl:text>&#10;</xsl:text>
@@ -74,7 +74,7 @@
 
 <xsl:template match="section">
 
-  <xsl:variable name="text" select="iref[@item='Methods']/@subitem"/>
+  <xsl:variable name="text" select="iref[@item='methods']/@subitem"/>
 
   <xsl:variable name="safe" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
     <xsl:choose>
