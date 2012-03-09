@@ -1294,8 +1294,8 @@
   <iref primary="true" item="Methods" subitem="CONNECT" x:for-anchor=""/>
 <t>
    The CONNECT method requests that the proxy establish a tunnel
-   to the request-target and then restrict its behavior to blind
-   forwarding of packets until the connection is closed.
+   to the request-target and, if successful, thereafter restrict its behavior
+   to blind forwarding of packets until the connection is closed.
 </t>
 <t>
    When using CONNECT, the request-target &MUST; use the authority form
@@ -1309,12 +1309,23 @@ Host: server.example.com:80
 
 </artwork></figure>
 <t>
-   Other HTTP mechanisms can be used normally with the CONNECT method &mdash;
-   except end-to-end protocol Upgrade requests, since the
-   tunnel must be established first.
+   Any successful (2xx) response to a CONNECT request indicates that the
+   proxy has established a connection to the requested host and port,
+   and has switched to tunneling the current connection to that server
+   connection.
+   The tunneled data from the server begins immediately after the blank line
+   that concludes the successful response's header block.
+   A server &SHOULD-NOT; send any Transfer-Encoding or Content-Length
+   header fields in a successful response.
+   A client &MUST; ignore any Content-Length or Transfer-Encoding header
+   fields received in a successful response.
 </t>
 <t>
-   For example, proxy authentication might be used to establish the
+   Any response other than a successful response indicates that the tunnel
+   has not yet been formed and that the connection remains governed by HTTP.
+</t>
+<t>
+   Proxy authentication might be used to establish the
    authority to create a tunnel:
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
@@ -1324,24 +1335,17 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 
 </artwork></figure>
 <t>
-   Bodies on CONNECT requests have no defined semantics. Note that sending a body
-   on a CONNECT request might cause some existing implementations to reject the
-   request.
+   A message body on a CONNECT request has no defined semantics. Sending a
+   body on a CONNECT request might cause existing implementations to reject
+   the request.
 </t>
 <t>
-   Like any other pipelined HTTP/1.1 request, data to be tunnel may be
-   sent immediately after the blank line. The usual caveats also apply:
+   Similar to a pipelined HTTP/1.1 request, data to be tunneled from client
+   to server &MAY; be sent immediately after the request (before a response
+   is received). The usual caveats also apply:
    data may be discarded if the eventual response is negative, and the
    connection may be reset with no response if more than one TCP segment
    is outstanding.
-</t>
-
-<section title="Establishing a Tunnel with CONNECT">
-<t>
-   Any successful (2xx) response to a CONNECT request indicates that the
-   proxy has established a connection to the requested host and port,
-   and has switched to tunneling the current connection to that server
-   connection.
 </t>
 <t>
    It may be the case that the proxy itself can only reach the requested
@@ -1352,19 +1356,17 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    authority.
 </t>
 <t>
-   An origin server which receives a CONNECT request for itself &MAY;
-   respond with a 2xx status code to indicate that a connection is
-   established.
-</t>
-<t>
    If at any point either one of the peers gets disconnected, any
    outstanding data that came from that peer will be passed to the other
    one, and after that also the other connection will be terminated by
    the proxy. If there is outstanding data to that peer undelivered,
    that data will be discarded.
 </t>
-
-</section>
+<t>
+   An origin server which receives a CONNECT request for itself &MAY;
+   respond with a 2xx status code to indicate that a connection is
+   established.  However, most origin servers do not implement CONNECT.
+</t>
 </section>
 </section>
 
