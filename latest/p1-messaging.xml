@@ -1918,266 +1918,6 @@ Content-Type: text/plain
 </section>
 </section>
 
-<section title="Message Routing" anchor="message.routing">
-<t>
-   In most cases, the user agent is provided a URI reference
-   from which it determines an absolute URI for identifying the target
-   resource.  When a request to the resource is initiated, all or part
-   of that URI is used to construct the HTTP request-target.
-</t>
-
-<section title="Types of Request Target" anchor="request-target-types">
-<t>
-   The proper format choice of the four options available to request-target
-   depends on the method being requested and if the request is being made to
-   a proxy.
-</t>   
-<t anchor="origin-form"><iref item="origin form (of request-target)"/>
-   The most common form of request-target is that used when making
-   a request to an origin server ("origin form") to access a resource
-   identified by an "http" (<xref target="http.uri"/>) or
-   "https" (<xref target="https.uri"/>) URI.
-   In this case, the absolute path and query components of the URI
-   &MUST; be transmitted as the request-target and the authority component
-   (excluding any userinfo) &MUST; be transmitted in a Host header field.
-   For example, a client wishing to retrieve a representation of the resource
-   identified as
-</t>
-<figure><artwork x:indent-with="  ">
-http://www.example.org/where?q=now
-</artwork></figure>
-<t>
-   directly from the origin server would open (or reuse) a TCP connection
-   to port 80 of the host "www.example.org" and send the lines:
-</t>
-<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET /where?q=now HTTP/1.1
-Host: www.example.org
-</artwork></figure>
-<t>
-   followed by the remainder of the request. Note that the origin form
-   of request-target always starts with an absolute path. If the target
-   resource's URI path is empty, then an absolute path of "/" &MUST; be
-   provided in the request-target.
-</t>
-<t>
-   If the request-target is percent-encoded
-   (<xref target="RFC3986" x:fmt="," x:sec="2.1"/>), the origin server
-   &MUST; decode the request-target in order to
-   properly interpret the request. Servers &SHOULD; respond to invalid
-   request-targets with an appropriate status code.
-</t>
-<t anchor="absolute-URI-form"><iref item="absolute-URI form (of request-target)"/>
-   The "absolute-URI" form of request-target is &REQUIRED; when the request
-   is being made to a proxy.  The proxy is requested to either forward the
-   request or service it from a valid cache, and then return the response.
-   Note that the proxy &MAY; forward the request on to another proxy or
-   directly to the server specified by the absolute-URI.
-   In order to avoid request loops, a proxy that forwards requests to other
-   proxies &MUST; be able to recognize and exclude all of its own server
-   names, including any aliases, local variations, or literal IP addresses.
-   An example request-line would be:
-</t>
-<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
-</artwork></figure>
-<t>
-   To allow for transition to absolute-URIs in all requests in future
-   versions of HTTP, all HTTP/1.1 servers &MUST; accept the absolute-URI
-   form in requests, even though HTTP/1.1 clients will only generate
-   them in requests to proxies.
-</t>
-<t>
-   If a proxy receives a host name that is not a fully qualified domain
-   name, it &MAY; add its domain to the host name it received. If a proxy
-   receives a fully qualified domain name, the proxy &MUST-NOT; change
-   the host name.
-</t>
-<t anchor="authority-form"><iref item="authority form (of request-target)"/>
-   The "authority form" of request-target, which &MUST-NOT; be used
-   with any request method other than CONNECT, is used to establish a
-   tunnel through one or more proxies (&CONNECT;).  For example,
-</t>
-<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-CONNECT www.example.com:80 HTTP/1.1
-</artwork></figure>
-<t anchor="asterix-form"><iref item="asterisk form (of request-target)"/>
-   The asterisk ("*") form of request-target, which &MUST-NOT; be used
-   with any request method other than OPTIONS, means that the request
-   applies to the server as a whole (the listening process) rather than
-   to a specific named resource at that server.  For example,
-</t>
-<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-OPTIONS * HTTP/1.1
-</artwork></figure>
-<t>
-   If a proxy receives an OPTIONS request with an absolute-URI form of
-   request-target in which the URI has an empty path and no query component,
-   then the last proxy on the request chain &MUST; use a request-target
-   of "*" when it forwards the request to the indicated origin server.
-</t>
-<figure><preamble>   
-   For example, the request
-</preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-OPTIONS http://www.example.org:8001 HTTP/1.1
-</artwork></figure>
-<figure><preamble>   
-  would be forwarded by the final proxy as
-</preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-OPTIONS * HTTP/1.1
-Host: www.example.org:8001
-</artwork>
-<postamble>
-   after connecting to port 8001 of host "www.example.org".
-</postamble>
-</figure>
-<t>
-   A non-transforming proxy &MUST-NOT; rewrite the "path-absolute" and "query"
-   parts of the received request-target when forwarding it to the next inbound
-   server, except as noted above to replace a null path-absolute with "/" or
-   "*".
-</t>
-</section>
-
-<section title="The Resource Identified by a Request" anchor="the.resource.identified.by.a.request">
-<t>
-   The exact resource identified by an Internet request is determined by
-   examining both the request-target and the Host header field.
-</t>
-<t>
-   An origin server that does not allow resources to differ by the
-   requested host &MAY; ignore the Host header field value when
-   determining the resource identified by an HTTP/1.1 request. (But see
-   <xref target="changes.to.simplify.multi-homed.web.servers.and.conserve.ip.addresses"/>
-   for other requirements on Host support in HTTP/1.1.)
-</t>
-<t>
-   An origin server that does differentiate resources based on the host
-   requested (sometimes referred to as virtual hosts or vanity host
-   names) &MUST; use the following rules for determining the requested
-   resource on an HTTP/1.1 request:
-  <list style="numbers">
-    <t>If request-target is an absolute-URI, the host is part of the
-     request-target. Any Host header field value in the request &MUST; be
-     ignored.</t>
-    <t>If the request-target is not an absolute-URI, and the request includes
-     a Host header field, the host is determined by the Host header
-     field value.</t>
-    <t>If the host as determined by rule 1 or 2 is not a valid host on
-     the server, the response &MUST; be a 400 (Bad Request) error message.</t>
-  </list>
-</t>
-<t>
-   Recipients of an HTTP/1.0 request that lacks a Host header field &MAY;
-   attempt to use heuristics (e.g., examination of the URI path for
-   something unique to a particular host) in order to determine what
-   exact resource is being requested.
-</t>
-</section>
-
-<section title="Effective Request URI" anchor="effective.request.uri">
-  <iref primary="true" item="effective request URI"/>
-  <iref primary="true" item="target resource"/>
-<t>
-   HTTP requests often do not carry the absolute URI (<xref target="RFC3986" x:fmt="," x:sec="4.3"/>)
-   for the target resource; instead, the URI needs to be inferred from the
-   request-target, Host header field, and connection context. The result of
-   this process is called the "effective request URI".  The "target resource"
-   is the resource identified by the effective request URI.
-</t>
-<t>
-   If the request-target is an absolute-URI, then the effective request URI is
-   the request-target.
-</t>
-<t>
-   If the request-target uses the origin form or the asterisk form,
-   and the Host header field is present, then the effective request URI is
-   constructed by concatenating
-</t>
-<t>
-  <list style="symbols">
-    <t>
-      the scheme name: "http" if the request was received over an insecure
-      TCP connection, or "https" when received over a SSL/TLS-secured TCP
-      connection,
-    </t>
-    <t>
-      the octet sequence "://",
-    </t>
-    <t>
-      the authority component, as specified in the Host header field
-      (<xref target="header.host"/>), and
-    </t>
-    <t>
-      the request-target obtained from the request-line, unless the
-      request-target is just the asterisk "*".
-    </t>
-  </list>
-</t>
-<t>
-   If the request-target uses the origin form or the asterisk form,
-   and the Host header field is not present, then the effective request URI is
-   undefined.
-</t>
-<t>
-   Otherwise, when request-target uses the authority form, the effective
-   request URI is undefined.
-</t>
-<figure>
-<preamble>
-   Example 1: the effective request URI for the message
-</preamble> 
-<artwork type="example" x:indent-with="  ">
-GET /pub/WWW/TheProject.html HTTP/1.1
-Host: www.example.org:8080
-</artwork>
-<postamble>
-  (received over an insecure TCP connection) is "http", plus "://", plus the
-  authority component "www.example.org:8080", plus the request-target
-  "/pub/WWW/TheProject.html", thus
-  "http://www.example.org:8080/pub/WWW/TheProject.html".
-</postamble>
-</figure>
-<figure>
-<preamble>
-   Example 2: the effective request URI for the message
-</preamble> 
-<artwork type="example" x:indent-with="  ">
-OPTIONS * HTTP/1.1
-Host: www.example.org
-</artwork>
-<postamble>
-  (received over an SSL/TLS secured TCP connection) is "https", plus "://", plus the
-  authority component "www.example.org", thus "https://www.example.org".
-</postamble>
-</figure>
-<t>
-   Effective request URIs are compared using the rules described in 
-   <xref target="uri.comparison"/>, except that empty path components &MUST-NOT;
-   be treated as equivalent to an absolute path of "/".
-</t>  
-</section>
-
-<section title="Associating a Response to a Request" anchor="associating.response.to.request">
-<t>
-   HTTP does not include a request identifier for associating a given
-   request message with its corresponding one or more response messages.
-   Hence, it relies on the order of response arrival to correspond exactly
-   to the order in which requests are made on the same connection.
-   More than one response message per request only occurs when one or more
-   informational responses (1xx, see &status-1xx;) precede a final response
-   to the same request.
-</t>
-<t>
-   A client that uses persistent connections and sends more than one request
-   per connection &MUST; maintain a list of outstanding requests in the
-   order sent on that connection and &MUST; associate each received response
-   message to the highest ordered request that has not yet received a final
-   (non-1xx) response.
-</t>
-</section>
-</section>
-
 <section title="Transfer Codings" anchor="transfer.codings">
   <x:anchor-alias value="transfer-coding"/>
   <x:anchor-alias value="transfer-extension"/>
@@ -2548,6 +2288,266 @@ Host: www.example.org
     <t>Content-Length</t>
     <t>Trailer</t>
   </list>
+</t>
+</section>
+</section>
+
+<section title="Message Routing" anchor="message.routing">
+<t>
+   In most cases, the user agent is provided a URI reference
+   from which it determines an absolute URI for identifying the target
+   resource.  When a request to the resource is initiated, all or part
+   of that URI is used to construct the HTTP request-target.
+</t>
+
+<section title="Types of Request Target" anchor="request-target-types">
+<t>
+   The proper format choice of the four options available to request-target
+   depends on the method being requested and if the request is being made to
+   a proxy.
+</t>   
+<t anchor="origin-form"><iref item="origin form (of request-target)"/>
+   The most common form of request-target is that used when making
+   a request to an origin server ("origin form") to access a resource
+   identified by an "http" (<xref target="http.uri"/>) or
+   "https" (<xref target="https.uri"/>) URI.
+   In this case, the absolute path and query components of the URI
+   &MUST; be transmitted as the request-target and the authority component
+   (excluding any userinfo) &MUST; be transmitted in a Host header field.
+   For example, a client wishing to retrieve a representation of the resource
+   identified as
+</t>
+<figure><artwork x:indent-with="  ">
+http://www.example.org/where?q=now
+</artwork></figure>
+<t>
+   directly from the origin server would open (or reuse) a TCP connection
+   to port 80 of the host "www.example.org" and send the lines:
+</t>
+<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /where?q=now HTTP/1.1
+Host: www.example.org
+</artwork></figure>
+<t>
+   followed by the remainder of the request. Note that the origin form
+   of request-target always starts with an absolute path. If the target
+   resource's URI path is empty, then an absolute path of "/" &MUST; be
+   provided in the request-target.
+</t>
+<t>
+   If the request-target is percent-encoded
+   (<xref target="RFC3986" x:fmt="," x:sec="2.1"/>), the origin server
+   &MUST; decode the request-target in order to
+   properly interpret the request. Servers &SHOULD; respond to invalid
+   request-targets with an appropriate status code.
+</t>
+<t anchor="absolute-URI-form"><iref item="absolute-URI form (of request-target)"/>
+   The "absolute-URI" form of request-target is &REQUIRED; when the request
+   is being made to a proxy.  The proxy is requested to either forward the
+   request or service it from a valid cache, and then return the response.
+   Note that the proxy &MAY; forward the request on to another proxy or
+   directly to the server specified by the absolute-URI.
+   In order to avoid request loops, a proxy that forwards requests to other
+   proxies &MUST; be able to recognize and exclude all of its own server
+   names, including any aliases, local variations, or literal IP addresses.
+   An example request-line would be:
+</t>
+<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
+</artwork></figure>
+<t>
+   To allow for transition to absolute-URIs in all requests in future
+   versions of HTTP, all HTTP/1.1 servers &MUST; accept the absolute-URI
+   form in requests, even though HTTP/1.1 clients will only generate
+   them in requests to proxies.
+</t>
+<t>
+   If a proxy receives a host name that is not a fully qualified domain
+   name, it &MAY; add its domain to the host name it received. If a proxy
+   receives a fully qualified domain name, the proxy &MUST-NOT; change
+   the host name.
+</t>
+<t anchor="authority-form"><iref item="authority form (of request-target)"/>
+   The "authority form" of request-target, which &MUST-NOT; be used
+   with any request method other than CONNECT, is used to establish a
+   tunnel through one or more proxies (&CONNECT;).  For example,
+</t>
+<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+CONNECT www.example.com:80 HTTP/1.1
+</artwork></figure>
+<t anchor="asterix-form"><iref item="asterisk form (of request-target)"/>
+   The asterisk ("*") form of request-target, which &MUST-NOT; be used
+   with any request method other than OPTIONS, means that the request
+   applies to the server as a whole (the listening process) rather than
+   to a specific named resource at that server.  For example,
+</t>
+<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+OPTIONS * HTTP/1.1
+</artwork></figure>
+<t>
+   If a proxy receives an OPTIONS request with an absolute-URI form of
+   request-target in which the URI has an empty path and no query component,
+   then the last proxy on the request chain &MUST; use a request-target
+   of "*" when it forwards the request to the indicated origin server.
+</t>
+<figure><preamble>   
+   For example, the request
+</preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+OPTIONS http://www.example.org:8001 HTTP/1.1
+</artwork></figure>
+<figure><preamble>   
+  would be forwarded by the final proxy as
+</preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+OPTIONS * HTTP/1.1
+Host: www.example.org:8001
+</artwork>
+<postamble>
+   after connecting to port 8001 of host "www.example.org".
+</postamble>
+</figure>
+<t>
+   A non-transforming proxy &MUST-NOT; rewrite the "path-absolute" and "query"
+   parts of the received request-target when forwarding it to the next inbound
+   server, except as noted above to replace a null path-absolute with "/" or
+   "*".
+</t>
+</section>
+
+<section title="The Resource Identified by a Request" anchor="the.resource.identified.by.a.request">
+<t>
+   The exact resource identified by an Internet request is determined by
+   examining both the request-target and the Host header field.
+</t>
+<t>
+   An origin server that does not allow resources to differ by the
+   requested host &MAY; ignore the Host header field value when
+   determining the resource identified by an HTTP/1.1 request. (But see
+   <xref target="changes.to.simplify.multi-homed.web.servers.and.conserve.ip.addresses"/>
+   for other requirements on Host support in HTTP/1.1.)
+</t>
+<t>
+   An origin server that does differentiate resources based on the host
+   requested (sometimes referred to as virtual hosts or vanity host
+   names) &MUST; use the following rules for determining the requested
+   resource on an HTTP/1.1 request:
+  <list style="numbers">
+    <t>If request-target is an absolute-URI, the host is part of the
+     request-target. Any Host header field value in the request &MUST; be
+     ignored.</t>
+    <t>If the request-target is not an absolute-URI, and the request includes
+     a Host header field, the host is determined by the Host header
+     field value.</t>
+    <t>If the host as determined by rule 1 or 2 is not a valid host on
+     the server, the response &MUST; be a 400 (Bad Request) error message.</t>
+  </list>
+</t>
+<t>
+   Recipients of an HTTP/1.0 request that lacks a Host header field &MAY;
+   attempt to use heuristics (e.g., examination of the URI path for
+   something unique to a particular host) in order to determine what
+   exact resource is being requested.
+</t>
+</section>
+
+<section title="Effective Request URI" anchor="effective.request.uri">
+  <iref primary="true" item="effective request URI"/>
+  <iref primary="true" item="target resource"/>
+<t>
+   HTTP requests often do not carry the absolute URI (<xref target="RFC3986" x:fmt="," x:sec="4.3"/>)
+   for the target resource; instead, the URI needs to be inferred from the
+   request-target, Host header field, and connection context. The result of
+   this process is called the "effective request URI".  The "target resource"
+   is the resource identified by the effective request URI.
+</t>
+<t>
+   If the request-target is an absolute-URI, then the effective request URI is
+   the request-target.
+</t>
+<t>
+   If the request-target uses the origin form or the asterisk form,
+   and the Host header field is present, then the effective request URI is
+   constructed by concatenating
+</t>
+<t>
+  <list style="symbols">
+    <t>
+      the scheme name: "http" if the request was received over an insecure
+      TCP connection, or "https" when received over a SSL/TLS-secured TCP
+      connection,
+    </t>
+    <t>
+      the octet sequence "://",
+    </t>
+    <t>
+      the authority component, as specified in the Host header field
+      (<xref target="header.host"/>), and
+    </t>
+    <t>
+      the request-target obtained from the request-line, unless the
+      request-target is just the asterisk "*".
+    </t>
+  </list>
+</t>
+<t>
+   If the request-target uses the origin form or the asterisk form,
+   and the Host header field is not present, then the effective request URI is
+   undefined.
+</t>
+<t>
+   Otherwise, when request-target uses the authority form, the effective
+   request URI is undefined.
+</t>
+<figure>
+<preamble>
+   Example 1: the effective request URI for the message
+</preamble> 
+<artwork type="example" x:indent-with="  ">
+GET /pub/WWW/TheProject.html HTTP/1.1
+Host: www.example.org:8080
+</artwork>
+<postamble>
+  (received over an insecure TCP connection) is "http", plus "://", plus the
+  authority component "www.example.org:8080", plus the request-target
+  "/pub/WWW/TheProject.html", thus
+  "http://www.example.org:8080/pub/WWW/TheProject.html".
+</postamble>
+</figure>
+<figure>
+<preamble>
+   Example 2: the effective request URI for the message
+</preamble> 
+<artwork type="example" x:indent-with="  ">
+OPTIONS * HTTP/1.1
+Host: www.example.org
+</artwork>
+<postamble>
+  (received over an SSL/TLS secured TCP connection) is "https", plus "://", plus the
+  authority component "www.example.org", thus "https://www.example.org".
+</postamble>
+</figure>
+<t>
+   Effective request URIs are compared using the rules described in 
+   <xref target="uri.comparison"/>, except that empty path components &MUST-NOT;
+   be treated as equivalent to an absolute path of "/".
+</t>  
+</section>
+
+<section title="Associating a Response to a Request" anchor="associating.response.to.request">
+<t>
+   HTTP does not include a request identifier for associating a given
+   request message with its corresponding one or more response messages.
+   Hence, it relies on the order of response arrival to correspond exactly
+   to the order in which requests are made on the same connection.
+   More than one response message per request only occurs when one or more
+   informational responses (1xx, see &status-1xx;) precede a final response
+   to the same request.
+</t>
+<t>
+   A client that uses persistent connections and sends more than one request
+   per connection &MUST; maintain a list of outstanding requests in the
+   order sent on that connection and &MUST; associate each received response
+   message to the highest ordered request that has not yet received a final
+   (non-1xx) response.
 </t>
 </section>
 </section>
