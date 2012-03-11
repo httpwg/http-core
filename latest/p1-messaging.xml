@@ -32,6 +32,7 @@
   <!ENTITY header-warning         "<xref target='Part6' x:rel='#header.warning' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY idempotent-methods     "<xref target='Part2' x:rel='#idempotent.methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY method                 "<xref target='Part2' x:rel='#method' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY OPTIONS                "<xref target='Part2' x:rel='#OPTIONS' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-code-reasonphr  "<xref target='Part2' x:rel='#status.code.and.reason.phrase' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-codes           "<xref target='Part2' x:rel='#status.codes' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-100             "<xref target='Part2' x:rel='#status.100' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -2359,20 +2360,30 @@ Content-Type: text/plain
    There are four distinct formats for the request-target, depending on both
    the method being requested and whether the request is to a proxy.
 </t>   
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/>
-  <x:ref>request-target</x:ref> = "*"
-                 / <x:ref>absolute-URI</x:ref>
-                 / ( <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ] )
-                 / <x:ref>authority</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-target"/><iref primary="true" item="Grammar" subitem="origin-form"/><iref primary="true" item="Grammar" subitem="absolute-form"/><iref primary="true" item="Grammar" subitem="authority-form"/><iref primary="true" item="Grammar" subitem="asterisk-form"/>
+  <x:ref>request-target</x:ref> = <x:ref>origin-form</x:ref>
+                 / <x:ref>absolute-form</x:ref>
+                 / <x:ref>authority-form</x:ref>
+                 / <x:ref>asterisk-form</x:ref>
+
+  <x:ref>origin-form</x:ref>    = <x:ref>path-absolute</x:ref> [ "?" <x:ref>query</x:ref> ]
+  <x:ref>absolute-form</x:ref>  = <x:ref>absolute-URI</x:ref>
+  <x:ref>authority-form</x:ref> = <x:ref>authority</x:ref>
+  <x:ref>asterisk-form</x:ref>  = "*"
 </artwork></figure>
-<t anchor="origin-form"><iref item="origin form (of request-target)"/>
-   The most common form of request-target is that used when making
-   a request to an origin server ("origin form") to access a resource
-   identified by an "http" (<xref target="http.uri"/>) or
-   "https" (<xref target="https.uri"/>) URI.
-   In this case, the absolute path and query components of the URI
-   &MUST; be transmitted as the request-target and the authority component
-   (excluding any userinfo) &MUST; be transmitted in a Host header field.
+<t anchor="origin-form"><iref item="origin-form (of request-target)"/>
+   The most common form of request-target is the origin-form.
+   When making a request directly to an origin server, other than a CONNECT
+   or server-wide OPTIONS request (as detailed below),
+   a client &MUST; send only the absolute path and query components of
+   the target URI as the request-target.
+   If the target URI's path component is empty, then the client &MUST; send
+   "/" as the path within the origin-form of request-target.
+   A Host header field is also sent, as defined in
+   <xref target="header.host"/>, containing the target URI's
+   authority component (excluding any userinfo).
+</t>
+<t>
    For example, a client wishing to retrieve a representation of the resource
    identified as
 </t>
@@ -2388,65 +2399,56 @@ GET /where?q=now HTTP/1.1
 Host: www.example.org
 </artwork></figure>
 <t>
-   followed by the remainder of the request. Note that the origin form
-   of request-target always starts with an absolute path. If the target
-   resource's URI path is empty, then an absolute path of "/" &MUST; be
-   provided in the request-target.
+   followed by the remainder of the request message.
 </t>
-<t>
-   If the request-target is percent-encoded
-   (<xref target="RFC3986" x:fmt="," x:sec="2.1"/>), the origin server
-   &MUST; decode the request-target in order to
-   properly interpret the request. Servers &SHOULD; respond to invalid
-   request-targets with an appropriate status code.
-</t>
-<t anchor="absolute-URI-form"><iref item="absolute-URI form (of request-target)"/>
-   The "absolute-URI" form of request-target is &REQUIRED; when the request
-   is being made to a proxy.  The proxy is requested to either forward the
-   request or service it from a valid cache, and then return the response.
-   Note that the proxy &MAY; forward the request on to another proxy or
-   directly to the server specified by the absolute-URI.
+<t anchor="absolute-form"><iref item="absolute-form (of request-target)"/>
+   When making a request to a proxy, other than a CONNECT or server-wide
+   OPTIONS request (as detailed below), a client &MUST; send the target URI
+   in absolute-form as the request-target.
+   The proxy is requested to either service that request from a valid cache,
+   if possible, or make the same request on the client's behalf to either
+   the next inbound proxy server or directly to the origin server indicated
+   by the request-target.
    In order to avoid request loops, a proxy that forwards requests to other
    proxies &MUST; be able to recognize and exclude all of its own server
    names, including any aliases, local variations, or literal IP addresses.
-   An example request-line would be:
+</t>
+<t>
+   An example absolute-form of request-line would be:
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
 </artwork></figure>
 <t>
-   To allow for transition to absolute-URIs in all requests in future
-   versions of HTTP, all HTTP/1.1 servers &MUST; accept the absolute-URI
-   form in requests, even though HTTP/1.1 clients will only generate
-   them in requests to proxies.
+   To allow for transition to the absolute-form for all requests in some
+   future version of HTTP, HTTP/1.1 servers &MUST; accept the absolute-form
+   in requests, even though HTTP/1.1 clients will only send them in requests
+   to proxies.
 </t>
-<t>
-   If a proxy receives a host name that is not a fully qualified domain
-   name, it &MAY; add its domain to the host name it received. If a proxy
-   receives a fully qualified domain name, the proxy &MUST-NOT; change
-   the host name.
-</t>
-<t anchor="authority-form"><iref item="authority form (of request-target)"/>
-   The "authority form" of request-target, which &MUST-NOT; be used
-   with any request method other than CONNECT, is used to establish a
-   tunnel through one or more proxies (&CONNECT;).  For example,
+<t anchor="authority-form"><iref item="authority-form (of request-target)"/>
+   The authority-form of request-target is only used for CONNECT requests
+   (&CONNECT;).  When making a CONNECT request to establish a tunnel through
+   one or more proxies, a client &MUST; send only the target URI's
+   authority component (excluding any userinfo) as the request-target.
+   For example,
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 CONNECT www.example.com:80 HTTP/1.1
 </artwork></figure>
-<t anchor="asterix-form"><iref item="asterisk form (of request-target)"/>
-   The asterisk ("*") form of request-target, which &MUST-NOT; be used
-   with any request method other than OPTIONS, means that the request
-   applies to the server as a whole (the listening process) rather than
-   to a specific named resource at that server.  For example,
+<t anchor="asterisk-form"><iref item="asterisk-form (of request-target)"/>
+   The asterisk-form of request-target is only used for a server-wide
+   OPTIONS request (&OPTIONS;).  When a client wishes to request OPTIONS
+   for the server as a whole, as opposed to a specific named resource of
+   that server, the client &MUST; send only "*" (%x2A) as the request-target.
+   For example,
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 OPTIONS * HTTP/1.1
 </artwork></figure>
 <t>
-   If a proxy receives an OPTIONS request with an absolute-URI form of
+   If a proxy receives an OPTIONS request with an absolute-form of
    request-target in which the URI has an empty path and no query component,
-   then the last proxy on the request chain &MUST; use a request-target
+   then the last proxy on the request chain &MUST; send a request-target
    of "*" when it forwards the request to the indicated origin server.
 </t>
 <figure><preamble>   
@@ -2465,10 +2467,15 @@ Host: www.example.org:8001
 </postamble>
 </figure>
 <t>
+   If a proxy receives a request-target with a host name that is not a
+   fully qualified domain name, it &MAY; add its domain to the host name
+   it received when forwarding the request.  A proxy &MUST-NOT; change the
+   host name if it is a fully qualified domain name.
+</t>
+<t>
    A non-transforming proxy &MUST-NOT; rewrite the "path-absolute" and "query"
    parts of the received request-target when forwarding it to the next inbound
-   server, except as noted above to replace a null path-absolute with "/" or
-   "*".
+   server, except as noted above to replace an empty path with "/" or "*".
 </t>
 </section>
 
@@ -2478,8 +2485,8 @@ Host: www.example.org:8001
   <x:anchor-alias value="Host"/>
 <t>
    The "Host" header field in a request provides the host and port
-   information from the target resource's URI, enabling the origin
-   server to distinguish between resources while servicing requests
+   information from the target URI, enabling the origin
+   server to distinguish among resources while servicing requests
    for multiple host names on a single IP address.  Since the Host
    field-value is critical information for handling a request, it
    &SHOULD; be sent as the first header field following the request-line.
@@ -2489,12 +2496,11 @@ Host: www.example.org:8001
 </artwork></figure>
 <t>
    A client &MUST; send a Host header field in all HTTP/1.1 request
-   messages.  If the target resource's URI includes an authority
-   component, then the Host field-value &MUST; be identical to that
-   authority component after excluding any userinfo (<xref target="http.uri"/>).
-   If the authority component is missing or undefined for the target
-   resource's URI, then the Host header field &MUST; be sent with an
-   empty field-value.
+   messages.  If the target URI includes an authority component, then
+   the Host field-value &MUST; be identical to that authority component
+   after excluding any userinfo (<xref target="http.uri"/>).
+   If the authority component is missing or undefined for the target URI,
+   then the Host header field &MUST; be sent with an empty field-value.
 </t>
 <t>
    For example, a GET request to the origin server for
@@ -2506,24 +2512,24 @@ Host: www.example.org
 </artwork></figure>
 <t>
    The Host header field &MUST; be sent in an HTTP/1.1 request even
-   if the request-target is in the form of an absolute-URI, since this
+   if the request-target is in the absolute-form, since this
    allows the Host information to be forwarded through ancient HTTP/1.0
    proxies that might not have implemented Host.
 </t>
 <t>
-   When an HTTP/1.1 proxy receives a request with a request-target in
-   the form of an absolute-URI, the proxy &MUST; ignore the received
+   When an HTTP/1.1 proxy receives a request with an absolute-form of
+   request-target, the proxy &MUST; ignore the received
    Host header field (if any) and instead replace it with the host
-   information of the request-target.  When a proxy forwards a request,
-   it &MUST; generate the Host header field based on the received
-   absolute-URI rather than the received Host.
+   information of the request-target.  If the proxy forwards the request,
+   it &MUST; generate a new Host field-value based on the received
+   request-target rather than forward the received Host field-value.
 </t>
 <t>
    Since the Host header field acts as an application-level routing
    mechanism, it is a frequent target for malware seeking to poison
    a shared cache or redirect a request to an unintended server.
    An interception proxy is particularly vulnerable if it relies on
-   the Host header field value for redirecting requests to internal
+   the Host field-value for redirecting requests to internal
    servers, or for use as a cache key in a shared cache, without
    first verifying that the intercepted connection is targeting a
    valid IP address for that host.
@@ -2533,11 +2539,6 @@ Host: www.example.org
    any HTTP/1.1 request message that lacks a Host header field and
    to any request message that contains more than one Host header field
    or a Host header field with an invalid field-value.
-</t>
-<t>
-   See Sections <xref target="the.resource.identified.by.a.request" format="counter"/>
-   and <xref target="changes.to.simplify.multi-homed.web.servers.and.conserve.ip.addresses" format="counter"/>
-   for other requirements relating to Host.
 </t>
 </section>
 
@@ -5143,8 +5144,11 @@ Zhong Yu.
  )
 
 <x:ref>absolute-URI</x:ref> = &lt;absolute-URI, defined in [RFC3986], Section 4.3&gt;
+<x:ref>absolute-form</x:ref> = absolute-URI
+<x:ref>asterisk-form</x:ref> = "*"
 <x:ref>attribute</x:ref> = token
 <x:ref>authority</x:ref> = &lt;authority, defined in [RFC3986], Section 3.2&gt;
+<x:ref>authority-form</x:ref> = authority
 
 <x:ref>chunk</x:ref> = chunk-size [ chunk-ext ] CRLF chunk-data CRLF
 <x:ref>chunk-data</x:ref> = 1*OCTET
@@ -5175,6 +5179,7 @@ Zhong Yu.
 
 <x:ref>obs-fold</x:ref> = CRLF ( SP / HTAB )
 <x:ref>obs-text</x:ref> = %x80-FF
+<x:ref>origin-form</x:ref> = path-absolute [ "?" query ]
 
 <x:ref>partial-URI</x:ref> = relative-part [ "?" query ]
 <x:ref>path-abempty</x:ref> = &lt;path-abempty, defined in [RFC3986], Section 3.3&gt;
@@ -5203,8 +5208,8 @@ Zhong Yu.
 <x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
 <x:ref>relative-part</x:ref> = &lt;relative-part, defined in [RFC3986], Section 4.2&gt;
 <x:ref>request-line</x:ref> = method SP request-target SP HTTP-version CRLF
-<x:ref>request-target</x:ref> = "*" / absolute-URI / ( path-absolute [ "?" query ] )
- / authority
+<x:ref>request-target</x:ref> = origin-form / absolute-form / authority-form /
+ asterisk-form
 
 <x:ref>special</x:ref> = "(" / ")" / "&lt;" / "&gt;" / "@" / "," / ";" / ":" / "\" /
  DQUOTE / "/" / "[" / "]" / "?" / "=" / "{" / "}"
