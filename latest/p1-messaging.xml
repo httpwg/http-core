@@ -425,7 +425,7 @@
    message, beginning with a request-line that includes a method, URI, and
    protocol version (<xref target="request.line"/>),
    followed by MIME-like header fields containing
-   request modifiers, client information, and payload metadata
+   request modifiers, client information, and representation metadata
    (<xref target="header.fields"/>),
    an empty line to indicate the end of the header section, and finally
    a message body containing the payload body (if any,
@@ -438,7 +438,7 @@
    includes the protocol version, a success or error code, and textual
    reason phrase (<xref target="status.line"/>),
    possibly followed by MIME-like header fields containing server
-   information, resource metadata, and payload metadata
+   information, resource metadata, and representation metadata
    (<xref target="header.fields"/>),
    an empty line to indicate the end of the header section, and finally
    a message body containing the payload body (if any,
@@ -2354,7 +2354,8 @@ Content-Type: text/plain
 
 <section title="Request Target" anchor="request-target">
 <t>
-   Once an inbound connection is obtained (<xref target="connections"/>),
+   Once an inbound connection is obtained
+   (<xref target="connection.management"/>),
    the client sends an HTTP request message (<xref target="http.message"/>)
    with a request-target derived from the target URI.
    There are four distinct formats for the request-target, depending on both
@@ -2408,10 +2409,8 @@ Host: www.example.org
    The proxy is requested to either service that request from a valid cache,
    if possible, or make the same request on the client's behalf to either
    the next inbound proxy server or directly to the origin server indicated
-   by the request-target.
-   In order to avoid request loops, a proxy that forwards requests to other
-   proxies &MUST; be able to recognize and exclude all of its own server
-   names, including any aliases, local variations, or literal IP addresses.
+   by the request-target.  Requirements on such "forwarding" of messages are
+   defined in <xref target="intermediary.forwarding"/>.
 </t>
 <t>
    An example absolute-form of request-line would be:
@@ -2466,17 +2465,6 @@ Host: www.example.org:8001
    after connecting to port 8001 of host "www.example.org".
 </postamble>
 </figure>
-<t>
-   If a proxy receives a request-target with a host name that is not a
-   fully qualified domain name, it &MAY; add its domain to the host name
-   it received when forwarding the request.  A proxy &MUST-NOT; change the
-   host name if it is a fully qualified domain name.
-</t>
-<t>
-   A non-transforming proxy &MUST-NOT; rewrite the "path-absolute" and "query"
-   parts of the received request-target when forwarding it to the next inbound
-   server, except as noted above to replace an empty path with "/" or "*".
-</t>
 </section>
 
 <section title="Host" anchor="header.host">
@@ -2630,175 +2618,35 @@ https://www.example.org
 </t>
 </section>
 
-<section title="Associating a Response to a Request" anchor="associating.response.to.request">
+<section title="Intermediary Forwarding" anchor="intermediary.forwarding">
 <t>
-   HTTP does not include a request identifier for associating a given
-   request message with its corresponding one or more response messages.
-   Hence, it relies on the order of response arrival to correspond exactly
-   to the order in which requests are made on the same connection.
-   More than one response message per request only occurs when one or more
-   informational responses (1xx, see &status-1xx;) precede a final response
-   to the same request.
+   As described in <xref target="intermediaries"/>, intermediaries can serve
+   a variety of roles in the processing of HTTP requests and responses.
+   Some intermediaries are used to improve performance or availability.
+   Others are used for access control or to filter content.
+   Since an HTTP stream has characteristics similar to a pipe-and-filter
+   architecture, there are no inherent limits to the extent an intermediary
+   can enhance (or interfere) with either direction of the stream.
 </t>
 <t>
-   A client that uses persistent connections and sends more than one request
-   per connection &MUST; maintain a list of outstanding requests in the
-   order sent on that connection and &MUST; associate each received response
-   message to the highest ordered request that has not yet received a final
-   (non-1xx) response.
-</t>
-</section>
-</section>
-
-<section title="Connections" anchor="connections">
-
-<section title="Persistent Connections" anchor="persistent.connections">
-
-<section title="Purpose" anchor="persistent.purpose">
-<t>
-   Prior to persistent connections, a separate TCP connection was
-   established for each request, increasing the load on HTTP servers
-   and causing congestion on the Internet. The use of inline images and
-   other associated data often requires a client to make multiple
-   requests of the same server in a short amount of time. Analysis of
-   these performance problems and results from a prototype
-   implementation are available <xref target="Pad1995"/> <xref target="Spe"/>. Implementation experience and
-   measurements of actual HTTP/1.1 implementations show good
-   results <xref target="Nie1997"/>. Alternatives have also been explored, for example,
-   T/TCP <xref target="Tou1998"/>.
+   In order to avoid request loops, a proxy that forwards requests to other
+   proxies &MUST; be able to recognize and exclude all of its own server
+   names, including any aliases, local variations, or literal IP addresses.
 </t>
 <t>
-   Persistent HTTP connections have a number of advantages:
-  <list style="symbols">
-      <t>
-        By opening and closing fewer TCP connections, CPU time is saved
-        in routers and hosts (clients, servers, proxies, gateways,
-        tunnels, or caches), and memory used for TCP protocol control
-        blocks can be saved in hosts.
-      </t>
-      <t>
-        HTTP requests and responses can be pipelined on a connection.
-        Pipelining allows a client to make multiple requests without
-        waiting for each response, allowing a single TCP connection to
-        be used much more efficiently, with much lower elapsed time.
-      </t>
-      <t>
-        Network congestion is reduced by reducing the number of packets
-        caused by TCP opens, and by allowing TCP sufficient time to
-        determine the congestion state of the network.
-      </t>
-      <t>
-        Latency on subsequent requests is reduced since there is no time
-        spent in TCP's connection opening handshake.
-      </t>
-      <t>
-        HTTP can evolve more gracefully, since errors can be reported
-        without the penalty of closing the TCP connection. Clients using
-        future versions of HTTP might optimistically try a new feature,
-        but if communicating with an older server, retry with old
-        semantics after an error is reported.
-      </t>
-    </list>
+   If a proxy receives a request-target with a host name that is not a
+   fully qualified domain name, it &MAY; add its domain to the host name
+   it received when forwarding the request.  A proxy &MUST-NOT; change the
+   host name if it is a fully qualified domain name.
 </t>
 <t>
-   HTTP implementations &SHOULD; implement persistent connections.
-</t>
-</section>
-
-<section title="Overall Operation" anchor="persistent.overall">
-<t>
-   A significant difference between HTTP/1.1 and earlier versions of
-   HTTP is that persistent connections are the default behavior of any
-   HTTP connection. That is, unless otherwise indicated, the client
-   &SHOULD; assume that the server will maintain a persistent connection,
-   even after error responses from the server.
+   A non-transforming proxy &MUST-NOT; rewrite the "path-absolute" and "query"
+   parts of the received request-target when forwarding it to the next inbound
+   server, except as noted above to replace an empty path with "/" or "*".
 </t>
 <t>
-   Persistent connections provide a mechanism by which a client and a
-   server can signal the close of a TCP connection. This signaling takes
-   place using the Connection header field (<xref target="header.connection"/>). Once a close
-   has been signaled, the client &MUST-NOT; send any more requests on that
-   connection.
-</t>
-
-<section title="Negotiation" anchor="persistent.negotiation">
-<t>
-   An HTTP/1.1 server &MAY; assume that a HTTP/1.1 client intends to
-   maintain a persistent connection unless a Connection header field including
-   the connection-token "close" was sent in the request. If the server
-   chooses to close the connection immediately after sending the
-   response, it &SHOULD; send a Connection header field including the
-   connection-token "close".
-</t>
-<t>
-   An HTTP/1.1 client &MAY; expect a connection to remain open, but would
-   decide to keep it open based on whether the response from a server
-   contains a Connection header field with the connection-token close. In case
-   the client does not want to maintain a connection for more than that
-   request, it &SHOULD; send a Connection header field including the
-   connection-token close.
-</t>
-<t>
-   If either the client or the server sends the close token in the
-   Connection header field, that request becomes the last one for the
-   connection.
-</t>
-<t>
-   Clients and servers &SHOULD-NOT;  assume that a persistent connection is
-   maintained for HTTP versions less than 1.1 unless it is explicitly
-   signaled. See <xref target="compatibility.with.http.1.0.persistent.connections"/> for more information on backward
-   compatibility with HTTP/1.0 clients.
-</t>
-<t>
-   In order to remain persistent, all messages on the connection &MUST;
-   have a self-defined message length (i.e., one not defined by closure
-   of the connection), as described in <xref target="message.body"/>.
-</t>
-</section>
-
-<section title="Pipelining" anchor="pipelining">
-<t>
-   A client that supports persistent connections &MAY; "pipeline" its
-   requests (i.e., send multiple requests without waiting for each
-   response). A server &MUST; send its responses to those requests in the
-   same order that the requests were received.
-</t>
-<t>
-   Clients which assume persistent connections and pipeline immediately
-   after connection establishment &SHOULD; be prepared to retry their
-   connection if the first pipelined attempt fails. If a client does
-   such a retry, it &MUST-NOT; pipeline before it knows the connection is
-   persistent. Clients &MUST; also be prepared to resend their requests if
-   the server closes the connection before sending all of the
-   corresponding responses.
-</t>
-<t>
-   Clients &SHOULD-NOT; pipeline requests using non-idempotent request methods or
-   non-idempotent sequences of request methods (see &idempotent-methods;). Otherwise, a
-   premature termination of the transport connection could lead to
-   indeterminate results. A client wishing to send a non-idempotent
-   request &SHOULD; wait to send that request until it has received the
-   response status line for the previous request.
-</t>
-</section>
-</section>
-
-<section title="Proxy Servers" anchor="persistent.proxy">
-<t>
-   It is especially important that proxies correctly implement the
-   properties of the Connection header field as specified in <xref target="header.connection"/>.
-</t>
-<t>
-   The proxy server &MUST; signal persistent connections separately with
-   its clients and the origin servers (or other proxy servers) that it
-   connects to. Each persistent connection applies to only one transport
-   link.
-</t>
-<t>
-   A proxy server &MUST-NOT; establish a HTTP/1.1 persistent connection
-   with an HTTP/1.0 client (but see <xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>
-   for information and discussion of the problems with the Keep-Alive header field
-   implemented by many HTTP/1.0 clients).
+   Intermediaries that forward a message &MUST; implement the
+   Connection header field as specified in <xref target="header.connection"/>.
 </t>
 
 <section title="End-to-end and Hop-by-hop Header Fields" anchor="end-to-end.and.hop-by-hop.header-fields">
@@ -2916,6 +2764,347 @@ https://www.example.org
 
 </section>
 
+<section title="Associating a Response to a Request" anchor="associating.response.to.request">
+<t>
+   HTTP does not include a request identifier for associating a given
+   request message with its corresponding one or more response messages.
+   Hence, it relies on the order of response arrival to correspond exactly
+   to the order in which requests are made on the same connection.
+   More than one response message per request only occurs when one or more
+   informational responses (1xx, see &status-1xx;) precede a final response
+   to the same request.
+</t>
+<t>
+   A client that uses persistent connections and sends more than one request
+   per connection &MUST; maintain a list of outstanding requests in the
+   order sent on that connection and &MUST; associate each received response
+   message to the highest ordered request that has not yet received a final
+   (non-1xx) response.
+</t>
+</section>
+</section>
+
+<section title="Connection Management" anchor="connection.management">
+
+<section title="Connection" anchor="header.connection">
+  <iref primary="true" item="Connection header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/>
+  <x:anchor-alias value="Connection"/>
+  <x:anchor-alias value="connection-token"/>
+<t>
+   The "Connection" header field allows the sender to specify
+   options that are desired only for that particular connection.
+   Such connection options &MUST; be removed or replaced before the
+   message can be forwarded downstream by a proxy or gateway.
+   This mechanism also allows the sender to indicate which HTTP
+   header fields used in the message are only intended for the
+   immediate recipient ("hop-by-hop"), as opposed to all recipients
+   on the chain ("end-to-end"), enabling the message to be
+   self-descriptive and allowing future connection-specific extensions
+   to be deployed in HTTP without fear that they will be blindly
+   forwarded by previously deployed intermediaries.
+</t>
+<t>
+   The Connection header field's value has the following grammar:
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-token"/>
+  <x:ref>Connection</x:ref>       = 1#<x:ref>connection-token</x:ref>
+  <x:ref>connection-token</x:ref> = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   A proxy or gateway &MUST; parse a received Connection
+   header field before a message is forwarded and, for each
+   connection-token in this field, remove any header field(s) from
+   the message with the same name as the connection-token, and then
+   remove the Connection header field itself or replace it with the
+   sender's own connection options for the forwarded message.
+</t>
+<t>
+   A sender &MUST-NOT; include field-names in the Connection header
+   field-value for fields that are defined as expressing constraints
+   for all recipients in the request or response chain, such as the
+   Cache-Control header field (&header-cache-control;).
+</t>
+<t>
+   The connection options do not have to correspond to a header field
+   present in the message, since a connection-specific header field
+   might not be needed if there are no parameters associated with that
+   connection option.  Recipients that trigger certain connection
+   behavior based on the presence of connection options &MUST; do so
+   based on the presence of the connection-token rather than only the
+   presence of the optional header field.  In other words, if the
+   connection option is received as a header field but not indicated
+   within the Connection field-value, then the recipient &MUST; ignore
+   the connection-specific header field because it has likely been
+   forwarded by an intermediary that is only partially conformant.
+</t>
+<t>
+   When defining new connection options, specifications ought to
+   carefully consider existing deployed header fields and ensure
+   that the new connection-token does not share the same name as
+   an unrelated header field that might already be deployed.
+   Defining a new connection-token essentially reserves that potential
+   field-name for carrying additional information related to the
+   connection option, since it would be unwise for senders to use
+   that field-name for anything else.
+</t>
+<t>
+   HTTP/1.1 defines the "close" connection option for the sender to
+   signal that the connection will be closed after completion of the
+   response. For example,
+</t>
+<figure><artwork type="example">
+  Connection: close
+</artwork></figure>
+<t>
+   in either the request or the response header fields indicates that
+   the connection &SHOULD-NOT;  be considered "persistent" (<xref target="persistent.connections"/>)
+   after the current request/response is complete.
+</t>
+<t>
+   An HTTP/1.1 client that does not support persistent connections &MUST;
+   include the "close" connection option in every request message.
+</t>
+<t>
+   An HTTP/1.1 server that does not support persistent connections &MUST;
+   include the "close" connection option in every response message that
+   does not have a 1xx (Informational) status code.
+</t>
+</section>
+
+<section title="Via" anchor="header.via">
+  <iref primary="true" item="Via header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/>
+  <x:anchor-alias value="pseudonym"/>
+  <x:anchor-alias value="received-by"/>
+  <x:anchor-alias value="received-protocol"/>
+  <x:anchor-alias value="Via"/>
+<t>
+   The "Via" header field &MUST; be sent by a proxy or gateway to
+   indicate the intermediate protocols and recipients between the user
+   agent and the server on requests, and between the origin server and
+   the client on responses. It is analogous to the "Received" field
+   used by email systems (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>)
+   and is intended to be used for tracking message forwards,
+   avoiding request loops, and identifying the protocol capabilities of
+   all senders along the request/response chain.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
+  <x:ref>Via</x:ref>               = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref>
+                          [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
+  <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
+  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   The received-protocol indicates the protocol version of the message
+   received by the server or client along each segment of the
+   request/response chain. The received-protocol version is appended to
+   the Via field value when the message is forwarded so that information
+   about the protocol capabilities of upstream applications remains
+   visible to all recipients.
+</t>
+<t>
+   The protocol-name is excluded if and only if it would be "HTTP". The
+   received-by field is normally the host and optional port number of a
+   recipient server or client that subsequently forwarded the message.
+   However, if the real host is considered to be sensitive information,
+   it &MAY; be replaced by a pseudonym. If the port is not given, it &MAY;
+   be assumed to be the default port of the received-protocol.
+</t>
+<t>
+   Multiple Via field values represent each proxy or gateway that has
+   forwarded the message. Each recipient &MUST; append its information
+   such that the end result is ordered according to the sequence of
+   forwarding applications.
+</t>
+<t>
+   Comments &MAY; be used in the Via header field to identify the software
+   of each recipient, analogous to the User-Agent and Server header fields.
+   However, all comments in the Via field are optional and &MAY; be removed
+   by any recipient prior to forwarding the message.
+</t>
+<t>
+   For example, a request message could be sent from an HTTP/1.0 user
+   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
+   forward the request to a public proxy at p.example.net, which completes
+   the request by forwarding it to the origin server at www.example.com.
+   The request received by www.example.com would then have the following
+   Via header field:
+</t>
+<figure><artwork type="example">
+  Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
+</artwork></figure>
+<t>
+   A proxy or gateway used as a portal through a network firewall
+   &SHOULD-NOT; forward the names and ports of hosts within the firewall
+   region unless it is explicitly enabled to do so. If not enabled, the
+   received-by host of any host behind the firewall &SHOULD; be replaced
+   by an appropriate pseudonym for that host.
+</t>
+<t>
+   For organizations that have strong privacy requirements for hiding
+   internal structures, a proxy or gateway &MAY; combine an ordered
+   subsequence of Via header field entries with identical received-protocol
+   values into a single such entry. For example,
+</t>
+<figure><artwork type="example">
+  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
+</artwork></figure>
+<t>
+  could be collapsed to
+</t>
+<figure><artwork type="example">
+  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
+</artwork></figure>
+<t>
+   Senders &SHOULD-NOT; combine multiple entries unless they are all
+   under the same organizational control and the hosts have already been
+   replaced by pseudonyms. Senders &MUST-NOT; combine entries which
+   have different received-protocol values.
+</t>
+</section>
+
+<section title="Persistent Connections" anchor="persistent.connections">
+
+<section title="Purpose" anchor="persistent.purpose">
+<t>
+   Prior to persistent connections, a separate TCP connection was
+   established for each request, increasing the load on HTTP servers
+   and causing congestion on the Internet. The use of inline images and
+   other associated data often requires a client to make multiple
+   requests of the same server in a short amount of time. Analysis of
+   these performance problems and results from a prototype
+   implementation are available <xref target="Pad1995"/> <xref target="Spe"/>. Implementation experience and
+   measurements of actual HTTP/1.1 implementations show good
+   results <xref target="Nie1997"/>. Alternatives have also been explored, for example,
+   T/TCP <xref target="Tou1998"/>.
+</t>
+<t>
+   Persistent HTTP connections have a number of advantages:
+  <list style="symbols">
+      <t>
+        By opening and closing fewer TCP connections, CPU time is saved
+        in routers and hosts (clients, servers, proxies, gateways,
+        tunnels, or caches), and memory used for TCP protocol control
+        blocks can be saved in hosts.
+      </t>
+      <t>
+        HTTP requests and responses can be pipelined on a connection.
+        Pipelining allows a client to make multiple requests without
+        waiting for each response, allowing a single TCP connection to
+        be used much more efficiently, with much lower elapsed time.
+      </t>
+      <t>
+        Network congestion is reduced by reducing the number of packets
+        caused by TCP opens, and by allowing TCP sufficient time to
+        determine the congestion state of the network.
+      </t>
+      <t>
+        Latency on subsequent requests is reduced since there is no time
+        spent in TCP's connection opening handshake.
+      </t>
+      <t>
+        HTTP can evolve more gracefully, since errors can be reported
+        without the penalty of closing the TCP connection. Clients using
+        future versions of HTTP might optimistically try a new feature,
+        but if communicating with an older server, retry with old
+        semantics after an error is reported.
+      </t>
+    </list>
+</t>
+<t>
+   HTTP implementations &SHOULD; implement persistent connections.
+</t>
+</section>
+
+<section title="Overall Operation" anchor="persistent.overall">
+<t>
+   A significant difference between HTTP/1.1 and earlier versions of
+   HTTP is that persistent connections are the default behavior of any
+   HTTP connection. That is, unless otherwise indicated, the client
+   &SHOULD; assume that the server will maintain a persistent connection,
+   even after error responses from the server.
+</t>
+<t>
+   Persistent connections provide a mechanism by which a client and a
+   server can signal the close of a TCP connection. This signaling takes
+   place using the Connection header field (<xref target="header.connection"/>). Once a close
+   has been signaled, the client &MUST-NOT; send any more requests on that
+   connection.
+</t>
+
+<section title="Negotiation" anchor="persistent.negotiation">
+<t>
+   An HTTP/1.1 server &MAY; assume that a HTTP/1.1 client intends to
+   maintain a persistent connection unless a Connection header field including
+   the connection-token "close" was sent in the request. If the server
+   chooses to close the connection immediately after sending the
+   response, it &SHOULD; send a Connection header field including the
+   connection-token "close".
+</t>
+<t>
+   An HTTP/1.1 client &MAY; expect a connection to remain open, but would
+   decide to keep it open based on whether the response from a server
+   contains a Connection header field with the connection-token close. In case
+   the client does not want to maintain a connection for more than that
+   request, it &SHOULD; send a Connection header field including the
+   connection-token close.
+</t>
+<t>
+   If either the client or the server sends the close token in the
+   Connection header field, that request becomes the last one for the
+   connection.
+</t>
+<t>
+   Clients and servers &SHOULD-NOT;  assume that a persistent connection is
+   maintained for HTTP versions less than 1.1 unless it is explicitly
+   signaled. See <xref target="compatibility.with.http.1.0.persistent.connections"/> for more information on backward
+   compatibility with HTTP/1.0 clients.
+</t>
+<t>
+   Each persistent connection applies to only one transport link.
+</t>
+<t>
+   A proxy server &MUST-NOT; establish a HTTP/1.1 persistent connection
+   with an HTTP/1.0 client (but see <xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>
+   for information and discussion of the problems with the Keep-Alive header field
+   implemented by many HTTP/1.0 clients).
+</t>
+<t>
+   In order to remain persistent, all messages on the connection &MUST;
+   have a self-defined message length (i.e., one not defined by closure
+   of the connection), as described in <xref target="message.body"/>.
+</t>
+</section>
+
+<section title="Pipelining" anchor="pipelining">
+<t>
+   A client that supports persistent connections &MAY; "pipeline" its
+   requests (i.e., send multiple requests without waiting for each
+   response). A server &MUST; send its responses to those requests in the
+   same order that the requests were received.
+</t>
+<t>
+   Clients which assume persistent connections and pipeline immediately
+   after connection establishment &SHOULD; be prepared to retry their
+   connection if the first pipelined attempt fails. If a client does
+   such a retry, it &MUST-NOT; pipeline before it knows the connection is
+   persistent. Clients &MUST; also be prepared to resend their requests if
+   the server closes the connection before sending all of the
+   corresponding responses.
+</t>
+<t>
+   Clients &SHOULD-NOT; pipeline requests using non-idempotent request methods or
+   non-idempotent sequences of request methods (see &idempotent-methods;). Otherwise, a
+   premature termination of the transport connection could lead to
+   indeterminate results. A client wishing to send a non-idempotent
+   request &SHOULD; wait to send that request until it has received the
+   response status line for the previous request.
+</t>
+</section>
+</section>
+
 <section title="Practical Considerations" anchor="persistent.practical">
 <t>
    Servers will usually have some time-out value beyond which they will
@@ -2981,7 +3170,6 @@ https://www.example.org
    be repeated if the second sequence of requests fails.
 </t>
 </section>
-
 </section>
 
 <section title="Message Transmission Requirements" anchor="message.transmission.requirements">
@@ -3132,146 +3320,6 @@ https://www.example.org
 </section>
 
 </section>
-</section>
-
-
-<section title="Miscellaneous notes that might disappear" anchor="misc">
-<section title="Scheme aliases considered harmful" anchor="scheme.aliases">
-<t>
-   <cref anchor="TBD-aliases-harmful">describe why aliases like webcal are harmful.</cref>
-</t>
-</section>
-
-<section title="Use of HTTP for proxy communication" anchor="http.proxy">
-<t>
-   <cref anchor="TBD-proxy-other">Configured to use HTTP to proxy HTTP or other protocols.</cref>
-</t>
-</section>
-
-<section title="Interception of HTTP for access control" anchor="http.intercept">
-<t>
-   <cref anchor="TBD-intercept">Interception of HTTP traffic for initiating access control.</cref>
-</t>
-</section>
-
-<section title="Use of HTTP by other protocols" anchor="http.others">
-<t>
-   <cref anchor="TBD-profiles">Profiles of HTTP defined by other protocol.
-   Extensions of HTTP like WebDAV.</cref>
-</t>
-
-</section>
-<section title="Use of HTTP by media type specification" anchor="http.media">
-<t>
-   <cref anchor="TBD-hypertext">Instructions on composing HTTP requests via hypertext formats.</cref>
-</t>
-</section>
-</section>
-
-<section title="Header Field Definitions" anchor="header.field.definitions">
-<t>
-   This section defines the syntax and semantics of HTTP header fields
-   related to message origination, framing, and routing.
-</t>
-<texttable align="left">
-  <ttcol>Header Field Name</ttcol>
-  <ttcol>Defined in...</ttcol>
-  
-  <c>Connection</c> <c><xref target="header.connection"/></c>
-  <c>Content-Length</c> <c><xref target="header.content-length"/></c>
-  <c>Host</c> <c><xref target="header.host"/></c>
-  <c>TE</c> <c><xref target="header.te"/></c>
-  <c>Trailer</c> <c><xref target="header.trailer"/></c>
-  <c>Transfer-Encoding</c> <c><xref target="header.transfer-encoding"/></c>
-  <c>Upgrade</c> <c><xref target="header.upgrade"/></c>
-  <c>Via</c> <c><xref target="header.via"/></c>
-</texttable>
-
-<section title="Connection" anchor="header.connection">
-  <iref primary="true" item="Connection header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/>
-  <x:anchor-alias value="Connection"/>
-  <x:anchor-alias value="connection-token"/>
-<t>
-   The "Connection" header field allows the sender to specify
-   options that are desired only for that particular connection.
-   Such connection options &MUST; be removed or replaced before the
-   message can be forwarded downstream by a proxy or gateway.
-   This mechanism also allows the sender to indicate which HTTP
-   header fields used in the message are only intended for the
-   immediate recipient ("hop-by-hop"), as opposed to all recipients
-   on the chain ("end-to-end"), enabling the message to be
-   self-descriptive and allowing future connection-specific extensions
-   to be deployed in HTTP without fear that they will be blindly
-   forwarded by previously deployed intermediaries.
-</t>
-<t>
-   The Connection header field's value has the following grammar:
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-token"/>
-  <x:ref>Connection</x:ref>       = 1#<x:ref>connection-token</x:ref>
-  <x:ref>connection-token</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   A proxy or gateway &MUST; parse a received Connection
-   header field before a message is forwarded and, for each
-   connection-token in this field, remove any header field(s) from
-   the message with the same name as the connection-token, and then
-   remove the Connection header field itself or replace it with the
-   sender's own connection options for the forwarded message.
-</t>
-<t>
-   A sender &MUST-NOT; include field-names in the Connection header
-   field-value for fields that are defined as expressing constraints
-   for all recipients in the request or response chain, such as the
-   Cache-Control header field (&header-cache-control;).
-</t>
-<t>
-   The connection options do not have to correspond to a header field
-   present in the message, since a connection-specific header field
-   might not be needed if there are no parameters associated with that
-   connection option.  Recipients that trigger certain connection
-   behavior based on the presence of connection options &MUST; do so
-   based on the presence of the connection-token rather than only the
-   presence of the optional header field.  In other words, if the
-   connection option is received as a header field but not indicated
-   within the Connection field-value, then the recipient &MUST; ignore
-   the connection-specific header field because it has likely been
-   forwarded by an intermediary that is only partially conformant.
-</t>
-<t>
-   When defining new connection options, specifications ought to
-   carefully consider existing deployed header fields and ensure
-   that the new connection-token does not share the same name as
-   an unrelated header field that might already be deployed.
-   Defining a new connection-token essentially reserves that potential
-   field-name for carrying additional information related to the
-   connection option, since it would be unwise for senders to use
-   that field-name for anything else.
-</t>
-<t>
-   HTTP/1.1 defines the "close" connection option for the sender to
-   signal that the connection will be closed after completion of the
-   response. For example,
-</t>
-<figure><artwork type="example">
-  Connection: close
-</artwork></figure>
-<t>
-   in either the request or the response header fields indicates that
-   the connection &SHOULD-NOT;  be considered "persistent" (<xref target="persistent.connections"/>)
-   after the current request/response is complete.
-</t>
-<t>
-   An HTTP/1.1 client that does not support persistent connections &MUST;
-   include the "close" connection option in every request message.
-</t>
-<t>
-   An HTTP/1.1 server that does not support persistent connections &MUST;
-   include the "close" connection option in every response message that
-   does not have a 1xx (Informational) status code.
-</t>
-</section>
 
 <section title="Upgrade" anchor="header.upgrade">
   <iref primary="true" item="Upgrade header field" x:for-anchor=""/>
@@ -3379,101 +3427,6 @@ https://www.example.org
   </list>
 </t>
 </section>
-
-
-</section>
-
-<section title="Via" anchor="header.via">
-  <iref primary="true" item="Via header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/>
-  <x:anchor-alias value="pseudonym"/>
-  <x:anchor-alias value="received-by"/>
-  <x:anchor-alias value="received-protocol"/>
-  <x:anchor-alias value="Via"/>
-<t>
-   The "Via" header field &MUST; be sent by a proxy or gateway to
-   indicate the intermediate protocols and recipients between the user
-   agent and the server on requests, and between the origin server and
-   the client on responses. It is analogous to the "Received" field
-   used by email systems (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>)
-   and is intended to be used for tracking message forwards,
-   avoiding request loops, and identifying the protocol capabilities of
-   all senders along the request/response chain.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
-  <x:ref>Via</x:ref>               = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref>
-                          [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
-  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
-  <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
-  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   The received-protocol indicates the protocol version of the message
-   received by the server or client along each segment of the
-   request/response chain. The received-protocol version is appended to
-   the Via field value when the message is forwarded so that information
-   about the protocol capabilities of upstream applications remains
-   visible to all recipients.
-</t>
-<t>
-   The protocol-name is excluded if and only if it would be "HTTP". The
-   received-by field is normally the host and optional port number of a
-   recipient server or client that subsequently forwarded the message.
-   However, if the real host is considered to be sensitive information,
-   it &MAY; be replaced by a pseudonym. If the port is not given, it &MAY;
-   be assumed to be the default port of the received-protocol.
-</t>
-<t>
-   Multiple Via field values represent each proxy or gateway that has
-   forwarded the message. Each recipient &MUST; append its information
-   such that the end result is ordered according to the sequence of
-   forwarding applications.
-</t>
-<t>
-   Comments &MAY; be used in the Via header field to identify the software
-   of each recipient, analogous to the User-Agent and Server header fields.
-   However, all comments in the Via field are optional and &MAY; be removed
-   by any recipient prior to forwarding the message.
-</t>
-<t>
-   For example, a request message could be sent from an HTTP/1.0 user
-   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
-   forward the request to a public proxy at p.example.net, which completes
-   the request by forwarding it to the origin server at www.example.com.
-   The request received by www.example.com would then have the following
-   Via header field:
-</t>
-<figure><artwork type="example">
-  Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
-</artwork></figure>
-<t>
-   A proxy or gateway used as a portal through a network firewall
-   &SHOULD-NOT; forward the names and ports of hosts within the firewall
-   region unless it is explicitly enabled to do so. If not enabled, the
-   received-by host of any host behind the firewall &SHOULD; be replaced
-   by an appropriate pseudonym for that host.
-</t>
-<t>
-   For organizations that have strong privacy requirements for hiding
-   internal structures, a proxy or gateway &MAY; combine an ordered
-   subsequence of Via header field entries with identical received-protocol
-   values into a single such entry. For example,
-</t>
-<figure><artwork type="example">
-  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
-</artwork></figure>
-<t>
-  could be collapsed to
-</t>
-<figure><artwork type="example">
-  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
-</artwork></figure>
-<t>
-   Senders &SHOULD-NOT; combine multiple entries unless they are all
-   under the same organizational control and the hosts have already been
-   replaced by pseudonyms. Senders &MUST-NOT; combine entries which
-   have different received-protocol values.
-</t>
 </section>
 
 </section>
@@ -5060,7 +5013,6 @@ Zhong Yu.
 </t>
 <t>
   Change ABNF productions for header fields to only define the field value.
-  (<xref target="header.field.definitions"/>)
 </t>
 <t>
   Clarify exactly when close connection options must be sent.
