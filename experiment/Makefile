@@ -32,7 +32,6 @@ TARGETS = $(TARGETS_HTML) \
           p2-semantics.iana-headers \
           p2-semantics.iana-methods	\
           p2-semantics.iana-status-codes \
-          p3-payload.iana-headers \
           p4-conditional.iana-headers \
           p4-conditional.iana-status-codes \
           p5-range.iana-headers \
