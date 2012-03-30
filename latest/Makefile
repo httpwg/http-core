@@ -14,11 +14,17 @@ TARGETS_XML= p1-messaging.xml \
           p6-cache.xml \
           p7-auth.xml
 
-TARGETS_ABNF= $(TARGETS_XML:.xml=.abnf)
-TARGETS_ABNFAPPENDIX= $(TARGETS_XML:.xml=.abnf-appendix)
+TARGETS_ABNF= p1-messaging.abnf \
+          p2-semantics.abnf \
+          p4-conditional.abnf \
+          p5-range.abnf \
+          p6-cache.abnf \
+          p7-auth.abnf
+
+TARGETS_ABNFAPPENDIX= $(TARGETS_abnf:.xml=.abnf-appendix)
 TARGETS_HTML= $(TARGETS_XML:.xml=.html)
 TARGETS_XHTML= $(TARGETS_XML:.xml=.xhtml)
-TARGETS_PARSEDABNF= $(TARGETS_XML:.xml=.parsed-abnf)
+TARGETS_PARSEDABNF= $(TARGETS_ABNF:.abnf=.parsed-abnf)
 TARGETS_REDXML= $(TARGETS_XML:.xml=.redxml)
 TARGETS_TXT= $(TARGETS_XML:.xml=.txt)
 
