@@ -2586,18 +2586,43 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </section>
 
 <section title="Representation" anchor="representation">
+<iref item="representation"/>
+<t>
+   A "<x:dfn>representation</x:dfn>" is information in a format that can be readily
+   communicated from one party to another.  A resource representation
+   is information that reflects the state of that resource, as observed
+   at some point in the past (e.g., in a response to GET) or to be
+   desired at some point in the future (e.g., in a PUT request).
+</t>
+<t>
+   Most, but not all, representations transferred via HTTP are intended
+   to be a representation of the target resource (the resource identified
+   by the effective request URI).  The precise semantics of a representation
+   are determined by the type of message (request or response), the request
+   method, the response status code, and the representation metadata.
+   For example, the above semantic is true for the representation in any
+   200 (OK) response to GET and for the representation in any PUT request.
+   A 200 response to PUT, in contrast, contains either a representation
+   that describes the successful action or a representation of the target
+   resource, with the latter indicated by a Content-Location header field
+   with the same value as the effective request URI.  Likewise, response
+   messages with an error status code usually contain a representation that
+   describes the error and what next steps are suggested for resolving it.
+</t>
 <t>
    Request and Response messages &MAY; transfer a representation if not otherwise
    restricted by the request method or response status code. A representation
    consists of metadata (representation header fields) and data (representation
    body).  When a complete or partial representation is enclosed in an HTTP message,
    it is referred to as the payload of the message.
+   <cref>#351</cref>
 </t>
 <t>
    A representation body is only present in a message when a message body is
    present, as described in &message-body;. The representation body is obtained
    from the message body by decoding any Transfer-Encoding that might
    have been applied to ensure safe and proper transfer of the message.
+   <cref>#351</cref>
 </t>
 
 <section title="Identifying the Resource Associated with a Representation" anchor="identifying.response.associated.with.representation">
@@ -2639,6 +2664,93 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </t>
 </section>
 
+<section title="Representation Header Fields" anchor="representation.header.fields">
+  <x:anchor-alias value="representation-header"/>
+<t>
+   Representation header fields define metadata about the representation data
+   enclosed in the message body or, if no message body is present, about
+   the representation that would have been transferred in a 200 response
+   to a simultaneous GET request with the same effective request URI.
+</t>
+<t>
+   The following header fields are defined as representation metadata:
+</t>
+<texttable align="left">
+  <ttcol>Header Field Name</ttcol>
+  <ttcol>Defined in...</ttcol>
+
+  <c>Content-Encoding</c> <c><xref target="header.content-encoding"/></c>
+  <c>Content-Language</c> <c><xref target="header.content-language"/></c>
+  <c>Content-Location</c> <c><xref target="header.content-location"/></c>
+  <c>Content-Type</c> <c><xref target="header.content-type"/></c>
+  <c>Expires</c> <c>&header-expires;</c>
+</texttable>
+<t>
+   Additional header fields define metadata about the selected
+   representation, which might differ from the representation included
+   in the message for responses to some state-changing methods.
+   The following header fields are defined as selected representation
+   metadata:
+</t>
+<texttable align="left">
+  <ttcol>Header Field Name</ttcol>
+  <ttcol>Defined in...</ttcol>
+
+  <c>ETag</c> <c>&header-etag;</c>
+  <c>Last-Modified</c> <c>&header-last-modified;</c>
+</texttable>
+</section>
+
+<section title="Representation Data" anchor="representation.data">
+  <x:anchor-alias value="representation-data"/>
+<t>
+   The representation body associated with an HTTP message is
+   either provided as the payload body of the message or
+   referred to by the message semantics and the effective request
+   URI.  The representation data is in a format and encoding defined by
+   the representation metadata header fields.
+</t>
+<t>
+   The data type of the representation data
+   is determined via the header fields Content-Type and Content-Encoding.
+   These define a two-layer, ordered encoding model:
+</t>
+<figure><artwork type="example">
+  representation-data := Content-Encoding( Content-Type( bits ) )
+</artwork></figure>
+<t>
+   Content-Type specifies the media type of the underlying data, which
+   defines both the data format and how that data &SHOULD; be processed
+   by the recipient (within the scope of the request method semantics).
+   Any HTTP/1.1 message containing a payload body &SHOULD; include a
+   Content-Type header field defining the media type of the associated
+   representation unless that metadata is unknown to the sender.
+   If the Content-Type header field is not present, it indicates that
+   the sender does not know the media type of the representation;
+   recipients &MAY; either assume that the media type is
+   "application/octet-stream" (<xref target="RFC2046" x:fmt="," x:sec="4.5.1"/>)
+   or examine the content to determine its type.
+</t>
+<t>
+   In practice, resource owners do not always properly configure their origin
+   server to provide the correct Content-Type for a given representation,
+   with the result that some clients will examine a response body's content
+   and override the specified type.
+   Clients that do so risk drawing incorrect conclusions, which might expose
+   additional security risks (e.g., "privilege escalation").  Furthermore,
+   it is impossible to determine the sender's intent by examining the data
+   format: many data formats match multiple media types that differ only in
+   processing semantics.  Implementers are encouraged to provide a means of
+   disabling such "content sniffing" when it is used.
+</t>
+<t>
+   Content-Encoding is used to indicate any additional content
+   codings applied to the data, usually for the purpose of data
+   compression, that are a property of the representation.  If
+   Content-Encoding is not present, then there is no additional
+   encoding beyond that defined by the Content-Type.
+</t>
+</section>
 </section>
 
 
@@ -6671,123 +6783,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <t>
   None yet.
 </t>
-</section>
-</section>
-
-<section title="THE TEXT FORMERLY KNOWN AS PART3">
-
-<section title="Representation" anchor="representation3">
-<iref item="representation"/>
-<t>
-   A "<x:dfn>representation</x:dfn>" is information in a format that can be readily
-   communicated from one party to another.  A resource representation
-   is information that reflects the state of that resource, as observed
-   at some point in the past (e.g., in a response to GET) or to be
-   desired at some point in the future (e.g., in a PUT request).
-</t>
-<t>
-   Most, but not all, representations transferred via HTTP are intended
-   to be a representation of the target resource (the resource identified
-   by the effective request URI).  The precise semantics of a representation
-   are determined by the type of message (request or response), the request
-   method, the response status code, and the representation metadata.
-   For example, the above semantic is true for the representation in any
-   200 (OK) response to GET and for the representation in any PUT request.
-   A 200 response to PUT, in contrast, contains either a representation
-   that describes the successful action or a representation of the target
-   resource, with the latter indicated by a Content-Location header field
-   with the same value as the effective request URI.  Likewise, response
-   messages with an error status code usually contain a representation that
-   describes the error and what next steps are suggested for resolving it.
-</t>
-
-<section title="Representation Header Fields" anchor="representation.header.fields">
-  <x:anchor-alias value="representation-header"/>
-<t>
-   Representation header fields define metadata about the representation data
-   enclosed in the message body or, if no message body is present, about
-   the representation that would have been transferred in a 200 response
-   to a simultaneous GET request with the same effective request URI.
-</t>
-<t>
-   The following header fields are defined as representation metadata:
-</t>
-<texttable align="left">
-  <ttcol>Header Field Name</ttcol>
-  <ttcol>Defined in...</ttcol>
-
-  <c>Content-Encoding</c> <c><xref target="header.content-encoding"/></c>
-  <c>Content-Language</c> <c><xref target="header.content-language"/></c>
-  <c>Content-Location</c> <c><xref target="header.content-location"/></c>
-  <c>Content-Type</c> <c><xref target="header.content-type"/></c>
-  <c>Expires</c> <c>&header-expires;</c>
-</texttable>
-<t>
-   Additional header fields define metadata about the selected
-   representation, which might differ from the representation included
-   in the message for responses to some state-changing methods.
-   The following header fields are defined as selected representation
-   metadata:
-</t>
-<texttable align="left">
-  <ttcol>Header Field Name</ttcol>
-  <ttcol>Defined in...</ttcol>
-
-  <c>ETag</c> <c>&header-etag;</c>
-  <c>Last-Modified</c> <c>&header-last-modified;</c>
-</texttable>
-</section>
-
-<section title="Representation Data" anchor="representation.data">
-  <x:anchor-alias value="representation-data"/>
-<t>
-   The representation body associated with an HTTP message is
-   either provided as the payload body of the message or
-   referred to by the message semantics and the effective request
-   URI.  The representation data is in a format and encoding defined by
-   the representation metadata header fields.
-</t>
-<t>
-   The data type of the representation data
-   is determined via the header fields Content-Type and Content-Encoding.
-   These define a two-layer, ordered encoding model:
-</t>
-<figure><artwork type="example">
-  representation-data := Content-Encoding( Content-Type( bits ) )
-</artwork></figure>
-<t>
-   Content-Type specifies the media type of the underlying data, which
-   defines both the data format and how that data &SHOULD; be processed
-   by the recipient (within the scope of the request method semantics).
-   Any HTTP/1.1 message containing a payload body &SHOULD; include a
-   Content-Type header field defining the media type of the associated
-   representation unless that metadata is unknown to the sender.
-   If the Content-Type header field is not present, it indicates that
-   the sender does not know the media type of the representation;
-   recipients &MAY; either assume that the media type is
-   "application/octet-stream" (<xref target="RFC2046" x:fmt="," x:sec="4.5.1"/>)
-   or examine the content to determine its type.
-</t>
-<t>
-   In practice, resource owners do not always properly configure their origin
-   server to provide the correct Content-Type for a given representation,
-   with the result that some clients will examine a response body's content
-   and override the specified type.
-   Clients that do so risk drawing incorrect conclusions, which might expose
-   additional security risks (e.g., "privilege escalation").  Furthermore,
-   it is impossible to determine the sender's intent by examining the data
-   format: many data formats match multiple media types that differ only in
-   processing semantics.  Implementers are encouraged to provide a means of
-   disabling such "content sniffing" when it is used.
-</t>
-<t>
-   Content-Encoding is used to indicate any additional content
-   codings applied to the data, usually for the purpose of data
-   compression, that are a property of the representation.  If
-   Content-Encoding is not present, then there is no additional
-   encoding beyond that defined by the Content-Type.
-</t>
-</section>
 </section>
 </section>
 
