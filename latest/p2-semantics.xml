@@ -2604,8 +2604,324 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <section title="Header Field Definitions" anchor="header.field.definitions">
 <t>
    This section defines the syntax and semantics of HTTP/1.1 header fields
-   related to request and response semantics.
+   related to request and response semantics and to the payload of messages.
 </t>
+
+
+<section title="Accept" anchor="header.accept">
+  <iref primary="true" item="Accept header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Accept" x:for-anchor=""/>
+  <x:anchor-alias value="Accept"/>
+  <x:anchor-alias value="accept-ext"/>
+  <x:anchor-alias value="accept-params"/>
+  <x:anchor-alias value="media-range"/>
+<t>
+   The "Accept" header field can be used by user agents to specify
+   response media types that are acceptable. Accept header fields can be used to
+   indicate that the request is specifically limited to a small set of desired
+   types, as in the case of a request for an in-line image.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept"/><iref primary="true" item="Grammar" subitem="media-range"/><iref primary="true" item="Grammar" subitem="accept-params"/><iref primary="true" item="Grammar" subitem="accept-ext"/>
+  <x:ref>Accept</x:ref> = #( <x:ref>media-range</x:ref> [ <x:ref>accept-params</x:ref> ] )
+  
+  <x:ref>media-range</x:ref>    = ( "*/*"
+                   / ( <x:ref>type</x:ref> "/" "*" )
+                   / ( <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> )
+                   ) *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
+  <x:ref>accept-params</x:ref>  = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> *( <x:ref>accept-ext</x:ref> )
+  <x:ref>accept-ext</x:ref>     = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" <x:ref>word</x:ref> ]
+</artwork></figure>
+<t>
+   The asterisk "*" character is used to group media types into ranges,
+   with "*/*" indicating all media types and "type/*" indicating all
+   subtypes of that type. The media-range &MAY; include media type
+   parameters that are applicable to that range.
+</t>
+<t>
+   Each media-range &MAY; be followed by one or more accept-params,
+   beginning with the "q" parameter for indicating a relative quality
+   factor. The first "q" parameter (if any) separates the media-range
+   parameter(s) from the accept-params. Quality factors allow the user
+   or user agent to indicate the relative degree of preference for that
+   media-range, using the qvalue scale from 0 to 1 (&qvalue;). The
+   default value is q=1.
+</t>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> Use of the "q" parameter name to separate media type
+    parameters from Accept extension parameters is due to historical
+    practice. Although this prevents any media type parameter named
+    "q" from being used with a media range, such an event is believed
+    to be unlikely given the lack of any "q" parameters in the IANA
+    media type registry and the rare usage of any media type
+    parameters in Accept. Future media types are discouraged from
+    registering any parameter named "q".
+  </t>
+</x:note>
+<t>
+   The example
+</t>
+<figure><artwork type="example">
+  Accept: audio/*; q=0.2, audio/basic
+</artwork></figure>
+<t>
+   &SHOULD; be interpreted as "I prefer audio/basic, but send me any audio
+   type if it is the best available after an 80% mark-down in quality".
+</t>
+<t>
+   A request without any Accept header field implies that the user agent
+   will accept any media type in response.
+   If an Accept header field is present in a request and none of the
+   available representations for the response have a media type that is
+   listed as acceptable, the origin server &MAY; either
+   honor the Accept header field by sending a 406 (Not Acceptable) response
+   or disregard the Accept header field by treating the response as if
+   it is not subject to content negotiation.
+</t>
+<t>
+   A more elaborate example is
+</t>
+<figure><artwork type="example">
+  Accept: text/plain; q=0.5, text/html,
+          text/x-dvi; q=0.8, text/x-c
+</artwork></figure>
+<t>
+   Verbally, this would be interpreted as "text/html and text/x-c are
+   the preferred media types, but if they do not exist, then send the
+   text/x-dvi representation, and if that does not exist, send the text/plain
+   representation".
+</t>
+<t>
+   Media ranges can be overridden by more specific media ranges or
+   specific media types. If more than one media range applies to a given
+   type, the most specific reference has precedence. For example,
+</t>
+<figure><artwork type="example">
+  Accept: text/*, text/plain, text/plain;format=flowed, */*
+</artwork></figure>
+<t>
+   have the following precedence:
+   <list style="numbers">
+    <t>text/plain;format=flowed</t>
+    <t>text/plain</t>
+    <t>text/*</t>
+    <t>*/*</t>
+   </list>
+</t>
+<t>
+   The media type quality factor associated with a given type is
+   determined by finding the media range with the highest precedence
+   which matches that type. For example,
+</t>
+<figure><artwork type="example">
+  Accept: text/*;q=0.3, text/html;q=0.7, text/html;level=1,
+          text/html;level=2;q=0.4, */*;q=0.5
+</artwork></figure>
+<t>
+   would cause the following values to be associated:
+</t>
+<texttable align="left">
+  <ttcol>Media Type</ttcol><ttcol>Quality Value</ttcol>
+  <c>text/html;level=1</c>    <c>1</c>
+  <c>text/html</c>            <c>0.7</c>
+  <c>text/plain</c>           <c>0.3</c>
+  <c>image/jpeg</c>           <c>0.5</c>
+  <c>text/html;level=2</c>    <c>0.4</c>
+  <c>text/html;level=3</c>    <c>0.7</c>
+</texttable>
+<t>
+      <x:h>Note:</x:h> A user agent might be provided with a default set of quality
+      values for certain media ranges. However, unless the user agent is
+      a closed system which cannot interact with other rendering agents,
+      this default set ought to be configurable by the user.
+</t>
+</section>
+
+<section title="Accept-Charset" anchor="header.accept-charset">
+  <iref primary="true" item="Accept-Charset header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Accept-Charset" x:for-anchor=""/>
+  <x:anchor-alias value="Accept-Charset"/>
+<t>
+   The "Accept-Charset" header field can be used by user agents to
+   indicate what character encodings are acceptable in a response
+   payload. This field allows
+   clients capable of understanding more comprehensive or special-purpose
+   character encodings to signal that capability to a server which is capable of
+   representing documents in those character encodings.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Charset"/>
+  <x:ref>Accept-Charset</x:ref> = 1#( ( <x:ref>charset</x:ref> / "*" )
+                         [ <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> ] )
+</artwork></figure>
+<t>
+   Character encoding values (a.k.a., charsets) are described in
+   <xref target="character.sets"/>. Each charset &MAY; be given an
+   associated quality value which represents the user's preference
+   for that charset. The default value is q=1. An example is
+</t>
+<figure><artwork type="example">
+  Accept-Charset: iso-8859-5, unicode-1-1;q=0.8
+</artwork></figure>
+<t>
+   The special value "*", if present in the Accept-Charset field,
+   matches every character encoding which is not mentioned elsewhere in the
+   Accept-Charset field. If no "*" is present in an Accept-Charset field, then
+   all character encodings not explicitly mentioned get a quality value of 0.
+</t>
+<t>
+   A request without any Accept-Charset header field implies that the user
+   agent will accept any character encoding in response.
+   If an Accept-Charset header field is present in a request and none of the
+   available representations for the response have a character encoding that
+   is listed as acceptable, the origin server &MAY; either honor the
+   Accept-Charset header field by sending a 406 (Not Acceptable) response or
+   disregard the Accept-Charset header field by treating the response as if
+   it is not subject to content negotiation.
+</t>
+</section>
+
+<section title="Accept-Encoding" anchor="header.accept-encoding">
+  <iref primary="true" item="Accept-Encoding header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Accept-Encoding" x:for-anchor=""/>
+  <x:anchor-alias value="Accept-Encoding"/>
+  <x:anchor-alias value="codings"/>
+<t>
+   The "Accept-Encoding" header field can be used by user agents to
+   indicate what response content-codings (<xref target="content.codings"/>)
+   are acceptable in the response.  An "identity" token is used as a synonym
+   for "no encoding" in order to communicate when no encoding is preferred.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Encoding"/><iref primary="true" item="Grammar" subitem="codings"/>
+  <x:ref>Accept-Encoding</x:ref>  = #( <x:ref>codings</x:ref> [ <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> ] )
+  <x:ref>codings</x:ref>          = <x:ref>content-coding</x:ref> / "identity" / "*"
+</artwork></figure>
+<t>
+   Each codings value &MAY; be given an associated quality value which
+   represents the preference for that encoding. The default value is q=1.
+</t>
+<t>
+   For example,
+</t>
+<figure><artwork type="example">
+  Accept-Encoding: compress, gzip
+  Accept-Encoding:
+  Accept-Encoding: *
+  Accept-Encoding: compress;q=0.5, gzip;q=1.0
+  Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0
+</artwork></figure>
+<t>
+   A server tests whether a content-coding for a given representation is
+   acceptable, according to an Accept-Encoding field, using these rules:
+  <list style="numbers">
+      <t>The special "*" symbol in an Accept-Encoding field matches any
+         available content-coding not explicitly listed in the header
+         field.</t>
+
+      <t>If the representation has no content-coding, then it is acceptable
+         by default unless specifically excluded by the Accept-Encoding field
+         stating either "identity;q=0" or "*;q=0" without a more specific
+         entry for "identity".</t>
+
+      <t>If the representation's content-coding is one of the content-codings
+         listed in the Accept-Encoding field, then it is acceptable unless
+         it is accompanied by a qvalue of 0. (As defined in &qvalue;, a
+         qvalue of 0 means "not acceptable".)</t>
+
+      <t>If multiple content-codings are acceptable, then the acceptable
+         content-coding with the highest non-zero qvalue is preferred.</t>
+  </list>
+</t>
+<t>
+   An Accept-Encoding header field with a combined field-value that is empty
+   implies that the user agent does not want any content-coding in response.
+   If an Accept-Encoding header field is present in a request and none of the
+   available representations for the response have a content-coding that
+   is listed as acceptable, the origin server &SHOULD; send a response
+   without any content-coding.
+</t>
+<t>
+   A request without an Accept-Encoding header field implies that the user
+   agent will accept any content-coding in response, but a representation
+   without content-coding is preferred for compatibility with the widest
+   variety of user agents.
+</t>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> Most HTTP/1.0 applications do not recognize or obey qvalues
+    associated with content-codings. This means that qvalues will not
+    work and are not permitted with x-gzip or x-compress.
+  </t>
+</x:note>
+</section>
+
+<section title="Accept-Language" anchor="header.accept-language">
+  <iref primary="true" item="Accept-Language header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Accept-Language" x:for-anchor=""/>
+  <x:anchor-alias value="Accept-Language"/>
+  <x:anchor-alias value="language-range"/>
+<t>
+   The "Accept-Language" header field can be used by user agents to
+   indicate the set of natural languages that are preferred in the response.
+   Language tags are defined in <xref target="language.tags"/>.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Language"/><iref primary="true" item="Grammar" subitem="language-range"/>
+  <x:ref>Accept-Language</x:ref> =
+                    1#( <x:ref>language-range</x:ref> [ <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> ] )
+  <x:ref>language-range</x:ref>  = 
+            &lt;language-range, defined in <xref target="RFC4647" x:fmt="," x:sec="2.1"/>&gt;
+</artwork></figure>
+<t>
+   Each language-range can be given an associated quality value which
+   represents an estimate of the user's preference for the languages
+   specified by that range. The quality value defaults to "q=1". For
+   example,
+</t>
+<figure><artwork type="example">
+  Accept-Language: da, en-gb;q=0.8, en;q=0.7
+</artwork></figure>
+<t>
+   would mean: "I prefer Danish, but will accept British English and
+   other types of English".
+   (see also <xref target="RFC4647" x:sec="2.3" x:fmt="of"/>)
+</t>
+<t>
+   For matching, <xref target="RFC4647" x:sec="3" x:fmt="of"/> defines 
+   several matching schemes. Implementations can offer the most appropriate
+   matching scheme for their requirements. 
+</t>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> The "Basic Filtering" scheme (<xref target="RFC4647"
+    x:fmt="," x:sec="3.3.1"/>) is identical to the matching scheme that was
+    previously defined in <xref target="RFC2616" x:fmt="of" x:sec="14.4"/>.
+  </t>
+</x:note>
+<t>
+   It might be contrary to the privacy expectations of the user to send
+   an Accept-Language header field with the complete linguistic preferences of
+   the user in every request. For a discussion of this issue, see
+   <xref target="privacy.issues.connected.to.accept.header.fields"/>.
+</t>
+<t>
+   As intelligibility is highly dependent on the individual user, it is
+   recommended that client applications make the choice of linguistic
+   preference available to the user. If the choice is not made
+   available, then the Accept-Language header field &MUST-NOT; be given in
+   the request.
+</t>
+<x:note>
+  <t>
+    <x:h>Note:</x:h> When making the choice of linguistic preference available to
+    the user, we remind implementors of  the fact that users are not
+    familiar with the details of language matching as described above,
+    and ought to be provided appropriate guidance. As an example, users
+    might assume that on selecting "en-gb", they will be served any
+    kind of English document if British English is not available. A
+    user agent might suggest in such a case to add "en" to get the
+    best matching behavior.
+  </t>
+</x:note>
+</section>
 
 <section title="Allow" anchor="header.allow">
   <iref primary="true" item="Allow header field" x:for-anchor=""/>
@@ -2633,6 +2949,227 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    A proxy &MUST-NOT; modify the Allow header field &mdash; it does not need to
    understand all the methods specified in order to handle them according to
    the generic message handling rules.
+</t>
+</section>
+
+
+<section title="Content-Encoding" anchor="header.content-encoding">
+  <iref primary="true" item="Content-Encoding header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Content-Encoding" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Encoding"/>
+<t>
+   The "Content-Encoding" header field indicates what content-codings 
+   have been applied to the representation beyond those inherent in the media
+   type, and thus what decoding mechanisms have to be applied in order to obtain
+   the media-type referenced by the Content-Type header field.
+   Content-Encoding is primarily used to allow a representation to be
+   compressed without losing the identity of its underlying media type.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
+  <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
+</artwork></figure>
+<t>
+   Content codings are defined in <xref target="content.codings"/>. An example of its use is
+</t>
+<figure><artwork type="example">
+  Content-Encoding: gzip
+</artwork></figure>
+<t>
+   The content-coding is a characteristic of the representation.
+   Typically, the representation body is stored with this
+   encoding and is only decoded before rendering or analogous usage.
+   However, a transforming proxy &MAY; modify the content-coding if the
+   new coding is known to be acceptable to the recipient, unless the
+   "no-transform" cache-control directive is present in the message.
+</t>
+<t>
+   If the media type includes an inherent encoding, such as a data format
+   that is always compressed, then that encoding would not be restated as 
+   a Content-Encoding even if it happens to be the same algorithm as one
+   of the content-codings.  Such a content-coding would only be listed if,
+   for some bizarre reason, it is applied a second time to form the
+   representation.  Likewise, an origin server might choose to publish the
+   same payload data as multiple representations that differ only in whether
+   the coding is defined as part of Content-Type or Content-Encoding, since
+   some user agents will behave differently in their handling of each
+   response (e.g., open a "Save as ..." dialog instead of automatic
+   decompression and rendering of content).
+</t>
+<t>
+   A representation that has a content-coding applied to it &MUST; include
+   a Content-Encoding header field (<xref target="header.content-encoding"/>)
+   that lists the content-coding(s) applied.
+</t>
+<t>
+   If multiple encodings have been applied to a representation, the content
+   codings &MUST; be listed in the order in which they were applied.
+   Additional information about the encoding parameters &MAY; be provided
+   by other header fields not defined by this specification.
+</t>
+<t>
+   If the content-coding of a representation in a request message is not
+   acceptable to the origin server, the server &SHOULD; respond with a
+   status code of 415 (Unsupported Media Type).
+</t>
+</section>
+
+<section title="Content-Language" anchor="header.content-language">
+  <iref primary="true" item="Content-Language header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Content-Language" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Language"/>
+<t>
+   The "Content-Language" header field describes the natural
+   language(s) of the intended audience for the representation. Note that this might
+   not be equivalent to all the languages used within the representation.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Language"/>
+  <x:ref>Content-Language</x:ref> = 1#<x:ref>language-tag</x:ref>
+</artwork></figure>
+<t>
+   Language tags are defined in <xref target="language.tags"/>. The primary purpose of
+   Content-Language is to allow a user to identify and differentiate
+   representations according to the user's own preferred language. Thus, if the
+   body content is intended only for a Danish-literate audience, the
+   appropriate field is
+</t>
+<figure><artwork type="example">
+  Content-Language: da
+</artwork></figure>
+<t>
+   If no Content-Language is specified, the default is that the content
+   is intended for all language audiences. This might mean that the
+   sender does not consider it to be specific to any natural language,
+   or that the sender does not know for which language it is intended.
+</t>
+<t>
+   Multiple languages &MAY; be listed for content that is intended for
+   multiple audiences. For example, a rendition of the "Treaty of
+   Waitangi", presented simultaneously in the original Maori and English
+   versions, would call for
+</t>
+<figure><artwork type="example">
+  Content-Language: mi, en
+</artwork></figure>
+<t>
+   However, just because multiple languages are present within a representation
+   does not mean that it is intended for multiple linguistic audiences.
+   An example would be a beginner's language primer, such as "A First
+   Lesson in Latin", which is clearly intended to be used by an
+   English-literate audience. In this case, the Content-Language would
+   properly only include "en".
+</t>
+<t>
+   Content-Language &MAY; be applied to any media type &mdash; it is not
+   limited to textual documents.
+</t>
+</section>
+
+<section title="Content-Location" anchor="header.content-location">
+  <iref primary="true" item="Content-Location header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Content-Location" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Location"/>
+<t>
+   The "Content-Location" header field supplies a URI that can be used
+   as a specific identifier for the representation in this message.
+   In other words, if one were to perform a GET on this URI at the time
+   of this message's generation, then a 200 response would contain the
+   same representation that is enclosed as payload in this message.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Location"/>
+  <x:ref>Content-Location</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
+</artwork></figure>
+<t>
+   The Content-Location value is not a replacement for the effective
+   Request URI (&effective-request-uri;).  It is representation metadata.
+   It has the same syntax and semantics as the header field of the same name
+   defined for MIME body parts in <xref target="RFC2557" x:fmt="of" x:sec="4"/>.
+   However, its appearance in an HTTP message has some special implications
+   for HTTP recipients.
+</t>
+<t>
+   If Content-Location is included in a response message and its value
+   is the same as the effective request URI, then the response payload
+   &SHOULD; be considered a current representation of that resource.
+   For a GET or HEAD request, this is the same as the default semantics
+   when no Content-Location is provided by the server.  For a state-changing
+   request like PUT or POST, it implies that the server's response contains
+   the new representation of that resource, thereby distinguishing it from
+   representations that might only report about the action (e.g., "It worked!").
+   This allows authoring applications to update their local copies without
+   the need for a subsequent GET request.
+</t>
+<t>
+   If Content-Location is included in a response message and its value
+   differs from the effective request URI, then the origin server is
+   informing recipients that this representation has its own, presumably
+   more specific, identifier.  For a GET or HEAD request, this is an
+   indication that the effective request URI identifies a resource that
+   is subject to content negotiation and the selected representation for
+   this response can also be found at the identified URI.  For other
+   methods, such a Content-Location indicates that this representation
+   contains a report on the action's status and the same report is
+   available (for future access with GET) at the given URI.  For
+   example, a purchase transaction made via a POST request might
+   include a receipt document as the payload of the 200 response;
+   the Content-Location value provides an identifier for retrieving
+   a copy of that same receipt in the future.
+</t>
+<t>
+   If Content-Location is included in a request message, then it &MAY;
+   be interpreted by the origin server as an indication of where the
+   user agent originally obtained the content of the enclosed
+   representation (prior to any subsequent modification of the content
+   by that user agent).  In other words, the user agent is providing
+   the same representation metadata that it received with the original
+   representation.  However, such interpretation &MUST-NOT; be used to
+   alter the semantics of the method requested by the client.  For
+   example, if a client makes a PUT request on a negotiated resource
+   and the origin server accepts that PUT (without redirection), then the
+   new set of values for that resource is expected to be consistent with
+   the one representation supplied in that PUT; the Content-Location
+   cannot be used as a form of reverse content selection that
+   identifies only one of the negotiated representations to be updated.
+   If the user agent had wanted the latter semantics, it would have applied
+   the PUT directly to the Content-Location URI.
+</t>
+<t>
+   A Content-Location field received in a request message is transitory
+   information that &SHOULD-NOT; be saved with other representation
+   metadata for use in later responses.  The Content-Location's value
+   might be saved for use in other contexts, such as within source links
+   or other metadata.
+</t>
+<t>
+   A cache cannot assume that a representation with a Content-Location
+   different from the URI used to retrieve it can be used to respond to
+   later requests on that Content-Location URI.
+</t>
+<t>
+   If the Content-Location value is a partial URI, the partial URI is
+   interpreted relative to the effective request URI.
+</t>
+</section>
+
+<section title="Content-Type" anchor="header.content-type">
+  <iref primary="true" item="Content-Type header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Content-Type" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Type"/>
+<t>
+   The "Content-Type" header field indicates the media type of the
+   representation. In the case of responses to the HEAD method, the media type is
+   that which would have been sent had the request been a GET.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Type"/>
+  <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
+</artwork></figure>
+<t>
+   Media types are defined in <xref target="media.types"/>. An example of the field is
+</t>
+<figure><artwork type="example">
+  Content-Type: text/html; charset=ISO-8859-4
+</artwork></figure>
+<t>
+   Further discussion of Content-Type is provided in <xref target="representation.data"/>.
 </t>
 </section>
 
@@ -3060,7 +3597,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   User-Agent: CERN-LineMode/2.15 libwww/2.17b3
 </artwork></figure>
 </section>
-
 </section>
 
 <section title="IANA Considerations" anchor="IANA.considerations">
@@ -5509,548 +6045,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </section>
 </section>
 
-<section title="Header Field Definitions" anchor="header.field.definitions3">
-<t>
-   This section defines the syntax and semantics of HTTP/1.1 header fields
-   related to the payload of messages.
-</t>
-
-<section title="Accept" anchor="header.accept">
-  <iref primary="true" item="Accept header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Accept" x:for-anchor=""/>
-  <x:anchor-alias value="Accept"/>
-  <x:anchor-alias value="accept-ext"/>
-  <x:anchor-alias value="accept-params"/>
-  <x:anchor-alias value="media-range"/>
-<t>
-   The "Accept" header field can be used by user agents to specify
-   response media types that are acceptable. Accept header fields can be used to
-   indicate that the request is specifically limited to a small set of desired
-   types, as in the case of a request for an in-line image.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept"/><iref primary="true" item="Grammar" subitem="media-range"/><iref primary="true" item="Grammar" subitem="accept-params"/><iref primary="true" item="Grammar" subitem="accept-ext"/>
-  <x:ref>Accept</x:ref> = #( <x:ref>media-range</x:ref> [ <x:ref>accept-params</x:ref> ] )
-  
-  <x:ref>media-range</x:ref>    = ( "*/*"
-                   / ( <x:ref>type</x:ref> "/" "*" )
-                   / ( <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> )
-                   ) *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
-  <x:ref>accept-params</x:ref>  = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> *( <x:ref>accept-ext</x:ref> )
-  <x:ref>accept-ext</x:ref>     = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" <x:ref>word</x:ref> ]
-</artwork></figure>
-<t>
-   The asterisk "*" character is used to group media types into ranges,
-   with "*/*" indicating all media types and "type/*" indicating all
-   subtypes of that type. The media-range &MAY; include media type
-   parameters that are applicable to that range.
-</t>
-<t>
-   Each media-range &MAY; be followed by one or more accept-params,
-   beginning with the "q" parameter for indicating a relative quality
-   factor. The first "q" parameter (if any) separates the media-range
-   parameter(s) from the accept-params. Quality factors allow the user
-   or user agent to indicate the relative degree of preference for that
-   media-range, using the qvalue scale from 0 to 1 (&qvalue;). The
-   default value is q=1.
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> Use of the "q" parameter name to separate media type
-    parameters from Accept extension parameters is due to historical
-    practice. Although this prevents any media type parameter named
-    "q" from being used with a media range, such an event is believed
-    to be unlikely given the lack of any "q" parameters in the IANA
-    media type registry and the rare usage of any media type
-    parameters in Accept. Future media types are discouraged from
-    registering any parameter named "q".
-  </t>
-</x:note>
-<t>
-   The example
-</t>
-<figure><artwork type="example">
-  Accept: audio/*; q=0.2, audio/basic
-</artwork></figure>
-<t>
-   &SHOULD; be interpreted as "I prefer audio/basic, but send me any audio
-   type if it is the best available after an 80% mark-down in quality".
-</t>
-<t>
-   A request without any Accept header field implies that the user agent
-   will accept any media type in response.
-   If an Accept header field is present in a request and none of the
-   available representations for the response have a media type that is
-   listed as acceptable, the origin server &MAY; either
-   honor the Accept header field by sending a 406 (Not Acceptable) response
-   or disregard the Accept header field by treating the response as if
-   it is not subject to content negotiation.
-</t>
-<t>
-   A more elaborate example is
-</t>
-<figure><artwork type="example">
-  Accept: text/plain; q=0.5, text/html,
-          text/x-dvi; q=0.8, text/x-c
-</artwork></figure>
-<t>
-   Verbally, this would be interpreted as "text/html and text/x-c are
-   the preferred media types, but if they do not exist, then send the
-   text/x-dvi representation, and if that does not exist, send the text/plain
-   representation".
-</t>
-<t>
-   Media ranges can be overridden by more specific media ranges or
-   specific media types. If more than one media range applies to a given
-   type, the most specific reference has precedence. For example,
-</t>
-<figure><artwork type="example">
-  Accept: text/*, text/plain, text/plain;format=flowed, */*
-</artwork></figure>
-<t>
-   have the following precedence:
-   <list style="numbers">
-    <t>text/plain;format=flowed</t>
-    <t>text/plain</t>
-    <t>text/*</t>
-    <t>*/*</t>
-   </list>
-</t>
-<t>
-   The media type quality factor associated with a given type is
-   determined by finding the media range with the highest precedence
-   which matches that type. For example,
-</t>
-<figure><artwork type="example">
-  Accept: text/*;q=0.3, text/html;q=0.7, text/html;level=1,
-          text/html;level=2;q=0.4, */*;q=0.5
-</artwork></figure>
-<t>
-   would cause the following values to be associated:
-</t>
-<texttable align="left">
-  <ttcol>Media Type</ttcol><ttcol>Quality Value</ttcol>
-  <c>text/html;level=1</c>    <c>1</c>
-  <c>text/html</c>            <c>0.7</c>
-  <c>text/plain</c>           <c>0.3</c>
-  <c>image/jpeg</c>           <c>0.5</c>
-  <c>text/html;level=2</c>    <c>0.4</c>
-  <c>text/html;level=3</c>    <c>0.7</c>
-</texttable>
-<t>
-      <x:h>Note:</x:h> A user agent might be provided with a default set of quality
-      values for certain media ranges. However, unless the user agent is
-      a closed system which cannot interact with other rendering agents,
-      this default set ought to be configurable by the user.
-</t>
-</section>
-
-<section title="Accept-Charset" anchor="header.accept-charset">
-  <iref primary="true" item="Accept-Charset header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Accept-Charset" x:for-anchor=""/>
-  <x:anchor-alias value="Accept-Charset"/>
-<t>
-   The "Accept-Charset" header field can be used by user agents to
-   indicate what character encodings are acceptable in a response
-   payload. This field allows
-   clients capable of understanding more comprehensive or special-purpose
-   character encodings to signal that capability to a server which is capable of
-   representing documents in those character encodings.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Charset"/>
-  <x:ref>Accept-Charset</x:ref> = 1#( ( <x:ref>charset</x:ref> / "*" )
-                         [ <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> ] )
-</artwork></figure>
-<t>
-   Character encoding values (a.k.a., charsets) are described in
-   <xref target="character.sets"/>. Each charset &MAY; be given an
-   associated quality value which represents the user's preference
-   for that charset. The default value is q=1. An example is
-</t>
-<figure><artwork type="example">
-  Accept-Charset: iso-8859-5, unicode-1-1;q=0.8
-</artwork></figure>
-<t>
-   The special value "*", if present in the Accept-Charset field,
-   matches every character encoding which is not mentioned elsewhere in the
-   Accept-Charset field. If no "*" is present in an Accept-Charset field, then
-   all character encodings not explicitly mentioned get a quality value of 0.
-</t>
-<t>
-   A request without any Accept-Charset header field implies that the user
-   agent will accept any character encoding in response.
-   If an Accept-Charset header field is present in a request and none of the
-   available representations for the response have a character encoding that
-   is listed as acceptable, the origin server &MAY; either honor the
-   Accept-Charset header field by sending a 406 (Not Acceptable) response or
-   disregard the Accept-Charset header field by treating the response as if
-   it is not subject to content negotiation.
-</t>
-</section>
-
-<section title="Accept-Encoding" anchor="header.accept-encoding">
-  <iref primary="true" item="Accept-Encoding header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Accept-Encoding" x:for-anchor=""/>
-  <x:anchor-alias value="Accept-Encoding"/>
-  <x:anchor-alias value="codings"/>
-<t>
-   The "Accept-Encoding" header field can be used by user agents to
-   indicate what response content-codings (<xref target="content.codings"/>)
-   are acceptable in the response.  An "identity" token is used as a synonym
-   for "no encoding" in order to communicate when no encoding is preferred.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Encoding"/><iref primary="true" item="Grammar" subitem="codings"/>
-  <x:ref>Accept-Encoding</x:ref>  = #( <x:ref>codings</x:ref> [ <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> ] )
-  <x:ref>codings</x:ref>          = <x:ref>content-coding</x:ref> / "identity" / "*"
-</artwork></figure>
-<t>
-   Each codings value &MAY; be given an associated quality value which
-   represents the preference for that encoding. The default value is q=1.
-</t>
-<t>
-   For example,
-</t>
-<figure><artwork type="example">
-  Accept-Encoding: compress, gzip
-  Accept-Encoding:
-  Accept-Encoding: *
-  Accept-Encoding: compress;q=0.5, gzip;q=1.0
-  Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0
-</artwork></figure>
-<t>
-   A server tests whether a content-coding for a given representation is
-   acceptable, according to an Accept-Encoding field, using these rules:
-  <list style="numbers">
-      <t>The special "*" symbol in an Accept-Encoding field matches any
-         available content-coding not explicitly listed in the header
-         field.</t>
-
-      <t>If the representation has no content-coding, then it is acceptable
-         by default unless specifically excluded by the Accept-Encoding field
-         stating either "identity;q=0" or "*;q=0" without a more specific
-         entry for "identity".</t>
-
-      <t>If the representation's content-coding is one of the content-codings
-         listed in the Accept-Encoding field, then it is acceptable unless
-         it is accompanied by a qvalue of 0. (As defined in &qvalue;, a
-         qvalue of 0 means "not acceptable".)</t>
-
-      <t>If multiple content-codings are acceptable, then the acceptable
-         content-coding with the highest non-zero qvalue is preferred.</t>
-  </list>
-</t>
-<t>
-   An Accept-Encoding header field with a combined field-value that is empty
-   implies that the user agent does not want any content-coding in response.
-   If an Accept-Encoding header field is present in a request and none of the
-   available representations for the response have a content-coding that
-   is listed as acceptable, the origin server &SHOULD; send a response
-   without any content-coding.
-</t>
-<t>
-   A request without an Accept-Encoding header field implies that the user
-   agent will accept any content-coding in response, but a representation
-   without content-coding is preferred for compatibility with the widest
-   variety of user agents.
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> Most HTTP/1.0 applications do not recognize or obey qvalues
-    associated with content-codings. This means that qvalues will not
-    work and are not permitted with x-gzip or x-compress.
-  </t>
-</x:note>
-</section>
-
-<section title="Accept-Language" anchor="header.accept-language">
-  <iref primary="true" item="Accept-Language header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Accept-Language" x:for-anchor=""/>
-  <x:anchor-alias value="Accept-Language"/>
-  <x:anchor-alias value="language-range"/>
-<t>
-   The "Accept-Language" header field can be used by user agents to
-   indicate the set of natural languages that are preferred in the response.
-   Language tags are defined in <xref target="language.tags"/>.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Language"/><iref primary="true" item="Grammar" subitem="language-range"/>
-  <x:ref>Accept-Language</x:ref> =
-                    1#( <x:ref>language-range</x:ref> [ <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref> ] )
-  <x:ref>language-range</x:ref>  = 
-            &lt;language-range, defined in <xref target="RFC4647" x:fmt="," x:sec="2.1"/>&gt;
-</artwork></figure>
-<t>
-   Each language-range can be given an associated quality value which
-   represents an estimate of the user's preference for the languages
-   specified by that range. The quality value defaults to "q=1". For
-   example,
-</t>
-<figure><artwork type="example">
-  Accept-Language: da, en-gb;q=0.8, en;q=0.7
-</artwork></figure>
-<t>
-   would mean: "I prefer Danish, but will accept British English and
-   other types of English".
-   (see also <xref target="RFC4647" x:sec="2.3" x:fmt="of"/>)
-</t>
-<t>
-   For matching, <xref target="RFC4647" x:sec="3" x:fmt="of"/> defines 
-   several matching schemes. Implementations can offer the most appropriate
-   matching scheme for their requirements. 
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> The "Basic Filtering" scheme (<xref target="RFC4647"
-    x:fmt="," x:sec="3.3.1"/>) is identical to the matching scheme that was
-    previously defined in <xref target="RFC2616" x:fmt="of" x:sec="14.4"/>.
-  </t>
-</x:note>
-<t>
-   It might be contrary to the privacy expectations of the user to send
-   an Accept-Language header field with the complete linguistic preferences of
-   the user in every request. For a discussion of this issue, see
-   <xref target="privacy.issues.connected.to.accept.header.fields"/>.
-</t>
-<t>
-   As intelligibility is highly dependent on the individual user, it is
-   recommended that client applications make the choice of linguistic
-   preference available to the user. If the choice is not made
-   available, then the Accept-Language header field &MUST-NOT; be given in
-   the request.
-</t>
-<x:note>
-  <t>
-    <x:h>Note:</x:h> When making the choice of linguistic preference available to
-    the user, we remind implementors of  the fact that users are not
-    familiar with the details of language matching as described above,
-    and ought to be provided appropriate guidance. As an example, users
-    might assume that on selecting "en-gb", they will be served any
-    kind of English document if British English is not available. A
-    user agent might suggest in such a case to add "en" to get the
-    best matching behavior.
-  </t>
-</x:note>
-</section>
-
-<section title="Content-Encoding" anchor="header.content-encoding">
-  <iref primary="true" item="Content-Encoding header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Content-Encoding" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Encoding"/>
-<t>
-   The "Content-Encoding" header field indicates what content-codings 
-   have been applied to the representation beyond those inherent in the media
-   type, and thus what decoding mechanisms have to be applied in order to obtain
-   the media-type referenced by the Content-Type header field.
-   Content-Encoding is primarily used to allow a representation to be
-   compressed without losing the identity of its underlying media type.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
-  <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
-</artwork></figure>
-<t>
-   Content codings are defined in <xref target="content.codings"/>. An example of its use is
-</t>
-<figure><artwork type="example">
-  Content-Encoding: gzip
-</artwork></figure>
-<t>
-   The content-coding is a characteristic of the representation.
-   Typically, the representation body is stored with this
-   encoding and is only decoded before rendering or analogous usage.
-   However, a transforming proxy &MAY; modify the content-coding if the
-   new coding is known to be acceptable to the recipient, unless the
-   "no-transform" cache-control directive is present in the message.
-</t>
-<t>
-   If the media type includes an inherent encoding, such as a data format
-   that is always compressed, then that encoding would not be restated as 
-   a Content-Encoding even if it happens to be the same algorithm as one
-   of the content-codings.  Such a content-coding would only be listed if,
-   for some bizarre reason, it is applied a second time to form the
-   representation.  Likewise, an origin server might choose to publish the
-   same payload data as multiple representations that differ only in whether
-   the coding is defined as part of Content-Type or Content-Encoding, since
-   some user agents will behave differently in their handling of each
-   response (e.g., open a "Save as ..." dialog instead of automatic
-   decompression and rendering of content).
-</t>
-<t>
-   A representation that has a content-coding applied to it &MUST; include
-   a Content-Encoding header field (<xref target="header.content-encoding"/>)
-   that lists the content-coding(s) applied.
-</t>
-<t>
-   If multiple encodings have been applied to a representation, the content
-   codings &MUST; be listed in the order in which they were applied.
-   Additional information about the encoding parameters &MAY; be provided
-   by other header fields not defined by this specification.
-</t>
-<t>
-   If the content-coding of a representation in a request message is not
-   acceptable to the origin server, the server &SHOULD; respond with a
-   status code of 415 (Unsupported Media Type).
-</t>
-</section>
-
-<section title="Content-Language" anchor="header.content-language">
-  <iref primary="true" item="Content-Language header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Content-Language" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Language"/>
-<t>
-   The "Content-Language" header field describes the natural
-   language(s) of the intended audience for the representation. Note that this might
-   not be equivalent to all the languages used within the representation.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Language"/>
-  <x:ref>Content-Language</x:ref> = 1#<x:ref>language-tag</x:ref>
-</artwork></figure>
-<t>
-   Language tags are defined in <xref target="language.tags"/>. The primary purpose of
-   Content-Language is to allow a user to identify and differentiate
-   representations according to the user's own preferred language. Thus, if the
-   body content is intended only for a Danish-literate audience, the
-   appropriate field is
-</t>
-<figure><artwork type="example">
-  Content-Language: da
-</artwork></figure>
-<t>
-   If no Content-Language is specified, the default is that the content
-   is intended for all language audiences. This might mean that the
-   sender does not consider it to be specific to any natural language,
-   or that the sender does not know for which language it is intended.
-</t>
-<t>
-   Multiple languages &MAY; be listed for content that is intended for
-   multiple audiences. For example, a rendition of the "Treaty of
-   Waitangi", presented simultaneously in the original Maori and English
-   versions, would call for
-</t>
-<figure><artwork type="example">
-  Content-Language: mi, en
-</artwork></figure>
-<t>
-   However, just because multiple languages are present within a representation
-   does not mean that it is intended for multiple linguistic audiences.
-   An example would be a beginner's language primer, such as "A First
-   Lesson in Latin", which is clearly intended to be used by an
-   English-literate audience. In this case, the Content-Language would
-   properly only include "en".
-</t>
-<t>
-   Content-Language &MAY; be applied to any media type &mdash; it is not
-   limited to textual documents.
-</t>
-</section>
-
-<section title="Content-Location" anchor="header.content-location">
-  <iref primary="true" item="Content-Location header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Content-Location" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Location"/>
-<t>
-   The "Content-Location" header field supplies a URI that can be used
-   as a specific identifier for the representation in this message.
-   In other words, if one were to perform a GET on this URI at the time
-   of this message's generation, then a 200 response would contain the
-   same representation that is enclosed as payload in this message.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Location"/>
-  <x:ref>Content-Location</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
-</artwork></figure>
-<t>
-   The Content-Location value is not a replacement for the effective
-   Request URI (&effective-request-uri;).  It is representation metadata.
-   It has the same syntax and semantics as the header field of the same name
-   defined for MIME body parts in <xref target="RFC2557" x:fmt="of" x:sec="4"/>.
-   However, its appearance in an HTTP message has some special implications
-   for HTTP recipients.
-</t>
-<t>
-   If Content-Location is included in a response message and its value
-   is the same as the effective request URI, then the response payload
-   &SHOULD; be considered a current representation of that resource.
-   For a GET or HEAD request, this is the same as the default semantics
-   when no Content-Location is provided by the server.  For a state-changing
-   request like PUT or POST, it implies that the server's response contains
-   the new representation of that resource, thereby distinguishing it from
-   representations that might only report about the action (e.g., "It worked!").
-   This allows authoring applications to update their local copies without
-   the need for a subsequent GET request.
-</t>
-<t>
-   If Content-Location is included in a response message and its value
-   differs from the effective request URI, then the origin server is
-   informing recipients that this representation has its own, presumably
-   more specific, identifier.  For a GET or HEAD request, this is an
-   indication that the effective request URI identifies a resource that
-   is subject to content negotiation and the selected representation for
-   this response can also be found at the identified URI.  For other
-   methods, such a Content-Location indicates that this representation
-   contains a report on the action's status and the same report is
-   available (for future access with GET) at the given URI.  For
-   example, a purchase transaction made via a POST request might
-   include a receipt document as the payload of the 200 response;
-   the Content-Location value provides an identifier for retrieving
-   a copy of that same receipt in the future.
-</t>
-<t>
-   If Content-Location is included in a request message, then it &MAY;
-   be interpreted by the origin server as an indication of where the
-   user agent originally obtained the content of the enclosed
-   representation (prior to any subsequent modification of the content
-   by that user agent).  In other words, the user agent is providing
-   the same representation metadata that it received with the original
-   representation.  However, such interpretation &MUST-NOT; be used to
-   alter the semantics of the method requested by the client.  For
-   example, if a client makes a PUT request on a negotiated resource
-   and the origin server accepts that PUT (without redirection), then the
-   new set of values for that resource is expected to be consistent with
-   the one representation supplied in that PUT; the Content-Location
-   cannot be used as a form of reverse content selection that
-   identifies only one of the negotiated representations to be updated.
-   If the user agent had wanted the latter semantics, it would have applied
-   the PUT directly to the Content-Location URI.
-</t>
-<t>
-   A Content-Location field received in a request message is transitory
-   information that &SHOULD-NOT; be saved with other representation
-   metadata for use in later responses.  The Content-Location's value
-   might be saved for use in other contexts, such as within source links
-   or other metadata.
-</t>
-<t>
-   A cache cannot assume that a representation with a Content-Location
-   different from the URI used to retrieve it can be used to respond to
-   later requests on that Content-Location URI.
-</t>
-<t>
-   If the Content-Location value is a partial URI, the partial URI is
-   interpreted relative to the effective request URI.
-</t>
-</section>
-
-<section title="Content-Type" anchor="header.content-type">
-  <iref primary="true" item="Content-Type header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Content-Type" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Type"/>
-<t>
-   The "Content-Type" header field indicates the media type of the
-   representation. In the case of responses to the HEAD method, the media type is
-   that which would have been sent had the request been a GET.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Type"/>
-  <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
-</artwork></figure>
-<t>
-   Media types are defined in <xref target="media.types"/>. An example of the field is
-</t>
-<figure><artwork type="example">
-  Content-Type: text/html; charset=ISO-8859-4
-</artwork></figure>
-<t>
-   Further discussion of Content-Type is provided in <xref target="representation.data"/>.
-</t>
-</section>
-
-</section>
 
 <section title="IANA Considerations" anchor="IANA.considerations3">
 
