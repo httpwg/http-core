@@ -21,7 +21,7 @@ TARGETS_ABNF= p1-messaging.abnf \
           p6-cache.abnf \
           p7-auth.abnf
 
-TARGETS_ABNFAPPENDIX= $(TARGETS_abnf:.xml=.abnf-appendix)
+TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
 TARGETS_HTML= $(TARGETS_XML:.xml=.html)
 TARGETS_XHTML= $(TARGETS_XML:.xml=.xhtml)
 TARGETS_PARSEDABNF= $(TARGETS_ABNF:.abnf=.parsed-abnf)
