@@ -77,9 +77,35 @@
   
   <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space($src) != normalize-space($collected)">
     <xsl:message>WARNING: appendix contained inside source document needs to be updated</xsl:message>
-    <!--<xsl:message>A: <xsl:value-of select="//section[@anchor='collected.abnf']//artwork"/></xsl:message>
-    <xsl:message>B: <xsl:value-of select="$collected"/></xsl:message>-->
+    <xsl:call-template name="showdiff">
+      <xsl:with-param name="actual" select="normalize-space($src)"/>
+      <xsl:with-param name="expected" select="normalize-space($collected)"/>
+    </xsl:call-template>
   </xsl:if>
+</xsl:template>
+
+<xsl:template name="showdiff">
+  <xsl:param name="actual"/>
+  <xsl:param name="expected"/>
+  <xsl:param name="prev"/>
+  
+  <xsl:choose>
+    <xsl:when test="$actual=''">
+      <!-- done -->
+    </xsl:when>
+    <xsl:when test="substring($actual,1,1)=substring($expected,1,1)">
+      <xsl:call-template name="showdiff">
+        <xsl:with-param name="actual" select="substring($actual,2)"/>
+        <xsl:with-param name="expected" select="substring($expected,2)"/>
+        <xsl:with-param name="prev" select="concat($prev,substring($actual,1,1))"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:message>WARNING: at position <xsl:value-of select="string-length($prev)"/></xsl:message>
+      <xsl:message>WARNING: prefix <xsl:value-of select="$prev"/></xsl:message>
+      <xsl:message>WARNING: actual text is: '<xsl:value-of select="substring($actual,1,20)"/>...' expected was: '<xsl:value-of select="substring($expected,1,20)"/>...'</xsl:message>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <xsl:function name="x:laststartchar">
