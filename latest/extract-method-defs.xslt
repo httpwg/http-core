@@ -12,6 +12,7 @@
     <texttable align="left" suppress-title="true" anchor="iana.method.registration.table">
       <ttcol>Method</ttcol>
       <ttcol>Safe</ttcol>
+      <ttcol>Idempotent</ttcol>
       <ttcol>Reference</ttcol>
       <xsl:apply-templates select="//section[iref/@item='Methods']">
         <xsl:sort select="iref[@item='Methods']/@subitem"/>
@@ -83,9 +84,17 @@
     </xsl:choose>
   </xsl:variable>
 
+  <xsl:variable name="idempotent" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
+    <xsl:choose>
+      <xsl:when test="rdf:Description/p2:idempotent='yes'">yes</xsl:when>
+      <xsl:otherwise>no</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+
   <xsl:text>&#10;</xsl:text>
   <c><xsl:value-of select="$text"/></c>
   <c><xsl:value-of select="$safe"/></c>
+  <c><xsl:value-of select="$idempotent"/></c>
   <c><xref target="{@anchor}"/></c>
 </xsl:template>
 
