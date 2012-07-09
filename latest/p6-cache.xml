@@ -415,7 +415,7 @@
 </section>
 </section>
 
-<section anchor="caching.overview" title="Cache Operation">
+<section anchor="caching.overview" title="Overview of Cache Operation">
 <iref item="cache entry" />
 <iref item="cache key" />
 <t>
@@ -452,8 +452,9 @@
    secondary key for the values of the original request's selecting header
    fields (<xref target="caching.negotiated.responses"/>).
 </t>
+</section>
 
-<section anchor="response.cacheability" title="Response Cacheability">
+<section anchor="response.cacheability" title="Storing Responses in Caches">
 <t>
    A cache &MUST-NOT; store a response to any request, unless:
    <list style="symbols">
@@ -502,6 +503,8 @@
    responses are not usually useful to store. However, caches are not
    prohibited from storing such responses.
 </t>
+
+<section anchor="incomplete.responses" title="Storing Incomplete Responses">
 <t>
    A response message is considered complete when all of the octets indicated
    by the message framing (&messaging;) are received prior to the connection
@@ -525,6 +528,33 @@
    send a partial response to a client without explicitly marking it as such
    using the <x:ref>206 (Partial Content)</x:ref> status code.
 </t>
+</section>
+
+
+<section anchor="caching.authenticated.responses" 
+   title="Storing Responses to Authenticated Requests">
+<t>
+   A shared cache &MUST-NOT; use a cached response to a request with an
+   <x:ref>Authorization</x:ref> header field (&header-authorization;) to
+   satisfy any subsequent request unless a cache directive that allows such
+   responses to be stored is present in the response.
+</t>
+
+<t>
+   In this specification, the following <x:ref>Cache-Control</x:ref> response
+   directives (<xref target="cache-response-directive"/>) have such an effect:
+   must-revalidate, public, s-maxage.
+</t>
+
+<t>
+   Note that cached responses that contain the "must-revalidate" and/or
+   "s-maxage" response directives are not allowed to be served stale (<xref
+   target="serving.stale.responses"/>) by shared caches. In particular, a
+   response with either "max-age=0, must-revalidate" or "s-maxage=0" cannot be
+   used to satisfy a subsequent request without revalidating it on the origin
+   server.
+</t>
+</section>
 </section>
 
 
@@ -593,7 +623,6 @@
    standard.
 </t>
 
-</section>
 
 <section anchor="expiration.model" title="Freshness Model">
 <t>
@@ -681,6 +710,7 @@
    directives), it is considered invalid. Caches are encouraged to consider
    responses that have invalid freshness information to be stale.
 </t>
+</section>
 
 <section anchor="heuristic.freshness" title="Calculating Heuristic Freshness">
 <t>
@@ -716,7 +746,6 @@
       no-cache) if they wish to preclude caching.
    </t>
 </x:note>
-</section>
 </section>
 
 <section anchor="age.calculations" title="Calculating Age">
@@ -986,106 +1015,8 @@ status code:</t>
 
 </section>
 
-<section anchor="head.effects" title="Updating Caches with HEAD Responses">
-<t>
-   A response to the HEAD method is identical to what an equivalent request
-   made with a GET would have been, except it lacks a body. This property
-   of HEAD responses is used to both invalidate and update cached GET
-   responses.
-</t>
-<t>
-   If one or more stored GET responses can be selected (as per <xref
-   target="caching.negotiated.responses"/>) for a HEAD request, and the
-   <x:ref>Content-Length</x:ref>, <x:ref>ETag</x:ref> or
-   <x:ref>Last-Modified</x:ref> value of a HEAD response differs from that in a
-   selected GET response, the cache &MUST; consider that selected response to
-   be stale.
-</t>
-<t>
-   If the <x:ref>Content-Length</x:ref>, <x:ref>ETag</x:ref> and
-   <x:ref>Last-Modified</x:ref> values of a HEAD response (when present) are
-   the same as that in a selected GET response (as per
-   <xref target="caching.negotiated.responses"/>), the cache &SHOULD; update
-   the remaining headers in the stored response using the following rules:
-   <list style="symbols">
-      <t>delete any <x:ref>Warning</x:ref> header fields in the stored response
-         with warn-code 1xx (see <xref target="header.warning" />);</t>
-      <t>retain any <x:ref>Warning</x:ref> header fields in the stored response
-         with warn-code 2xx; and,</t>
-      <t>use other header fields provided in the response to replace
-         all instances of the corresponding header fields in the stored
-         response.</t>
-   </list>
-</t>
-
-</section>
-
-<section anchor="invalidation.after.updates.or.deletions" 
-   title="Request Methods that Invalidate">
-<t>
-   Because unsafe request methods (&safe-methods;) such as PUT, POST or DELETE
-   have the potential for changing state on the origin server, intervening
-   caches can use them to keep their contents up-to-date.
-</t>
-<t>
-   A cache &MUST; invalidate the effective Request URI
-   (&effective-request-uri;) as well as the URI(s) in the
-   <x:ref>Location</x:ref> and <x:ref>Content-Location</x:ref> response header
-   fields (if present) when a non-error response to a request with an unsafe
-   method is received.
-</t>
-<t>
-   However, a cache &MUST-NOT; invalidate a URI from a <x:ref>Location</x:ref>
-   or <x:ref>Content-Location</x:ref> response header field if the host part of
-   that URI differs from the host part in the effective request URI
-   (&effective-request-uri;). This helps prevent denial of service attacks.
-</t>
-<t>
-   A cache &MUST; invalidate the effective request URI 
-   (&effective-request-uri;) when it receives a non-error response 
-   to a request with a method whose safety is unknown.
-</t>
-<t>
-   Here, a "non-error response" is one with a <x:ref>2xx (Successful)</x:ref>
-   or <x:ref>3xx (Redirection)</x:ref> status code. "Invalidate" means that
-   the cache will either remove all stored responses related to the effective
-   request URI, or will mark these as "invalid" and in need of a mandatory
-   validation before they can be returned in response to a subsequent request.
-</t>
-<t>
-   Note that this does not guarantee that all appropriate responses are
-   invalidated. For example, the request that caused the change at the origin
-   server might not have gone through the cache where a response is stored.
-</t>
-</section>
-
-<section anchor="caching.authenticated.responses" 
-   title="Shared Caching of Authenticated Responses">
-<t>
-   A shared cache &MUST-NOT; use a cached response to a request with an
-   <x:ref>Authorization</x:ref> header field (&header-authorization;) to
-   satisfy any subsequent request unless a cache directive that allows such
-   responses to be stored is present in the response.
-</t>
-
-<t>
-   In this specification, the following <x:ref>Cache-Control</x:ref> response
-   directives (<xref target="cache-response-directive"/>) have such an effect:
-   must-revalidate, public, s-maxage.
-</t>
-
-<t>
-   Note that cached responses that contain the "must-revalidate" and/or
-   "s-maxage" response directives are not allowed to be served stale (<xref
-   target="serving.stale.responses"/>) by shared caches. In particular, a
-   response with either "max-age=0, must-revalidate" or "s-maxage=0" cannot be
-   used to satisfy a subsequent request without revalidating it on the origin
-   server.
-</t>
-</section>
-
 <section anchor="caching.negotiated.responses" 
-   title="Caching Negotiated Responses">
+   title="Using Negotiated Responses">
 <t>
    When a cache receives a request that can be satisfied by a stored response
    that has a <x:ref>Vary</x:ref> header field (<xref target="header.vary"/>),
@@ -1141,6 +1072,7 @@ status code:</t>
 </t>
 </section>
 
+
 <section anchor="combining.responses" title="Combining Partial Content">
 <t>
    A response might transfer only a partial representation if the
@@ -1165,9 +1097,85 @@ status code:</t>
    </list>
 </t>
 </section>
+</section>
 
+
+<section anchor="head.effects" title="Updating Caches with HEAD Responses">
+<t>
+   A response to the HEAD method is identical to what an equivalent request
+   made with a GET would have been, except it lacks a body. This property
+   of HEAD responses is used to both invalidate and update cached GET
+   responses.
+</t>
+<t>
+   If one or more stored GET responses can be selected (as per <xref
+   target="caching.negotiated.responses"/>) for a HEAD request, and the
+   <x:ref>Content-Length</x:ref>, <x:ref>ETag</x:ref> or
+   <x:ref>Last-Modified</x:ref> value of a HEAD response differs from that in a
+   selected GET response, the cache &MUST; consider that selected response to
+   be stale.
+</t>
+<t>
+   If the <x:ref>Content-Length</x:ref>, <x:ref>ETag</x:ref> and
+   <x:ref>Last-Modified</x:ref> values of a HEAD response (when present) are
+   the same as that in a selected GET response (as per
+   <xref target="caching.negotiated.responses"/>), the cache &SHOULD; update
+   the remaining headers in the stored response using the following rules:
+   <list style="symbols">
+      <t>delete any <x:ref>Warning</x:ref> header fields in the stored response
+         with warn-code 1xx (see <xref target="header.warning" />);</t>
+      <t>retain any <x:ref>Warning</x:ref> header fields in the stored response
+         with warn-code 2xx; and,</t>
+      <t>use other header fields provided in the response to replace
+         all instances of the corresponding header fields in the stored
+         response.</t>
+   </list>
+</t>
 
 </section>
+
+
+<section anchor="invalidation.after.updates.or.deletions" 
+   title="Request Methods that Invalidate">
+<t>
+   Because unsafe request methods (&safe-methods;) such as PUT, POST or DELETE
+   have the potential for changing state on the origin server, intervening
+   caches can use them to keep their contents up-to-date.
+</t>
+<t>
+   A cache &MUST; invalidate the effective Request URI
+   (&effective-request-uri;) as well as the URI(s) in the
+   <x:ref>Location</x:ref> and <x:ref>Content-Location</x:ref> response header
+   fields (if present) when a non-error response to a request with an unsafe
+   method is received.
+</t>
+<t>
+   However, a cache &MUST-NOT; invalidate a URI from a <x:ref>Location</x:ref>
+   or <x:ref>Content-Location</x:ref> response header field if the host part of
+   that URI differs from the host part in the effective request URI
+   (&effective-request-uri;). This helps prevent denial of service attacks.
+</t>
+<t>
+   A cache &MUST; invalidate the effective request URI 
+   (&effective-request-uri;) when it receives a non-error response 
+   to a request with a method whose safety is unknown.
+</t>
+<t>
+   Here, a "non-error response" is one with a <x:ref>2xx (Successful)</x:ref>
+   or <x:ref>3xx (Redirection)</x:ref> status code. "Invalidate" means that
+   the cache will either remove all stored responses related to the effective
+   request URI, or will mark these as "invalid" and in need of a mandatory
+   validation before they can be returned in response to a subsequent request.
+</t>
+<t>
+   Note that this does not guarantee that all appropriate responses are
+   invalidated. For example, the request that caused the change at the origin
+   server might not have gone through the cache where a response is stored.
+</t>
+</section>
+
+
+
 
 <section anchor="header.field.definitions" title="Header Field Definitions">
 <t>
