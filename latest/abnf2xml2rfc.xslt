@@ -16,7 +16,7 @@
   <xsl:variable name="all-lines" as="xs:string*" select="tokenize($collected, '\r?\n')"/>
   <xsl:variable name="lines" select="$all-lines[normalize-space(.)!='']"/>
   
-  <section title="Collected ABNF" anchor="collected.abnf">
+  <xsl:variable name="generated"><section title="Collected ABNF" anchor="collected.abnf">
     <xsl:text>&#10;</xsl:text>
     <figure>
       <xsl:text>&#10;</xsl:text>
@@ -57,16 +57,32 @@
     </figure>  
     <xsl:text>&#10;</xsl:text>
     
-    <figure>
-      <preamble>ABNF diagnostics:</preamble>
-      <artwork type="inline">
-        <xsl:text>&#10;</xsl:text>
-        <xsl:for-each select="$lines[substring(.,1,2)='; ']">
-          <xsl:value-of select="."/>
+    <xsl:variable name="diags">
+      <xsl:for-each select="$lines[substring(.,1,2)='; ']">
+        <xsl:variable name="prod" select="substring-before(substring-after(.,'; '),' defined but not used')"/>
+        <xsl:choose>
+          <xsl:when test="$prod!='' and $src//iref[@item='Header Fields' and @subitem=$prod]">
+            <!-- header field; expected not to be reference -->
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="."/>
+            <xsl:text>&#10;</xsl:text>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:for-each>
+    </xsl:variable>
+    
+    <xsl:if test="$diags!=''">
+      <figure>
+        <preamble>ABNF diagnostics:</preamble>
+        <artwork type="inline">
           <xsl:text>&#10;</xsl:text>
-        </xsl:for-each>
-    </artwork></figure>
-  </section>
+          <xsl:value-of select="$diags"/>
+      </artwork></figure>
+    </xsl:if>
+  </section></xsl:variable>
+
+  <xsl:copy-of select="$generated"/>
 
   <!-- check whether it's up-to-date... -->
   <xsl:variable name="src">
@@ -75,11 +91,11 @@
     </xsl:for-each>
   </xsl:variable>
   
-  <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space($src) != normalize-space($collected)">
+  <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space($src) != normalize-space($generated)">
     <xsl:message>WARNING: appendix contained inside source document needs to be updated</xsl:message>
     <xsl:call-template name="showdiff">
       <xsl:with-param name="actual" select="normalize-space($src)"/>
-      <xsl:with-param name="expected" select="normalize-space($collected)"/>
+      <xsl:with-param name="expected" select="normalize-space($generated)"/>
     </xsl:call-template>
   </xsl:if>
 </xsl:template>
