@@ -91,11 +91,15 @@
     </xsl:for-each>
   </xsl:variable>
   
-  <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space($src) != normalize-space($generated)">
+  <xsl:variable name="new">
+    <xsl:value-of select="$generated//artwork"/>
+  </xsl:variable>
+  
+  <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space($src) != normalize-space($new)">
     <xsl:message>WARNING: appendix contained inside source document needs to be updated</xsl:message>
     <xsl:call-template name="showdiff">
       <xsl:with-param name="actual" select="normalize-space($src)"/>
-      <xsl:with-param name="expected" select="normalize-space($generated)"/>
+      <xsl:with-param name="expected" select="normalize-space($new)"/>
     </xsl:call-template>
   </xsl:if>
 </xsl:template>
