@@ -104,14 +104,11 @@
 <abstract>
 <t>
    The Hypertext Transfer Protocol (HTTP) is an application-level protocol for
-   distributed, collaborative, hypertext information systems. HTTP has been in
-   use by the World Wide Web global information initiative since 1990. This
-   document is Part 4 of the seven-part specification that defines the protocol
-   referred to as "HTTP/1.1" and, taken together, obsoletes RFC 2616.
-</t>
-<t>
-   Part 4 defines request header fields for indicating conditional requests and
-   the rules for constructing responses to those requests.
+   distributed, collaborative, hypertext information systems. This document
+   defines HTTP/1.1 conditional requests, including metadata header fields
+   for indicating state changes, request header fields for making
+   preconditions on such state, and rules for constructing the responses to a
+   conditional request when one or more preconditions evaluate to false.
 </t>
 </abstract>
 
@@ -132,13 +129,20 @@
   </t>
 </note>
 </front>
+
 <middle>
 <section title="Introduction" anchor="introduction">
 <t>
-   This document defines the HTTP/1.1 conditional request mechanisms,
-   including both metadata for indicating/observing changes in resource
-   representations and request header fields that specify preconditions
-   on that metadata; to be checked before performing the request method.
+   Conditional requests are HTTP requests <xref target="Part2"/> that include
+   one or more header fields indicating a precondition to be tested before
+   applying the method semantics to the target resource.
+   Each precondition is based on metadata that is expected to change if the
+   selected representation of the target resource is changed.
+   This document defines the HTTP/1.1 conditional request mechanisms in terms
+   of the architecture, syntax notation, and conformance criteria defined in
+   &architecture;.
+</t>
+<t>
    Conditional GET requests are the most efficient mechanism for HTTP
    cache updates &caching;.  Conditionals can also be
    applied to state-changing methods, such as PUT and DELETE, to prevent
@@ -166,92 +170,6 @@
    values provided in the request header fields to the current metadata
    for the selected representation.
 </t>
-
-<section title="Conformance and Error Handling" anchor="intro.conformance.and.error.handling">
-<t>
-   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
-   document are to be interpreted as described in <xref target="RFC2119"/>.
-</t>
-<t>
-   This specification targets conformance criteria according to the role of
-   a participant in HTTP communication.  Hence, HTTP requirements are placed
-   on senders, recipients, clients, servers, user agents, intermediaries,
-   origin servers, proxies, gateways, or caches, depending on what behavior
-   is being constrained by the requirement. See &architecture; for definitions
-   of these terms.
-</t>
-<t>
-   The verb "generate" is used instead of "send" where a requirement
-   differentiates between creating a protocol element and merely forwarding a
-   received element downstream.
-</t>
-<t>
-   An implementation is considered conformant if it complies with all of the
-   requirements associated with the roles it partakes in HTTP. Note that
-   SHOULD-level requirements are relevant here, unless one of the documented
-   exceptions is applicable.
-</t>
-<t>
-   This document also uses ABNF to define valid protocol elements
-   (<xref target="notation"/>).
-   In addition to the prose requirements placed upon them, senders &MUST-NOT;
-   generate protocol elements that do not match the grammar defined by the
-   ABNF rules for those protocol elements that are applicable to the sender's
-   role. If a received protocol element is processed, the recipient &MUST; be
-   able to parse any value that would match the ABNF rules for that protocol
-   element, excluding only those rules not applicable to the recipient's role.
-</t>
-<t>
-   Unless noted otherwise, a recipient &MAY; attempt to recover a usable
-   protocol element from an invalid construct.  HTTP does not define
-   specific error handling mechanisms except when they have a direct impact
-   on security, since different applications of the protocol require
-   different error handling strategies.  For example, a Web browser might
-   wish to transparently recover from a response where the
-   <x:ref>Location</x:ref> header field doesn't parse according to the ABNF,
-   whereas a systems control client might consider any form of error recovery
-   to be dangerous.
-</t>
-</section>
-
-<section title="Syntax Notation" anchor="notation">
-  <x:anchor-alias value="ALPHA"/>
-  <x:anchor-alias value="CR"/>
-  <x:anchor-alias value="DIGIT"/>
-  <x:anchor-alias value="DQUOTE"/>
-  <x:anchor-alias value="LF"/>
-  <x:anchor-alias value="OCTET"/>
-  <x:anchor-alias value="VCHAR"/>
-  <x:anchor-alias value="core.rules"/>
-  <x:anchor-alias value="obs-text"/>
-  <x:anchor-alias value="OWS"/>
-  <x:anchor-alias value="HTTP-date"/>
-<t>
-   This specification uses the Augmented Backus-Naur Form (ABNF) notation
-   of <xref target="RFC5234"/> with the list rule extension defined in
-   &notation;.  <xref target="collected.abnf"/> shows the collected ABNF
-   with the list rule expanded.
-</t>
-<t>
-  The following core rules are included by
-  reference, as defined in <xref target="RFC5234" x:fmt="," x:sec="B.1"/>:
-  ALPHA (letters), CR (carriage return), CRLF (CR LF), CTL (controls),
-  DIGIT (decimal 0-9), DQUOTE (double quote),
-  HEXDIG (hexadecimal 0-9/A-F/a-f), LF (line feed),
-  OCTET (any 8-bit sequence of data), SP (space), and
-  VCHAR (any visible US-ASCII character).
-</t>
-<t>
-  The ABNF rules below are defined in <xref target="Part1"/> and
-  <xref target="Part2"/>:
-</t>
-<figure><artwork type="abnf2616">
-  <x:ref>OWS</x:ref>           = &lt;OWS, defined in &whitespace;&gt;
-  <x:ref>obs-text</x:ref>      = &lt;obs-text, defined in &field-components;&gt;
-  <x:ref>HTTP-date</x:ref>     = &lt;HTTP-date, defined in &http-date;&gt;
-</artwork></figure>
-</section>
 </section>
 
 <section title="Validators" anchor="validators">
@@ -1083,6 +1001,49 @@ Content-Encoding: gzip
    resource is in an unexpected state.
 </t>
 </section>
+</section>
+
+<section title="ABNF Rules Defined Elsewhere" anchor="abnf.dependencies">
+  <x:anchor-alias value="ALPHA"/>
+  <x:anchor-alias value="CR"/>
+  <x:anchor-alias value="DIGIT"/>
+  <x:anchor-alias value="DQUOTE"/>
+  <x:anchor-alias value="LF"/>
+  <x:anchor-alias value="OCTET"/>
+  <x:anchor-alias value="VCHAR"/>
+  <x:anchor-alias value="core.rules"/>
+  <x:anchor-alias value="obs-text"/>
+  <x:anchor-alias value="OWS"/>
+  <x:anchor-alias value="HTTP-date"/>
+<t>
+   This specification uses the Augmented Backus-Naur Form (ABNF) notation
+   of <xref target="RFC5234"/> with the list rule extension defined in
+   &notation;.  <xref target="collected.abnf"/> shows the collected ABNF
+   with the list rule expanded.
+</t>
+<t>
+  The following core rules are included by
+  reference, as defined in <xref target="RFC5234" x:fmt="," x:sec="B.1"/>:
+  ALPHA (letters), CR (carriage return), CRLF (CR LF), CTL (controls),
+  DIGIT (decimal 0-9), DQUOTE (double quote),
+  HEXDIG (hexadecimal 0-9/A-F/a-f), LF (line feed),
+  OCTET (any 8-bit sequence of data), SP (space), and
+  VCHAR (any visible US-ASCII character).
+</t>
+<t>
+  The ABNF rules below are defined in <xref target="Part1"/> and
+  <xref target="Part2"/>:
+</t>
+<figure><artwork type="abnf2616">
+  <x:ref>OWS</x:ref>           = &lt;OWS, defined in &whitespace;&gt;
+  <x:ref>obs-text</x:ref>      = &lt;obs-text, defined in &field-components;&gt;
+  <x:ref>HTTP-date</x:ref>     = &lt;HTTP-date, defined in &http-date;&gt;
+</artwork></figure>
+<t>
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in <xref target="RFC2119"/>.
+</t>
 </section>
 
 <section title="IANA Considerations" anchor="IANA.considerations">
