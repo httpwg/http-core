@@ -64,6 +64,15 @@
           <xsl:when test="$prod!='' and $src//iref[@item='Header Fields' and @subitem=$prod]">
             <!-- header field; expected not to be reference -->
           </xsl:when>
+          <xsl:when test="$prod!='' and $src//iref[@item='Grammar' and @subitem=$prod and comment()='terminal production']">
+            <!-- known to be a terminal production -->
+          </xsl:when>
+          <xsl:when test="$prod!='' and $src//iref[@item='Grammar' and @subitem=$prod and comment()='exported production']">
+            <!-- known to be used in another part -->
+          </xsl:when>
+          <xsl:when test="$prod!='' and $src//iref[@item='Grammar' and @subitem=$prod and comment()='unused production']">
+            <!-- known to be unused, but we want to include it anyway -->
+          </xsl:when>
           <xsl:otherwise>
             <xsl:value-of select="."/>
             <xsl:text>&#10;</xsl:text>
