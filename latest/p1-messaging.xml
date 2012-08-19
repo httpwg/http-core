@@ -1911,40 +1911,70 @@ Content-Type: text/plain
   <x:ref>qdtext-nf</x:ref>      = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
 </artwork></figure>
 <t>
+   Chunk extensions within the chucked encoding are deprecated.
+   Senders &SHOULD-NOT; send chunk-ext.
+   Definition of new chunk extensions is discouraged. 
+</t>
+<t>
    The chunk-size field is a string of hex digits indicating the size of
    the chunk-data in octets. The chunked encoding is ended by any chunk whose size is
    zero, followed by the trailer, which is terminated by an empty line.
 </t>
+
+<section title="Trailer" anchor="header.trailer">
+  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/>
+  <x:anchor-alias value="Trailer"/>
 <t>
-   The trailer allows the sender to include additional HTTP header
-   fields at the end of the message. The <x:ref>Trailer</x:ref> header field
-   can be used to indicate which header fields are included in a trailer (see
-   <xref target="header.trailer"/>).
+   A trailer allows the sender to include additional fields at the end of a
+   chunked message in order to supply metadata that might be dynamically
+   generated while the message body is sent, such as a message integrity
+   check, digital signature, or post-processing status.
+   The trailer &MUST-NOT; contain fields that need to be known before a
+   recipient processes the body, such as <x:ref>Transfer-Encoding</x:ref>,
+   <x:ref>Content-Length</x:ref>, and <x:ref>Trailer</x:ref>.
 </t>
 <t>
-   A server using chunked transfer-coding in a response &MUST-NOT; use the
-   trailer for any header fields unless at least one of the following is
-   true:
+   When a message includes a message body encoded with the chunked
+   transfer-coding and the sender desires to send metadata in the form of
+   trailer fields at the end of the message, the sender &SHOULD; send a
+   <x:ref>Trailer</x:ref> header field before the message body to indicate
+   which fields will be present in the trailers. This allows the recipient
+   to prepare for receipt of that metadata before it starts processing the body,
+   which is useful if the message is being streamed and the recipient wishes
+   to confirm an integrity check on the fly.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
+  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
+</artwork></figure>
+<t>
+   If no <x:ref>Trailer</x:ref> header field is present, the sender of a
+   chunked message body &SHOULD; send an empty trailer.
+</t>
+<t>
+   A server &MUST; send an empty trailer with the chunked transfer-coding
+   unless at least one of the following is true:
   <list style="numbers">
     <t>the request included a <x:ref>TE</x:ref> header field that indicates
     "trailers" is acceptable in the transfer-coding of the response, as
     described in <xref target="header.te"/>; or,</t>
      
-    <t>the trailer fields consist entirely of optional metadata, and the
+    <t>the trailer fields consist entirely of optional metadata and the
     recipient could use the message (in a manner acceptable to the server where
-    the field originated) without receiving it. In other words, the server that
-    generated the header field (often but not always the origin server) is
-    willing to accept the possibility that the trailer fields might be silently
-    discarded along the path to the client.</t>
+    the field originated) without receiving that metadata. In other words,
+    the server that generated the header field is willing to accept the
+    possibility that the trailer fields might be silently discarded along
+    the path to the client.</t>
   </list>
 </t>
 <t>
-   This requirement prevents an interoperability failure when the
-   message is being received by an HTTP/1.1 (or later) proxy and
-   forwarded to an HTTP/1.0 recipient. It avoids a situation where
-   conformance with the protocol would have necessitated a possibly
-   infinite buffer on the proxy.
+   The above requirement prevents the need for an infinite buffer when a
+   message is being received by an HTTP/1.1 (or later) proxy and forwarded to
+   an HTTP/1.0 recipient.
 </t>
+</section>
+
+<section title="Decoding chunked" anchor="decoding.chunked">
 <t>
    A process for decoding the "chunked" transfer-coding
    can be represented in pseudo-code as:
@@ -1965,16 +1995,14 @@ Content-Type: text/plain
   }
   Content-Length := length
   Remove "chunked" from Transfer-Encoding
+  Remove Trailer from existing header fields
 </artwork></figure>
 <t>
    All HTTP/1.1 applications &MUST; be able to receive and decode the
    "chunked" transfer-coding and &MUST; ignore chunk-ext extensions
    they do not understand.
 </t>
-<t>
-   Use of chunk-ext extensions by senders is deprecated; they &SHOULD-NOT; be
-   sent and definition of new chunk-extensions is discouraged. 
-</t>
+</section>
 </section>
 
 <section title="Compression Codings" anchor="compression.codings">
@@ -2089,40 +2117,6 @@ Content-Type: text/plain
    <x:ref>Connection</x:ref> header field (<xref target="header.connection"/>)
    in order to prevent the TE field from being forwarded by intermediaries
    that do not support its semantics.
-</t>
-</section>
-
-<section title="Trailer" anchor="header.trailer">
-  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/>
-  <x:anchor-alias value="Trailer"/>
-<t>
-   The "Trailer" header field indicates that the given set of
-   header fields is present in the trailer of a message encoded with
-   chunked transfer-coding.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
-  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
-</artwork></figure>
-<t>
-   An HTTP/1.1 message &SHOULD; include a Trailer header field in a
-   message using chunked transfer-coding with a non-empty trailer. Doing
-   so allows the recipient to know which header fields to expect in the
-   trailer.
-</t>
-<t>
-   If no Trailer header field is present, the trailer &SHOULD-NOT;  include
-   any header fields. See <xref target="chunked.encoding"/> for restrictions on the use of
-   trailer fields in a "chunked" transfer-coding.
-</t>
-<t>
-   Message header fields listed in the Trailer header field &MUST-NOT;
-   include the following header fields:
-  <list style="symbols">
-    <t><x:ref>Transfer-Encoding</x:ref></t>
-    <t><x:ref>Content-Length</x:ref></t>
-    <t><x:ref>Trailer</x:ref></t>
-  </list>
 </t>
 </section>
 </section>
