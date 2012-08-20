@@ -2681,6 +2681,7 @@ https://www.example.org
   <iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/>
   <x:anchor-alias value="Connection"/>
   <x:anchor-alias value="connection-option"/>
+  <x:anchor-alias value="close"/>
 <t>
    The "Connection" header field allows the sender to indicate desired
    control options for the current connection.  In order to avoid confusing
@@ -2747,9 +2748,9 @@ https://www.example.org
    that field-name for anything else.
 </t>
 <t>
-   HTTP/1.1 defines the "close" connection option for the sender to
-   signal that the connection will be closed after completion of the
-   response. For example,
+   HTTP/1.1 defines the "<x:dfn>close</x:dfn>" connection option for the
+   sender to signal that this connection will be closed after completion of
+   the response. For example,
 </t>
 <figure><artwork type="example">
   Connection: close
@@ -2786,7 +2787,8 @@ https://www.example.org
 <t>
    HTTP/1.1 defaults to the use of "<x:ref>persistent connections</x:ref>",
    which allow multiple requests and responses to be carried over a single
-   connection.
+   connection. The "<x:ref>close</x:ref>" connection-option is used to
+   signal that a connection will close after the current request/response.
    Persistent connections have a number of advantages:
   <list style="symbols">
       <t>
@@ -2823,45 +2825,21 @@ https://www.example.org
 <t>
    HTTP implementations &SHOULD; implement persistent connections.
 </t>
-
-<section title="Overall Operation" anchor="persistent.overall">
+   
+<section title="Establishment" anchor="persistent.establishment">
 <t>
-   A significant difference between HTTP/1.1 and earlier versions of
-   HTTP is that persistent connections are the default behavior of any
-   HTTP connection. That is, unless otherwise indicated, the client
-   &SHOULD; assume that the server will maintain a persistent connection,
-   even after error responses from the server.
+   Each connection applies to only one transport link.
 </t>
-<t>
-   Persistent connections provide a mechanism by which a client and a
-   server can signal the close of a TCP connection. This signaling takes
-   place using the <x:ref>Connection</x:ref> header field
-   (<xref target="header.connection"/>). Once a close has been signaled, the
-   client &MUST-NOT; send any more requests on that
-   connection.
-</t>
-
-<section title="Negotiation" anchor="persistent.negotiation">
 <t>
    An HTTP/1.1 server &MAY; assume that a HTTP/1.1 client intends to
    maintain a persistent connection unless a <x:ref>Connection</x:ref> header
-   field including the connection option "close" was sent in the request. If
-   the server chooses to close the connection immediately after sending the
-   response, it &SHOULD; send a Connection header field including the
-   connection option "close".
+   field including the connection option "close" was sent in the request.
 </t>
 <t>
    An HTTP/1.1 client &MAY; expect a connection to remain open, but would
    decide to keep it open based on whether the response from a server
    contains a <x:ref>Connection</x:ref> header field with the connection option
-   "close". In case the client does not want to maintain a connection for more
-   than that request, it &SHOULD; send a Connection header field including the
-   connection option "close".
-</t>
-<t>
-   If either the client or the server sends the "close" option in the
-   <x:ref>Connection</x:ref> header field, that request becomes the last one
-   for the connection.
+   "close".
 </t>
 <t>
    Clients and servers &SHOULD-NOT;  assume that a persistent connection is
@@ -2870,20 +2848,24 @@ https://www.example.org
    compatibility with HTTP/1.0 clients.
 </t>
 <t>
-   Each persistent connection applies to only one transport link.
-</t>
-<t>
    A proxy server &MUST-NOT; establish a HTTP/1.1 persistent connection
    with an HTTP/1.0 client (but see <xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>
    for information and discussion of the problems with the Keep-Alive header field
    implemented by many HTTP/1.0 clients).
+</t>
+</section>
+
+<section title="Reuse" anchor="persistent.reuse">
+<t>
+   Unless otherwise indicated, the client
+   &SHOULD; assume that the server will maintain a persistent connection,
+   even after error responses from the server.
 </t>
 <t>
    In order to remain persistent, all messages on the connection &MUST;
    have a self-defined message length (i.e., one not defined by closure
    of the connection), as described in <xref target="message.body"/>.
 </t>
-</section>
 
 <section title="Pipelining" anchor="pipelining">
 <t>
@@ -2902,41 +2884,33 @@ https://www.example.org
    corresponding responses.
 </t>
 <t>
-   Clients &SHOULD-NOT; pipeline requests using non-idempotent request methods or
-   non-idempotent sequences of request methods (see &idempotent-methods;). Otherwise, a
-   premature termination of the transport connection could lead to
-   indeterminate results. A client wishing to send a non-idempotent
+   Clients &SHOULD-NOT; pipeline requests using non-idempotent request methods
+   or non-idempotent sequences of request methods (see &idempotent-methods;).
+   Otherwise, a premature termination of the transport connection could lead
+   to indeterminate results. A client wishing to send a non-idempotent
    request &SHOULD; wait to send that request until it has received the
    response status line for the previous request.
 </t>
 </section>
-</section>
 
-<section title="Practical Considerations" anchor="persistent.practical">
+<section title="Retrying Requests" anchor="persistent.retrying.requests">
 <t>
-   Servers will usually have some time-out value beyond which they will
-   no longer maintain an inactive connection. Proxy servers might make
-   this a higher value since it is likely that the client will be making
-   more connections through the same server. The use of persistent
-   connections places no requirements on the length (or existence) of
-   this time-out for either the client or the server.
+   Senders can close the transport connection at any time. Therefore, 
+   clients, servers, and proxies &MUST; be able to recover
+   from asynchronous close events. Client software &MAY; reopen the
+   transport connection and retransmit the aborted sequence of requests
+   without user interaction so long as the request sequence is
+   idempotent (see &idempotent-methods;). Non-idempotent request methods or sequences
+   &MUST-NOT; be automatically retried, although user agents &MAY; offer a
+   human operator the choice of retrying the request(s). Confirmation by
+   user-agent software with semantic understanding of the application
+   &MAY; substitute for user confirmation. The automatic retry &SHOULD-NOT; 
+   be repeated if the second sequence of requests fails.
 </t>
-<t>
-   When a client or server wishes to time-out it &SHOULD; issue a graceful
-   close on the transport connection. Clients and servers &SHOULD; both
-   constantly watch for the other side of the transport close, and
-   respond to it as appropriate. If a client or server does not detect
-   the other side's close promptly it could cause unnecessary resource
-   drain on the network.
-</t>
-<t>
-   A client, server, or proxy &MAY; close the transport connection at any
-   time. For example, a client might have started to send a new request
-   at the same time that the server has decided to close the "idle"
-   connection. From the server's point of view, the connection is being
-   closed while it was idle, but from the client's point of view, a
-   request is in progress.
-</t>
+</section>
+</section>
+   
+<section title="Concurrency" anchor="persistent.concurrency">
 <t>
    Clients (including proxies) &SHOULD; limit the number of simultaneous
    connections that they maintain to a given server (including proxies).
@@ -2962,45 +2936,79 @@ https://www.example.org
 </t>
 </section>
 
-<section title="Retrying Requests" anchor="persistent.retrying.requests">
+<section title="Failures and Time-outs" anchor="persistent.failures">
 <t>
-   Senders can close the transport connection at any time. Therefore, 
-   clients, servers, and proxies &MUST; be able to recover
-   from asynchronous close events. Client software &MAY; reopen the
-   transport connection and retransmit the aborted sequence of requests
-   without user interaction so long as the request sequence is
-   idempotent (see &idempotent-methods;). Non-idempotent request methods or sequences
-   &MUST-NOT; be automatically retried, although user agents &MAY; offer a
-   human operator the choice of retrying the request(s). Confirmation by
-   user-agent software with semantic understanding of the application
-   &MAY; substitute for user confirmation. The automatic retry &SHOULD-NOT; 
-   be repeated if the second sequence of requests fails.
+   Servers will usually have some time-out value beyond which they will
+   no longer maintain an inactive connection. Proxy servers might make
+   this a higher value since it is likely that the client will be making
+   more connections through the same server. The use of persistent
+   connections places no requirements on the length (or existence) of
+   this time-out for either the client or the server.
 </t>
-</section>
-</section>
-
-<section title="Message Transmission Requirements" anchor="message.transmission.requirements">
-
-<section title="Persistent Connections and Flow Control" anchor="persistent.flow">
+<t>
+   When a client or server wishes to time-out it &SHOULD; issue a graceful
+   close on the transport connection. Clients and servers &SHOULD; both
+   constantly watch for the other side of the transport close, and
+   respond to it as appropriate. If a client or server does not detect
+   the other side's close promptly it could cause unnecessary resource
+   drain on the network.
+</t>
+<t>
+   A client, server, or proxy &MAY; close the transport connection at any
+   time. For example, a client might have started to send a new request
+   at the same time that the server has decided to close the "idle"
+   connection. From the server's point of view, the connection is being
+   closed while it was idle, but from the client's point of view, a
+   request is in progress.
+</t>
 <t>
    HTTP/1.1 servers &SHOULD; maintain persistent connections and use TCP's
    flow control mechanisms to resolve temporary overloads, rather than
    terminating connections with the expectation that clients will retry.
    The latter technique can exacerbate network congestion.
 </t>
-</section>
-
-<section title="Monitoring Connections for Error Status Messages" anchor="persistent.monitor">
 <t>
    An HTTP/1.1 (or later) client sending a message body &SHOULD; monitor
    the network connection for an error status code while it is transmitting
    the request. If the client sees an error status code, it &SHOULD;
-   immediately cease transmitting the body. If the body is being sent
-   using a "chunked" encoding (<xref target="transfer.codings"/>), a zero length chunk and
-   empty trailer &MAY; be used to prematurely mark the end of the message.
-   If the body was preceded by a Content-Length header field, the client &MUST;
-   close the connection.
+   immediately cease transmitting the body and close the connection.
 </t>
+</section>
+   
+<section title="Tear-down" anchor="persistent.tear-down">
+<t>
+   Persistent connections provide a mechanism by which a client and a
+   server can signal the close of a TCP connection. This signaling takes
+   place using the <x:ref>Connection</x:ref> header field
+   (<xref target="header.connection"/>). Once a close has been signaled, the
+   client &MUST-NOT; send any more requests on that
+   connection.
+</t>
+<t>
+   If either the client or the server sends the "close" option in the
+   <x:ref>Connection</x:ref> header field, that request/response pair
+   becomes the last one for the connection.
+</t>
+<t>
+   If the server chooses to close the connection immediately after sending the
+   response, it &SHOULD; send a Connection header field including the
+   connection option "close".
+</t>
+<t>
+   In case the client does not want to maintain a connection for more
+   than that request, it &SHOULD; send a Connection header field including the
+   connection option "close".
+</t>
+<t>
+   If the client is sending data, a server implementation using TCP
+   &SHOULD; be careful to ensure that the client acknowledges receipt of
+   the packet(s) containing the response, before the server closes the
+   input connection. If the client continues sending data to the server
+   after the close, the server's TCP stack will send a reset packet to
+   the client, which might erase the client's unacknowledged input buffers
+   before they can be read and interpreted by the HTTP application.
+</t>
+</section>
 </section>
 
 <section title="Use of the 100 (Continue) Status" anchor="use.of.the.100.status">
@@ -3112,20 +3120,6 @@ https://www.example.org
     </t>
   </list>
 </t>
-</section>
-
-<section title="Closing Connections on Error" anchor="closing.connections.on.error">
-<t>
-   If the client is sending data, a server implementation using TCP
-   &SHOULD; be careful to ensure that the client acknowledges receipt of
-   the packet(s) containing the response, before the server closes the
-   input connection. If the client continues sending data to the server
-   after the close, the server's TCP stack will send a reset packet to
-   the client, which might erase the client's unacknowledged input buffers
-   before they can be read and interpreted by the HTTP application.
-</t>
-</section>
-
 </section>
 
 <section title="Upgrade" anchor="header.upgrade">
@@ -4862,12 +4856,12 @@ Zhong Yu.
   Remove requirement to retry a sequence of requests as long it was idempotent.
   Remove requirements about when servers are allowed to close connections
   prematurely.
-  (<xref target="persistent.practical"/>)
+  (<xref target="persistent.connections"/>)
 </t>
 <t>
   Remove requirement to retry requests under certain circumstances when the
   server prematurely closes the connection.
-  (<xref target="message.transmission.requirements"/>)
+  (<xref target="persistent.reuse"/>)
 </t>
 <t>
   Change ABNF productions for header fields to only define the field value.
