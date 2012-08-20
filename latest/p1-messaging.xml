@@ -2480,6 +2480,99 @@ https://www.example.org
 </t>
 </section>
 
+<section title="Via" anchor="header.via">
+  <iref primary="true" item="Via header field" x:for-anchor=""/>
+  <iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/>
+  <x:anchor-alias value="pseudonym"/>
+  <x:anchor-alias value="received-by"/>
+  <x:anchor-alias value="received-protocol"/>
+  <x:anchor-alias value="Via"/>
+<t>
+   The "Via" header field &MUST; be sent by a proxy or gateway to
+   indicate the intermediate protocols and recipients between the user
+   agent and the server on requests, and between the origin server and
+   the client on responses. It is analogous to the "Received" field
+   used by email systems (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>)
+   and is intended to be used for tracking message forwards,
+   avoiding request loops, and identifying the protocol capabilities of
+   all senders along the request/response chain.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
+  <x:ref>Via</x:ref>               = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref>
+                          [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
+  <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
+  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   The received-protocol indicates the protocol version of the message
+   received by the server or client along each segment of the
+   request/response chain. The received-protocol version is appended to
+   the Via field value when the message is forwarded so that information
+   about the protocol capabilities of upstream applications remains
+   visible to all recipients.
+</t>
+<t>
+   The protocol-name is excluded if and only if it would be "HTTP". The
+   received-by field is normally the host and optional port number of a
+   recipient server or client that subsequently forwarded the message.
+   However, if the real host is considered to be sensitive information,
+   it &MAY; be replaced by a pseudonym. If the port is not given, it &MAY;
+   be assumed to be the default port of the received-protocol.
+</t>
+<t>
+   Multiple Via field values represent each proxy or gateway that has
+   forwarded the message. Each recipient &MUST; append its information
+   such that the end result is ordered according to the sequence of
+   forwarding applications.
+</t>
+<t>
+   Comments &MAY; be used in the Via header field to identify the software
+   of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
+   <x:ref>Server</x:ref> header fields. However, all comments in the Via field
+   are optional and &MAY; be removed by any recipient prior to forwarding the
+   message.
+</t>
+<t>
+   For example, a request message could be sent from an HTTP/1.0 user
+   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
+   forward the request to a public proxy at p.example.net, which completes
+   the request by forwarding it to the origin server at www.example.com.
+   The request received by www.example.com would then have the following
+   Via header field:
+</t>
+<figure><artwork type="example">
+  Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
+</artwork></figure>
+<t>
+   A proxy or gateway used as a portal through a network firewall
+   &SHOULD-NOT; forward the names and ports of hosts within the firewall
+   region unless it is explicitly enabled to do so. If not enabled, the
+   received-by host of any host behind the firewall &SHOULD; be replaced
+   by an appropriate pseudonym for that host.
+</t>
+<t>
+   A proxy or gateway &MAY; combine an ordered subsequence of Via header
+   field entries into a single such entry if the entries have identical
+   received-protocol values. For example,
+</t>
+<figure><artwork type="example">
+  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
+</artwork></figure>
+<t>
+  could be collapsed to
+</t>
+<figure><artwork type="example">
+  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
+</artwork></figure>
+<t>
+   Senders &SHOULD-NOT; combine multiple entries unless they are all
+   under the same organizational control and the hosts have already been
+   replaced by pseudonyms. Senders &MUST-NOT; combine entries which
+   have different received-protocol values.
+</t>
+</section>
+
 <section title="Message Transforming" anchor="message.transforming">
 <t>
    If a proxy receives a request-target with a host name that is not a
@@ -2655,99 +2748,6 @@ https://www.example.org
    An HTTP/1.1 server that does not support persistent connections &MUST;
    include the "close" connection option in every response message that
    does not have a <x:ref>1xx (Informational)</x:ref> status code.
-</t>
-</section>
-
-<section title="Via" anchor="header.via">
-  <iref primary="true" item="Via header field" x:for-anchor=""/>
-  <iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/>
-  <x:anchor-alias value="pseudonym"/>
-  <x:anchor-alias value="received-by"/>
-  <x:anchor-alias value="received-protocol"/>
-  <x:anchor-alias value="Via"/>
-<t>
-   The "Via" header field &MUST; be sent by a proxy or gateway to
-   indicate the intermediate protocols and recipients between the user
-   agent and the server on requests, and between the origin server and
-   the client on responses. It is analogous to the "Received" field
-   used by email systems (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>)
-   and is intended to be used for tracking message forwards,
-   avoiding request loops, and identifying the protocol capabilities of
-   all senders along the request/response chain.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
-  <x:ref>Via</x:ref>               = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref>
-                          [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
-  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
-  <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
-  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   The received-protocol indicates the protocol version of the message
-   received by the server or client along each segment of the
-   request/response chain. The received-protocol version is appended to
-   the Via field value when the message is forwarded so that information
-   about the protocol capabilities of upstream applications remains
-   visible to all recipients.
-</t>
-<t>
-   The protocol-name is excluded if and only if it would be "HTTP". The
-   received-by field is normally the host and optional port number of a
-   recipient server or client that subsequently forwarded the message.
-   However, if the real host is considered to be sensitive information,
-   it &MAY; be replaced by a pseudonym. If the port is not given, it &MAY;
-   be assumed to be the default port of the received-protocol.
-</t>
-<t>
-   Multiple Via field values represent each proxy or gateway that has
-   forwarded the message. Each recipient &MUST; append its information
-   such that the end result is ordered according to the sequence of
-   forwarding applications.
-</t>
-<t>
-   Comments &MAY; be used in the Via header field to identify the software
-   of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
-   <x:ref>Server</x:ref> header fields. However, all comments in the Via field
-   are optional and &MAY; be removed by any recipient prior to forwarding the
-   message.
-</t>
-<t>
-   For example, a request message could be sent from an HTTP/1.0 user
-   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
-   forward the request to a public proxy at p.example.net, which completes
-   the request by forwarding it to the origin server at www.example.com.
-   The request received by www.example.com would then have the following
-   Via header field:
-</t>
-<figure><artwork type="example">
-  Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
-</artwork></figure>
-<t>
-   A proxy or gateway used as a portal through a network firewall
-   &SHOULD-NOT; forward the names and ports of hosts within the firewall
-   region unless it is explicitly enabled to do so. If not enabled, the
-   received-by host of any host behind the firewall &SHOULD; be replaced
-   by an appropriate pseudonym for that host.
-</t>
-<t>
-   A proxy or gateway &MAY; combine an ordered subsequence of Via header
-   field entries into a single such entry if the entries have identical
-   received-protocol values. For example,
-</t>
-<figure><artwork type="example">
-  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
-</artwork></figure>
-<t>
-  could be collapsed to
-</t>
-<figure><artwork type="example">
-  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
-</artwork></figure>
-<t>
-   Senders &SHOULD-NOT; combine multiple entries unless they are all
-   under the same organizational control and the hosts have already been
-   replaced by pseudonyms. Senders &MUST-NOT; combine entries which
-   have different received-protocol values.
 </t>
 </section>
 
