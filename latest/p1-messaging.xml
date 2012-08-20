@@ -2468,10 +2468,19 @@ https://www.example.org
    can enhance (or interfere) with either direction of the stream.
 </t>
 <t>
+   Intermediaries that forward a message &MUST; implement the
+   <x:ref>Connection</x:ref> header field, as specified in
+   <xref target="header.connection"/>, to exclude fields that are only
+   intended for the incoming connection.
+</t>
+<t>
    In order to avoid request loops, a proxy that forwards requests to other
    proxies &MUST; be able to recognize and exclude all of its own server
    names, including any aliases, local variations, or literal IP addresses.
 </t>
+</section>
+
+<section title="Message Transforming" anchor="message.transforming">
 <t>
    If a proxy receives a request-target with a host name that is not a
    fully qualified domain name, it &MAY; add its own domain to the host name
@@ -2484,66 +2493,14 @@ https://www.example.org
    server, except as noted above to replace an empty path with "/" or "*".
 </t>
 <t>
-   Intermediaries that forward a message &MUST; implement the
-   <x:ref>Connection</x:ref> header field as specified in
-   <xref target="header.connection"/>.
-</t>
-
-<section title="End-to-end and Hop-by-hop Header Fields" anchor="end-to-end.and.hop-by-hop.header-fields">
-<!--<t>
-  <cref anchor="TODO-end-to-end" source="jre">
-    Restored from <eref target="http://tools.ietf.org/html/draft-ietf-httpbis-p6-cache-05#section-7.1"/>.
-    See also <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/60"/>.
-  </cref>
-</t>-->
-<t>
-   For the purpose of defining the behavior of caches and non-caching
-   proxies, we divide HTTP header fields into two categories:
-  <list style="symbols">
-      <t>End-to-end header fields, which are  transmitted to the ultimate
-        recipient of a request or response. End-to-end header fields in
-        responses &MUST; be stored as part of a cache entry and &MUST; be
-        transmitted in any response formed from a cache entry.</t>
-
-      <t>Hop-by-hop header fields, which are meaningful only for a single
-        transport-level connection, and are not stored by caches or
-        forwarded by proxies.</t>
-  </list>
+   A non-transforming proxy &MUST; preserve the message payload (&payload;),
+   though it &MAY; change the message body through application or removal
+   of a transfer-coding (<xref target="transfer.codings"/>).
 </t>
 <t>
-   The following HTTP/1.1 header fields are hop-by-hop header fields:
-  <list style="symbols">
-      <t><x:ref>Connection</x:ref></t>
-      <t>Keep-Alive (<xref target="RFC2068" x:fmt="of" x:sec="19.7.1.1"/>)</t>
-      <t><x:ref>Proxy-Authenticate</x:ref> (&header-proxy-authenticate;)</t>
-      <t><x:ref>Proxy-Authorization</x:ref> (&header-proxy-authorization;)</t>
-      <t><x:ref>TE</x:ref></t>
-      <t><x:ref>Trailer</x:ref></t>
-      <t><x:ref>Transfer-Encoding</x:ref></t>
-      <t><x:ref>Upgrade</x:ref></t>
-  </list>
-</t>
-<t>
-   All other header fields defined by HTTP/1.1 are end-to-end header fields.
-</t>
-<t>
-   Other hop-by-hop header fields &MUST; be listed in a
-   <x:ref>Connection</x:ref> header field (<xref target="header.connection"/>).
-</t>
-</section>
-
-<section title="Non-modifiable Header Fields" anchor="non-modifiable.header-fields">
-<!--<t>
-  <cref anchor="TODO-non-mod-headers" source="jre">
-    Restored from <eref target="http://tools.ietf.org/html/draft-ietf-httpbis-p6-cache-05#section-7.2"/>.
-    See also <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/60"/>.
-  </cref>
-</t>-->
-<t>
-   Some features of HTTP/1.1, such as Digest Authentication, depend on the
-   value of certain end-to-end header fields. A non-transforming proxy &SHOULD-NOT;
-   modify an end-to-end header field unless the definition of that header field requires
-   or specifically allows that.
+   A non-transforming proxy &SHOULD-NOT; modify header fields that provide
+   information about the end points of the communication chain, the resource
+   state, or the selected representation.
 </t>
 <t>
    A non-transforming proxy &MUST-NOT; modify any of the following fields in a
@@ -2559,22 +2516,14 @@ https://www.example.org
   </list>
 </t>
 <t>
-   A non-transforming proxy &MUST-NOT; modify any of the following fields in a
-   response:
-  <list style="symbols">
-    <t><x:ref>Expires</x:ref> (&header-expires;)</t>
-  </list>
-</t>
-<t>
-   but it &MAY; add any of these fields if not already present. If an
-   <x:ref>Expires</x:ref> header field is added, it &MUST; be given a
-   field value identical to that of the <x:ref>Date</x:ref> header field in
-   that response.
+   A non-transforming proxy &MUST-NOT; modify an <x:ref>Expires</x:ref>
+   header field (&header-expires;) if already present in a response, but
+   it &MAY; add an <x:ref>Expires</x:ref> header field with a field-value
+   identical to that of the <x:ref>Date</x:ref> header field.
 </t>
 <t>
    A proxy &MUST-NOT; modify or add any of the following fields in a
-   message that contains the no-transform cache-control directive, or in
-   any request:
+   message that contains the no-transform cache-control directive:
   <list style="symbols">
     <t><x:ref>Content-Encoding</x:ref> (&header-content-encoding;)</t>
     <t><x:ref>Content-Range</x:ref> (&header-content-range;)</t>
@@ -2589,20 +2538,13 @@ https://www.example.org
 </t>
 <x:note>
   <t>
-    <x:h>Warning:</x:h> Unnecessary modification of end-to-end header fields might
+    <x:h>Warning:</x:h> Unnecessary modification of header fields might
     cause authentication failures if stronger authentication
     mechanisms are introduced in later versions of HTTP. Such
     authentication mechanisms &MAY; rely on the values of header fields
     not listed here.
   </t>
 </x:note>
-<t>
-   A non-transforming proxy &MUST; preserve the message payload (&payload;),
-   though it &MAY; change the message body through application or removal
-   of a transfer-coding (<xref target="transfer.codings"/>).
-</t>
-</section>
-
 </section>
 
 <section title="Associating a Response to a Request" anchor="associating.response.to.request">
