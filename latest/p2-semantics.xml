@@ -17,6 +17,7 @@
   <!ENTITY mdash "&#8212;">
   <!ENTITY Note "<x:h xmlns:x='http://purl.org/net/xml2rfc/ext'>Note:</x:h>">
   <!ENTITY architecture               "<xref target='Part1' x:rel='#architecture' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY conformance                "<xref target='Part1' x:rel='#conformance' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY notation                   "<xref target='Part1' x:rel='#notation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY acks                       "<xref target='Part1' x:rel='#acks' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY messaging                  "<xref target='Part1' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -215,15 +216,16 @@
    message semantics in relation to the identified request target, and
    responds to that request with one or more response messages.
    This document defines HTTP/1.1 request and response semantics in terms of
-   the architecture, syntax notation, and conformance criteria defined in
-   <xref target="Part1"/>.
+   the architecture defined in <xref target="Part1"/>.
 </t>
 <t>
    HTTP provides a uniform interface for interacting with resources regardless
    of their type, nature, or implementation.  HTTP semantics includes the
-   intentions defined by each request method, extensions to those semantics
-   that might be described in request header fields, the meaning of status
-   codes to indicate a machine-readable response, and additional control data
+   intentions defined by each request method (<xref target="methods"/>),
+   extensions to those semantics that might be described in request header
+   fields (<xref target="request.fields"/>),
+   the meaning of status codes to indicate a machine-readable response
+   (<xref target="status.codes"/>), and other control data
    and resource metadata that might be given in response header fields.
 </t>
 <t><iref item="content negotiation"/>
@@ -234,62 +236,15 @@
    algorithms that are collectively referred to as
    "<x:dfn>content negotiation</x:dfn>".
 </t>
-<x:note><t>
-   &Note; This document is currently disorganized in order to minimize changes
-   between drafts and enable reviewers to see the smaller errata changes.
-   A future draft will reorganize the sections to better reflect the content.
-   In particular, the sections will be ordered according to the typical
-   processing of an HTTP request message (after message parsing): resource
-   mapping, methods, request modifying header fields, response status,
-   status modifying header fields, and resource metadata.  The current mess
-   reflects how widely dispersed these topics and associated requirements
-   had become in <xref target="RFC2616"/>.
-</t></x:note>
-<section title="Conformance and Error Handling" anchor="intro.conformance.and.error.handling">
+<section title="Conformance and Error Handling" anchor="conformance">
 <t>
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
    document are to be interpreted as described in <xref target="RFC2119"/>.
 </t>
 <t>
-   This specification targets conformance criteria according to the role of
-   a participant in HTTP communication.  Hence, HTTP requirements are placed
-   on senders, recipients, clients, servers, user agents, intermediaries,
-   origin servers, proxies, gateways, or caches, depending on what behavior
-   is being constrained by the requirement. See &architecture; for definitions
-   of these terms.
-</t>
-<t>
-   The verb "generate" is used instead of "send" where a requirement
-   differentiates between creating a protocol element and merely forwarding a
-   received element downstream.
-</t>
-<t>
-   An implementation is considered conformant if it complies with all of the
-   requirements associated with the roles it partakes in HTTP. Note that
-   SHOULD-level requirements are relevant here, unless one of the documented
-   exceptions is applicable.
-</t>
-<t>
-   This document also uses ABNF to define valid protocol elements
-   (<xref target="notation"/>).
-   In addition to the prose requirements placed upon them, senders &MUST-NOT;
-   generate protocol elements that do not match the grammar defined by the
-   ABNF rules for those protocol elements that are applicable to the sender's
-   role. If a received protocol element is processed, the recipient &MUST; be
-   able to parse any value that would match the ABNF rules for that protocol
-   element, excluding only those rules not applicable to the recipient's role.
-</t>
-<t>
-   Unless noted otherwise, a recipient &MAY; attempt to recover a usable
-   protocol element from an invalid construct.  HTTP does not define
-   specific error handling mechanisms except when they have a direct impact
-   on security, since different applications of the protocol require
-   different error handling strategies.  For example, a Web browser might
-   wish to transparently recover from a response where the
-   <x:ref>Location</x:ref> header field doesn't parse according to the ABNF,
-   whereas a systems control client might consider any form of error recovery
-   to be dangerous.
+   Conformance criteria and considerations regarding error handling
+   are defined in &conformance;.
 </t>
 </section>
 
@@ -304,55 +259,169 @@
 </section>
 </section>
 
-<section title="Methods" anchor="methods">
+<section title="Resource" anchor="resource">
+  <x:anchor-alias value="target resource"/>
+<t>
+   The target of each HTTP request is called a resource. 
+   HTTP does not limit the nature of a resource; it merely
+   defines an interface that might be used to interact with resources.
+   Each resource is identified by a Uniform Resource Identifier (URI), as
+   described in &uri;.
+</t>
+<t>
+   When a client constructs an HTTP/1.1 request message, it sends the
+   "target URI" in one of various forms, as defined in
+   (&request-target;). When a request is received, the server reconstructs
+   an "effective request URI" for the target resource
+   (&effective-request-uri;).
+</t>
+<t>
+   One design goal of HTTP is to separate resource identification from
+   request semantics, which is made possible by vesting the request
+   semantics in the request method (<xref target="methods"/>) and a few
+   request-modifying header fields (<xref target="request.fields"/>).
+   Resource owners &SHOULD-NOT; include request semantics within a URI,
+   such as by specifying an action to invoke within the path or query
+   components of the effective request URI, unless those semantics are
+   disabled when they are inconsistent with the request method.
+</t>
+</section>
+
+<section title="Request Methods" anchor="methods">
   <x:anchor-alias value="method"/>
 <t>
-   The method token indicates the request method to be performed on the target
-   resource (&effective-request-uri;). The method is case-sensitive.
+   The request method token is the primary source of request semantics;
+   it indicates the purpose for which the client has made this request
+   and what is expected by the client as a successful result.  The request
+   semantics &MAY; be further specialized by the semantics of some header
+   fields when present in a request (<xref target="request.fields"/>) if
+   those additional semantics do not conflict with the method.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="method"/>
-  <x:ref>method</x:ref>         = <x:ref>token</x:ref>
+  <x:ref>method</x:ref> = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
-   The list of methods allowed by a resource can be specified in an
-   <x:ref>Allow</x:ref> header field (<xref target="header.allow"/>). The
-   status code of the response always notifies the client whether a method is
-   currently allowed on a resource, since the set of allowed methods can change
-   dynamically. An origin server &SHOULD; respond with the status code
-   <x:ref>405 (Method Not Allowed)</x:ref> if the method is known by the origin
-   server but not allowed for the resource, and <x:ref>501 (Not
-   Implemented)</x:ref> if the method is unrecognized or not implemented by the
-   origin server. The methods GET and HEAD &MUST; be supported by all
-   general-purpose servers. All other methods are &OPTIONAL;; however, if the
-   above methods are implemented, they &MUST; be implemented with the same
-   semantics as those specified in <xref target="method.definitions"/>.
+   HTTP was originally designed to be usable as an interface to distributed
+   object systems.  The request method was envisioned as applying
+   semantics to a target resource in much the same way as invoking a defined
+   method on an identified object would apply semantics. The method token
+   is case-sensitive because it might be used as a gateway to object-based
+   systems with case-sensitive method names.
 </t>
-
-<section title="Safe and Idempotent Methods" anchor="safe.and.idempotent">
+<t>
+   Unlike distributed objects, the standardized request methods in HTTP are
+   not resource-specific, since uniform interfaces provide for better
+   visibility and reuse in network-based systems <xref target="REST"/>.
+   Once defined, a standardized method &MUST; have the same semantics when
+   applied to any resource, though each resource determines for itself
+   whether those semantics are implemented or allowed.
+</t>
+<t>
+   This specification defines a number of standardized methods that are
+   commonly used in HTTP, as outlined by the following table. By convention,
+   standardized methods are defined in all-uppercase ASCII letters.
+</t>
+<texttable align="left" suppress-title="true" anchor="method.overview">
+   <ttcol>Method</ttcol>
+   <ttcol>Description</ttcol>
+   <ttcol>Sec.</ttcol>
+   <c>GET</c>
+   <c>Retrieve a current representation of the target resource.</c>
+   <c><xref target="GET" format="counter"/></c>
+   <c>HEAD</c>
+   <c>Same as GET, but do not include a message body in the response.</c>
+   <c><xref target="HEAD" format="counter"/></c>
+   <c>POST</c>
+   <c>Perform resource-specific processing on the request payload.</c>
+   <c><xref target="POST" format="counter"/></c>
+   <c>PUT</c>
+   <c>Replace all current representations of the target resource with
+      the request payload.</c>
+   <c><xref target="PUT" format="counter"/></c>
+   <c>DELETE</c>
+   <c>Remove all current representations of the target resource.</c>
+   <c><xref target="DELETE" format="counter"/></c>
+   <c>CONNECT</c>
+   <c>Establish a tunnel to the server identified by the target resource.</c>
+   <c><xref target="CONNECT" format="counter"/></c>
+   <c>OPTIONS</c>
+   <c>Describe the communication options for the target resource.</c>
+   <c><xref target="OPTIONS" format="counter"/></c>
+   <c>TRACE</c>
+   <c>Perform a message loop-back test along the path to the target resource.</c>
+   <c><xref target="TRACE" format="counter"/></c>
+</texttable>
+<t>
+   The methods GET and HEAD &MUST; be supported by all general-purpose
+   servers. All other methods are &OPTIONAL;. If one of the above methods is
+   implemented by a server, the server &MUST; implement that method according
+   to the semantics defined for it in <xref target="method.definitions"/>.
+</t>
+<t>
+   Additional methods &MAY; be used in HTTP.  New methods &SHOULD; be
+   registered within the IANA registry, as defined in
+   <xref target="method.registry"/>.
+</t>
+<t>
+   The set of methods allowed by a target resource can be listed in an
+   <x:ref>Allow</x:ref> header field (<xref target="header.allow"/>).
+   However, the set of allowed methods can change dynamically.
+   When a request message is received that is unrecognized or not implemented
+   by an origin server, the origin server &SHOULD; respond with the
+   <x:ref>501 (Not Implemented)</x:ref> status code.
+   When a request message is received that is known by an origin server but
+   not allowed for the target resource, the origin server &SHOULD; respond
+   with the <x:ref>405 (Method Not Allowed)</x:ref> status code.
+</t>
+<section title="Common Method Properties" anchor="method.properties">
 
 <section title="Safe Methods" anchor="safe.methods">
 <iref item="Safe Methods" primary="true"/>
 <t>
-   Implementers need to be aware that the software represents the user in
-   their interactions over the Internet, and need to allow
-   the user to be aware of any actions they take which might have an
-   unexpected significance to themselves or others.
+   Request methods are considered "<x:dfn anchor="safe">safe</x:dfn>" if
+   their defined semantics are essentially read-only; i.e., the user does
+   not request, and does not expect, any state change on the origin server
+   as a result of applying a safe method to a target resource.  Likewise,
+   reasonable use of a safe method is not expected to cause any harm,
+   loss of property, or unusual burden on the origin server.
 </t>
 <t>
-   In particular, the convention has been established that the GET, HEAD,
-   OPTIONS, and TRACE request methods &SHOULD-NOT; have the significance
-   of taking an action other than retrieval. These request methods ought
-   to be considered "<x:dfn anchor="safe">safe</x:dfn>".
-   This allows user agents to represent other methods, such as POST, PUT
-   and DELETE, in a special way, so that the user is made aware of the
-   fact that a possibly unsafe action is being requested.
+   This definition of safe methods does not prevent an implementation from
+   including behavior that is potentially harmful, not entirely read-only,
+   or which causes side-effects while invoking a safe method.  In fact,
+   some dynamic resources might consider that a feature.  What is
+   important, however, is that the user did not request that additional
+   behavior and cannot be held accountable for it.  For example,
+   most servers append request information to access log files at the
+   completion of every response, regardless of the method, and that is
+   considered safe even though the log storage might become full and crash
+   the server.
 </t>
 <t>
-   Naturally, it is not possible to ensure that the server does not
-   generate side-effects as a result of performing a GET request; in
-   fact, some dynamic resources consider that a feature. The important
-   distinction here is that the user did not request the side-effects,
-   so therefore cannot be held accountable for them.
+   The GET, HEAD, OPTIONS, and TRACE request methods are defined to be safe.
+</t>
+<t>
+   A user agent &SHOULD; distinguish between safe and unsafe methods when
+   presenting potential actions to a user, such that the user can be made
+   aware of an unsafe action before it is requested.
+   A user agent &SHOULD-NOT; make requests using unsafe methods as an
+   automated result of the user selecting a safe action, unless the
+   instruction for making the unsafe request came from the same origin server
+   as the request target.
+</t>
+<t>
+   When a resource is constructed such that parameters within the effective
+   request URI have the effect of selecting an action, it is the resource
+   owner's responsibility to ensure that the action is consistent with the
+   request method semantics.
+   For example, it is common for HTML form-based content editing software
+   to use actions within query parameters, such as "page?do=delete".
+   If the purpose of such a resource is to perform an unsafe action, then
+   the resource &MUST; disable or disallow that action when it is accessed
+   using a safe request method.  Failure to do so will result in
+   unfortunate side-effects when automated processes perform a GET on
+   every URI reference, which often occurs for the sake of link maintenance,
+   pre-fetching, or building a search index.
 </t>
 </section>
 
@@ -914,6 +983,18 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    of their syntax.
 </t>
 
+<section title="Request-modifier Header Fields" anchor="request.fields">
+</section>
+
+<section title="Status-modifier Header Fields" anchor="response.fields">
+</section>
+
+<section title="Resource Metadata Fields" anchor="resource.fields">
+</section>
+
+<section title="Payload Metadata Fields" anchor="payload.fields">
+</section>
+
 <section title="Considerations for Creating Header Fields" anchor="considerations.for.creating.header.fields">
 <t>
    New header fields are registered using the procedures described in
@@ -1060,7 +1141,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 
 </section>
 
-<section title="Status Codes" anchor="status.codes">
+<section title="Response Status Codes" anchor="status.codes">
 <t>
    The status-code element is a 3-digit integer result code of the attempt to
    understand and satisfy the request.
@@ -4918,6 +4999,16 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
 <references title="Informative References">
 
+<reference anchor="REST" target="http://www.ics.uci.edu/~fielding/pubs/dissertation/top.htm">
+  <front>
+    <title>Architectural Styles and the Design of Network-based Software Architectures</title>
+    <author initials="R.T." surname="Fielding" fullname="Roy T. Fielding">
+      <organization>Doctoral Dissertation, University of California, Irvine</organization>
+    </author>
+    <date month="Sep" year="2000"/>
+  </front>
+</reference>
+
 <reference anchor="RFC1123">
   <front>
     <title>Requirements for Internet Hosts - Application and Support</title>
@@ -5667,10 +5758,10 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
 <x:ref>Server</x:ref> = product *( RWS ( product / comment ) )
 
-<x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in [Part1], Section 2.8&gt;
+<x:ref>URI-reference</x:ref> = &lt;URI-reference, defined in [Part1], Section 2.7&gt;
 <x:ref>User-Agent</x:ref> = product *( RWS ( product / comment ) )
 
-<x:ref>absolute-URI</x:ref> = &lt;absolute-URI, defined in [Part1], Section 2.8&gt;
+<x:ref>absolute-URI</x:ref> = &lt;absolute-URI, defined in [Part1], Section 2.7&gt;
 <x:ref>accept-ext</x:ref> = OWS ";" OWS token [ "=" word ]
 <x:ref>accept-params</x:ref> = weight *accept-ext
 <x:ref>asctime-date</x:ref> = day-name SP date3 SP time-of-day SP year
@@ -5734,7 +5825,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <x:ref>obs-date</x:ref> = rfc850-date / asctime-date
 
 <x:ref>parameter</x:ref> = attribute "=" value
-<x:ref>partial-URI</x:ref> = &lt;partial-URI, defined in [Part1], Section 2.8&gt;
+<x:ref>partial-URI</x:ref> = &lt;partial-URI, defined in [Part1], Section 2.7&gt;
 <x:ref>product</x:ref> = token [ "/" product-version ]
 <x:ref>product-version</x:ref> = token
 
