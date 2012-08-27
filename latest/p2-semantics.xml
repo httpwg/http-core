@@ -326,7 +326,7 @@
    <ttcol>Description</ttcol>
    <ttcol>Sec.</ttcol>
    <c>GET</c>
-   <c>Retrieve a current representation of the target resource.</c>
+   <c>Transfer a current representation of the target resource.</c>
    <c><xref target="GET" format="counter"/></c>
    <c>HEAD</c>
    <c>Same as GET, but do not include a message body in the response.</c>
@@ -353,13 +353,14 @@
 </texttable>
 <t>
    The methods GET and HEAD &MUST; be supported by all general-purpose
-   servers. All other methods are &OPTIONAL;. If one of the above methods is
-   implemented by a server, the server &MUST; implement that method according
-   to the semantics defined for it in <xref target="method.definitions"/>.
+   servers. All other methods are &OPTIONAL;.
+   When implemented, a server &MUST; implement the above methods according
+   to the semantics defined for them in <xref target="method.definitions"/>.
 </t>
 <t>
-   Additional methods &MAY; be used in HTTP.  New methods &SHOULD; be
-   registered within the IANA registry, as defined in
+   Additional methods &MAY; be used in HTTP; many have already been
+   standardized outside the scope of this specification and registered
+   within the HTTP Method Registry maintained by IANA, as defined in
    <xref target="method.registry"/>.
 </t>
 <t>
@@ -376,10 +377,10 @@
 <section title="Common Method Properties" anchor="method.properties">
 
 <section title="Safe Methods" anchor="safe.methods">
-<iref item="Safe Methods" primary="true"/>
+<iref item="safe" primary="true"/>
 <t>
    Request methods are considered "<x:dfn anchor="safe">safe</x:dfn>" if
-   their defined semantics are essentially read-only; i.e., the user does
+   their defined semantics are essentially read-only; i.e., the client does
    not request, and does not expect, any state change on the origin server
    as a result of applying a safe method to a target resource.  Likewise,
    reasonable use of a safe method is not expected to cause any harm,
@@ -388,108 +389,85 @@
 <t>
    This definition of safe methods does not prevent an implementation from
    including behavior that is potentially harmful, not entirely read-only,
-   or which causes side-effects while invoking a safe method.  In fact,
-   some dynamic resources might consider that a feature.  What is
-   important, however, is that the user did not request that additional
+   or which causes side-effects while invoking a safe method.  What is
+   important, however, is that the client did not request that additional
    behavior and cannot be held accountable for it.  For example,
    most servers append request information to access log files at the
    completion of every response, regardless of the method, and that is
    considered safe even though the log storage might become full and crash
-   the server.
+   the server.  Likewise, a safe request initiated by selecting an
+   advertisement on the Web will often have the side-effect of charging an
+   advertising account.
 </t>
 <t>
    The GET, HEAD, OPTIONS, and TRACE request methods are defined to be safe.
 </t>
 <t>
+   The purpose of distinguishing between safe and unsafe methods is to
+   allow automated retrieval processes (spiders) and cache performance
+   optimization (pre-fetching) to work without fear of causing harm.
+   In addition, it allows a user agent to apply appropriate constraints
+   on the automated use of unsafe methods when processing potentially
+   untrusted content.
+</t>
+<t>
    A user agent &SHOULD; distinguish between safe and unsafe methods when
    presenting potential actions to a user, such that the user can be made
    aware of an unsafe action before it is requested.
-   A user agent &SHOULD-NOT; make requests using unsafe methods as an
-   automated result of the user selecting a safe action, unless the
-   instruction for making the unsafe request came from the same origin server
-   as the request target.
 </t>
 <t>
    When a resource is constructed such that parameters within the effective
    request URI have the effect of selecting an action, it is the resource
    owner's responsibility to ensure that the action is consistent with the
    request method semantics.
-   For example, it is common for HTML form-based content editing software
+   For example, it is common for Web-based content editing software
    to use actions within query parameters, such as "page?do=delete".
    If the purpose of such a resource is to perform an unsafe action, then
    the resource &MUST; disable or disallow that action when it is accessed
    using a safe request method.  Failure to do so will result in
    unfortunate side-effects when automated processes perform a GET on
-   every URI reference, which often occurs for the sake of link maintenance,
-   pre-fetching, or building a search index.
+   every URI reference for the sake of link maintenance, pre-fetching,
+   building a search index, etc.
 </t>
 </section>
 
 <section title="Idempotent Methods" anchor="idempotent.methods">
-<iref item="Idempotent Methods" primary="true"/>
+<iref item="idempotent" primary="true"/>
 <t>
-   Request methods can also have the property of "idempotence" in that,
-   aside from error or expiration issues, the intended effect of multiple
-   identical requests is the same as for a single request.
+   Request methods are considered
+   "<x:dfn anchor="idempotent">idempotent</x:dfn>" if the intended effect
+   of multiple identical requests is the same as for a single request.
    PUT, DELETE, and all safe request methods are idempotent.
-   It is important to note that idempotence refers only to changes
-   requested by the client: a server is free to change its state due
-   to multiple requests for the purpose of tracking those requests,
-   versioning of results, etc.
+</t>
+<t>
+   Like the definition of safe, the idempotent property only applies to
+   what has been requested by the user; a server is free to log each request
+   separately, retain a revision control history, or implement other
+   non-idempotent side-effects for each idempotent request.
+</t>
+<t>
+   Idempotent methods are distinguished because the request can be repeated
+   automatically if a communication failure occurs before the client is
+   able to read the server's response.  For example, if a client sends a PUT
+   request and the underlying connection is closed before any response is
+   received, then it can establish a new connection and retry the request
+   because it knows that repeating the request will have the same effect
+   even if the original request succeeded.  Note, however, that repeated
+   failures would indicate a problem within the server.
 </t>
 </section>
-</section>
 
-<section title="Method Registry" anchor="method.registry">
+<section title="Cacheable Methods" anchor="cacheable.methods">
+<iref item="cacheable" primary="true"/>
 <t>
-  The HTTP Method Registry defines the name space for the method token in the
-  Request line of an HTTP request.
-</t>
-<t>
-  Registrations &MUST; include the following fields:
-  <list style="symbols">
-    <t>Method Name (see <xref target="methods"/>)</t>
-    <t>Safe ("yes" or "no", see <xref target="safe.methods"/>)</t>
-    <t>Idempotent ("yes" or "no", see <xref target="safe.methods"/>)</t>
-    <t>Pointer to specification text</t>
-  </list>
-</t>
-<t>
-  Values to be added to this name space require IETF Review
-  (see <xref target="RFC5226" x:fmt="," x:sec="4.1"/>).
-</t>
-<t>
-  The registry itself is maintained at <eref target="http://www.iana.org/assignments/http-methods"/>.
-</t>
-
-<section title="Considerations for New Methods" anchor="considerations.for.new.methods">
-<t>
-   When it is necessary to express new semantics for a HTTP request that
-   aren't specific to a single application or media type, and currently defined
-   methods are inadequate, it might be appropriate to register a new method.
-</t>
-<t>
-   HTTP methods are generic; that is, they are potentially applicable to any
-   resource, not just one particular media type, "type" of resource, or
-   application. As such, it is preferred that new HTTP methods be registered
-   in a document that isn't specific to a single application, so that this is
-   clear.
-</t>
-<t>
-   Due to the parsing rules defined in &message-body;, definitions of HTTP
-   methods cannot prohibit the presence of a message body on either the request
-   or the response message (with responses to HEAD requests being the single
-   exception). Definitions of new methods cannot change this rule, but they can
-   specify that only zero-length bodies (as opposed to absent bodies) are allowed.
-</t>
-<t>
-   New method definitions need to indicate whether they are safe (<xref
-   target="safe.methods"/>), what semantics (if any) the request body has,
-   and whether they are idempotent (<xref target="idempotent.methods"/>). 
-   They also need to state whether they can be cached (&caching;); in 
-   particular under what conditions a cache can store the response, and under
-   what conditions such a stored response can be used to satisfy a subsequent 
-   request.
+   Request methods are considered
+   "<x:dfn anchor="cacheable">cacheable</x:dfn>" if it is possible and useful
+   to answer a current client request with a stored response from a prior
+   request.  GET and HEAD are defined to be cacheable.  In general, safe
+   methods that do not depend on a current or authoritative response are
+   also cacheable, though the overwhelming majority of caches only support
+   GET and HEAD. HTTP requirements for cache behavior and cacheable responses
+   are defined in &caching;.
 </t>
 </section>
 </section>
@@ -4042,11 +4020,57 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
 <section title="IANA Considerations" anchor="IANA.considerations">
 
-<section title="Method Registry" anchor="method.registration">
+<section title="Method Registry" anchor="method.registry">
 <t>
-  The registration procedure for HTTP request methods is defined by 
-  <xref target="method.registry"/> of this document.
+  The HTTP Method Registry defines the name space for the method token in the
+  Request line of an HTTP request.
 </t>
+<t>
+  Registrations &MUST; include the following fields:
+  <list style="symbols">
+    <t>Method Name (see <xref target="methods"/>)</t>
+    <t>Safe ("yes" or "no", see <xref target="safe.methods"/>)</t>
+    <t>Idempotent ("yes" or "no", see <xref target="safe.methods"/>)</t>
+    <t>Pointer to specification text</t>
+  </list>
+</t>
+<t>
+  Values to be added to this name space require IETF Review
+  (see <xref target="RFC5226" x:fmt="," x:sec="4.1"/>).
+</t>
+<t>
+  The registry itself is maintained at <eref target="http://www.iana.org/assignments/http-methods"/>.
+</t>
+
+<section title="Considerations for New Methods" anchor="considerations.for.new.methods">
+<t>
+   Standardized HTTP methods are generic; that is, they are potentially
+   applicable to any resource, not just one particular media type, kind of
+   resource, or application. As such, it is preferred that new HTTP methods
+   be registered in a document that isn't specific to a single application or
+   data format, since orthogonal technologies deserve orthogonal specification.
+</t>
+<t>
+   Since HTTP message parsing (&message-body;) is independent of method
+   semantics (aside from responses to HEAD), definitions of new HTTP methods
+   cannot change the parsing algorithm or prohibit the presence of a message
+   body on either the request or the response message.
+   Definitions of new methods can specify that only zero-length bodies are
+   allowed, which would imply that each such messages would be required to
+   contain a Content-Length header field with a value of "0".
+</t>
+<t>
+   New method definitions need to indicate whether they are safe (<xref
+   target="safe.methods"/>), idempotent (<xref target="idempotent.methods"/>),
+   or cacheable (<xref target="cacheable.methods"/>), and what
+   semantics are to be associated with the request body if any is present
+   in the request.  If a method is cacheable, the method definition ought
+   to describe how, and under what conditions, a cache can store a response
+   and use it to satisfy a subsequent request.
+</t>
+</section>
+
+<section title="Registrations" anchor="method.registration">
 <t>
    The HTTP Method Registry shall be created at <eref target="http://www.iana.org/assignments/http-methods"/>
    and be populated with the registrations below:
@@ -4109,6 +4133,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </texttable>
 <!--(END)-->
 <?ENDINC p2-semantics.iana-methods ?>
+</section>
 </section>
 
 <section title="Status Code Registry" anchor="status.code.registration">
