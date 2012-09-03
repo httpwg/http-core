@@ -33,7 +33,6 @@
   <!ENTITY header-content-type    "<xref target='Part2' x:rel='#header.content-type' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-date            "<xref target='Part2' x:rel='#header.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-etag            "<xref target='Part4' x:rel='#header.etag' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY header-expect          "<xref target='Part2' x:rel='#header.expect' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-expires         "<xref target='Part6' x:rel='#header.expires' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-last-modified   "<xref target='Part4' x:rel='#header.last-modified' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-mime-version    "<xref target='Part2' x:rel='#mime-version' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -47,14 +46,13 @@
   <!ENTITY OPTIONS                "<xref target='Part2' x:rel='#OPTIONS' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY qvalue                 "<xref target='Part2' x:rel='#quality.values' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-codes           "<xref target='Part2' x:rel='#status.codes' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY status-100             "<xref target='Part2' x:rel='#status.100' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-1xx             "<xref target='Part2' x:rel='#status.1xx' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-203             "<xref target='Part2' x:rel='#status.203' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-3xx             "<xref target='Part2' x:rel='#status.3xx' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-304             "<xref target='Part4' x:rel='#status.304' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-4xx             "<xref target='Part2' x:rel='#status.4xx' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-414             "<xref target='Part2' x:rel='#status.414' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY cons-new-header-fields "<xref target='Part2' x:rel='#considerations.for.creating.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY cons-new-header-fields "<xref target='Part2' x:rel='#considerations.for.new.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
 ]>
 <?rfc toc="yes" ?>
 <?rfc symrefs="yes" ?>
@@ -3009,117 +3007,6 @@ https://www.example.org
    before they can be read and interpreted by the HTTP application.
 </t>
 </section>
-</section>
-
-<section title="Use of the 100 (Continue) Status" anchor="use.of.the.100.status">
-<t>
-   The purpose of the <x:ref>100 (Continue)</x:ref> status code (see &status-100;)
-   is to allow a client that is sending a request message with a request body
-   to determine if the origin server is willing to accept the request
-   (based on the request header fields) before the client sends the request
-   body. In some cases, it might either be inappropriate or highly
-   inefficient for the client to send the body if the server will reject
-   the message without looking at the body.
-</t>
-<t>
-   Requirements for HTTP/1.1 clients:
-  <list style="symbols">
-    <t>
-        If a client will wait for a <x:ref>100 (Continue)</x:ref> response before
-        sending the request body, it &MUST; send an <x:ref>Expect</x:ref> header
-        field (&header-expect;) with the "100-continue" expectation.
-    </t>
-    <t>
-        A client &MUST-NOT; send an <x:ref>Expect</x:ref> header field with
-        the "100-continue" expectation if it does not intend to send a request
-        body.
-    </t>
-  </list>
-</t>
-<t>
-   Because of the presence of older implementations, the protocol allows
-   ambiguous situations in which a client might send "Expect: 100-continue"
-   without receiving either a <x:ref>417 (Expectation Failed)</x:ref> 
-   or a <x:ref>100 (Continue)</x:ref> status code. Therefore, when a client sends this
-   header field to an origin server (possibly via a proxy) from which it
-   has never seen a <x:ref>100 (Continue)</x:ref> status code, the client &SHOULD-NOT;  
-   wait for an indefinite period before sending the request body.
-</t>
-<t>
-   Requirements for HTTP/1.1 origin servers:
-  <list style="symbols">
-    <t> Upon receiving a request which includes an <x:ref>Expect</x:ref> header
-        field with the "100-continue" expectation, an origin server &MUST;
-        either respond with <x:ref>100 (Continue)</x:ref> status code and continue to read
-        from the input stream, or respond with a final status code. The
-        origin server &MUST-NOT; wait for the request body before sending
-        the <x:ref>100 (Continue)</x:ref> response. If it responds with a final status
-        code, it &MAY; close the transport connection or it &MAY; continue
-        to read and discard the rest of the request.  It &MUST-NOT;
-        perform the request method if it returns a final status code.
-    </t>
-    <t> An origin server &SHOULD-NOT;  send a <x:ref>100 (Continue)</x:ref> response if
-        the request message does not include an <x:ref>Expect</x:ref> header
-        field with the "100-continue" expectation, and &MUST-NOT; send a
-        <x:ref>100 (Continue)</x:ref> response if such a request comes from an HTTP/1.0
-        (or earlier) client. There is an exception to this rule: for
-        compatibility with <xref target="RFC2068"/>, a server &MAY; send a <x:ref>100 (Continue)</x:ref>
-        status code in response to an HTTP/1.1 PUT or POST request that does
-        not include an Expect header field with the "100-continue"
-        expectation. This exception, the purpose of which is
-        to minimize any client processing delays associated with an
-        undeclared wait for <x:ref>100 (Continue)</x:ref> status code, applies only to
-        HTTP/1.1 requests, and not to requests with any other HTTP-version
-        value.
-    </t>
-    <t> An origin server &MAY; omit a <x:ref>100 (Continue)</x:ref> response if it has
-        already received some or all of the request body for the
-        corresponding request.
-    </t>
-    <t> An origin server that sends a <x:ref>100 (Continue)</x:ref> response &MUST;
-        ultimately send a final status code, once the request body is
-        received and processed, unless it terminates the transport
-        connection prematurely.
-    </t>
-    <t> If an origin server receives a request that does not include an
-        <x:ref>Expect</x:ref> header field with the "100-continue" expectation,
-        the request includes a request body, and the server responds
-        with a final status code before reading the entire request body
-        from the transport connection, then the server &SHOULD-NOT;  close
-        the transport connection until it has read the entire request,
-        or until the client closes the connection. Otherwise, the client
-        might not reliably receive the response message. However, this
-        requirement ought not be construed as preventing a server from
-        defending itself against denial-of-service attacks, or from
-        badly broken client implementations.
-      </t>
-    </list>
-</t>
-<t>
-   Requirements for HTTP/1.1 proxies:
-  <list style="symbols">
-    <t> If a proxy receives a request that includes an <x:ref>Expect</x:ref>
-        header field with the "100-continue" expectation, and the proxy
-        either knows that the next-hop server complies with HTTP/1.1 or
-        higher, or does not know the HTTP version of the next-hop
-        server, it &MUST; forward the request, including the Expect header
-        field.
-    </t>
-    <t> If the proxy knows that the version of the next-hop server is
-        HTTP/1.0 or lower, it &MUST-NOT; forward the request, and it &MUST;
-        respond with a <x:ref>417 (Expectation Failed)</x:ref> status code.
-    </t>
-    <t> Proxies &SHOULD; maintain a record of the HTTP version
-        numbers received from recently-referenced next-hop servers.
-    </t>
-    <t> A proxy &MUST-NOT; forward a <x:ref>100 (Continue)</x:ref> response if the
-        request message was received from an HTTP/1.0 (or earlier)
-        client and did not include an <x:ref>Expect</x:ref> header field with
-        the "100-continue" expectation. This requirement overrides the
-        general rule for forwarding of <x:ref>1xx</x:ref> responses (see &status-1xx;).
-    </t>
-  </list>
-</t>
 </section>
 
 <section title="Upgrade" anchor="header.upgrade">
