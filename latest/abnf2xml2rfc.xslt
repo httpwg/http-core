@@ -73,6 +73,9 @@
           <xsl:when test="$prod!='' and $src//iref[@item='Grammar' and @subitem=$prod and comment()='unused production']">
             <!-- known to be unused, but we want to include it anyway -->
           </xsl:when>
+          <xsl:when test="$prod!='' and $src//x:ref=$prod">
+            <!-- referenced otherwise -->
+          </xsl:when>
           <xsl:otherwise>
             <xsl:value-of select="."/>
             <xsl:text>&#10;</xsl:text>
