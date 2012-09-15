@@ -10,10 +10,10 @@
 
 <my:data>
   <my:item>
-    <iref item='Cache Directives' subitem='stale-while-revalidate'>
+    <iref item='stale-while-revalidate (cache directive)'>
       <xref target="RFC5861" x:fmt="," x:sec="3"/>
     </iref>
-    <iref item='Cache Directives' subitem='stale-if-error'>
+    <iref item='stale-if-error (cache directive)'>
       <xref target="RFC5861" x:fmt="," x:sec="4"/>
     </iref>
   </my:item>
@@ -25,8 +25,8 @@
       <ttcol>Cache Directive</ttcol>
       <ttcol>Reference</ttcol>
       <xsl:text>&#10;</xsl:text>
-      <xsl:apply-templates select="//iref[@item='Cache Directives']|document('')//iref[@item='Cache Directives']">
-        <xsl:sort select="@subitem"/>
+      <xsl:apply-templates select="//iref[contains(@item,' (cache directive)') and @primary='true']|document('')//iref">
+        <xsl:sort select="@item"/>
       </xsl:apply-templates>
     </texttable>
     <xsl:text>&#10;</xsl:text>
@@ -85,8 +85,9 @@
 <xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
 
 <xsl:template match="iref">
-  <xsl:variable name="dir" select="@subitem"/>
-  <xsl:if test="not(preceding::iref[@item='Cache Directives' and @subitem=$dir])">
+  <xsl:variable name="t" select="@item"/>
+  <xsl:variable name="dir" select="substring-before($t,' (cache directive)')"/>
+  <xsl:if test="not(preceding::iref[@item=$t])">
 
     <xsl:text>&#10;</xsl:text>
     <c><xsl:value-of select="$dir"/></c>
@@ -104,7 +105,7 @@
           </xsl:for-each>
         </xsl:when>
         <xsl:otherwise>
-          <xsl:for-each select="//*[iref[@item='Cache Directives' and @subitem=$dir]]">
+          <xsl:for-each select="//*[iref[@item=$t]]">
             <xsl:if test="position()!=1">
               <xsl:text>, </xsl:text>
             </xsl:if>
