@@ -15,8 +15,8 @@
       <ttcol>Value</ttcol>
       <ttcol>Description</ttcol>
       <ttcol>Reference</ttcol>
-      <xsl:apply-templates select="//section[iref/@item='Status Codes']">
-        <xsl:sort select="iref[@item='Status Codes']/@subitem"/>
+      <xsl:apply-templates select="//section[iref[contains(@item,' (status code)') and @primary='true']]">
+        <xsl:sort select="iref[contains(@item,' (status code)') and @primary='true']/@item"/>
       </xsl:apply-templates>
     </texttable>
     <xsl:text>&#10;</xsl:text>
@@ -75,7 +75,8 @@
 <xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
 
 <xsl:template match="section">
-  <xsl:variable name="text" select="iref[@item='Status Codes']/@subitem"/>
+  <xsl:variable name="t" select="iref[contains(@item,'(status code)')]/@item"/>
+  <xsl:variable name="text" select="substring-before($t,' (status code)')"/>
   <xsl:variable name="redirects-to-other-part" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#" select="rdf:Description/p2:redirects-to"/>
 
   <xsl:if test="not($redirects-to-other-part)">
