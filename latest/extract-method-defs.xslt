@@ -14,8 +14,8 @@
       <ttcol>Safe</ttcol>
       <ttcol>Idempotent</ttcol>
       <ttcol>Reference</ttcol>
-      <xsl:apply-templates select="//section[iref/@item='Methods']">
-        <xsl:sort select="iref[@item='Methods']/@subitem"/>
+      <xsl:apply-templates select="//section[iref[contains(@item,' method') and @primary='true']]">
+        <xsl:sort select="iref[contains(@item,' method') and @primary='true']/@item"/>
       </xsl:apply-templates>
     </texttable>
     <xsl:text>&#10;</xsl:text>
@@ -74,8 +74,8 @@
 <xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
 
 <xsl:template match="section">
-
-  <xsl:variable name="text" select="iref[@item='Methods']/@subitem"/>
+  <xsl:variable name="t" select="iref[contains(@item,' method')]/@item"/>
+  <xsl:variable name="text" select="substring-before($t,' method')"/>
 
   <xsl:variable name="safe" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
     <xsl:choose>
