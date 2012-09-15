@@ -15,8 +15,8 @@
       <ttcol>Status</ttcol>
       <ttcol>Reference</ttcol>
       <xsl:text>&#10;</xsl:text>
-      <xsl:apply-templates select="//section[iref[@item='Header Fields' and @primary='true']]">
-        <xsl:sort select="iref[@item='Header Fields']/@subitem"/>
+      <xsl:apply-templates select="//section[iref[contains(@item,' header field') and @primary='true']]">
+        <xsl:sort select="iref[contains(@item,' header field') and @primary='true']/@item"/>
       </xsl:apply-templates>
     </texttable>
     <xsl:text>&#10;</xsl:text>
@@ -75,8 +75,9 @@
 <xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
 
 <xsl:template match="section">
+  <xsl:variable name="t" select="iref[contains(@item,'header field')]/@item"/>
   <xsl:text>&#10;</xsl:text>
-  <c><xsl:value-of select="iref[@item='Header Fields']/@subitem"/></c>
+  <c><xsl:value-of select="substring-before($t,' header field')"/></c>
   <c>http</c>
   <c>standard</c>
   <c><xref target="{@anchor}"/></c>
