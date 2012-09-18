@@ -338,6 +338,8 @@
    a representation that describes the error and what next steps are suggested
    for resolving it.
 </t>
+
+<section title="Payload Header Fields" anchor="payload.header.fields">
 <t>
    Header fields that specifically describe the payload, rather than the
    associated representation, are referred to as "payload header fields".
@@ -354,45 +356,56 @@
 </texttable>
 </section>
 
-<section title="Associating a Representation with its Resource" anchor="associating.representation.with.resource">
+<section title="Identifying the Payload" anchor="identifying.payload">
 <t>
-   It is sometimes necessary to determine an identifier for the resource
-   associated with a representation.
+   When a complete or partial representation is transferred in a message
+   payload, it is often desirable for the sender to supply, or the recipient
+   to determine, an identifier for the resource corresponding to that
+   representation.
 </t>
 <t>
-   An HTTP request representation, when present, is always associated with an
-   anonymous (i.e., unidentified) resource.
+   The following rules are used to determine such a URI for the payload of a
+   request message:
+   <list style="symbols">
+      <t>If the request has a <x:ref>Content-Location</x:ref> header field,
+         then the sender asserts that the payload is a representation of the
+         resource identified by the Content-Location field-value. However,
+         such an assertion cannot be trusted unless it can be verified by
+         other means (not defined by HTTP). The information might still be
+         useful for revision history links.</t>
+      <t>Otherwise, the payload is unidentified.</t>
+   </list>
 </t>
 <t>
-   In the common case, an HTTP response is a representation of the target
-   resource (see &effective-request-uri;). However, this is not always the
-   case. To determine the URI of the resource a response is associated with,
-   the following rules are used (with the first applicable one being selected):
+   The following rules, to be applied in order until a match is found, are
+   used to determine such a URI for the payload of a response message:
+   <list style="numbers">
+      <t>If the request is GET or HEAD and the response status code is
+         <x:ref>200 (OK)</x:ref>, 
+         <x:ref>204 (No Content)</x:ref>,
+         <x:ref>206 (Partial Content)</x:ref>, or
+         <x:ref>304 (Not Modified)</x:ref>,
+         the payload's identifier is the effective request URI
+         (&effective-request-uri;).</t>
+      <t>If the request is GET or HEAD and the response status code is
+         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is a
+         potentially modified representation of the target resource; as such,
+         the effective request URI might only act as an identifier for the
+         payload's representation when a request is made via the same chain
+         of intermediaries.</t>
+      <t>If the response has a <x:ref>Content-Location</x:ref> header field
+         and its field-value is a reference to the same URI as the effective
+         request URI, the payload's identifier is the effective request URI.</t>
+      <t>If the response has a <x:ref>Content-Location</x:ref> header field
+         and its field-value is a reference to a URI different from the
+         effective request URI, then the sender asserts that the payload is a
+         representation of the resource identified by the Content-Location
+         field-value. However, such an assertion cannot be trusted unless
+         it can be verified by other means (not defined by HTTP).</t>
+      <t>Otherwise, the payload is unidentified.</t>
+   </list>
 </t>
-<t><list style="numbers">
-   <t>If the response status code is <x:ref>200 (OK)</x:ref> or <x:ref>203
-   (Non-Authoritative Information)</x:ref> and the request method was GET,
-   the response payload is a representation of the target resource.</t>
-   <t>If the response status code is <x:ref>204 (No Content)</x:ref>,
-   <x:ref>206 (Partial Content)</x:ref>, or <x:ref>304 (Not Modified)</x:ref>
-   and the request method was GET or HEAD, the response payload is a partial
-   representation of the target resource.</t>
-   <t>If the response has a <x:ref>Content-Location</x:ref> header field, and
-   that URI is the same as the effective request URI, the response payload is a
-   representation of the target resource.</t>
-   <t>If the response has a <x:ref>Content-Location</x:ref> header field, and
-   that URI is not the same as the effective request URI, then the response
-   asserts that its payload is a representation of the resource identified by
-   the Content-Location URI. However, such an assertion cannot be trusted unless
-   it can be verified by other means (not defined by HTTP).</t>
-   <t>Otherwise, the response is a representation of an anonymous (i.e.,
-   unidentified) resource.</t>
-</list></t>
-<t>
-  <cref anchor="TODO-req-uri">
-   The comparison function is going to have to be defined somewhere,
-   because we already need to compare URIs for things like cache invalidation.</cref>
-</t>
+</section>
 </section>
 
 <section title="Representation Header Fields" anchor="representation.header.fields">
@@ -4124,38 +4137,29 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
 <section title="Considerations for New Status Codes" anchor="considerations.for.new.status.codes">
 <t>
-   When it is necessary to express new semantics for a HTTP response that
-   aren't specific to a single application or media type, and currently defined
-   status codes are inadequate, a new status code can be registered.
-</t>
-<t>
-   HTTP status codes are generic; that is, they are potentially applicable to
+   When it is necessary to express semantics for a response that are not
+   defined by current status codes, a new status code can be registered.
+   HTTP status codes are generic; they are potentially applicable to
    any resource, not just one particular media type, "type" of resource, or
-   application. As such, it is preferred that new HTTP status codes be
-   registered in a document that isn't specific to a single application, so
-   that this is clear.
+   application. As such, it is preferred that new status codes be
+   registered in a document that isn't specific to a single application.
 </t>
 <t>
-   Definitions of new HTTP status codes typically explain the request
-   conditions that produce a response containing the status code (e.g.,
-   combinations of request header fields and/or method(s)), along with any 
-   interactions with response header fields (e.g., those that are required,
-   those that modify the semantics of the response).
-</t>
-<t>
-   New HTTP status codes are required to fall under one of the categories
+   New status codes are required to fall under one of the categories
    defined in <xref target="status.codes"/>. To allow existing parsers to
    properly handle them, new status codes cannot disallow a response body,
-   although they can mandate a zero-length response body. They can require the
-   presence of one or more particular HTTP response header field(s).
+   although they can mandate a zero-length response body.
 </t>
 <t>
-   Likewise, their definitions can specify that caches are allowed to use
-   heuristics to determine their freshness (see &caching;; by default, it is
-   not allowed), and can define how to determine the resource which they
-   carry a representation for (see <xref
-   target="associating.representation.with.resource"/>; by default,
-   it is anonymous).
+   A definition for a new status code ought to explain the request
+   conditions that produce a response containing that status code (e.g.,
+   combinations of request header fields and/or method(s)) along with any 
+   dependencies on response header fields (e.g., what fields are required
+   and what fields can modify the semantics). A response that can transfer a
+   payload ought to specify expected cache behavior (e.g., cacheability and
+   freshness criteria, as described in &caching;) and whether the payload has
+   any implied association with an identified resource
+   (<xref target="identifying.payload"/>).
 </t>
 </section>
 
