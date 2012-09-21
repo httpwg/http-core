@@ -25,6 +25,7 @@
   <!ENTITY content.negotiation    "<xref target='Part2' x:rel='#content.negotiation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY diff-mime              "<xref target='Part2' x:rel='#differences.between.http.and.mime' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY representation         "<xref target='Part2' x:rel='#representation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY HEAD                   "<xref target='Part2' x:rel='#HEAD' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-allow           "<xref target='Part2' x:rel='#header.allow' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-cache-control   "<xref target='Part6' x:rel='#header.cache-control' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-content-encoding    "<xref target='Part2' x:rel='#header.content-encoding' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -1461,10 +1462,11 @@ Content-Type: text/plain
    status code (<xref target="status.line"/>).
    Responses to the HEAD request method never include a message body
    because the associated response header fields (e.g.,
-   <x:ref>Transfer-Encoding</x:ref>, <x:ref>Content-Length</x:ref>, etc.) only
-   indicate what their values would have been if the request method had been
-   GET. <x:ref>2xx (Successful)</x:ref> responses to CONNECT switch to tunnel
-   mode instead of having a message body.
+   <x:ref>Transfer-Encoding</x:ref>, <x:ref>Content-Length</x:ref>, etc.),
+   if present, indicate only what their values would have been if the request
+   method had been GET (&HEAD;).
+   <x:ref>2xx (Successful)</x:ref> responses to CONNECT switch to tunnel
+   mode instead of having a message body (&CONNECT;).
    All <x:ref>1xx (Informational)</x:ref>, <x:ref>204 (No Content)</x:ref>, and
    <x:ref>304 (Not Modified)</x:ref> responses &MUST-NOT; include a message body.
    All other responses do include a message body, although the body
@@ -1562,13 +1564,11 @@ Content-Type: text/plain
   <iref primary="true" item="Content-Length header field" x:for-anchor=""/>
   <x:anchor-alias value="Content-Length"/>
 <t>
-   When a message does not have a <x:ref>Transfer-Encoding</x:ref> header field
-   and the payload body length can be determined prior to being transferred, a
-   Content-Length header field &SHOULD; be sent to indicate the length of the
-   payload body that is either present as the message body, for requests
-   and non-HEAD responses other than <x:ref>304 (Not Modified)</x:ref>, or
-   would have been present had the request been an unconditional GET.  The
-   length is expressed as a decimal number of octets.
+   When a message is allowed to contain a message body, does not have a
+   <x:ref>Transfer-Encoding</x:ref> header field, and has a payload body
+   length that is known to the sender before the message header section has
+   been sent, the sender &SHOULD; send a Content-Length header field to
+   indicate the length of the payload body as a decimal number of octets.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/>
   <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
@@ -1580,13 +1580,28 @@ Content-Type: text/plain
   Content-Length: 3495
 </artwork></figure>
 <t>
-   In the case of a response to a HEAD request, Content-Length indicates
-   the size of the payload body (without any potential transfer-coding)
-   that would have been sent had the request been a GET.
-   In the case of a <x:ref>304 (Not Modified)</x:ref> response (&status-304;)
-   to a GET request, Content-Length indicates the size of the payload body (without
-   any potential transfer-coding) that would have been sent in a <x:ref>200 (OK)</x:ref>
-   response.
+   A sender &MUST-NOT; send a Content-Length header field in any message that
+   contains a <x:ref>Transfer-Encoding</x:ref> header field.
+</t>
+<t>
+   A server &MAY; send a Content-Length header field in a response to a HEAD
+   request (&HEAD;) in order to indicate the size of the payload body,
+   excluding any potential transfer-coding, that would have been sent had the
+   same request been a GET.
+</t>
+<t>
+   A server &MAY; send a Content-Length header field in a
+   <x:ref>304 (Not Modified)</x:ref> response to a conditional GET request
+   (&status-304;) in order to indicate the size of the payload body,
+   excluding any potential transfer-coding, that would have been sent in a
+   <x:ref>200 (OK)</x:ref> response.
+</t>
+<t>
+   A server &MUST-NOT; send a Content-Length header field in any response
+   with a status code of
+   <x:ref>1xx (Informational)</x:ref> or <x:ref>204 (No Content)</x:ref>.
+   A server &SHOULD-NOT; send a Content-Length header field in any
+   <x:ref>2xx (Successful)</x:ref> response to a CONNECT request (&CONNECT;).
 </t>
 <t>
    Any Content-Length field value greater than or equal to zero is valid.
