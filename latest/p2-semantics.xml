@@ -288,7 +288,7 @@
    of octets (representation data).
 </t>
 
-<section title="Representation Header Fields" anchor="representation.header.fields">
+<section title="Representation Metadata" anchor="representation.metadata">
   <x:anchor-alias value="representation-header"/>
 <t>
    Representation header fields provide metadata about the representation.
@@ -299,7 +299,7 @@
    payload body if the same request had been a GET.
 </t>
 <t>
-   The following header fields are defined as representation metadata:
+   The following header fields are defined to convey representation metadata:
 </t>
 <texttable align="left">
   <ttcol>Header Field Name</ttcol>
@@ -311,6 +311,151 @@
   <c>Content-Location</c> <c><xref target="header.content-location"/></c>
   <c>Expires</c> <c>&header-expires;</c>
 </texttable>
+
+<section title="Data Type" anchor="data.type">
+
+<section title="Media Types" anchor="media.types">
+  <x:anchor-alias value="media-type"/>
+  <x:anchor-alias value="type"/>
+  <x:anchor-alias value="subtype"/>
+<t>
+   HTTP uses Internet Media Types <xref target="RFC2046"/> in the
+   <x:ref>Content-Type</x:ref> (<xref target="header.content-type"/>)
+   and <x:ref>Accept</x:ref> (<xref target="header.accept"/>) header fields in
+   order to provide open and extensible data typing and type negotiation.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
+  <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
+  <x:ref>type</x:ref>       = <x:ref>token</x:ref>
+  <x:ref>subtype</x:ref>    = <x:ref>token</x:ref>
+</artwork></figure>
+<t anchor="rule.parameter">
+  <x:anchor-alias value="attribute"/>
+  <x:anchor-alias value="parameter"/>
+  <x:anchor-alias value="value"/>
+   The type/subtype &MAY; be followed by parameters in the form of
+   attribute/value pairs.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="attribute"/><iref primary="true" item="Grammar" subitem="value"/>
+  <x:ref>parameter</x:ref>      = <x:ref>attribute</x:ref> "=" <x:ref>value</x:ref>
+  <x:ref>attribute</x:ref>      = <x:ref>token</x:ref>
+  <x:ref>value</x:ref>          = <x:ref>word</x:ref>
+</artwork></figure>
+<t>
+   The type, subtype, and parameter attribute names are case-insensitive.
+   Parameter values might or might not be case-sensitive, depending on the
+   semantics of the parameter name.  The presence or absence of a parameter might
+   be significant to the processing of a media-type, depending on its
+   definition within the media type registry.
+</t>
+<t>
+   A parameter value that matches the <x:ref>token</x:ref> production can be
+   transmitted as either a token or within a quoted-string. The quoted and
+   unquoted values are equivalent. 
+</t>
+<t>
+   Media-type values are registered with the Internet Assigned Number
+   Authority (IANA). The media type registration process is
+   outlined in <xref target="RFC4288"/>. Use of non-registered media types is
+   discouraged.
+</t>
+</section>
+
+<section title="Character Encodings (charset)" anchor="character.sets">
+<t>
+   HTTP uses charset names to indicate the character encoding of a
+   textual representation.
+</t>
+<t anchor="rule.charset">
+  <x:anchor-alias value="charset"/>
+   A character encoding is identified by a case-insensitive token. The
+   complete set of tokens is defined by the IANA Character Set registry
+   (<eref target="http://www.iana.org/assignments/character-sets"/>).
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="charset"/>
+  <x:ref>charset</x:ref> = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   Although HTTP allows an arbitrary token to be used as a charset
+   value, any token that has a predefined value within the IANA
+   Character Set registry &MUST; represent the character encoding defined
+   by that registry. Applications &SHOULD; limit their use of character
+   encodings to those defined within the IANA registry.
+</t>
+<t>
+   HTTP uses charset in two contexts: within an <x:ref>Accept-Charset</x:ref>
+   request header field (in which the charset value is an unquoted token) and
+   as the value of a parameter in a <x:ref>Content-Type</x:ref> header field
+   (within a request or response), in which case the parameter value of the
+   charset parameter can be quoted.
+</t>
+<t>
+   Implementers need to be aware of IETF character set requirements <xref target="RFC3629"/>
+   <xref target="RFC2277"/>.
+</t>
+</section>
+
+<section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
+<t>
+   Internet media types are registered with a canonical form. A
+   representation transferred via HTTP messages &MUST; be in the
+   appropriate canonical form prior to its transmission except for
+   "text" types, as defined in the next paragraph.
+</t>
+<t>
+   When in canonical form, media subtypes of the "text" type use CRLF as
+   the text line break. HTTP relaxes this requirement and allows the
+   transport of text media with plain CR or LF alone representing a line
+   break when it is done consistently for an entire representation. HTTP
+   applications &MUST; accept CRLF, bare CR, and bare LF as indicating
+   a line break in text media received via HTTP. In
+   addition, if the text is in a character encoding that does not
+   use octets 13 and 10 for CR and LF respectively, as is the case for
+   some multi-byte character encodings, HTTP allows the use of whatever octet
+   sequences are defined by that character encoding to represent the
+   equivalent of CR and LF for line breaks. This flexibility regarding
+   line breaks applies only to text media in the payload body; a bare CR
+   or LF &MUST-NOT; be substituted for CRLF within any of the HTTP control
+   structures (such as header fields and multipart boundaries).
+</t>
+<t>
+   If a representation is encoded with a content-coding, the underlying
+   data &MUST; be in a form defined above prior to being encoded.
+</t>
+</section>
+
+<section title="Multipart Types" anchor="multipart.types">
+<t>
+   MIME provides for a number of "multipart" types &mdash; encapsulations of
+   one or more representations within a single message body. All multipart
+   types share a common syntax, as defined in <xref target="RFC2046" x:sec="5.1.1" x:fmt="of"/>,
+   and include a boundary parameter as part of the media type
+   value. The message body is itself a protocol element; a sender &MUST;
+   generate only CRLF to represent line breaks between body-parts.
+</t>
+<t>
+   In general, HTTP treats a multipart message body no differently than
+   any other media type: strictly as payload.  HTTP does not use the
+   multipart boundary as an indicator of message body length.
+   <!-- jre: re-insert removed text pointing to caching? -->
+   In all other respects, an HTTP user agent &SHOULD; follow the same or similar
+   behavior as a MIME user agent would upon receipt of a multipart type.
+   The MIME header fields within each body-part of a multipart message body
+   do not have any significance to HTTP beyond that defined by
+   their MIME semantics.
+</t>
+<t>
+   A recipient &MUST; treat an unrecognized multipart subtype
+   as being equivalent to "multipart/mixed".
+</t>
+<x:note>
+  <t>
+    &Note; The "multipart/form-data" type has been specifically defined
+    for carrying form data suitable for processing via the POST
+    request method, as described in <xref target="RFC2388"/>.
+  </t>
+</x:note>
+</section>
 
 <section title="Content-Type" anchor="header.content-type">
   <iref primary="true" item="Content-Type header field" x:for-anchor=""/>
@@ -352,6 +497,57 @@
    format: many data formats match multiple media types that differ only in
    processing semantics.  Implementers are encouraged to provide a means of
    disabling such "content sniffing" when it is used.
+</t>
+</section>
+</section>
+
+<section title="Data Encoding" anchor="data.encoding">
+
+<section title="Content Codings" anchor="content.codings">
+  <x:anchor-alias value="content-coding"/>
+<t>
+   Content coding values indicate an encoding transformation that has
+   been or can be applied to a representation. Content codings are primarily
+   used to allow a representation to be compressed or otherwise usefully
+   transformed without losing the identity of its underlying media type
+   and without loss of information. Frequently, the representation is stored in
+   coded form, transmitted directly, and only decoded by the recipient.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="content-coding"/>
+  <x:ref>content-coding</x:ref>   = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   All content-coding values are case-insensitive. HTTP/1.1 uses
+   content-coding values in the <x:ref>Accept-Encoding</x:ref>
+   (<xref target="header.accept-encoding"/>) and <x:ref>Content-Encoding</x:ref>
+   (<xref target="header.content-encoding"/>) header fields. Although the value
+   describes the content-coding, what is more important is that it
+   indicates what decoding mechanism will be required to remove the
+   encoding.
+</t>
+<t>
+   compress<iref item="compress (Coding Format)"/>
+  <list>
+    <t>
+      See &compress-coding;.
+    </t>
+  </list>
+</t>
+<t>
+   deflate<iref item="deflate (Coding Format)"/>
+  <list>
+    <t>
+      See &deflate-coding;.
+    </t>
+  </list>
+</t>
+<t>
+   gzip<iref item="gzip (Coding Format)"/>
+  <list>
+    <t>
+      See &gzip-coding;.
+    </t>
+  </list>
 </t>
 </section>
 
@@ -412,6 +608,41 @@
    status code of 415 (Unsupported Media Type).
 </t>
 </section>
+</section>
+
+<section title="Audience Language" anchor="audience.language">
+
+<section title="Language Tags" anchor="language.tags">
+  <x:anchor-alias value="language-tag"/>
+<t>
+   A language tag, as defined in <xref target="RFC5646"/>, identifies a
+   natural language spoken, written, or otherwise conveyed by human beings for
+   communication of information to other human beings. Computer languages are
+   explicitly excluded. HTTP uses language tags within the
+   <x:ref>Accept-Language</x:ref> and <x:ref>Content-Language</x:ref> fields.
+</t>
+<t>
+   In summary, a language tag is composed of one or more parts: A primary
+   language subtag followed by a possibly empty series of subtags:
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="language-tag"/>
+  <x:ref>language-tag</x:ref> = &lt;Language-Tag, defined in <xref target="RFC5646" x:sec="2.1"/>&gt;
+</artwork></figure>
+<t>
+   White space is not allowed within the tag and all tags are case-insensitive.
+   The name space of language subtags is administered by the IANA (see
+   <eref target="http://www.iana.org/assignments/language-subtag-registry"/>).
+</t>
+<figure>
+  <preamble>Example tags include:</preamble>
+<artwork type="example">
+  en, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
+</artwork>
+</figure>
+<t>
+   See <xref target="RFC5646"/> for further information. 
+</t>
+</section>
 
 <section title="Content-Language" anchor="header.content-language">
   <iref primary="true" item="Content-Language header field" x:for-anchor=""/>
@@ -460,6 +691,60 @@
 <t>
    Content-Language &MAY; be applied to any media type &mdash; it is not
    limited to textual documents.
+</t>
+</section>
+</section>
+
+<section title="Identification" anchor="identification">
+
+<section title="Identifying the Payload" anchor="identifying.payload">
+<t>
+   When a complete or partial representation is transferred in a message
+   payload, it is often desirable for the sender to supply, or the recipient
+   to determine, an identifier for the resource corresponding to that
+   representation.
+</t>
+<t>
+   The following rules are used to determine such a URI for the payload of a
+   request message:
+   <list style="symbols">
+      <t>If the request has a <x:ref>Content-Location</x:ref> header field,
+         then the sender asserts that the payload is a representation of the
+         resource identified by the Content-Location field-value. However,
+         such an assertion cannot be trusted unless it can be verified by
+         other means (not defined by HTTP). The information might still be
+         useful for revision history links.</t>
+      <t>Otherwise, the payload is unidentified.</t>
+   </list>
+</t>
+<t>
+   The following rules, to be applied in order until a match is found, are
+   used to determine such a URI for the payload of a response message:
+   <list style="numbers">
+      <t>If the request is GET or HEAD and the response status code is
+         <x:ref>200 (OK)</x:ref>, 
+         <x:ref>204 (No Content)</x:ref>,
+         <x:ref>206 (Partial Content)</x:ref>, or
+         <x:ref>304 (Not Modified)</x:ref>,
+         the payload's identifier is the effective request URI
+         (&effective-request-uri;).</t>
+      <t>If the request is GET or HEAD and the response status code is
+         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is a
+         potentially modified representation of the target resource; as such,
+         the effective request URI might only act as an identifier for the
+         payload's representation when a request is made via the same chain
+         of intermediaries.</t>
+      <t>If the response has a <x:ref>Content-Location</x:ref> header field
+         and its field-value is a reference to the same URI as the effective
+         request URI, the payload's identifier is the effective request URI.</t>
+      <t>If the response has a <x:ref>Content-Location</x:ref> header field
+         and its field-value is a reference to a URI different from the
+         effective request URI, then the sender asserts that the payload is a
+         representation of the resource identified by the Content-Location
+         field-value. However, such an assertion cannot be trusted unless
+         it can be verified by other means (not defined by HTTP).</t>
+      <t>Otherwise, the payload is unidentified.</t>
+   </list>
 </t>
 </section>
 
@@ -548,6 +833,7 @@
 </t>
 </section>
 </section>
+</section>
 
 <section title="Representation Data" anchor="representation.data">
   <x:anchor-alias value="representation-data"/>
@@ -568,7 +854,7 @@
 </artwork></figure>
 </section>
 
-<section title="Message Payload" anchor="payload">
+<section title="Payload Semantics" anchor="payload">
 <iref item="payload"/>
 <t>
    Some HTTP messages transfer a complete or partial representation as the
@@ -601,8 +887,6 @@
    a representation that describes the error and what next steps are suggested
    for resolving it.
 </t>
-
-<section title="Payload Header Fields" anchor="payload.header.fields">
 <t>
    Header fields that specifically describe the payload, rather than the
    associated representation, are referred to as "payload header fields".
@@ -617,58 +901,6 @@
   <c>Content-Range</c> <c>&header-content-range;</c>
   <c>Transfer-Encoding</c> <c>&header-transfer-encoding;</c>
 </texttable>
-</section>
-
-<section title="Identifying the Payload" anchor="identifying.payload">
-<t>
-   When a complete or partial representation is transferred in a message
-   payload, it is often desirable for the sender to supply, or the recipient
-   to determine, an identifier for the resource corresponding to that
-   representation.
-</t>
-<t>
-   The following rules are used to determine such a URI for the payload of a
-   request message:
-   <list style="symbols">
-      <t>If the request has a <x:ref>Content-Location</x:ref> header field,
-         then the sender asserts that the payload is a representation of the
-         resource identified by the Content-Location field-value. However,
-         such an assertion cannot be trusted unless it can be verified by
-         other means (not defined by HTTP). The information might still be
-         useful for revision history links.</t>
-      <t>Otherwise, the payload is unidentified.</t>
-   </list>
-</t>
-<t>
-   The following rules, to be applied in order until a match is found, are
-   used to determine such a URI for the payload of a response message:
-   <list style="numbers">
-      <t>If the request is GET or HEAD and the response status code is
-         <x:ref>200 (OK)</x:ref>, 
-         <x:ref>204 (No Content)</x:ref>,
-         <x:ref>206 (Partial Content)</x:ref>, or
-         <x:ref>304 (Not Modified)</x:ref>,
-         the payload's identifier is the effective request URI
-         (&effective-request-uri;).</t>
-      <t>If the request is GET or HEAD and the response status code is
-         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is a
-         potentially modified representation of the target resource; as such,
-         the effective request URI might only act as an identifier for the
-         payload's representation when a request is made via the same chain
-         of intermediaries.</t>
-      <t>If the response has a <x:ref>Content-Location</x:ref> header field
-         and its field-value is a reference to the same URI as the effective
-         request URI, the payload's identifier is the effective request URI.</t>
-      <t>If the response has a <x:ref>Content-Location</x:ref> header field
-         and its field-value is a reference to a URI different from the
-         effective request URI, then the sender asserts that the payload is a
-         representation of the resource identified by the Content-Location
-         field-value. However, such an assertion cannot be trusted unless
-         it can be verified by other means (not defined by HTTP).</t>
-      <t>Otherwise, the payload is unidentified.</t>
-   </list>
-</t>
-</section>
 </section>
 
 <section title="Content Negotiation" anchor="content.negotiation">
@@ -832,6 +1064,38 @@
 </t>
 </section>
 </section>
+</section>
+
+<section title="Product Tokens" anchor="product.tokens">
+  <x:anchor-alias value="product"/>
+  <x:anchor-alias value="product-version"/>
+<t>
+   Product tokens are used to allow communicating applications to
+   identify themselves by software name and version. Most fields using
+   product tokens also allow sub-products which form a significant part
+   of the application to be listed, separated by whitespace. By
+   convention, the products are listed in order of their significance
+   for identifying the application.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
+  <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
+  <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   Examples:
+</t>
+<figure><artwork type="example">
+  User-Agent: CERN-LineMode/2.15 libwww/2.17b3
+  Server: Apache/0.8.4
+</artwork></figure>
+<t>
+   Product tokens &SHOULD; be short and to the point. They &MUST-NOT; be
+   used for advertising or other non-essential information. Although any
+   token octet &MAY; appear in a product-version, this token &SHOULD;
+   only be used for a version identifier (i.e., successive versions of
+   the same product &SHOULD; only differ in the product-version portion of
+   the product value).
+</t>
 </section>
 
 <section title="Request Methods" anchor="methods">
@@ -2090,7 +2354,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </section>
 </section>
 
-<section title="Authentication" anchor="request.auth">
+<section title="Authentication Credentials" anchor="request.auth">
 <texttable align="left">
   <ttcol>Header Field Name</ttcol>
   <ttcol>Defined in...</ttcol>
@@ -3232,6 +3496,153 @@ Content-Type: text/plain
   <c>Retry-After</c> <c><xref target="header.retry-after"/></c>
 </texttable>
 
+<section title="Origination Date" anchor="origination.date">
+
+<section title="Date/Time Formats" anchor="http.date">
+  <x:anchor-alias value="HTTP-date"/>
+<t>
+   HTTP applications have historically allowed three different formats
+   for date/time stamps. However, the preferred format is a fixed-length subset
+   of that defined by <xref target="RFC1123"/>:
+</t>
+<figure><artwork type="example" x:indent-with="  ">
+Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 1123
+</artwork></figure>
+<t>
+   The other formats are described here only for compatibility with obsolete
+   implementations.
+</t>
+<figure><artwork type="example" x:indent-with="  ">
+Sunday, 06-Nov-94 08:49:37 GMT ; obsolete RFC 850 format
+Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
+</artwork></figure>
+<t>
+   HTTP/1.1 clients and servers that parse a date value &MUST; accept
+   all three formats (for compatibility with HTTP/1.0), though they &MUST;
+   only generate the RFC 1123 format for representing HTTP-date values
+   in header fields.
+</t>
+<t>
+   All HTTP date/time stamps &MUST; be represented in Greenwich Mean Time
+   (GMT), without exception. For the purposes of HTTP, GMT is exactly
+   equal to UTC (Coordinated Universal Time). This is indicated in the
+   first two formats by the inclusion of "GMT" as the three-letter
+   abbreviation for time zone, and &MUST; be assumed when reading the
+   asctime format. HTTP-date is case sensitive and &MUST-NOT; include
+   additional whitespace beyond that specifically included as SP in the
+   grammar.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
+  <x:ref>HTTP-date</x:ref>    = <x:ref>rfc1123-date</x:ref> / <x:ref>obs-date</x:ref>
+</artwork></figure>
+<t anchor="preferred.date.format">
+  <x:anchor-alias value="rfc1123-date"/>
+  <x:anchor-alias value="time-of-day"/>
+  <x:anchor-alias value="hour"/>
+  <x:anchor-alias value="minute"/>
+  <x:anchor-alias value="second"/>
+  <x:anchor-alias value="day-name"/>
+  <x:anchor-alias value="day"/>
+  <x:anchor-alias value="month"/>
+  <x:anchor-alias value="year"/>
+  <x:anchor-alias value="GMT"/>
+  Preferred format:
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc1123-date"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
+  <x:ref>rfc1123-date</x:ref> = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
+  ; fixed length subset of the format defined in
+  ; <xref target="RFC1123" x:fmt="of" x:sec="5.2.14"/>
+  
+  <x:ref>day-name</x:ref>     = <x:abnf-char-sequence>"Mon"</x:abnf-char-sequence> ; "Mon", case-sensitive
+               / <x:abnf-char-sequence>"Tue"</x:abnf-char-sequence> ; "Tue", case-sensitive
+               / <x:abnf-char-sequence>"Wed"</x:abnf-char-sequence> ; "Wed", case-sensitive
+               / <x:abnf-char-sequence>"Thu"</x:abnf-char-sequence> ; "Thu", case-sensitive
+               / <x:abnf-char-sequence>"Fri"</x:abnf-char-sequence> ; "Fri", case-sensitive
+               / <x:abnf-char-sequence>"Sat"</x:abnf-char-sequence> ; "Sat", case-sensitive
+               / <x:abnf-char-sequence>"Sun"</x:abnf-char-sequence> ; "Sun", case-sensitive
+               
+  <x:ref>date1</x:ref>        = <x:ref>day</x:ref> <x:ref>SP</x:ref> <x:ref>month</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
+               ; e.g., 02 Jun 1982
+
+  <x:ref>day</x:ref>          = 2<x:ref>DIGIT</x:ref>
+  <x:ref>month</x:ref>        = <x:abnf-char-sequence>"Jan"</x:abnf-char-sequence> ; "Jan", case-sensitive
+               / <x:abnf-char-sequence>"Feb"</x:abnf-char-sequence> ; "Feb", case-sensitive
+               / <x:abnf-char-sequence>"Mar"</x:abnf-char-sequence> ; "Mar", case-sensitive
+               / <x:abnf-char-sequence>"Apr"</x:abnf-char-sequence> ; "Apr", case-sensitive
+               / <x:abnf-char-sequence>"May"</x:abnf-char-sequence> ; "May", case-sensitive
+               / <x:abnf-char-sequence>"Jun"</x:abnf-char-sequence> ; "Jun", case-sensitive
+               / <x:abnf-char-sequence>"Jul"</x:abnf-char-sequence> ; "Jul", case-sensitive
+               / <x:abnf-char-sequence>"Aug"</x:abnf-char-sequence> ; "Aug", case-sensitive
+               / <x:abnf-char-sequence>"Sep"</x:abnf-char-sequence> ; "Sep", case-sensitive
+               / <x:abnf-char-sequence>"Oct"</x:abnf-char-sequence> ; "Oct", case-sensitive
+               / <x:abnf-char-sequence>"Nov"</x:abnf-char-sequence> ; "Nov", case-sensitive
+               / <x:abnf-char-sequence>"Dec"</x:abnf-char-sequence> ; "Dec", case-sensitive
+  <x:ref>year</x:ref>         = 4<x:ref>DIGIT</x:ref>
+
+  <x:ref>GMT</x:ref>   = <x:abnf-char-sequence>"GMT"</x:abnf-char-sequence> ; "GMT", case-sensitive
+
+  <x:ref>time-of-day</x:ref>  = <x:ref>hour</x:ref> ":" <x:ref>minute</x:ref> ":" <x:ref>second</x:ref>
+                 ; 00:00:00 - 23:59:59
+                 
+  <x:ref>hour</x:ref>         = 2<x:ref>DIGIT</x:ref>               
+  <x:ref>minute</x:ref>       = 2<x:ref>DIGIT</x:ref>               
+  <x:ref>second</x:ref>       = 2<x:ref>DIGIT</x:ref>               
+</artwork></figure>
+<t>
+  The semantics of <x:ref>day-name</x:ref>, <x:ref>day</x:ref>,
+  <x:ref>month</x:ref>, <x:ref>year</x:ref>, and <x:ref>time-of-day</x:ref> are the
+  same as those defined for the RFC 5322 constructs
+  with the corresponding name (<xref target="RFC5322" x:fmt="," x:sec="3.3"/>).
+</t>
+<t anchor="obsolete.date.formats">
+  <x:anchor-alias value="obs-date"/>
+  <x:anchor-alias value="rfc850-date"/>
+  <x:anchor-alias value="asctime-date"/>
+  <x:anchor-alias value="date1"/>
+  <x:anchor-alias value="date2"/>
+  <x:anchor-alias value="date3"/>
+  <x:anchor-alias value="day-name-l"/>
+  Obsolete formats:
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="obs-date"/>
+  <x:ref>obs-date</x:ref>     = <x:ref>rfc850-date</x:ref> / <x:ref>asctime-date</x:ref> 
+</artwork></figure>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
+  <x:ref>rfc850-date</x:ref>  = <x:ref>day-name-l</x:ref> "," <x:ref>SP</x:ref> <x:ref>date2</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
+  <x:ref>date2</x:ref>        = <x:ref>day</x:ref> "-" <x:ref>month</x:ref> "-" 2<x:ref>DIGIT</x:ref>
+                 ; day-month-year (e.g., 02-Jun-82)
+
+  <x:ref>day-name-l</x:ref>   = <x:abnf-char-sequence>"Monday"</x:abnf-char-sequence> ; "Monday", case-sensitive
+         / <x:abnf-char-sequence>"Tuesday"</x:abnf-char-sequence> ; "Tuesday", case-sensitive
+         / <x:abnf-char-sequence>"Wednesday"</x:abnf-char-sequence> ; "Wednesday", case-sensitive
+         / <x:abnf-char-sequence>"Thursday"</x:abnf-char-sequence> ; "Thursday", case-sensitive
+         / <x:abnf-char-sequence>"Friday"</x:abnf-char-sequence> ; "Friday", case-sensitive
+         / <x:abnf-char-sequence>"Saturday"</x:abnf-char-sequence> ; "Saturday", case-sensitive
+         / <x:abnf-char-sequence>"Sunday"</x:abnf-char-sequence> ; "Sunday", case-sensitive
+</artwork></figure>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="asctime-date"/>
+  <x:ref>asctime-date</x:ref> = <x:ref>day-name</x:ref> <x:ref>SP</x:ref> <x:ref>date3</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
+  <x:ref>date3</x:ref>        = <x:ref>month</x:ref> <x:ref>SP</x:ref> ( 2<x:ref>DIGIT</x:ref> / ( <x:ref>SP</x:ref> 1<x:ref>DIGIT</x:ref> ))
+                 ; month day (e.g., Jun  2)
+</artwork></figure>
+<x:note>
+  <t>
+    &Note; Recipients of date values are encouraged to be robust in
+    accepting date values that might have been sent by non-HTTP
+    applications, as is sometimes the case when retrieving or posting
+    messages via proxies/gateways to SMTP or NNTP.
+  </t>
+</x:note>
+<x:note>
+  <t>
+    &Note; HTTP requirements for the date/time stamp format apply only
+    to their usage within the protocol stream. Clients and servers are
+    not required to use these formats for user presentation, request
+    logging, etc.
+  </t>
+</x:note>
+</section>
+
 <section title="Date" anchor="header.date">
   <iref primary="true" item="Date header field" x:for-anchor=""/>
   <x:anchor-alias value="Date"/>
@@ -3289,6 +3700,7 @@ Content-Type: text/plain
    practice, the date can be generated at any time during the message
    origination without affecting its semantic value.
 </t>
+</section>
 </section>
 
 <section title="Location" anchor="header.location">
@@ -3554,408 +3966,6 @@ Content-Type: text/plain
   </t>
 </x:note>
 </section>
-</section>
-</section>
-
-<section title="Protocol Parameters" anchor="protocol.parameters">
-<section title="Date/Time Formats" anchor="http.date">
-  <x:anchor-alias value="HTTP-date"/>
-<t>
-   HTTP applications have historically allowed three different formats
-   for date/time stamps. However, the preferred format is a fixed-length subset
-   of that defined by <xref target="RFC1123"/>:
-</t>
-<figure><artwork type="example" x:indent-with="  ">
-Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 1123
-</artwork></figure>
-<t>
-   The other formats are described here only for compatibility with obsolete
-   implementations.
-</t>
-<figure><artwork type="example" x:indent-with="  ">
-Sunday, 06-Nov-94 08:49:37 GMT ; obsolete RFC 850 format
-Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
-</artwork></figure>
-<t>
-   HTTP/1.1 clients and servers that parse a date value &MUST; accept
-   all three formats (for compatibility with HTTP/1.0), though they &MUST;
-   only generate the RFC 1123 format for representing HTTP-date values
-   in header fields.
-</t>
-<t>
-   All HTTP date/time stamps &MUST; be represented in Greenwich Mean Time
-   (GMT), without exception. For the purposes of HTTP, GMT is exactly
-   equal to UTC (Coordinated Universal Time). This is indicated in the
-   first two formats by the inclusion of "GMT" as the three-letter
-   abbreviation for time zone, and &MUST; be assumed when reading the
-   asctime format. HTTP-date is case sensitive and &MUST-NOT; include
-   additional whitespace beyond that specifically included as SP in the
-   grammar.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
-  <x:ref>HTTP-date</x:ref>    = <x:ref>rfc1123-date</x:ref> / <x:ref>obs-date</x:ref>
-</artwork></figure>
-<t anchor="preferred.date.format">
-  <x:anchor-alias value="rfc1123-date"/>
-  <x:anchor-alias value="time-of-day"/>
-  <x:anchor-alias value="hour"/>
-  <x:anchor-alias value="minute"/>
-  <x:anchor-alias value="second"/>
-  <x:anchor-alias value="day-name"/>
-  <x:anchor-alias value="day"/>
-  <x:anchor-alias value="month"/>
-  <x:anchor-alias value="year"/>
-  <x:anchor-alias value="GMT"/>
-  Preferred format:
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc1123-date"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
-  <x:ref>rfc1123-date</x:ref> = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
-  ; fixed length subset of the format defined in
-  ; <xref target="RFC1123" x:fmt="of" x:sec="5.2.14"/>
-  
-  <x:ref>day-name</x:ref>     = <x:abnf-char-sequence>"Mon"</x:abnf-char-sequence> ; "Mon", case-sensitive
-               / <x:abnf-char-sequence>"Tue"</x:abnf-char-sequence> ; "Tue", case-sensitive
-               / <x:abnf-char-sequence>"Wed"</x:abnf-char-sequence> ; "Wed", case-sensitive
-               / <x:abnf-char-sequence>"Thu"</x:abnf-char-sequence> ; "Thu", case-sensitive
-               / <x:abnf-char-sequence>"Fri"</x:abnf-char-sequence> ; "Fri", case-sensitive
-               / <x:abnf-char-sequence>"Sat"</x:abnf-char-sequence> ; "Sat", case-sensitive
-               / <x:abnf-char-sequence>"Sun"</x:abnf-char-sequence> ; "Sun", case-sensitive
-               
-  <x:ref>date1</x:ref>        = <x:ref>day</x:ref> <x:ref>SP</x:ref> <x:ref>month</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
-               ; e.g., 02 Jun 1982
-
-  <x:ref>day</x:ref>          = 2<x:ref>DIGIT</x:ref>
-  <x:ref>month</x:ref>        = <x:abnf-char-sequence>"Jan"</x:abnf-char-sequence> ; "Jan", case-sensitive
-               / <x:abnf-char-sequence>"Feb"</x:abnf-char-sequence> ; "Feb", case-sensitive
-               / <x:abnf-char-sequence>"Mar"</x:abnf-char-sequence> ; "Mar", case-sensitive
-               / <x:abnf-char-sequence>"Apr"</x:abnf-char-sequence> ; "Apr", case-sensitive
-               / <x:abnf-char-sequence>"May"</x:abnf-char-sequence> ; "May", case-sensitive
-               / <x:abnf-char-sequence>"Jun"</x:abnf-char-sequence> ; "Jun", case-sensitive
-               / <x:abnf-char-sequence>"Jul"</x:abnf-char-sequence> ; "Jul", case-sensitive
-               / <x:abnf-char-sequence>"Aug"</x:abnf-char-sequence> ; "Aug", case-sensitive
-               / <x:abnf-char-sequence>"Sep"</x:abnf-char-sequence> ; "Sep", case-sensitive
-               / <x:abnf-char-sequence>"Oct"</x:abnf-char-sequence> ; "Oct", case-sensitive
-               / <x:abnf-char-sequence>"Nov"</x:abnf-char-sequence> ; "Nov", case-sensitive
-               / <x:abnf-char-sequence>"Dec"</x:abnf-char-sequence> ; "Dec", case-sensitive
-  <x:ref>year</x:ref>         = 4<x:ref>DIGIT</x:ref>
-
-  <x:ref>GMT</x:ref>   = <x:abnf-char-sequence>"GMT"</x:abnf-char-sequence> ; "GMT", case-sensitive
-
-  <x:ref>time-of-day</x:ref>  = <x:ref>hour</x:ref> ":" <x:ref>minute</x:ref> ":" <x:ref>second</x:ref>
-                 ; 00:00:00 - 23:59:59
-                 
-  <x:ref>hour</x:ref>         = 2<x:ref>DIGIT</x:ref>               
-  <x:ref>minute</x:ref>       = 2<x:ref>DIGIT</x:ref>               
-  <x:ref>second</x:ref>       = 2<x:ref>DIGIT</x:ref>               
-</artwork></figure>
-<t>
-  The semantics of <x:ref>day-name</x:ref>, <x:ref>day</x:ref>,
-  <x:ref>month</x:ref>, <x:ref>year</x:ref>, and <x:ref>time-of-day</x:ref> are the
-  same as those defined for the RFC 5322 constructs
-  with the corresponding name (<xref target="RFC5322" x:fmt="," x:sec="3.3"/>).
-</t>
-<t anchor="obsolete.date.formats">
-  <x:anchor-alias value="obs-date"/>
-  <x:anchor-alias value="rfc850-date"/>
-  <x:anchor-alias value="asctime-date"/>
-  <x:anchor-alias value="date1"/>
-  <x:anchor-alias value="date2"/>
-  <x:anchor-alias value="date3"/>
-  <x:anchor-alias value="day-name-l"/>
-  Obsolete formats:
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="obs-date"/>
-  <x:ref>obs-date</x:ref>     = <x:ref>rfc850-date</x:ref> / <x:ref>asctime-date</x:ref> 
-</artwork></figure>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
-  <x:ref>rfc850-date</x:ref>  = <x:ref>day-name-l</x:ref> "," <x:ref>SP</x:ref> <x:ref>date2</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
-  <x:ref>date2</x:ref>        = <x:ref>day</x:ref> "-" <x:ref>month</x:ref> "-" 2<x:ref>DIGIT</x:ref>
-                 ; day-month-year (e.g., 02-Jun-82)
-
-  <x:ref>day-name-l</x:ref>   = <x:abnf-char-sequence>"Monday"</x:abnf-char-sequence> ; "Monday", case-sensitive
-         / <x:abnf-char-sequence>"Tuesday"</x:abnf-char-sequence> ; "Tuesday", case-sensitive
-         / <x:abnf-char-sequence>"Wednesday"</x:abnf-char-sequence> ; "Wednesday", case-sensitive
-         / <x:abnf-char-sequence>"Thursday"</x:abnf-char-sequence> ; "Thursday", case-sensitive
-         / <x:abnf-char-sequence>"Friday"</x:abnf-char-sequence> ; "Friday", case-sensitive
-         / <x:abnf-char-sequence>"Saturday"</x:abnf-char-sequence> ; "Saturday", case-sensitive
-         / <x:abnf-char-sequence>"Sunday"</x:abnf-char-sequence> ; "Sunday", case-sensitive
-</artwork></figure>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="asctime-date"/>
-  <x:ref>asctime-date</x:ref> = <x:ref>day-name</x:ref> <x:ref>SP</x:ref> <x:ref>date3</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
-  <x:ref>date3</x:ref>        = <x:ref>month</x:ref> <x:ref>SP</x:ref> ( 2<x:ref>DIGIT</x:ref> / ( <x:ref>SP</x:ref> 1<x:ref>DIGIT</x:ref> ))
-                 ; month day (e.g., Jun  2)
-</artwork></figure>
-<x:note>
-  <t>
-    &Note; Recipients of date values are encouraged to be robust in
-    accepting date values that might have been sent by non-HTTP
-    applications, as is sometimes the case when retrieving or posting
-    messages via proxies/gateways to SMTP or NNTP.
-  </t>
-</x:note>
-<x:note>
-  <t>
-    &Note; HTTP requirements for the date/time stamp format apply only
-    to their usage within the protocol stream. Clients and servers are
-    not required to use these formats for user presentation, request
-    logging, etc.
-  </t>
-</x:note>
-</section>
-
-<section title="Product Tokens" anchor="product.tokens">
-  <x:anchor-alias value="product"/>
-  <x:anchor-alias value="product-version"/>
-<t>
-   Product tokens are used to allow communicating applications to
-   identify themselves by software name and version. Most fields using
-   product tokens also allow sub-products which form a significant part
-   of the application to be listed, separated by whitespace. By
-   convention, the products are listed in order of their significance
-   for identifying the application.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
-  <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
-  <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   Examples:
-</t>
-<figure><artwork type="example">
-  User-Agent: CERN-LineMode/2.15 libwww/2.17b3
-  Server: Apache/0.8.4
-</artwork></figure>
-<t>
-   Product tokens &SHOULD; be short and to the point. They &MUST-NOT; be
-   used for advertising or other non-essential information. Although any
-   token octet &MAY; appear in a product-version, this token &SHOULD;
-   only be used for a version identifier (i.e., successive versions of
-   the same product &SHOULD; only differ in the product-version portion of
-   the product value).
-</t>
-</section>
-
-<section title="Character Encodings (charset)" anchor="character.sets">
-<t>
-   HTTP uses charset names to indicate the character encoding of a
-   textual representation.
-</t>
-<t anchor="rule.charset">
-  <x:anchor-alias value="charset"/>
-   A character encoding is identified by a case-insensitive token. The
-   complete set of tokens is defined by the IANA Character Set registry
-   (<eref target="http://www.iana.org/assignments/character-sets"/>).
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="charset"/>
-  <x:ref>charset</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   Although HTTP allows an arbitrary token to be used as a charset
-   value, any token that has a predefined value within the IANA
-   Character Set registry &MUST; represent the character encoding defined
-   by that registry. Applications &SHOULD; limit their use of character
-   encodings to those defined within the IANA registry.
-</t>
-<t>
-   HTTP uses charset in two contexts: within an <x:ref>Accept-Charset</x:ref>
-   request header field (in which the charset value is an unquoted token) and
-   as the value of a parameter in a <x:ref>Content-Type</x:ref> header field
-   (within a request or response), in which case the parameter value of the
-   charset parameter can be quoted.
-</t>
-<t>
-   Implementers need to be aware of IETF character set requirements <xref target="RFC3629"/>
-   <xref target="RFC2277"/>.
-</t>
-</section>
-
-<section title="Content Codings" anchor="content.codings">
-  <x:anchor-alias value="content-coding"/>
-<t>
-   Content coding values indicate an encoding transformation that has
-   been or can be applied to a representation. Content codings are primarily
-   used to allow a representation to be compressed or otherwise usefully
-   transformed without losing the identity of its underlying media type
-   and without loss of information. Frequently, the representation is stored in
-   coded form, transmitted directly, and only decoded by the recipient.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="content-coding"/>
-  <x:ref>content-coding</x:ref>   = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   All content-coding values are case-insensitive. HTTP/1.1 uses
-   content-coding values in the <x:ref>Accept-Encoding</x:ref>
-   (<xref target="header.accept-encoding"/>) and <x:ref>Content-Encoding</x:ref>
-   (<xref target="header.content-encoding"/>) header fields. Although the value
-   describes the content-coding, what is more important is that it
-   indicates what decoding mechanism will be required to remove the
-   encoding.
-</t>
-<t>
-   compress<iref item="compress (Coding Format)"/>
-  <list>
-    <t>
-      See &compress-coding;.
-    </t>
-  </list>
-</t>
-<t>
-   deflate<iref item="deflate (Coding Format)"/>
-  <list>
-    <t>
-      See &deflate-coding;.
-    </t>
-  </list>
-</t>
-<t>
-   gzip<iref item="gzip (Coding Format)"/>
-  <list>
-    <t>
-      See &gzip-coding;.
-    </t>
-  </list>
-</t>
-</section>
-
-<section title="Media Types" anchor="media.types">
-  <x:anchor-alias value="media-type"/>
-  <x:anchor-alias value="type"/>
-  <x:anchor-alias value="subtype"/>
-<t>
-   HTTP uses Internet Media Types <xref target="RFC2046"/> in the
-   <x:ref>Content-Type</x:ref> (<xref target="header.content-type"/>)
-   and <x:ref>Accept</x:ref> (<xref target="header.accept"/>) header fields in
-   order to provide open and extensible data typing and type negotiation.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
-  <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
-  <x:ref>type</x:ref>       = <x:ref>token</x:ref>
-  <x:ref>subtype</x:ref>    = <x:ref>token</x:ref>
-</artwork></figure>
-<t anchor="rule.parameter">
-  <x:anchor-alias value="attribute"/>
-  <x:anchor-alias value="parameter"/>
-  <x:anchor-alias value="value"/>
-   The type/subtype &MAY; be followed by parameters in the form of
-   attribute/value pairs.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="attribute"/><iref primary="true" item="Grammar" subitem="value"/>
-  <x:ref>parameter</x:ref>      = <x:ref>attribute</x:ref> "=" <x:ref>value</x:ref>
-  <x:ref>attribute</x:ref>      = <x:ref>token</x:ref>
-  <x:ref>value</x:ref>          = <x:ref>word</x:ref>
-</artwork></figure>
-<t>
-   The type, subtype, and parameter attribute names are case-insensitive.
-   Parameter values might or might not be case-sensitive, depending on the
-   semantics of the parameter name.  The presence or absence of a parameter might
-   be significant to the processing of a media-type, depending on its
-   definition within the media type registry.
-</t>
-<t>
-   A parameter value that matches the <x:ref>token</x:ref> production can be
-   transmitted as either a token or within a quoted-string. The quoted and
-   unquoted values are equivalent. 
-</t>
-<t>
-   Media-type values are registered with the Internet Assigned Number
-   Authority (IANA). The media type registration process is
-   outlined in <xref target="RFC4288"/>. Use of non-registered media types is
-   discouraged.
-</t>
-
-<section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
-<t>
-   Internet media types are registered with a canonical form. A
-   representation transferred via HTTP messages &MUST; be in the
-   appropriate canonical form prior to its transmission except for
-   "text" types, as defined in the next paragraph.
-</t>
-<t>
-   When in canonical form, media subtypes of the "text" type use CRLF as
-   the text line break. HTTP relaxes this requirement and allows the
-   transport of text media with plain CR or LF alone representing a line
-   break when it is done consistently for an entire representation. HTTP
-   applications &MUST; accept CRLF, bare CR, and bare LF as indicating
-   a line break in text media received via HTTP. In
-   addition, if the text is in a character encoding that does not
-   use octets 13 and 10 for CR and LF respectively, as is the case for
-   some multi-byte character encodings, HTTP allows the use of whatever octet
-   sequences are defined by that character encoding to represent the
-   equivalent of CR and LF for line breaks. This flexibility regarding
-   line breaks applies only to text media in the payload body; a bare CR
-   or LF &MUST-NOT; be substituted for CRLF within any of the HTTP control
-   structures (such as header fields and multipart boundaries).
-</t>
-<t>
-   If a representation is encoded with a content-coding, the underlying
-   data &MUST; be in a form defined above prior to being encoded.
-</t>
-</section>
-
-<section title="Multipart Types" anchor="multipart.types">
-<t>
-   MIME provides for a number of "multipart" types &mdash; encapsulations of
-   one or more representations within a single message body. All multipart
-   types share a common syntax, as defined in <xref target="RFC2046" x:sec="5.1.1" x:fmt="of"/>,
-   and include a boundary parameter as part of the media type
-   value. The message body is itself a protocol element; a sender &MUST;
-   generate only CRLF to represent line breaks between body-parts.
-</t>
-<t>
-   In general, HTTP treats a multipart message body no differently than
-   any other media type: strictly as payload.  HTTP does not use the
-   multipart boundary as an indicator of message body length.
-   <!-- jre: re-insert removed text pointing to caching? -->
-   In all other respects, an HTTP user agent &SHOULD; follow the same or similar
-   behavior as a MIME user agent would upon receipt of a multipart type.
-   The MIME header fields within each body-part of a multipart message body
-   do not have any significance to HTTP beyond that defined by
-   their MIME semantics.
-</t>
-<t>
-   A recipient &MUST; treat an unrecognized multipart subtype
-   as being equivalent to "multipart/mixed".
-</t>
-<x:note>
-  <t>
-    &Note; The "multipart/form-data" type has been specifically defined
-    for carrying form data suitable for processing via the POST
-    request method, as described in <xref target="RFC2388"/>.
-  </t>
-</x:note>
-</section>
-</section>
-
-<section title="Language Tags" anchor="language.tags">
-  <x:anchor-alias value="language-tag"/>
-<t>
-   A language tag, as defined in <xref target="RFC5646"/>, identifies a
-   natural language spoken, written, or otherwise conveyed by human beings for
-   communication of information to other human beings. Computer languages are
-   explicitly excluded. HTTP uses language tags within the
-   <x:ref>Accept-Language</x:ref> and <x:ref>Content-Language</x:ref> fields.
-</t>
-<t>
-   In summary, a language tag is composed of one or more parts: A primary
-   language subtag followed by a possibly empty series of subtags:
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="language-tag"/>
-  <x:ref>language-tag</x:ref> = &lt;Language-Tag, defined in <xref target="RFC5646" x:sec="2.1"/>&gt;
-</artwork></figure>
-<t>
-   White space is not allowed within the tag and all tags are case-insensitive.
-   The name space of language subtags is administered by the IANA (see
-   <eref target="http://www.iana.org/assignments/language-subtag-registry"/>).
-</t>
-<figure>
-  <preamble>Example tags include:</preamble>
-<artwork type="example">
-  en, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
-</artwork>
-</figure>
-<t>
-   See <xref target="RFC5646"/> for further information. 
-</t>
 </section>
 </section>
 
