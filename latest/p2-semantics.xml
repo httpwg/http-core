@@ -510,6 +510,12 @@
 <section title="Data Encoding" anchor="data.encoding">
 
 <section title="Content Codings" anchor="content.codings">
+  <iref primary="true" item="content coding"/>
+  <iref primary="true" item="compress (content coding)"/>
+  <iref primary="true" item="x-compress (content coding)"/>
+  <iref primary="true" item="deflate (content coding)"/>
+  <iref primary="true" item="gzip (content coding)"/>
+  <iref primary="true" item="x-gzip (content coding)"/>
   <x:anchor-alias value="content-coding"/>
 <t>
    Content coding values indicate an encoding transformation that has
@@ -523,37 +529,20 @@
   <x:ref>content-coding</x:ref>   = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
-   All content-coding values are case-insensitive. HTTP/1.1 uses
-   content-coding values in the <x:ref>Accept-Encoding</x:ref>
-   (<xref target="header.accept-encoding"/>) and <x:ref>Content-Encoding</x:ref>
-   (<xref target="header.content-encoding"/>) header fields. Although the value
-   describes the content-coding, what is more important is that it
-   indicates what decoding mechanism will be required to remove the
-   encoding.
+   All content-coding values are case-insensitive and &SHOULD; be registered
+   within the HTTP Content Coding registry, as defined in
+   <xref target="content.coding.registry"/>. They are used in the
+   <x:ref>Accept-Encoding</x:ref> (<xref target="header.accept-encoding"/>)
+   and <x:ref>Content-Encoding</x:ref> (<xref target="header.content-encoding"/>)
+   header fields.
 </t>
 <t>
-   compress<iref item="compress (Coding Format)"/>
-  <list>
-    <t>
-      See &compress-coding;.
-    </t>
-  </list>
-</t>
-<t>
-   deflate<iref item="deflate (Coding Format)"/>
-  <list>
-    <t>
-      See &deflate-coding;.
-    </t>
-  </list>
-</t>
-<t>
-   gzip<iref item="gzip (Coding Format)"/>
-  <list>
-    <t>
-      See &gzip-coding;.
-    </t>
-  </list>
+   The following content-coding values are defined by this specification:
+   <list>
+    <t>compress (and x-compress): See &compress-coding;.</t>
+    <t>deflate: See &deflate-coding;.</t>
+    <t>gzip (and x-gzip): See &gzip-coding;.</t>
+   </list>
 </t>
 </section>
 
@@ -561,27 +550,39 @@
   <iref primary="true" item="Content-Encoding header field" x:for-anchor=""/>
   <x:anchor-alias value="Content-Encoding"/>
 <t>
-   The "Content-Encoding" header field indicates what content-codings 
-   have been applied to the representation beyond those inherent in the media
-   type, and thus what decoding mechanisms have to be applied in order to obtain
-   the media-type referenced by the <x:ref>Content-Type</x:ref> header field.
-   Content-Encoding is primarily used to allow a representation to be
+   The "Content-Encoding" header field indicates what content codings 
+   have been applied to the representation, beyond those inherent in the media
+   type, and thus what decoding mechanisms have to be applied in order to
+   obtain data in the media type referenced by the <x:ref>Content-Type</x:ref>
+   header field.
+   Content-Encoding is primarily used to allow a representation's data to be
    compressed without losing the identity of its underlying media type.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
   <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
 </artwork></figure>
 <t>
-   Content codings are defined in <xref target="content.codings"/>. An example of its use is
+   An example of its use is
 </t>
 <figure><artwork type="example">
   Content-Encoding: gzip
 </artwork></figure>
 <t>
-   The content-coding is a characteristic of the representation.
-   Typically, the representation data is stored with this
-   encoding and is only decoded before rendering or analogous usage.
-   However, a transforming proxy &MAY; modify the content-coding if the
+   If multiple encodings have been applied to a representation, the content
+   codings &MUST; be listed in the order in which they were applied.
+   Additional information about the encoding parameters &MAY; be provided
+   by other header fields not defined by this specification.
+</t>
+<t>
+   Unlike Transfer-Encoding (&header-transfer-encoding;), the codings listed
+   in Content-Encoding are a characteristic of the representation; the
+   representation is defined in terms of the coded form, and all other
+   metadata about the representation is about the coded form unless otherwise
+   noted in the metadata definition. Typically, the representation is only
+   decoded just prior to rendering or analogous usage.
+</t>
+<t>
+   A transforming proxy &MAY; modify the content coding if the
    new coding is known to be acceptable to the recipient, unless the
    "no-transform" cache-control directive is present in the message.
 </t>
@@ -589,7 +590,7 @@
    If the media type includes an inherent encoding, such as a data format
    that is always compressed, then that encoding would not be restated as 
    a Content-Encoding even if it happens to be the same algorithm as one
-   of the content-codings.  Such a content-coding would only be listed if,
+   of the content codings.  Such a content coding would only be listed if,
    for some bizarre reason, it is applied a second time to form the
    representation.  Likewise, an origin server might choose to publish the
    same payload data as multiple representations that differ only in whether
@@ -597,16 +598,6 @@
    Content-Encoding, since some user agents will behave differently in their
    handling of each response (e.g., open a "Save as ..." dialog instead of
    automatic decompression and rendering of content).
-</t>
-<t>
-   A representation that has a content-coding applied to it &MUST; include
-   a Content-Encoding header field that lists the content-coding(s) applied.
-</t>
-<t>
-   If multiple encodings have been applied to a representation, the content
-   codings &MUST; be listed in the order in which they were applied.
-   Additional information about the encoding parameters &MAY; be provided
-   by other header fields not defined by this specification.
 </t>
 <t>
    If the content-coding of a representation in a request message is not
