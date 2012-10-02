@@ -9,7 +9,6 @@ bap  = ../../abnfparser/bap
 TARGETS_XML= p0-introduction.xml \
           p1-messaging.xml \
           p2-semantics.xml \
-          p3-payload.xml \
           p4-conditional.xml \
           p5-range.xml \
           p6-cache.xml \
