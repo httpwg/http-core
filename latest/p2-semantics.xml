@@ -71,7 +71,7 @@
   <!ENTITY header-via                 "<xref target='Part1' x:rel='#header.via' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-warning             "<xref target='Part6' x:rel='#header.warning' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-www-authenticate    "<xref target='Part7' x:rel='#header.www-authenticate' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY media-types                "<xref target='media.types' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY media-type                "<xref target='media.type' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY message-body               "<xref target='Part1' x:rel='#message.body' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY media-type-message-http    "<xref target='Part1' x:rel='#internet.media.type.message.http' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-206                 "<xref target='Part5' x:rel='#status.206' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -244,6 +244,14 @@
    other documents. <xref target="collected.abnf"/> shows the collected ABNF
    with the list rule expanded.
 </t>
+<t>
+   This specification uses the terms
+   "character",
+   "character encoding scheme",
+   "charset", and
+   "protocol element"
+   as they are defined in <xref target="RFC6365"/>.
+</t>
 </section>
 </section>
 
@@ -320,7 +328,7 @@
 
 <section title="Data Type" anchor="data.type">
 
-<section title="Media Types" anchor="media.types">
+<section title="Media Type" anchor="media.type">
   <x:anchor-alias value="media-type"/>
   <x:anchor-alias value="type"/>
   <x:anchor-alias value="subtype"/>
@@ -357,8 +365,15 @@
 <t>
    A parameter value that matches the <x:ref>token</x:ref> production can be
    transmitted as either a token or within a quoted-string. The quoted and
-   unquoted values are equivalent. 
+   unquoted values are equivalent. For example, the following examples are
+   all equivalent, but the first is preferred for consistency:
 </t>
+<figure><artwork type="example">
+  text/html;charset=utf-8
+  text/html;charset=UTF-8
+  Text/HTML;Charset="utf-8"
+  text/html; charset="utf-8"
+</artwork></figure>
 <t>
    Media-type values are registered with the Internet Assigned Number
    Authority (IANA). The media type registration process is
@@ -367,37 +382,21 @@
 </t>
 </section>
 
-<section title="Character Encodings (charset)" anchor="character.sets">
+<section title="Charset" anchor="charset">
+  <x:anchor-alias value="rule.charset"/>
 <t>
-   HTTP uses charset names to indicate the character encoding of a
-   textual representation.
-</t>
-<t anchor="rule.charset">
-  <x:anchor-alias value="charset"/>
-   A character encoding is identified by a case-insensitive token. The
-   complete set of tokens is defined by the IANA Character Set registry
-   (<eref target="http://www.iana.org/assignments/character-sets"/>).
+   HTTP uses charset names to indicate or negotiate the character encoding
+   scheme of a textual representation <xref target="RFC6365"/>.
+   A charset is identified by a case-insensitive token.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="charset"/>
   <x:ref>charset</x:ref> = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
-   Although HTTP allows an arbitrary token to be used as a charset
-   value, any token that has a predefined value within the IANA
-   Character Set registry &MUST; represent the character encoding defined
-   by that registry. Applications &SHOULD; limit their use of character
-   encodings to those defined within the IANA registry.
-</t>
-<t>
-   HTTP uses charset in two contexts: within an <x:ref>Accept-Charset</x:ref>
-   request header field (in which the charset value is an unquoted token) and
-   as the value of a parameter in a <x:ref>Content-Type</x:ref> header field
-   (within a request or response), in which case the parameter value of the
-   charset parameter can be quoted.
-</t>
-<t>
-   Implementers need to be aware of IETF character set requirements <xref target="RFC3629"/>
-   <xref target="RFC2277"/>.
+   The IANA Character Set registry
+   (<eref target="http://www.iana.org/assignments/character-sets"/>)
+   maintains the set of tokens registered for use on the Internet as
+   charset names  <xref target="RFC2978"/>.
 </t>
 </section>
 
@@ -415,10 +414,10 @@
    break when it is done consistently for an entire representation. HTTP
    applications &MUST; accept CRLF, bare CR, and bare LF as indicating
    a line break in text media received via HTTP. In
-   addition, if the text is in a character encoding that does not
+   addition, if the text is in a charset that does not
    use octets 13 and 10 for CR and LF respectively, as is the case for
-   some multi-byte character encodings, HTTP allows the use of whatever octet
-   sequences are defined by that character encoding to represent the
+   some multi-byte charsets, HTTP allows the use of whatever octet
+   sequences are defined by that charset to represent the
    equivalent of CR and LF for line breaks. This flexibility regarding
    line breaks applies only to text media in the payload body; a bare CR
    or LF &MUST-NOT; be substituted for CRLF within any of the HTTP control
@@ -478,7 +477,7 @@
   <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
 </artwork></figure>
 <t>
-   Media types are defined in <xref target="media.types"/>. An example of the field is
+   Media types are defined in <xref target="media.type"/>. An example of the field is
 </t>
 <figure><artwork type="example">
   Content-Type: text/html; charset=ISO-8859-4
@@ -912,7 +911,7 @@
    interpretation, whether by a human user or for further processing.
    Often, the server has different ways of representing the
    same information; for example, in different formats, languages,
-   or using different character encodings.
+   or using different charsets.
 </t>
 <t>
    HTTP clients and their users might have different or variable
@@ -2178,21 +2177,19 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="Accept-Charset header field" x:for-anchor=""/>
   <x:anchor-alias value="Accept-Charset"/>
 <t>
-   The "Accept-Charset" header field can be used by user agents to
-   indicate what character encodings are acceptable in a response
-   payload. This field allows
-   clients capable of understanding more comprehensive or special-purpose
-   character encodings to signal that capability to a server which is capable of
-   representing documents in those character encodings.
+   The "Accept-Charset" header field can be sent by a user agent to
+   indicate what charsets are acceptable in a selected representation.
+   This field allows user agents capable of understanding more comprehensive
+   or special-purpose charsets to signal that capability to an origin server
+   which is capable of representing documents in those charsets.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Charset"/>
   <x:ref>Accept-Charset</x:ref> = 1#( ( <x:ref>charset</x:ref> / "*" ) [ <x:ref>weight</x:ref> ] )
 </artwork></figure>
 <t>
-   Character encoding values (a.k.a., charsets) are described in
-   <xref target="character.sets"/>. Each charset &MAY; be given an
-   associated quality value which represents the user's preference
-   for that charset, as defined in &qvalue;.
+   Charset names are defined in <xref target="charset"/>.
+   A user agent &MAY; associate a quality value with each charset to indicate
+   the user's relative preference for that charset, as defined in &qvalue;.
    An example is
 </t>
 <figure><artwork type="example">
@@ -2200,21 +2197,25 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </artwork></figure>
 <t>
    The special value "*", if present in the Accept-Charset field,
-   matches every character encoding which is not mentioned elsewhere in the
+   matches every charset which is not mentioned elsewhere in the
    Accept-Charset field. If no "*" is present in an Accept-Charset field,
-   then any character encodings not explicitly mentioned in the field are
+   then any charsets not explicitly mentioned in the field are
    considered "not acceptable" to the client.
 </t>
 <t>
    A request without any Accept-Charset header field implies that the user
-   agent will accept any character encoding in response.
+   agent will accept any charset in response.
+   Most general-purpose user agents do not send Accept-Charset, unless
+   specifically configured to do so, because a detailed list of supported
+   charsets makes it easier for a server to identify an individual by virtue
+   of the user agent's request characteristics (a.k.a., fingerprinting).
 </t>
 <t>
    If an Accept-Charset header field is present in a request and none of the
-   available representations for the response have a character encoding that
-   is listed as acceptable, the origin server &MAY; either honor the
-   Accept-Charset header field by sending a <x:ref>406 (Not Acceptable)</x:ref> response or
-   disregard the Accept-Charset header field by treating the response as if
+   available representations for the response has a charset that is listed as
+   acceptable, the origin server &MAY; either honor the Accept-Charset header
+   field, by sending a <x:ref>406 (Not Acceptable)</x:ref> response, or
+   disregard the Accept-Charset header field by treating the resource as if
    it is not subject to content negotiation.
 </t>
 </section>
@@ -4385,7 +4386,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    existing parser components. When allowing both forms, the meaning of a
    parameter value ought to be independent of the syntax used for it (for an
    example, see the notes on parameter handling for media types in
-   &media-types;).
+   &media-type;).
 </t>
 <t>
    Authors of specifications defining new header fields are advised to consider
@@ -5122,6 +5123,19 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <seriesInfo name='RFC' value='5646' />
 </reference>
 
+<reference anchor='RFC6365'>
+  <front>
+    <title>Terminology Used in Internationalization in the IETF</title>
+    <author initials='P.' surname='Hoffman' fullname='P. Hoffman'>
+      <organization /></author>
+    <author initials='J.' surname='Klensin' fullname='J. Klensin'>
+      <organization /></author>
+    <date year='2011' month='September' />
+  </front>
+  <seriesInfo name='BCP' value='166' />
+  <seriesInfo name='RFC' value='6365' />
+</reference>
+
 </references>
 
 <references title="Informative References">
@@ -5223,19 +5237,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
     <date month="February" year="1997"/>
   </front>
   <seriesInfo name="RFC" value="2076"/>
-</reference>
-
-<reference anchor="RFC2277">
-  <front>
-    <title abbrev="Charset Policy">IETF Policy on Character Sets and Languages</title>
-    <author initials="H.T." surname="Alvestrand" fullname="Harald Tveit Alvestrand">
-      <organization>UNINETT</organization>
-      <address><email>Harald.T.Alvestrand@uninett.no</email></address>
-    </author>
-    <date month="January" year="1998"/>
-  </front>
-  <seriesInfo name="BCP" value="18"/>
-  <seriesInfo name="RFC" value="2277"/>
 </reference>
 
 <reference anchor='RFC2295'>
@@ -5345,17 +5346,17 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <seriesInfo name='RFC' value='2817' />
 </reference>
 
-<reference anchor="RFC3629">
+<reference anchor='RFC2978'>
   <front>
-    <title>UTF-8, a transformation format of ISO 10646</title>
-    <author initials="F." surname="Yergeau" fullname="F. Yergeau">
-      <organization>Alis Technologies</organization>
-      <address><email>fyergeau@alis.com</email></address>
-    </author>
-    <date month="November" year="2003"/>
+    <title>IANA Charset Registration Procedures</title>
+    <author initials='N.' surname='Freed' fullname='N. Freed'>
+      <organization /></author>
+    <author initials='J.' surname='Postel' fullname='J. Postel'>
+      <organization /></author>
+    <date year='2000' month='October' />
   </front>
-  <seriesInfo name="STD" value="63"/>
-  <seriesInfo name="RFC" value="3629"/>
+   <seriesInfo name='BCP' value='19' />
+   <seriesInfo name='RFC' value='2978' />
 </reference>
 
 <reference anchor='RFC3864'>
@@ -5561,9 +5562,8 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    types described in <xref target="canonicalization.and.text.defaults"/>
    of this document to the RFC 2049 canonical form of CRLF. Note, however, that
    this might be complicated by the presence of a <x:ref>Content-Encoding</x:ref>
-   and by the fact that HTTP allows the use of some character encodings which do
-   not use octets 13 and 10 to represent CR and LF, respectively, as is the case
-   for some multi-byte character encodings.
+   and by the fact that HTTP allows the use of some charsets
+   which do not use octets 13 and 10 to represent CR and LF, respectively.
 </t>
 <t>
    Conversion will break any cryptographic
@@ -5747,11 +5747,11 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </t>
 <t>
   Clarify contexts that charset is used in.
-  (<xref target="character.sets"/>)
+  (<xref target="charset"/>)
 </t>
 <t>
-  Remove the default character encoding of "ISO-8859-1" for text media types; the
-  default now is whatever the media type definition says.
+  Remove the default charset of "ISO-8859-1" for text media
+  types; the default now is whatever the media type definition says.
   (<xref target="canonicalization.and.text.defaults"/>)
 </t>
 <t>
