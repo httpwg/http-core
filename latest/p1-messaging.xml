@@ -1047,6 +1047,14 @@ Content-Type: text/plain
    Likewise, the presence of such whitespace in a response might be
    ignored by some clients or cause others to cease parsing.
 </t>
+<t>
+   A recipient that receives whitespace between the start-line and
+   the first header field &MUST; either reject the message as invalid or
+   consume each whitespace-preceded line without further processing of it
+   (i.e., ignore the entire line, along with any subsequent lines preceded
+   by whitespace, until a properly formed header field is received or the
+   header block is terminated).
+</t>
 
 <section title="Request Line" anchor="request.line">
   <x:anchor-alias value="Request"/>
@@ -1084,12 +1092,13 @@ Content-Type: text/plain
 <t>
    No whitespace is allowed inside the method, request-target, and
    protocol version.  Hence, recipients typically parse the request-line
-   into its component parts by splitting on the SP characters.
+   into its component parts by splitting on whitespace
+   (see <xref target="message.robustness"/>).
 </t>
 <t>
    Unfortunately, some user agents fail to properly encode hypertext
-   references that have embedded whitespace, sending the characters
-   directly instead of properly percent-encoding the disallowed characters.
+   references that have embedded whitespace, sending the characters directly
+   instead of properly encoding or excluding the disallowed characters.
    Recipients of an invalid request-line &SHOULD; respond with either a
    <x:ref>400 (Bad Request)</x:ref> error or a <x:ref>301 (Moved Permanently)</x:ref>
    redirect with the request-target properly encoded.  Recipients &SHOULD-NOT;
@@ -1800,16 +1809,27 @@ Content-Type: text/plain
    empty line received where a request-line is expected. In other words, if
    the server is reading the protocol stream at the beginning of a
    message and receives a CRLF first, it &SHOULD; ignore the CRLF.
-   Likewise, although the line terminator for the start-line and header
-   fields is the sequence CRLF, we recommend that recipients recognize a
-   single LF as a line terminator and ignore any CR.
+</t>
+<t>
+   Although the line terminator for the start-line and header
+   fields is the sequence CRLF, recipients &MAY; recognize a
+   single LF as a line terminator and ignore any preceding CR.
+</t>
+<t>
+   Although the request-line and status-line grammar rules require that each
+   of the component elements be separated by a single SP octet, recipients
+   &MAY; instead parse on whitespace-delimited word boundaries and, aside
+   from the CRLF terminator, treat any form of whitespace as the SP separator
+   while ignoring preceding or trailing whitespace;
+   such whitespace includes one or more of the following octets:
+   SP, HTAB, VT (%x0B), FF (%x0C), or bare CR. 
 </t>
 <t>
    When a server listening only for HTTP request messages, or processing
    what appears from the start-line to be an HTTP request message,
    receives a sequence of octets that does not match the HTTP-message
    grammar aside from the robustness exceptions listed above, the
-   server &MUST; respond with an HTTP/1.1 <x:ref>400 (Bad Request)</x:ref> response.  
+   server &SHOULD; respond with a <x:ref>400 (Bad Request)</x:ref> response.  
 </t>
 </section>
 </section>
