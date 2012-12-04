@@ -184,7 +184,7 @@
    as HTTP services.
 </t>
 <t>
-   One consequence of HTTP flexibility is that the protocol cannot be
+   One consequence of this flexibility is that the protocol cannot be
    defined in terms of what occurs behind the interface. Instead, we
    are limited to defining the syntax of communication, the intent
    of received communication, and the expected behavior of recipients.
@@ -297,14 +297,15 @@
 <t>
    The terms client and server refer only to the roles that
    these programs perform for a particular connection.  The same program
-   might act as a client on some connections and a server on others.  We use
-   the term "<x:dfn>user agent</x:dfn>" to refer to the program that initiates a request,
-   such as a WWW browser, editor, or spider (web-traversing robot), and
-   the term "<x:dfn>origin server</x:dfn>" to refer to the program that can originate
-   authoritative responses to a request.  For general requirements, we use
-   the term "<x:dfn>sender</x:dfn>" to refer to whichever component sent a given message
-   and the term "<x:dfn>recipient</x:dfn>" to refer to any component that receives the
-   message.
+   might act as a client on some connections and a server on others.
+   We use the term "<x:dfn>user agent</x:dfn>" to refer to any of the various
+   client programs that initiate a request, including (but not limited to)
+   browsers, spiders (web-based robots), command-line tools, native
+   applications, and mobile apps.  The term "<x:dfn>origin server</x:dfn>" is
+   used to refer to the program that can originate authoritative responses to
+   a request. For general requirements, we use the terms
+   "<x:dfn>sender</x:dfn>" and "<x:dfn>recipient</x:dfn>" to refer to any
+   component that sends or receives, respectively, a given message.
 </t>
 <t>
    HTTP relies upon the Uniform Resource Identifier (URI)
@@ -886,11 +887,11 @@ Content-Type: text/plain
    configuration of authentication information, such as within command
    invocation options, configuration files, or bookmark lists, even
    though such usage might expose a user identifier or password.
-   Senders &MUST-NOT; include a userinfo subcomponent (and its "@"
-   delimiter) when transmitting an "http" URI in a message.  Recipients
-   of HTTP messages that contain a URI reference &SHOULD; parse for the
-   existence of userinfo and treat its presence as an error, likely
-   indicating that the deprecated subcomponent is being used to obscure
+   Senders &MUST; exclude the userinfo subcomponent (and its "@"
+   delimiter) when an "http" URI is transmitted within a message as a
+   request target or header field value.
+   Recipients of an "http" URI reference &SHOULD; parse for userinfo and
+   treat its presence as an error, since it is likely being used to obscure
    the authority for the sake of phishing attacks.
 </t>
 </section>
@@ -1067,10 +1068,6 @@ Content-Type: text/plain
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-line"/>
   <x:ref>request-line</x:ref>   = <x:ref>method</x:ref> <x:ref>SP</x:ref> <x:ref>request-target</x:ref> <x:ref>SP</x:ref> <x:ref>HTTP-version</x:ref> <x:ref>CRLF</x:ref>
 </artwork></figure>
-<t>
-   A server &MUST; be able to parse any received message that begins
-   with a request-line and matches the ABNF rule for HTTP-message.
-</t>
 <iref primary="true" item="method"/>
 <t anchor="method">
    The method token indicates the request method to be performed on the
@@ -1119,7 +1116,7 @@ Content-Type: text/plain
 <t>
    Various ad-hoc limitations on request-line length are found in practice.
    It is &RECOMMENDED; that all HTTP senders and recipients support, at a
-   minimum, request-line lengths of up to 8000 octets.
+   minimum, request-line lengths of 8000 octets.
 </t>
 </section>
 
@@ -1137,10 +1134,6 @@ Content-Type: text/plain
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="status-line"/>
   <x:ref>status-line</x:ref> = <x:ref>HTTP-version</x:ref> <x:ref>SP</x:ref> <x:ref>status-code</x:ref> <x:ref>SP</x:ref> <x:ref>reason-phrase</x:ref> <x:ref>CRLF</x:ref>
 </artwork></figure>
-<t>
-   A client &MUST; be able to parse any received message that begins
-   with a status-line and matches the ABNF rule for HTTP-message.
-</t>
 <t>
    The status-code element is a 3-digit integer code describing the
    result of the server's attempt to understand and satisfy the client's
@@ -1192,12 +1185,14 @@ Content-Type: text/plain
    header field is defined in &header-date; as containing the origination
    timestamp for the message in which it appears.
 </t>
+
+<section title="Field Extensibility" anchor="field.extensibility">
 <t>
    HTTP header fields are fully extensible: there is no limit on the
    introduction of new field names, each presumably defining new semantics,
-   or on the number of header fields used in a given message.  Existing
+   nor on the number of header fields used in a given message.  Existing
    fields are defined in each part of this specification and in many other
-   specifications outside the standards process.
+   specifications outside the core standard.
    New header fields can be introduced without changing the protocol version
    if their defined semantics allow them to be safely ignored by recipients
    that do not recognize them.
@@ -1211,6 +1206,9 @@ Content-Type: text/plain
    configured to block or otherwise transform such fields.
    Unrecognized header fields &SHOULD; be ignored by other recipients.
 </t>
+</section>
+
+<section title="Field Order" anchor="field.order">
 <t>
    The order in which header fields with differing field names are
    received is not significant. However, it is "good practice" to send
@@ -1226,6 +1224,8 @@ Content-Type: text/plain
    Multiple header fields with the same field name &MUST-NOT; be
    sent in a message unless the entire field value for that
    header field is defined as a comma-separated list [i.e., #(values)].
+</t>
+<t>
    Multiple header fields with the same field name can be combined into
    one "field-name: field-value" pair, without changing the semantics of the
    message, by appending each subsequent field value to the combined
@@ -1237,12 +1237,15 @@ Content-Type: text/plain
 </t>
 <x:note>
   <t>
-   &Note; The "Set-Cookie" header field as implemented in
-   practice can occur multiple times, but does not use the list syntax, and
-   thus cannot be combined into a single line (<xref target="RFC6265"/>). (See Appendix A.2.3 of <xref target="Kri2001"/>
-   for details.)
-</t>
+   &Note; In practice, the "Set-Cookie" header field (<xref target="RFC6265"/>)
+   often appears multiple times in a response message and does not use the
+   list syntax, violating the above requirements on multiple header fields
+   with the same name. Since it cannot be combined into a single field-value,
+   recipients ought to handle "Set-Cookie" as a special case while processing
+   header fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
+  </t>
 </x:note>
+</section>
 
 <section title="Whitespace" anchor="whitespace">
 <t anchor="rule.LWS">
@@ -1252,7 +1255,7 @@ Content-Type: text/plain
 </t>
 <t anchor="rule.OWS">
    The OWS rule is used where zero or more linear whitespace octets might
-   appear. OWS &SHOULD; either not be produced or be produced as a single
+   appear. OWS &SHOULD; either not be generated or be generated as a single
    SP. Multiple OWS octets that occur within field-content &SHOULD; either
    be replaced with a single SP or transformed to all SP octets (each
    octet other than SP replaced with SP) before interpreting the field value
@@ -1260,14 +1263,14 @@ Content-Type: text/plain
 </t>
 <t anchor="rule.RWS">
    RWS is used when at least one linear whitespace octet is required to
-   separate field tokens. RWS &SHOULD; be produced as a single SP.
+   separate field tokens. RWS &SHOULD; be generated as a single SP.
    Multiple RWS octets that occur within field-content &SHOULD; either
    be replaced with a single SP or transformed to all SP octets before
    interpreting the field value or forwarding the message downstream.
 </t>
 <t anchor="rule.BWS">
    BWS is used where the grammar allows optional whitespace, for historical
-   reasons, but senders &SHOULD-NOT; produce it in messages;
+   reasons, but senders &SHOULD-NOT; generate it in messages;
    recipients &MUST; accept such bad optional whitespace and remove it before
    interpreting the field value or forwarding the message downstream.
 </t>
@@ -1310,7 +1313,7 @@ Content-Type: text/plain
    tab (obs-fold). This specification deprecates such line
    folding except within the message/http media type
    (<xref target="internet.media.type.message.http"/>).
-   HTTP senders &MUST-NOT; produce messages that include line folding
+   HTTP senders &MUST-NOT; generate messages that include line folding
    (i.e., that contain any field-value that matches the obs-fold rule) unless
    the message is intended for packaging within the message/http media type.
    HTTP recipients &SHOULD; accept line folding and replace any embedded
@@ -1330,22 +1333,25 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Field Length" anchor="field.length">
+<section title="Field Limits" anchor="field.limits">
 <t>
-   HTTP does not place a pre-defined limit on the length of header fields,
-   either in isolation or as a set. A server &MUST; be prepared to receive
-   request header fields of unbounded length and respond with a <x:ref>4xx
-   (Client Error)</x:ref> status code if the received header field(s) would be
-   longer than the server wishes to handle.
+   HTTP does not place a pre-defined limit on the length of each header field
+   or on the length of the header block as a whole.  Various ad-hoc
+   limitations on individual header field length are found in practice,
+   often depending on the specific field semantics.
 </t>
 <t>
-   A client that receives response header fields that are longer than it wishes
-   to handle can only treat it as a server error.
+   A server &MUST; be prepared to receive request header fields of unbounded
+   length and respond with an appropriate <x:ref>4xx (Client Error)</x:ref>
+   status code if the received header field(s) are larger than the server
+   wishes to process.
 </t>
 <t>
-   Various ad-hoc limitations on header field length are found in practice. It
-   is &RECOMMENDED; that all HTTP senders and recipients support messages whose
-   combined header fields have 4000 or more octets.
+   A client &MUST; be prepared to receive response header fields of unbounded
+   length. A client &MAY; discard or truncate received header fields that are
+   larger than the client wishes to process if the field semantics are such
+   that the dropped value(s) can be safely ignored without changing the
+   response semantics.
 </t>
 </section>
 
@@ -1397,12 +1403,12 @@ Content-Type: text/plain
   <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
 </artwork></figure>
 <t>
-   Recipients that process the value of the quoted-string &MUST; handle a
+   Recipients that process the value of a quoted-string &MUST; handle a
    quoted-pair as if it were replaced by the octet following the backslash. 
 </t>
 <t>
-   Senders &SHOULD-NOT; escape octets in quoted-strings that do not require
-   escaping (i.e., other than DQUOTE and the backslash octet).
+   Senders &SHOULD-NOT; generate a quoted-pair in a quoted-string except where
+   necessary to quote DQUOTE and backslash octets occurring within that string.
 </t>
 <t anchor="rule.comment">
   <x:anchor-alias value="comment"/>
@@ -1890,7 +1896,7 @@ Content-Type: text/plain
    The chunked encoding modifies the body of a message in order to
    transfer it as a series of chunks, each with its own size indicator,
    followed by an &OPTIONAL; trailer containing header fields. This
-   allows dynamically produced content to be transferred along with the
+   allows dynamically generated content to be transferred along with the
    information necessary for the recipient to verify that it has
    received the full message.
 </t>
@@ -4701,7 +4707,7 @@ Zhong Yu.
    approaches to persistent connections, by explicitly negotiating for them
    with a "Connection: keep-alive" request header field. However, some
    experimental implementations of HTTP/1.0 persistent connections are faulty;
-   for example, if a HTTP/1.0 proxy server doesn't understand
+   for example, if an HTTP/1.0 proxy server doesn't understand
    <x:ref>Connection</x:ref>, it will erroneously forward that header field
    to the next inbound server, which would result in a hung connection.
 </t>
