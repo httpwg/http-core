@@ -1477,12 +1477,12 @@ Content-Type: text/plain
 
 <section title="Transfer-Encoding" anchor="header.transfer-encoding">
   <iref primary="true" item="Transfer-Encoding header field" x:for-anchor=""/>
+  <iref item="chunked (Coding Format)"/>
   <x:anchor-alias value="Transfer-Encoding"/>
 <t>
-   When one or more transfer codings are applied to a payload body in order
-   to form the message body, a Transfer-Encoding header field &MUST; be sent
-   in the message and &MUST; contain the list of corresponding
-   transfer-coding names in the same order that they were applied.
+   The Transfer-Encoding header field lists the transfer coding names
+   corresponding to the sequence of transfer codings that have been
+   (or will be) applied to the payload body in order to form the message body.
    Transfer codings are defined in <xref target="transfer.codings"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
@@ -1496,21 +1496,21 @@ Content-Type: text/plain
    protocol. In HTTP's case, Transfer-Encoding is primarily intended to
    accurately delimit a dynamically generated payload and to distinguish
    payload encodings that are only applied for transport efficiency or
-   security from those that are characteristics of the target resource.
+   security from those that are characteristics of the selected resource.
 </t>
 <t>
-   The "chunked" transfer-coding (<xref target="chunked.encoding"/>)
-   &MUST; be implemented by all HTTP/1.1 recipients because it plays a
-   crucial role in delimiting messages when the payload body size is not
-   known in advance.
-   When the "chunked" transfer-coding is used, it &MUST; be the last
-   transfer-coding applied to form the message body and &MUST-NOT;
-   be applied more than once in a message body.
-   If any transfer-coding is applied to a request payload body,
-   the final transfer-coding applied &MUST; be "chunked".
-   If any transfer-coding is applied to a response payload body, then either
-   the final transfer-coding applied &MUST; be "chunked" or
-   the message &MUST; be terminated by closing the connection.
+   All HTTP/1.1 recipients &MUST; implement the chunked transfer coding
+   (<xref target="chunked.encoding"/>) because it plays a crucial role in
+   framing messages when the payload body size is not known in advance.
+   If chunked is applied to a payload body, the sender &MUST-NOT; apply
+   chunked more than once (i.e., chunking an already chunked message is not
+   allowed).
+   If any transfer coding is applied to a request payload body, the
+   sender &MUST; apply chunked as the final transfer coding to ensure that
+   the message is properly framed.
+   If any transfer coding is applied to a response payload body, the
+   sender &MUST; either apply chunked as the final transfer coding or
+   terminate the message by closing the connection.
 </t>
 <figure><preamble>
    For example,
@@ -1522,16 +1522,12 @@ Content-Type: text/plain
    message body.
 </postamble></figure>
 <t>
-   If more than one Transfer-Encoding header field is present in a message,
-   the multiple field-values &MUST; be combined into one field-value,
-   according to the algorithm defined in <xref target="header.fields"/>,
-   before determining the message body length.
-</t>
-<t>
    Unlike <x:ref>Content-Encoding</x:ref> (&content-codings;),
-   Transfer-Encoding is a property of the message, not of the payload, and thus
-   &MAY; be added or removed by any implementation along the request/response
-   chain. Additional information about the encoding parameters &MAY; be
+   Transfer-Encoding is a property of the message, not of the payload, and
+   any recipient along the request/response chain &MAY; decode the received
+   transfer coding(s) or apply additional transfer coding(s) to the message
+   body, assuming that corresponding changes are made to the Transfer-Encoding
+   field-value. Additional information about the encoding parameters &MAY; be
    provided by other header fields not defined by this specification.
 </t>
 <t>
@@ -1556,9 +1552,8 @@ Content-Type: text/plain
    the corresponding request indicates HTTP/1.1 (or later).
 </t>
 <t>
-   A server that receives a request message with a transfer-coding it does
-   not understand &SHOULD; respond with <x:ref>501 (Not Implemented)</x:ref> and then
-   close the connection.
+   A server that receives a request message with a transfer coding it does
+   not understand &SHOULD; respond with <x:ref>501 (Not Implemented)</x:ref>.
 </t>
 </section>
 
@@ -1635,6 +1630,7 @@ Content-Type: text/plain
 </section>
 
 <section title="Message Body Length" anchor="message.body.length">
+  <iref item="chunked (Coding Format)"/>
 <t>
    The length of a message body is determined by one of the following
    (in order of precedence):
@@ -1658,30 +1654,29 @@ Content-Type: text/plain
     </t></x:lt>
     <x:lt><t>
      If a <x:ref>Transfer-Encoding</x:ref> header field is present
-     and the "chunked" transfer-coding (<xref target="chunked.encoding"/>)
+     and the chunked transfer coding (<xref target="chunked.encoding"/>)
      is the final encoding, the message body length is determined by reading
-     and decoding the chunked data until the transfer-coding indicates the
+     and decoding the chunked data until the transfer coding indicates the
      data is complete.
     </t>
     <t>
      If a <x:ref>Transfer-Encoding</x:ref> header field is present in a
-     response and the "chunked" transfer-coding is not the final encoding, the
+     response and the chunked transfer coding is not the final encoding, the
      message body length is determined by reading the connection until it is
      closed by the server.
-     If a Transfer-Encoding header field is present in a request and the
-     "chunked" transfer-coding is not the final encoding, the message body
+     If a <x:ref>Transfer-Encoding</x:ref> header field is present in a request and the
+     chunked transfer coding is not the final encoding, the message body
      length cannot be determined reliably; the server &MUST; respond with
      the <x:ref>400 (Bad Request)</x:ref> status code and then close the connection.
     </t>
     <t>
      If a message is received with both a <x:ref>Transfer-Encoding</x:ref>
-     and a <x:ref>Content-Length</x:ref> header field, the
-     Transfer-Encoding overrides the Content-Length.
-     Such a message might indicate an attempt to perform request or response
-     smuggling (bypass of security-related checks on message routing or content)
-     and thus ought to be handled as an error.  The provided Content-Length &MUST;
-     be removed, prior to forwarding the message downstream, or replaced with
-     the real message body length after the transfer-coding is decoded.
+     and a <x:ref>Content-Length</x:ref> header field, the Transfer-Encoding
+     overrides the Content-Length. Such a message might indicate an attempt
+     to perform request or response smuggling (bypass of security-related
+     checks on message routing or content) and thus ought to be handled as
+     an error.  A sender &MUST; remove the received Content-Length field
+     prior to forwarding such a message downstream.
     </t></x:lt>
     <x:lt><t>
      If a message is received without <x:ref>Transfer-Encoding</x:ref> and with
@@ -1736,12 +1731,12 @@ Content-Type: text/plain
    <x:ref>411 (Length Required)</x:ref>.
 </t>
 <t>
-   Unless a transfer-coding other than "chunked" has been applied,
+   Unless a transfer coding other than chunked has been applied,
    a client that sends a request containing a message body &SHOULD;
    use a valid <x:ref>Content-Length</x:ref> header field if the message body
-   length is known in advance, rather than the "chunked" encoding, since some
-   existing services respond to "chunked" with a <x:ref>411 (Length Required)</x:ref>
-   status code even though they understand the chunked encoding.  This
+   length is known in advance, rather than the chunked transfer coding, since some
+   existing services respond to chunked with a <x:ref>411 (Length Required)</x:ref>
+   status code even though they understand the chunked transfer coding.  This
    is typically because such services are implemented via a gateway that
    requires a content-length in advance of being called and the server
    is unable or unwilling to buffer the entire request before processing.
@@ -1758,26 +1753,27 @@ Content-Type: text/plain
 
 <section anchor="incomplete.messages" title="Handling Incomplete Messages">
 <t>
-   Request messages that are prematurely terminated, possibly due to a
-   canceled connection or a server-imposed time-out exception, &MUST;
-   result in closure of the connection; sending an error response
-   prior to closing the connection is &OPTIONAL;.
+   A server that receives an incomplete request message, usually due to a
+   canceled request or a triggered time-out exception, &MAY; send an error
+   response prior to closing the connection.
 </t>
 <t>
-   Response messages that are prematurely terminated, usually by closure
-   of the connection prior to receiving the expected number of octets or by
-   failure to decode a transfer-encoded message body, &MUST; be recorded
-   as incomplete.  A response that terminates in the middle of the header
-   block (before the empty line is received) cannot be assumed to convey the
-   full semantics of the response and &MUST; be treated as an error.
+   A client that receives an incomplete response message, which can occur
+   when a connection is closed prematurely or when decoding a supposedly
+   chunked transfer coding fails, &MUST; record the message as incomplete.
+   If a response terminates in the middle of the header block (before the
+   empty line is received) and the status code might rely on header fields to
+   convey the full meaning of the response, then the client cannot assume
+   that meaning has been conveyed; the client might need to repeat the
+   request in order to determine what action to take next.
 </t>
 <t>
-   A message body that uses the chunked transfer encoding is
+   A message body that uses the chunked transfer coding is
    incomplete if the zero-sized chunk that terminates the encoding has not
    been received.  A message that uses a valid <x:ref>Content-Length</x:ref> is
    incomplete if the size of the message body received (in octets) is less than
    the value given by Content-Length.  A response that has neither chunked
-   transfer encoding nor Content-Length is terminated by closure of the
+   transfer coding nor Content-Length is terminated by closure of the
    connection, and thus is considered complete regardless of the number of
    message body octets received, provided that the header block was received
    intact.
@@ -1801,20 +1797,20 @@ Content-Type: text/plain
 
 <section title="Message Parsing Robustness" anchor="message.robustness">
 <t>
-   Older HTTP/1.0 client implementations might send an extra CRLF
+   Older HTTP/1.0 user agent implementations might send an extra CRLF
    after a POST request as a lame workaround for some early server
    applications that failed to read message body content that was
-   not terminated by a line-ending. An HTTP/1.1 client &MUST-NOT;
+   not terminated by a line-ending. An HTTP/1.1 user agent &MUST-NOT;
    preface or follow a request with an extra CRLF.  If terminating
    the request message body with a line-ending is desired, then the
-   client &MUST; include the terminating CRLF octets as part of the
+   user agent &MUST; include the terminating CRLF octets as part of the
    message body length. 
 </t>
 <t>
    In the interest of robustness, servers &SHOULD; ignore at least one
    empty line received where a request-line is expected. In other words, if
-   the server is reading the protocol stream at the beginning of a
-   message and receives a CRLF first, it &SHOULD; ignore the CRLF.
+   a server is reading the protocol stream at the beginning of a
+   message and receives a CRLF first, the server &SHOULD; ignore the CRLF.
 </t>
 <t>
    Although the line terminator for the start-line and header
@@ -1844,10 +1840,10 @@ Content-Type: text/plain
   <x:anchor-alias value="transfer-coding"/>
   <x:anchor-alias value="transfer-extension"/>
 <t>
-   Transfer-coding values are used to indicate an encoding
+   Transfer coding names are used to indicate an encoding
    transformation that has been, can be, or might need to be applied to a
    payload body in order to ensure "safe transport" through the network.
-   This differs from a content coding in that the transfer-coding is a
+   This differs from a content coding in that the transfer coding is a
    property of the message rather than a property of the representation
    that is being transferred.
 </t>
@@ -1871,7 +1867,7 @@ Content-Type: text/plain
   <x:ref>value</x:ref>              = <x:ref>word</x:ref>
 </artwork></figure>
 <t>
-   All transfer-coding values are case-insensitive and &SHOULD; be registered
+   All transfer-coding names are case-insensitive and &SHOULD; be registered
    within the HTTP Transfer Coding registry, as defined in
    <xref target="transfer.coding.registry"/>.
    They are used in the <x:ref>TE</x:ref> (<xref target="header.te"/>) and
@@ -1880,7 +1876,7 @@ Content-Type: text/plain
 </t>
 
 <section title="Chunked Transfer Coding" anchor="chunked.encoding">
-  <iref item="chunked (Coding Format)"/>
+  <iref primary="true" item="chunked (Coding Format)"/>
   <x:anchor-alias value="chunk"/>
   <x:anchor-alias value="chunked-body"/>
   <x:anchor-alias value="chunk-data"/>
@@ -1893,7 +1889,7 @@ Content-Type: text/plain
   <x:anchor-alias value="quoted-str-nf"/>
   <x:anchor-alias value="qdtext-nf"/>
 <t>
-   The chunked encoding modifies the body of a message in order to
+   The chunked transfer coding modifies the body of a message in order to
    transfer it as a series of chunks, each with its own size indicator,
    followed by an &OPTIONAL; trailer containing header fields. This
    allows dynamically generated content to be transferred along with the
@@ -1922,14 +1918,15 @@ Content-Type: text/plain
   <x:ref>qdtext-nf</x:ref>      = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
 </artwork></figure>
 <t>
-   Chunk extensions within the chucked encoding are deprecated.
+   Chunk extensions within the chunked transfer coding are deprecated.
    Senders &SHOULD-NOT; send chunk-ext.
    Definition of new chunk extensions is discouraged. 
 </t>
 <t>
    The chunk-size field is a string of hex digits indicating the size of
-   the chunk-data in octets. The chunked encoding is ended by any chunk whose size is
-   zero, followed by the trailer, which is terminated by an empty line.
+   the chunk-data in octets. The chunked transfer coding is complete when a
+   chunk with a chunk-size of zero is received, possibly followed by a
+   trailer, and finally terminated by an empty line.
 </t>
 
 <section title="Trailer" anchor="header.trailer">
@@ -1946,7 +1943,7 @@ Content-Type: text/plain
 </t>
 <t>
    When a message includes a message body encoded with the chunked
-   transfer-coding and the sender desires to send metadata in the form of
+   transfer coding and the sender desires to send metadata in the form of
    trailer fields at the end of the message, the sender &SHOULD; send a
    <x:ref>Trailer</x:ref> header field before the message body to indicate
    which fields will be present in the trailers. This allows the recipient
@@ -1962,11 +1959,11 @@ Content-Type: text/plain
    chunked message body &SHOULD; send an empty trailer.
 </t>
 <t>
-   A server &MUST; send an empty trailer with the chunked transfer-coding
+   A server &MUST; send an empty trailer with the chunked transfer coding
    unless at least one of the following is true:
   <list style="numbers">
     <t>the request included a <x:ref>TE</x:ref> header field that indicates
-    "trailers" is acceptable in the transfer-coding of the response, as
+    "trailers" is acceptable in the transfer coding of the response, as
     described in <xref target="header.te"/>; or,</t>
      
     <t>the trailer fields consist entirely of optional metadata and the
@@ -1986,7 +1983,7 @@ Content-Type: text/plain
 
 <section title="Decoding chunked" anchor="decoding.chunked">
 <t>
-   A process for decoding the "chunked" transfer-coding
+   A process for decoding the chunked transfer coding
    can be represented in pseudo-code as:
 </t>
 <figure><artwork type="code">
@@ -2009,7 +2006,7 @@ Content-Type: text/plain
 </artwork></figure>
 <t>
    All recipients &MUST; be able to receive and decode the
-   "chunked" transfer-coding and &MUST; ignore chunk-ext extensions
+   chunked transfer coding and &MUST; ignore chunk-ext extensions
    they do not understand.
 </t>
 </section>
@@ -2065,16 +2062,16 @@ Content-Type: text/plain
   <x:anchor-alias value="t-ranking"/>
   <x:anchor-alias value="rank"/>
 <t>
-   The "TE" header field in a request indicates what transfer-codings,
-   besides "chunked", the client is willing to accept in response, and
+   The "TE" header field in a request indicates what transfer codings,
+   besides chunked, the client is willing to accept in response, and
    whether or not the client is willing to accept trailer fields in a
-   chunked transfer-coding.
+   chunked transfer coding.
 </t>
 <t>
-   The TE field-value consists of a comma-separated list of transfer-coding
+   The TE field-value consists of a comma-separated list of transfer coding
    names, each allowing for optional parameters (as described in
    <xref target="transfer.codings"/>), and/or the keyword "trailers".
-   Clients &MUST-NOT; send the chunked transfer-coding name in TE;
+   Clients &MUST-NOT; send the chunked transfer coding name in TE;
    chunked is always acceptable for HTTP/1.1 recipients.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="t-ranking"/><iref primary="true" item="Grammar" subitem="rank"/>
@@ -2094,7 +2091,7 @@ Content-Type: text/plain
 </artwork></figure>
 <t>
    The presence of the keyword "trailers" indicates that the client is
-   willing to accept trailer fields in a chunked transfer-coding,
+   willing to accept trailer fields in a chunked transfer coding,
    as defined in <xref target="chunked.encoding"/>, on behalf of itself and
    any downstream clients. For chained requests, this implies that either:
    (a) all downstream clients are willing to accept trailer fields in the
@@ -2106,7 +2103,7 @@ Content-Type: text/plain
    entire response.
 </t>
 <t>
-   When multiple transfer-codings are acceptable, the client &MAY; rank the
+   When multiple transfer codings are acceptable, the client &MAY; rank the
    codings by preference using a case-insensitive "q" parameter (similar to
    the qvalues used in content negotiation fields, &qvalue;). The rank value
    is a real number in the range 0 through 1, where 0.001 is the least
@@ -2114,7 +2111,7 @@ Content-Type: text/plain
 </t>
 <t>
    If the TE field-value is empty or if no TE field is present, the only
-   acceptable transfer-coding is "chunked". A message with no transfer-coding
+   acceptable transfer coding is chunked. A message with no transfer coding
    is always acceptable.
 </t>
 <t>
@@ -2462,6 +2459,25 @@ https://www.example.org
 </t>
 </section>
 
+<section title="Associating a Response to a Request" anchor="associating.response.to.request">
+<t>
+   HTTP does not include a request identifier for associating a given
+   request message with its corresponding one or more response messages.
+   Hence, it relies on the order of response arrival to correspond exactly
+   to the order in which requests are made on the same connection.
+   More than one response message per request only occurs when one or more
+   informational responses (<x:ref>1xx</x:ref>, see &status-1xx;) precede a
+   final response to the same request.
+</t>
+<t>
+   A client that has more than one outstanding request on a connection &MUST;
+   maintain a list of outstanding requests in the order sent and &MUST;
+   associate each received response message on that connection to the highest
+   ordered request that has not yet received a final (non-<x:ref>1xx</x:ref>)
+   response.
+</t>
+</section>
+
 <section title="Message Forwarding" anchor="message.forwarding">
 <t>
    As described in <xref target="intermediaries"/>, intermediaries can serve
@@ -2483,7 +2499,6 @@ https://www.example.org
    proxies &MUST; be able to recognize and exclude all of its own server
    names, including any aliases, local variations, or literal IP addresses.
 </t>
-</section>
 
 <section title="Via" anchor="header.via">
   <iref primary="true" item="Via header field" x:for-anchor=""/>
@@ -2578,7 +2593,7 @@ https://www.example.org
 </t>
 </section>
 
-<section title="Message Transforming" anchor="message.transforming">
+<section title="Transformation" anchor="message.transformation">
 <t>
    If a proxy receives a request-target with a host name that is not a
    fully qualified domain name, it &MAY; add its own domain to the host name
@@ -2593,7 +2608,7 @@ https://www.example.org
 <t>
    A non-transforming proxy &MUST; preserve the message payload (&payload;),
    though it &MAY; change the message body through application or removal
-   of a transfer-coding (<xref target="transfer.codings"/>).
+   of a transfer coding (<xref target="transfer.codings"/>).
 </t>
 <t>
    A non-transforming proxy &SHOULD-NOT; modify header fields that provide
@@ -2644,24 +2659,6 @@ https://www.example.org
   </t>
 </x:note>
 </section>
-
-<section title="Associating a Response to a Request" anchor="associating.response.to.request">
-<t>
-   HTTP does not include a request identifier for associating a given
-   request message with its corresponding one or more response messages.
-   Hence, it relies on the order of response arrival to correspond exactly
-   to the order in which requests are made on the same connection.
-   More than one response message per request only occurs when one or more
-   informational responses (<x:ref>1xx</x:ref>, see &status-1xx;) precede a final response
-   to the same request.
-</t>
-<t>
-   A client that uses persistent connections and sends more than one request
-   per connection &MUST; maintain a list of outstanding requests in the
-   order sent on that connection and &MUST; associate each received response
-   message to the highest ordered request that has not yet received a final
-   (non-<x:ref>1xx</x:ref>) response.
-</t>
 </section>
 </section>
 
@@ -4735,7 +4732,7 @@ Zhong Yu.
 <t>
    HTTP/1.1 introduces the <x:ref>Transfer-Encoding</x:ref> header field
    (<xref target="header.transfer-encoding"/>). Proxies/gateways &MUST; remove
-   any transfer-coding prior to forwarding a message via a MIME-compliant
+   any transfer coding prior to forwarding a message via a MIME-compliant
    protocol.
 </t>
 </section>
@@ -4826,7 +4823,7 @@ Zhong Yu.
   (<xref target="header.content-length"/>)
 </t>
 <t>
-  The "identity" transfer-coding value token has been removed.
+  The "identity" transfer coding token has been removed.
   (Sections <xref format="counter" target="message.body"/> and
   <xref format="counter" target="transfer.codings"/>)
 </t>
