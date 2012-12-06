@@ -1761,6 +1761,10 @@ Content-Type: text/plain
    A client that receives an incomplete response message, which can occur
    when a connection is closed prematurely or when decoding a supposedly
    chunked transfer coding fails, &MUST; record the message as incomplete.
+   Cache requirements for incomplete responses are defined in
+   &cache-incomplete;.
+</t>
+<t>
    If a response terminates in the middle of the header block (before the
    empty line is received) and the status code might rely on header fields to
    convey the full meaning of the response, then the client cannot assume
@@ -1777,21 +1781,6 @@ Content-Type: text/plain
    connection, and thus is considered complete regardless of the number of
    message body octets received, provided that the header block was received
    intact.
-</t>
-<t>
-   A user agent &MUST-NOT; render an incomplete response message body as if
-   it were complete (i.e., some indication needs to be given to the user that an
-   error occurred).  Cache requirements for incomplete responses are defined
-   in &cache-incomplete;.
-</t>
-<t>
-   A server &MUST; read the entire request message body or close
-   the connection after sending its response, since otherwise the
-   remaining data on a persistent connection would be misinterpreted
-   as the next request.  Likewise,
-   a client &MUST; read the entire response message body if it intends
-   to reuse the same connection for a subsequent request.  Pipelining
-   multiple requests on a connection is described in <xref target="pipelining"/>.
 </t>
 </section>
 
@@ -2822,20 +2811,6 @@ https://www.example.org
    </list>
 </t>
 <t>
-   A proxy server &MUST-NOT; maintain a persistent connection with an
-   HTTP/1.0 client (see <xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/> for
-   information and discussion of the problems with the Keep-Alive header field
-   implemented by many HTTP/1.0 clients).
-</t>
-<t>
-   In order to remain persistent, all messages on a connection &MUST;
-   have a self-defined message length (i.e., one not defined by closure
-   of the connection), as described in <xref target="message.body"/>.
-</t>
-</section>
-
-<section title="Reuse" anchor="persistent.reuse">
-<t>
    A server &MAY; assume that an HTTP/1.1 client intends to maintain a
    persistent connection until a <x:ref>close</x:ref> connection option
    is received in a request.
@@ -2844,6 +2819,23 @@ https://www.example.org
    A client &MAY; reuse a persistent connection until it sends or receives
    a <x:ref>close</x:ref> connection option or receives an HTTP/1.0 response
    without a "keep-alive" connection option.
+</t>
+<t>
+   In order to remain persistent, all messages on a connection &MUST;
+   have a self-defined message length (i.e., one not defined by closure
+   of the connection), as described in <xref target="message.body"/>.
+   A server &MUST; read the entire request message body or close
+   the connection after sending its response, since otherwise the
+   remaining data on a persistent connection would be misinterpreted
+   as the next request.  Likewise,
+   a client &MUST; read the entire response message body if it intends
+   to reuse the same connection for a subsequent request.
+</t>
+<t>
+   A proxy server &MUST-NOT; maintain a persistent connection with an
+   HTTP/1.0 client (see <xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/> for
+   information and discussion of the problems with the Keep-Alive header field
+   implemented by many HTTP/1.0 clients).
 </t>
 <t>
    Clients and servers &SHOULD-NOT; assume that a persistent connection is
@@ -3609,7 +3601,7 @@ https://www.example.org
 </t>
 </section>
 
-<section title="Protocol Element Size Overflows" anchor="attack.protocol.element.size.overflows">
+<section title="Buffer Overflows" anchor="attack.protocol.element.size.overflows">
 <t>
    Because HTTP uses mostly textual, character-delimited fields, attackers can
    overflow buffers in implementations, and/or perform a Denial of Service
@@ -3634,6 +3626,34 @@ https://www.example.org
    fields, including (but not limited to) request methods, response status
    phrases, header field-names, and body chunks, so as to avoid denial of
    service attacks without impeding interoperability.
+</t>
+</section>
+
+<section title="Message Integrity" anchor="message.integrity">
+<t>
+   HTTP does not define a specific mechanism for ensuring message integrity,
+   instead relying on the error-detection ability of underlying transport
+   protocols and the use of length or chunk-delimited framing to detect
+   completeness. Additional integrity mechanisms, such as hash functions or
+   digital signatures applied to the content, can be selectively added to
+   messages via extensible metadata header fields. Historically, the lack of
+   a single integrity mechanism has been justified by the informal nature of
+   most HTTP communication.  However, the prevalence of HTTP as an information
+   access mechanism has resulted in its increasing use within environments
+   where verification of message integrity is crucial.
+</t>
+<t>
+   User agents are encouraged to implement configurable means for detecting
+   and reporting failures of message integrity such that those means can be
+   enabled within environments for which integrity is necessary. For example,
+   a browser being used to view medical history or drug interaction
+   information needs to indicate to the user when such information is detected
+   by the protocol to be incomplete, expired, or corrupted during transfer.
+   Such mechanisms might be selectively enabled via user agent extensions or
+   the presence of message integrity metadata in a response.
+   At a minimum, user agents ought to provide some indication that allows a
+   user to distinguish between a complete and incomplete response message
+   (<xref target="incomplete.messages"/>) when such verification is desired.
 </t>
 </section>
 </section>
@@ -4839,7 +4859,7 @@ Zhong Yu.
 <t>
   The requirement to retry requests under certain circumstances when the
   server prematurely closes the connection has been removed.
-  (<xref target="persistent.reuse"/>)
+  (<xref target="persistent.connections"/>)
 </t>
 <t>
   Some extraneous requirements about when servers are allowed to close
