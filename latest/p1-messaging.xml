@@ -47,6 +47,7 @@
   <!ENTITY OPTIONS                "<xref target='Part2' x:rel='#OPTIONS' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY qvalue                 "<xref target='Part2' x:rel='#quality.values' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY resource               "<xref target='Part2' x:rel='#resource' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY selected-representation    "<xref target='Part2' x:rel='#selected.representation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-codes           "<xref target='Part2' x:rel='#status.codes' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-1xx             "<xref target='Part2' x:rel='#status.1xx' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-203             "<xref target='Part2' x:rel='#status.203' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -1561,11 +1562,14 @@ Content-Type: text/plain
   <iref primary="true" item="Content-Length header field" x:for-anchor=""/>
   <x:anchor-alias value="Content-Length"/>
 <t>
-   When a message is allowed to contain a message body, does not have a
-   <x:ref>Transfer-Encoding</x:ref> header field, and has a payload body
-   length that is known to the sender before the message header section has
-   been sent, the sender &SHOULD; send a Content-Length header field to
-   indicate the length of the payload body as a decimal number of octets.
+   When a message does not have a <x:ref>Transfer-Encoding</x:ref> header
+   field, a Content-Length header field can provide the anticipated size,
+   as a decimal number of octets, for a potential payload body.
+   For messages that do include a payload body, the Content-Length field-value
+   provides the framing information necessary for determining where the body
+   (and message) ends.  For messages that do not include a payload body, the
+   Content-Length indicates the size of the selected representation
+   (&selected-representation;).
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/>
   <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
@@ -1579,6 +1583,15 @@ Content-Type: text/plain
 <t>
    A sender &MUST-NOT; send a Content-Length header field in any message that
    contains a <x:ref>Transfer-Encoding</x:ref> header field.
+</t>
+<t>
+   A user agent &SHOULD; send a Content-Length in a request message when no
+   <x:ref>Transfer-Encoding</x:ref> is sent and the request method defines
+   a meaning for an enclosed payload body. For example, a Content-Length
+   header field is normally sent in a POST request even when the value is
+   0 (indicating an empty payload body).  A user agent &SHOULD-NOT; send a
+   Content-Length header field when the request message does not contain a
+   payload body and the method semantics do not anticipate such a body.
 </t>
 <t>
    A server &MAY; send a Content-Length header field in a response to a HEAD
@@ -1601,6 +1614,14 @@ Content-Type: text/plain
    <x:ref>1xx (Informational)</x:ref> or <x:ref>204 (No Content)</x:ref>.
    A server &SHOULD-NOT; send a Content-Length header field in any
    <x:ref>2xx (Successful)</x:ref> response to a CONNECT request (&CONNECT;).
+</t>
+<t>
+   Aside from the cases defined above, in the absence of Transfer-Encoding,
+   an origin server &SHOULD; send a Content-Length header field when the
+   payload body size is known prior to sending the complete header block.
+   This will allow downstream recipients to measure transfer progress,
+   know when a received message is complete, and potentially reuse the
+   connection for additional requests.
 </t>
 <t>
    Any Content-Length field value greater than or equal to zero is valid.
