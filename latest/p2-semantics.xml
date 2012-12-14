@@ -387,8 +387,9 @@
 <section title="Charset" anchor="charset">
   <x:anchor-alias value="rule.charset"/>
 <t>
-   HTTP uses charset names to indicate or negotiate the character encoding
-   scheme of a textual representation <xref target="RFC6365"/>.
+   HTTP uses <x:dfn>charset</x:dfn> names to indicate or negotiate the
+   character encoding scheme of a textual representation
+   <xref target="RFC6365"/>.
    A charset is identified by a case-insensitive token.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="charset"/>
@@ -403,30 +404,35 @@
 
 <section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
 <t>
-   Internet media types are registered with a canonical form. A
-   representation transferred via HTTP messages &MUST; be in the
-   appropriate canonical form prior to its transmission except for
-   "text" types, as defined in the next paragraph.
+   Internet media types are registered with a canonical form in order to be
+   interoperable among systems with varying native encoding formats.
+   Representations selected or transferred via HTTP ought to be in canonical
+   form, for many of the same reasons described by MIME
+   <xref target="RFC2049"/>.
+   However, the performance characteristics of email deployments (i.e., store
+   and forward messages to peers) are significantly different from those
+   common to HTTP and the Web (server-based information services).
+   Furthermore, MIME's constraints for the sake of compatibility with older
+   mail transfer protocols do not apply to HTTP
+   (see <xref target="differences.between.http.and.mime"/>).
 </t>
 <t>
-   When in canonical form, media subtypes of the "text" type use CRLF as
-   the text line break. HTTP relaxes this requirement and allows the
-   transport of text media with plain CR or LF alone representing a line
-   break when it is done consistently for an entire representation. HTTP
-   applications &MUST; accept CRLF, bare CR, and bare LF as indicating
-   a line break in text media received via HTTP. In
-   addition, if the text is in a charset that does not
-   use octets 13 and 10 for CR and LF respectively, as is the case for
-   some multi-byte charsets, HTTP allows the use of whatever octet
-   sequences are defined by that charset to represent the
-   equivalent of CR and LF for line breaks. This flexibility regarding
-   line breaks applies only to text media in the payload body; a bare CR
-   or LF &MUST-NOT; be substituted for CRLF within any of the HTTP control
-   structures (such as header fields and multipart boundaries).
+   MIME's canonical form requires that media subtypes of the "text"
+   type use CRLF as the text line break. HTTP allows the
+   transfer of text media with plain CR or LF alone representing a line
+   break, when such line breaks are consistent for an entire representation.
+   HTTP senders &MAY; generate, and recipients &MUST; be able to parse,
+   line breaks in text media that consist of CRLF, bare CR, or bare LF.
+   In addition, text media in HTTP is not limited to charsets that
+   use octets 13 and 10 for CR and LF, respectively.
+   This flexibility regarding line breaks applies only to text within a
+   representation that has been assigned a "text" media type; it does not
+   apply to "multipart" types or HTTP elements outside the payload body
+   (e.g., header fields).
 </t>
 <t>
    If a representation is encoded with a content-coding, the underlying
-   data &MUST; be in a form defined above prior to being encoded.
+   data ought to be in a form defined above prior to being encoded.
 </t>
 </section>
 
@@ -440,27 +446,14 @@
    generate only CRLF to represent line breaks between body-parts.
 </t>
 <t>
-   In general, HTTP treats a multipart message body no differently than
-   any other media type: strictly as payload.  HTTP does not use the
-   multipart boundary as an indicator of message body length.
-   <!-- jre: re-insert removed text pointing to caching? -->
-   In all other respects, an HTTP user agent &SHOULD; follow the same or similar
-   behavior as a MIME user agent would upon receipt of a multipart type.
-   The MIME header fields within each body-part of a multipart message body
-   do not have any significance to HTTP beyond that defined by
-   their MIME semantics.
+   HTTP message framing does not use the multipart boundary as an indicator
+   of message body length, though it might be used by implementations that
+   generate or process the payload. For example, the "multipart/form-data"
+   type is often used for carrying form data in a request, as described in
+   <xref target="RFC2388"/>, and the "multipart/byteranges" type is defined
+   by this specification for use in some <x:ref>206 (Partial Content)</x:ref>
+   responses <xref target="Part5"/>.
 </t>
-<t>
-   A recipient &MUST; treat an unrecognized multipart subtype
-   as being equivalent to "multipart/mixed".
-</t>
-<x:note>
-  <t>
-    &Note; The "multipart/form-data" type has been specifically defined
-    for carrying form data suitable for processing via the POST
-    request method, as described in <xref target="RFC2388"/>.
-  </t>
-</x:note>
 </section>
 
 <section title="Content-Type" anchor="header.content-type">
@@ -468,17 +461,19 @@
   <x:anchor-alias value="Content-Type"/>
 <t>
    The "Content-Type" header field indicates the media type of the
-   representation, which defines both the data format and how that data
-   &SHOULD; be processed by the recipient (within the scope of the request
-   method semantics) after any <x:ref>Content-Encoding</x:ref> is decoded.
-   For responses to the HEAD method, the media type is
-   that which would have been sent had the request been a GET.
+   associated representation: either the representation enclosed in
+   the message payload or the selected representation, as determined by the
+   message semantics.  The indicated media type defines both the data format
+   and how that data is intended to be processed by a recipient, within the
+   scope of the received message semantics, after any content codings
+   indicated by <x:ref>Content-Encoding</x:ref> are decoded.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Type"/>
   <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
 </artwork></figure>
 <t>
-   Media types are defined in <xref target="media.type"/>. An example of the field is
+   Media types are defined in <xref target="media.type"/>. An example of the
+   field is
 </t>
 <figure><artwork type="example">
   Content-Type: text/html; charset=ISO-8859-4
@@ -583,8 +578,8 @@
 </t>
 <t>
    If the media type includes an inherent encoding, such as a data format
-   that is always compressed, then that encoding would not be restated as 
-   a Content-Encoding even if it happens to be the same algorithm as one
+   that is always compressed, then that encoding would not be restated in 
+   Content-Encoding even if it happens to be the same algorithm as one
    of the content codings.  Such a content coding would only be listed if,
    for some bizarre reason, it is applied a second time to form the
    representation.  Likewise, an origin server might choose to publish the
@@ -595,9 +590,9 @@
    automatic decompression and rendering of content).
 </t>
 <t>
-   If the content-coding of a representation in a request message is not
-   acceptable to the origin server, the server &SHOULD; respond with a
-   status code of 415 (Unsupported Media Type).
+   An origin server &MAY; respond with a status code of
+   <x:ref>415 (Unsupported Media Type)</x:ref> if a representation in the
+   request message has a content coding that is not acceptable.
 </t>
 </section>
 </section>
@@ -902,141 +897,126 @@
 </section>
 
 <section title="Content Negotiation" anchor="content.negotiation">
+  <x:anchor-alias value="content negotiation"/>
 <t>
-   HTTP responses include a representation which contains information for
-   interpretation, whether by a human user or for further processing.
-   Often, the server has different ways of representing the
-   same information; for example, in different formats, languages,
-   or using different charsets.
+   When responses convey a representation, whether indicating a success or
+   an error, the origin server often has different ways of representing that
+   information; for example, in different formats, languages, or encodings.
+   Likewise, different users or user agents might have differing capabilities,
+   characteristics, or preferences that could influence which representation,
+   among those available, would be best to deliver. For this reason, HTTP
+   provides mechanisms for <x:ref>content negotiation</x:ref>.
 </t>
 <t>
-   HTTP clients and their users might have different or variable
-   capabilities, characteristics or preferences which would influence
-   which representation, among those available from the server,
-   would be best for the server to deliver. For this reason, HTTP
-   provides mechanisms for "content negotiation" &mdash; a process of
-   allowing selection of a representation of a given resource,
-   when more than one is available.
-</t>
-<t>
-   This specification defines two patterns of content negotiation;
+   This specification defines two patterns of content negotiation that can
+   be made visible within the protocol:
    "proactive", where the server selects the representation based
-   upon the client's stated preferences, and "reactive" negotiation,
-   where the server provides a list of representations for the client to
-   choose from, based upon their metadata. In addition,  there are
-   other patterns: some applications use an "active content" pattern,
-   where the server returns active content which runs on the client
-   and, based on client available parameters, selects additional
-   resources to invoke. "Transparent Content Negotiation" (<xref target="RFC2295"/>)
-   has also been proposed.
+   upon the user agent's stated preferences, and "reactive" negotiation,
+   where the server provides a list of representations for the user agent to
+   choose from. Other patterns of content negotiation include
+   "conditional content", where the representation consists of multiple
+   parts that are selectively rendered based on user agent parameters, 
+   "active content", where the representation contains a script that
+   makes additional (more specific) requests based on the user agent
+   characteristics, and "Transparent Content Negotiation"
+   (<xref target="RFC2295"/>), where content selection is performed by
+   an intermediary. These patterns are not mutually exclusive, and each has
+   trade-offs in applicability and practicality.
 </t>
 <t>
-   These patterns are all widely used, and have trade-offs in applicability
-   and practicality. In particular, when the number of preferences or
-   capabilities to be expressed by a client are large (such as when many
-   different formats are supported by a user agent), proactive
-   negotiation becomes unwieldy, and might not be appropriate. Conversely,
-   when the number of representations to choose from is very large,
-   reactive negotiation might not be appropriate.
-</t>
-<t>
-   Note that, in all cases, the supplier of representations has the
-   responsibility for determining which representations might be
-   considered to be the "same information".
+   Note that, in all cases, the supplier of representations to the origin
+   server determines which representations might be considered to be the
+   "same information".
 </t>
 
 <section title="Proactive Negotiation" anchor="proactive.negotiation">
+  <x:anchor-alias value="proactive negotiation"/>
+  <x:anchor-alias value="server-driven negotiation"/>
 <t>
-   If the selection of the best representation for a response is made by
-   an algorithm located at the server, it is called proactive
-   negotiation. Selection is based on the available representations of
-   the response (the dimensions over which it can vary; e.g., language,
-   content-coding, etc.) and the contents of particular header fields in
-   the request message or on other information pertaining to the request
-   (such as the network address of the client).
+   When content negotiation preferences are sent by the user agent in a
+   request in order to encourage an algorithm located at the server to
+   select the preferred representation, it is called
+   <x:dfn>proactive negotiation</x:dfn>
+   (a.k.a., <x:dfn>server-driven negotiation</x:dfn>). Selection is based on
+   the available representations for a response (the dimensions over which it
+   might vary; e.g., language, content-coding, etc.) compared to various
+   information supplied in the request, including both the explicit
+   negotiation fields of <xref target="request.conneg"/> and implicit
+   characteristics, such as the client's network address or parts of the
+   <x:ref>User-Agent</x:ref> field.
 </t>
 <t>
    Proactive negotiation is advantageous when the algorithm for
    selecting from among the available representations is difficult to
-   describe to the user agent, or when the server desires to send its
-   "best guess" to the client along with the first response (hoping to
+   describe to a user agent, or when the server desires to send its
+   "best guess" to the user agent along with the first response (hoping to
    avoid the round-trip delay of a subsequent request if the "best
    guess" is good enough for the user). In order to improve the server's
-   guess, the user agent &MAY; include request header fields (<x:ref>Accept</x:ref>,
-   <x:ref>Accept-Language</x:ref>, <x:ref>Accept-Encoding</x:ref>, etc.) which describe its
-   preferences for such a response.
+   guess, a user agent &MAY; send request header fields that describe
+   its preferences.
 </t>
 <t>
-   Proactive negotiation has disadvantages:
-  <list style="numbers">
+   Proactive negotiation has serious disadvantages:
+  <list style="symbols">
     <t>
          It is impossible for the server to accurately determine what
          might be "best" for any given user, since that would require
          complete knowledge of both the capabilities of the user agent
          and the intended use for the response (e.g., does the user want
-         to view it on screen or print it on paper?).
+         to view it on screen or print it on paper?);
     </t>
     <t>
          Having the user agent describe its capabilities in every
          request can be both very inefficient (given that only a small
          percentage of responses have multiple representations) and a
-         potential violation of the user's privacy.
+         potential risk to the user's privacy;
     </t>
     <t>
          It complicates the implementation of an origin server and the
-         algorithms for generating responses to a request.
+         algorithms for generating responses to a request; and,
     </t>
     <t>
-         It might limit a public cache's ability to use the same response
-         for multiple user's requests.
+         It limits the reusability of responses for shared caching.
     </t>
   </list>
 </t>
 <t>
-   Proactive negotiation allows the user agent to specify its preferences,
-   but it cannot expect responses to always honor them. For example, the origin
-   server might not implement proactive negotiation, or it might decide that
-   sending a response that doesn't conform to the user agent's preferences is
-   better than sending a <x:ref>406 (Not Acceptable)</x:ref> response.
+   A user agent cannot rely on proactive negotiation preferences being
+   consistently honored, since the origin server might not implement proactive
+   negotiation for the requested resource or might decide that sending a
+   response that doesn't conform to the user agent's preferences is better
+   than sending a <x:ref>406 (Not Acceptable)</x:ref> response.
 </t>
 <t>
-   HTTP/1.1 includes the following header fields for enabling
-   proactive negotiation through description of user agent
-   capabilities and user preferences: <x:ref>Accept</x:ref>
-   (<xref target="header.accept"/>), <x:ref>Accept-Charset</x:ref>
-   (<xref target="header.accept-charset"/>), <x:ref>Accept-Encoding</x:ref>
-   (<xref target="header.accept-encoding"/>), <x:ref>Accept-Language</x:ref>
-   (<xref target="header.accept-language"/>), and <x:ref>User-Agent</x:ref>
-   (&header-user-agent;).
-   However, an origin server is not limited to these dimensions and &MAY; vary 
-   the response based on any aspect of the request, including aspects
-   of the connection (e.g., IP address) or information within extension
-   header fields not defined by this specification.
-</t>
-<x:note>
-  <t>
-    &Note; In practice, <x:ref>User-Agent</x:ref> based negotiation is fragile,
-    because new clients might not be recognized. 
-  </t>
-</x:note>
-<t>
-   The <x:ref>Vary</x:ref> header field (<xref target="header.vary"/>) can be
-   used to express the parameters the server uses to select a representation
-   that is subject to proactive negotiation.
+   An origin server &MAY; generate a <x:ref>Vary</x:ref> header field
+   (<xref target="header.vary"/>) in responses that are subject to proactive
+   negotiation to indicate what parameters of request information might
+   be used in its selection algorithm, thereby providing a means for
+   recipients to determine the reusability of that same response for
+   user agents with differing request information.
 </t>
 </section>
 
 <section title="Reactive Negotiation" anchor="reactive.negotiation">
+  <x:anchor-alias value="reactive negotiation"/>
+  <x:anchor-alias value="agent-driven negotiation"/>
 <t>
-   With reactive negotiation, selection of the best representation
-   for a response is performed by the user agent after receiving an
-   initial response from the origin server. Selection is based on a list
-   of the available representations of the response included within the
-   header fields or body of the initial response, with each
-   representation identified by its own URI. Selection from among the
-   representations can be performed automatically (if the user agent is
-   capable of doing so) or manually by the user selecting from a
-   generated (possibly hypertext) menu.
+   With <x:dfn>reactive negotiation</x:dfn>
+   (a.k.a., <x:dfn>agent-driven negotiation</x:dfn>), selection of the best
+   representation for a response is performed by the user agent after
+   receiving an initial response from the origin server with a list of
+   alternative resources. If the user agent is not satisfied by the initial
+   response, it can perform a GET request on one or more of the alternative
+   resources, selected based on metadata included in the list, to obtain a
+   different form of representation. Selection of alternatives might be
+   performed automatically by the user agent or manually by the user selecting
+   from a generated (possibly hypertext) menu.
+</t>
+<t>
+   The <x:ref>300 (Multiple Choices)</x:ref> and
+   <x:ref>406 (Not Acceptable)</x:ref> status codes indicate reactive
+   negotiation when the origin server is unwilling or unable to provide a
+   varying response using proactive negotiation.
 </t>
 <t>
    Reactive negotiation is advantageous when the response would vary
@@ -1046,19 +1026,12 @@
    caches are used to distribute server load and reduce network usage.
 </t>
 <t>
-   Reactive negotiation suffers from the disadvantage of needing a
-   second request to obtain the best alternate representation. This
-   second request is only efficient when caching is used. In addition,
-   this specification does not define any mechanism for supporting
-   automatic selection, though it also does not prevent any such
-   mechanism from being developed as an extension and used within
-   HTTP/1.1.
-</t>
-<t>
-   This specification defines the <x:ref>300 (Multiple Choices)</x:ref> and
-   <x:ref>406 (Not Acceptable)</x:ref> status codes for enabling reactive
-   negotiation when the server is unwilling or unable to provide a varying
-   response using proactive negotiation.
+   Reactive negotiation suffers from the disadvantages of transmitting
+   a list of alternatives to the user agent, which degrades user-perceived
+   latency if transmitted in the header section, and needing a second request
+   to obtain an alternate representation. Furthermore, this specification
+   does not define a mechanism for supporting automatic selection, though it
+   does not prevent such a mechanism from being developed as an extension.
 </t>
 </section>
 </section>
@@ -3323,7 +3296,9 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <t>
    The server is refusing to service the request because the request
    payload is in a format not supported by this request method on the
-   target resource.
+   target resource. The format problem might be due to the request's
+   indicated <x:ref>Content-Type</x:ref> or <x:ref>Content-Encoding</x:ref>,
+   or as a result of inspecting the data directly.
 </t>
 </section>
 
