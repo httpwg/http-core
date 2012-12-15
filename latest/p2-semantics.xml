@@ -1037,38 +1037,6 @@
 </section>
 </section>
 
-<section title="Product Tokens" anchor="product.tokens">
-  <x:anchor-alias value="product"/>
-  <x:anchor-alias value="product-version"/>
-<t>
-   Product tokens are used to allow communicating applications to
-   identify themselves by software name and version. Most fields using
-   product tokens also allow sub-products which form a significant part
-   of the application to be listed, separated by whitespace. By
-   convention, the products are listed in order of their significance
-   for identifying the application.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
-  <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
-  <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
-<t>
-   Examples:
-</t>
-<figure><artwork type="example">
-  User-Agent: CERN-LineMode/2.15 libwww/2.17b3
-  Server: Apache/0.8.4
-</artwork></figure>
-<t>
-   Product tokens &SHOULD; be short and to the point. They &MUST-NOT; be
-   used for advertising or other non-essential information. Although any
-   token octet &MAY; appear in a product-version, this token &SHOULD;
-   only be used for a version identifier (i.e., successive versions of
-   the same product &SHOULD; only differ in the product-version portion of
-   the product value).
-</t>
-</section>
-
 <section title="Request Methods" anchor="methods">
 
 <section title="Overview" anchor="method.overview">
@@ -2336,7 +2304,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </texttable>
 </section>
 
-<section title="Context" anchor="request.context">
+<section title="Request Context" anchor="request.context">
 <texttable align="left">
   <ttcol>Header Field Name</ttcol>
   <ttcol>Defined in...</ttcol>
@@ -2434,47 +2402,62 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <section title="User-Agent" anchor="header.user-agent">
   <iref primary="true" item="User-Agent header field" x:for-anchor=""/>
   <x:anchor-alias value="User-Agent"/>
+  <x:anchor-alias value="product"/>
+  <x:anchor-alias value="product-version"/>
 <t>
-   The "User-Agent" header field contains information about the user
-   agent originating the request. User agents &SHOULD; include this field with
-   requests.
-</t>
-<t>
-   Typically, it is used for statistical purposes, the tracing of protocol
-   violations, and tailoring responses to avoid particular user agent
-   limitations.
-</t>
-<t>
-   The field can contain multiple
-   product tokens (<xref target="product.tokens"/>)
-   and comments (&header-fields;) identifying the agent and its
-   significant subproducts. By convention, the product tokens are listed in
-   order of their significance for identifying the application.
-</t>
-<t>
-   Because this field is usually sent on every request a user agent makes,
-   implementations are encouraged not to include needlessly fine-grained
-   detail, and to limit (or even prohibit) the addition of subproducts by third
-   parties. Overly long and detailed User-Agent field values make requests
-   larger and can also be used to identify ("fingerprint") the user against
-   their wishes.
-</t>
-<t>
-   Likewise, implementations are encouraged not to use the product tokens of
-   other implementations in order to declare compatibility with them, as this
-   circumvents the purpose of the field. Finally, they are encouraged not to
-   use comments to identify products; doing so makes the field value more
-   difficult to parse.
+   The "User-Agent" header field contains information about the user agent
+   originating the request, which is often used by servers to help identify
+   the scope of reported interoperability problems, to work around or tailor
+   responses to avoid particular user agent limitations, and for analytics
+   regarding browser or operating system use. A user agent &SHOULD; include
+   a User-Agent field in each request unless specifically configured not
+   to do so.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="User-Agent"/>
   <x:ref>User-Agent</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
 </artwork></figure>
+<t>
+   The User-Agent field-value consists of one or more product identifiers,
+   each followed by zero or more comments (&header-fields;), which together
+   identify the user agent software and its significant subproducts.
+   By convention, the product identifiers are listed in order of their
+   significance for identifying the user agent software. Each product
+   identifier consists of a name and optional version.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
+  <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
+  <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   Senders &SHOULD; limit generated product identifiers to what is necessary
+   to identify the product; senders &MUST-NOT; generate advertising or other
+   non-essential information within the product identifier.
+   Senders &SHOULD-NOT; generate information in <x:ref>product-version</x:ref>
+   that is not a version identifier (i.e., successive versions of the same
+   product name ought to only differ in the product-version portion of the
+   product identifier).
+</t>
 <t>
    Example:
 </t>
 <figure><artwork type="example">
   User-Agent: CERN-LineMode/2.15 libwww/2.17b3
 </artwork></figure>
+<t>
+   A user agent &SHOULD-NOT; generate a User-Agent field containing needlessly
+   fine-grained detail and &SHOULD; limit the addition of subproducts by third
+   parties. Overly long and detailed User-Agent field values increase request
+   latency and the risk of a user being identified against their wishes
+   ("fingerprinting").
+</t>
+<t>
+   Likewise, implementations are encouraged not to use the product tokens of
+   other implementations in order to declare compatibility with them, as this
+   circumvents the purpose of the field. If a user agent masquerades as a
+   different user agent, recipients can assume that the user intentionally
+   desires to see responses tailored for that identified user agent, even
+   if they might not work as well for the actual user agent being used.
+</t>
 </section>
 </section>
 </section>
@@ -3857,7 +3840,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </texttable>
 </section>
 
-<section title="Informative" anchor="response.inform">
+<section title="Response Context" anchor="response.context">
 <t>
    The remaining response header fields provide more information about
    the target resource for potential use in later requests.
@@ -3903,18 +3886,24 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:anchor-alias value="Server"/>
 <t>
    The "Server" header field contains information about the
-   software used by the origin server to handle the request.
-</t>
-<t>
-   The field can contain multiple
-   product tokens (<xref target="product.tokens"/>) and
-   comments (&header-fields;) identifying the server and any significant
-   subproducts. The product tokens are listed in order of their significance
-   for identifying the application.
+   software used by the origin server to handle the request, which is often
+   used by clients to help identify the scope of reported interoperability
+   problems, to work around or tailor requests to avoid particular server
+   limitations, and for analytics regarding server or operating system use.
+   An origin server &MAY; generate a Server field in its responses.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Server"/>
   <x:ref>Server</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
 </artwork></figure>
+<t>
+   The Server field-value consists of one or more product identifiers, each
+   followed by zero or more comments (&header-fields;), which together
+   identify the origin server software and its significant subproducts.
+   By convention, the product identifiers are listed in order of their
+   significance for identifying the origin server software. Each product
+   identifier consists of a name and optional version, as defined in
+   <xref target="header.user-agent"/>.
+</t>
 <t>
    Example:
 </t>
@@ -3922,19 +3911,13 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   Server: CERN/3.0 libwww/2.17
 </artwork></figure>
 <t>
-   If the response is being forwarded through a proxy, the proxy application
-   &MUST-NOT; modify the <x:ref>Server</x:ref> header field. Instead, it
-   &MUST; include a <x:ref>Via</x:ref> field (as described in &header-via;).
+   An origin server &SHOULD-NOT; generate a Server field containing needlessly
+   fine-grained detail and &SHOULD; limit the addition of subproducts by third
+   parties. Overly long and detailed Server field values increase response
+   latency and potentially reveal internal implementation details that might
+   make it (slightly) easier for attackers to find and exploit known security
+   holes.
 </t>
-<x:note>
-  <t>
-    &Note; Revealing the specific software version of the server might
-    allow the server machine to become more vulnerable to attacks
-    against software that is known to contain security holes. Server
-    implementers are encouraged to make this field a configurable
-    option.
-  </t>
-</x:note>
 </section>
 </section>
 </section>
