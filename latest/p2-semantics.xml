@@ -1788,34 +1788,37 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    with a <x:ref>4xx</x:ref> status code other than 417.
 </t>
 <t>
-   The only expectation defined by this specification is:
-</t>
-<t><iref primary="true" item="100-continue (expect value)"/><iref primary="true" item="Expect Values" subitem="100-continue"/>
-  100-continue
-   <list>
-      <t>
-        The "100-continue" expectation is defined below. It does not support
-        any expect-params.
-      </t>
-   </list>
-</t>
-<t>
    Comparison is case-insensitive for names (expect-name), and case-sensitive
    for values (expect-value).
 </t>
 <t>
-   The Expect mechanism is hop-by-hop: the above requirements apply to any
-   server, including proxies. However, the Expect header field itself is
-   end-to-end; it &MUST; be forwarded if the request is forwarded.
+   The Expect header field &MUST; be forwarded if the request is forwarded.
 </t>
 <t>
-   Many older HTTP/1.0 and HTTP/1.1 applications do not understand the Expect
+   Many older HTTP/1.0 and HTTP/1.1 servers do not understand the Expect
    header field.
 </t>
 
 <section title="Use of the 100 (Continue) Status" anchor="use.of.the.100.status">
+  <iref primary="true" item="100-continue (expect value)"/>
+  <iref primary="true" item="Expect Values" subitem="100-continue"/>
+  <x:anchor-alias value="100-continue"/>
 <t>
-   The purpose of the <x:ref>100 (Continue)</x:ref> status code
+   The only expectation defined by this specification is: 
+</t>
+<t>
+  <x:dfn>100-continue</x:dfn>
+   <list>
+      <t>
+        The request includes a payload body and the client will wait for a
+        <x:ref>100 (Continue)</x:ref> response after sending the request
+        header section but before sending the payload body.
+        The 100-continue expectation does not use any expect-params.
+      </t>
+   </list>
+</t>
+<t>
+   The primary purpose of the <x:ref>100 (Continue)</x:ref> status code
    (<xref target='status.100'/>)
    is to allow a client that is sending a request message with a payload
    to determine if the origin server is willing to accept the request
@@ -2468,19 +2471,20 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    attempt to understand and satisfy the request.
 </t>
 <t>
-   HTTP status codes are extensible. HTTP applications are not required
+   HTTP status codes are extensible. HTTP clients are not required
    to understand the meaning of all registered status codes, though such
-   understanding is obviously desirable. However, applications &MUST;
+   understanding is obviously desirable. However, clients &MUST;
    understand the class of any status code, as indicated by the first
-   digit, and treat any unrecognized response as being equivalent to the
-   x00 status code of that class, with the exception that an
-   unrecognized response &MUST-NOT; be cached. For example, if an
-   unrecognized status code of 431 is received by the client, it can
-   safely assume that there was something wrong with its request and
-   treat the response as if it had received a 400 status code. In such
-   cases, user agents &SHOULD; present to the user the representation enclosed
-   with the response, since that representation is likely to include human-readable
-   information which will explain the unusual status.
+   digit, and treat an unrecognized status code as being equivalent to the
+   x00 status code of that class, with the exception that a response with an
+   unrecognized status code &MUST-NOT; be cached.
+</t>
+<t>
+   For example, if an unrecognized status code of 471 is received by a client,
+   the client can assume that there was something wrong with its request and
+   treat the response as if it had received a 400 status code. If the response
+   includes a message body, it will usually include a representation that
+   explains the response status.
 </t>
 <t>
    The first digit of the status-code defines the class of response. The
@@ -2508,11 +2512,6 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
       valid request
     </t>
   </list>
-</t>
-<t>
-   For most status codes the response can carry a payload, in which case a
-   <x:ref>Content-Type</x:ref> header field indicates the payload's media type
-   (&header-content-type;).
 </t>
 
 <section title="Overview of Status Codes" anchor="overview.of.status.codes">
@@ -2611,14 +2610,22 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="100 Continue (status code)" x:for-anchor=""/>
   <x:anchor-alias value="100 (Continue)"/>
 <t>
-   The client &SHOULD; continue with its request. This interim response is
-   used to inform the client that the initial part of the request has
-   been received and has not yet been rejected by the server. The client
-   &SHOULD; continue by sending the remainder of the request or, if the
-   request has already been completed, ignore this response. The server
-   &MUST; send a final response after the request has been completed.
-   See <xref target="use.of.the.100.status"/> for detailed discussion of the
-   use and handling of this status code.
+   The <x:dfn>100 (Continue)</x:dfn> status code indicates that the initial
+   part of a request has been received and has not yet been rejected by the
+   server. The server intends to send a final response after the request has
+   been fully received and acted upon.
+</t>
+<t>
+   When the request contains an <x:ref>Expect</x:ref> header field that
+   includes a <x:ref>100-continue</x:ref> expectation, the 100 response
+   indicates that the server wishes to receive the request payload body,
+   as described in <xref target="use.of.the.100.status"/>.  The client
+   ought to continue sending the request and discard the 100 response.
+</t>
+<t>
+   If the request did not contain an <x:ref>Expect</x:ref> header field
+   containing the <x:ref>100-continue</x:ref> expectation,
+   the client can simply discard this interim response.
 </t>
 </section>
 
@@ -2626,19 +2633,20 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="101 Switching Protocols (status code)" x:for-anchor=""/>
   <x:anchor-alias value="101 (Switching Protocols)"/>
 <t>
-   The server understands and is willing to comply with the client's request,
-   via the <x:ref>Upgrade</x:ref> message header field (&header-upgrade;), for
+   The <x:dfn>101 (Switching Protocols)</x:dfn> status code indicates that the
+   server understands and is willing to comply with the client's request,
+   via the <x:ref>Upgrade</x:ref> header field (&header-upgrade;), for
    a change in the application protocol being used on this connection. The
-   server will switch protocols to those defined by the response's Upgrade
-   header field immediately after the empty line which terminates the 101
-   response.
+   server will switch to the protocol(s) indicated within the response's
+   Upgrade header field immediately after the empty line which terminates the
+   101 response.
 </t>
 <t>
-   The protocol &SHOULD; be switched only when it is advantageous to do
-   so. For example, switching to a newer version of HTTP is advantageous
-   over older versions, and switching to a real-time, synchronous
-   protocol might be advantageous when delivering resources that use
-   such features.
+   It is assumed that the server will only agree to switch protocols when
+   it is advantageous to do so. For example, switching to a newer version of
+   HTTP might be advantageous over older versions, and switching to a
+   real-time, synchronous protocol might be advantageous when delivering
+   resources that use such features.
 </t>
 </section>
 </section>
@@ -2657,7 +2665,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="200 OK (status code)" x:for-anchor=""/>
   <x:anchor-alias value="200 (OK)"/>
 <t>
-   The request has succeeded. The payload sent in the response
+   The <x:dfn>200 (OK)</x:dfn> status code indicates that the request has
+   succeeded. The payload sent in the response
    is dependent on the method used in the request, for example:
   <list style="hanging">
     <t hangText="GET">
@@ -2685,27 +2694,21 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="201 Created (status code)" x:for-anchor=""/>
   <x:anchor-alias value="201 (Created)"/>
 <t>
-   The request has been fulfilled and has resulted in one or more new resources
-   being created. 
+   The <x:dfn>201 (Created)</x:dfn> status code indicates that the request has
+   been fulfilled and has resulted in one or more new resources being created. 
 </t>
 <t>
    Newly created resources are typically linked to from the response payload,
    with the most relevant URI also being carried in the <x:ref>Location</x:ref>
    header field. If the newly created resource's URI is the same as the
-   Effective Request URI, this information can be omitted (e.g., in the case of
-   a response to a PUT request).  
+   effective request URI, the Location field can be omitted.
 </t>
 <t>
-   The origin server &MUST; create the resource(s) before sending the 201 status
-   code. If the action cannot be carried out immediately, the server &SHOULD;
-   respond with a <x:ref>202 (Accepted)</x:ref> response instead.
-</t>
-<t>
-   A 201 response &MAY; contain an <x:ref>ETag</x:ref> response header field
-   indicating the current value of the entity-tag for the representation of the
-   resource identified by the <x:ref>Location</x:ref> header field or, in case
-   the Location header field was omitted, by the Effective Request URI (see
-   &header-etag;).
+   If an <x:ref>ETag</x:ref> header field is present in a 201 response, its
+   field value is the entity-tag for the representation created, which
+   is the new representation of the resource identified by either the
+   <x:ref>Location</x:ref> header field or, if no Location header field
+   is received, by the effective request URI (see &header-etag;).
 </t>
 </section>
 
@@ -2713,11 +2716,12 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="202 Accepted (status code)" x:for-anchor=""/>
   <x:anchor-alias value="202 (Accepted)"/>
 <t>
-   The request has been accepted for processing, but the processing has
-   not been completed.  The request might or might not eventually be
-   acted upon, as it might be disallowed when processing actually takes
-   place. There is no facility for re-sending a status code from an
-   asynchronous operation such as this.
+   The <x:dfn>202 (Accepted)</x:dfn> status code indicates that the request
+   has been accepted for processing, but the processing has not been
+   completed. The request might or might not eventually be acted upon, as it
+   might be disallowed when processing actually takes place. There is no
+   facility for re-sending a status code from an asynchronous operation such
+   as this.
 </t>
 <t>
    The 202 response is intentionally non-committal. Its purpose is to
@@ -2725,7 +2729,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    batch-oriented process that is only run once per day) without
    requiring that the user agent's connection to the server persist
    until the process is completed. The representation sent with this
-   response &SHOULD; include an indication of the request's current status
+   response ought to describe the request's current status
    and either a pointer to a status monitor or some estimate of when the
    user can expect the request to be fulfilled.
 </t>
@@ -2735,13 +2739,14 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="203 Non-Authoritative Information (status code)" x:for-anchor=""/>
   <x:anchor-alias value="203 (Non-Authoritative Information)"/>
 <t>
-   The request was successful but the enclosed payload has been modified
-   from that of the origin server's <x:ref>200 (OK)</x:ref> response by a
-   transforming proxy (&transformations;). This status code allows the proxy
-   to notify recipients when a transformation has been applied, since that
-   knowledge might impact later decisions regarding the content.
-   For example, future cache validation requests for the content might only
-   be applicable along the same request path (through the same proxies).
+   The <x:dfn>203 (Non-Authoritative Information)</x:dfn> status code
+   indicates that the request was successful but the enclosed payload has been
+   modified from that of the origin server's <x:ref>200 (OK)</x:ref> response
+   by a transforming proxy (&transformations;). This status code allows the
+   proxy to notify recipients when a transformation has been applied, since
+   that knowledge might impact later decisions regarding the content. For
+   example, future cache validation requests for the content might only be
+   applicable along the same request path (through the same proxies).
 </t>
 <t>
    The 203 response is similar to the Warning code of 214 Transformation
@@ -2754,11 +2759,11 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="204 No Content (status code)" x:for-anchor=""/>
   <x:anchor-alias value="204 (No Content)"/>
 <t>
-   The 204 (No Content) status code indicates that the server has
-   successfully fulfilled the request and that there is no additional
-   content to send in the response payload body.  Metadata in the
-   response header fields refer to the target resource and its current
-   representation after the requested action.
+   The <x:dfn>204 (No Content)</x:dfn> status code indicates that the server
+   has successfully fulfilled the request and that there is no additional
+   content to send in the response payload body. Metadata in the response
+   header fields refer to the target resource and its current representation
+   after the requested action.
 </t>
 <t>
    For example, if a 204 status code is received in response to a PUT
@@ -2768,8 +2773,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </t>
 <t>
    The 204 response allows a server to indicate that the action has been
-   successfully applied to the target resource while implying that the
-   user agent &SHOULD-NOT; traverse away from its current "document view"
+   successfully applied to the target resource, while implying that the
+   user agent does not need to traverse away from its current "document view"
    (if any).  The server assumes that the user agent will provide some
    indication of the success to its user, in accord with its own interface,
    and apply any new or updated metadata in the response to the active
@@ -2783,7 +2788,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    to be prevalent, such as within distributed version control systems.
 </t>
 <t>
-   The 204 response &MUST-NOT; include a message body, and thus is always
+   A 204 response does not include a message body, and thus is always
    terminated by the first empty line after the header fields.
 </t>
 </section>
@@ -2791,16 +2796,25 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <section title="205 Reset Content" anchor="status.205">
   <iref primary="true" item="205 Reset Content (status code)" x:for-anchor=""/>
 <t>
-   The server has fulfilled the request and the user agent &SHOULD; reset
-   the document view which caused the request to be sent. This response
-   is primarily intended to allow input for actions to take place via
-   user input, followed by a clearing of the form in which the input is
-   given so that the user can easily initiate another input action.
+   The <x:dfn>205 (Reset Content)</x:dfn> status code indicates that the
+   server has fulfilled the request and desires that the user agent reset the
+   "document view", which caused the request to be sent, to its original state
+   as received from the origin server.
 </t>
 <t>   
-   The message body included with the response &MUST; be empty. Note that
-   receivers still need to parse the response according to the algorithm defined
-   in &message-body;.
+   This response is intended to support a common data entry use case where
+   the user receives content that supports data entry (a form, notepad,
+   canvas, etc.), enters or manipulates data in that space, causes the entered
+   data to be submitted in a request, and then the data entry mechanism is
+   reset for the next entry so that the user can easily initiate another
+   input action.
+</t>
+<t>
+   Since the 205 status code implies that no additional content will be
+   provided in the payload, the server &MUST; send a message body of zero
+   length. In other words, the server &MUST; send a "Content-Length: 0" field
+   in a 205 response or close the connection immediately after sending the
+   blank line terminating the header section.
 </t>
 </section>
 </section>
