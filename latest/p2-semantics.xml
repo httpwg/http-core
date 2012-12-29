@@ -2584,7 +2584,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="1xx Informational (status code class)" x:for-anchor=""/>
   <iref primary="true" item="Status Codes Classes" subitem="1xx Informational" x:for-anchor=""/>
 <t>
-   This class of status code indicates a provisional response,
+   This class of status code indicates an interim response,
    consisting only of the status-line and optional header fields, and is
    terminated by an empty line. There are no required header fields for this
    class of status code. Since HTTP/1.0 did not define any 1xx status
@@ -3627,8 +3627,8 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    The "Date" header field represents the date and time at which
    the message was originated, having the same semantics as the Origination
    Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
-   The field value is an HTTP-date, as defined in <xref target="http.date"/>;
-   it &MUST; be sent in rfc1123-date format.
+   The field value is an HTTP-date, as defined in <xref target="http.date"/>,
+   though a sender &MUST; generate a Date value in the rfc1123-date format.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Date"/>
   <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -3640,42 +3640,32 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   Date: Tue, 15 Nov 1994 08:12:31 GMT
 </artwork></figure>
 <t>
-   Origin servers &MUST; include a Date header field in all responses,
-   except in these cases:
-  <list style="numbers">
-      <t>If the response status code is <x:ref>100 (Continue)</x:ref> or
-         <x:ref>101 (Switching Protocols)</x:ref>, the response &MAY; include a
-         Date header field, at the server's option.</t>
-
-      <t>If the response status code conveys a server error, e.g., <x:ref>500
-         (Internal Server Error)</x:ref> or <x:ref>503 (Service Unavailable)</x:ref>,
-         and it is inconvenient or impossible to generate a valid Date.</t>
-
-      <t>If the server does not have a clock that can provide a
-         reasonable approximation of the current time, its responses
-         &MUST-NOT; include a Date header field.</t>
-  </list>
+   When a Date header field is generated, the sender &SHOULD; generate its
+   field value as the best available approximation of the date and time of
+   message generation. In theory, the date ought to represent the moment just
+   before the payload is generated. In practice, the date can be generated at
+   any time during message origination.
 </t>
 <t>
-   A received message that does not have a Date header field &MUST; be
-   assigned one by the recipient if the message will be cached by that
-   recipient.
+   An origin server &MUST-NOT; send a Date header field if it does not have a
+   clock capable of providing a reasonable approximation of the current time.
+   An origin server &MAY; send a Date header field if the response is in the
+   <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
+   class of status codes.
+   An origin server &MUST; send a Date header field in all other cases.
 </t>
 <t>
-   Clients can use the Date header field as well; in order to keep request
-   messages small, they are advised not to include it when it doesn't convey
-   any useful information (as is usually the case for requests that do not
-   contain a payload).
+   A recipient with a clock that receives a response message without a Date
+   header field &MUST; record the time it was received and append a
+   corresponding Date header field to the message's header block if it is
+   cached or forwarded downstream.
 </t>
 <t>
-   The HTTP-date sent in a Date header field &SHOULD-NOT; represent a date and
-   time subsequent to the generation of the message. It &SHOULD; represent
-   the best available approximation of the date and time of message
-   generation, unless the implementation has no means of generating a
-   reasonably accurate date and time. In theory, the date ought to
-   represent the moment just before the payload is generated. In
-   practice, the date can be generated at any time during the message
-   origination without affecting its semantic value.
+   A user agent &MAY; send a Date header field in a request, though generally
+   will not do so unless it is believed to convey useful information to the
+   server. For example, custom applications of HTTP might convey a Date if
+   the server is expected to adjust its interpretation of the user's request
+   based on differences between the user agent and server clocks.
 </t>
 </section>
 </section>
