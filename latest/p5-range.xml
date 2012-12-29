@@ -239,14 +239,16 @@
   <x:anchor-alias value="206"/>
   <x:anchor-alias value="206 (Partial Content)"/>
 <t>
-   The server has fulfilled the partial GET request for the resource.
+   The <x:dfn>206 (Partial Content)</x:dfn> status code indicates that the
+   server has fulfilled the partial GET request for the resource.
    The request &MUST; have included a <x:ref>Range</x:ref> header field
    (<xref target="header.range"/>) indicating the desired range, and &MAY; have
    included an <x:ref>If-Range</x:ref> header field
    (<xref target="header.if-range"/>) to make the request conditional.
 </t>
 <t>
-   The response &MUST; include the following header fields:
+   When a 206 response is generated, the sender &MUST; generate the following
+   header fields:
   <list style="symbols">
     <t>
         Either a <x:ref>Content-Range</x:ref> header field
@@ -269,10 +271,11 @@
   </list>
 </t>
 <t>
-   If a 206 is sent in response to a request with an <x:ref>If-Range</x:ref>
-   header field, it &SHOULD-NOT; include other representation header fields.
-   Otherwise, the response &MUST; include all of the representation header
-   fields that would have been sent with a <x:ref>200 (OK)</x:ref> response
+   If a 206 is generated in response to a request with an <x:ref>If-Range</x:ref>
+   header field, the sender &SHOULD-NOT; generate other representation header
+   fields beyond those described above.
+   Otherwise, the sender &MUST; generate all of the same representation header
+   fields that would have been sent in a <x:ref>200 (OK)</x:ref> response
    to the same request.
 </t>
 <t>
@@ -285,20 +288,21 @@
   <iref primary="true" item="416 Requested Range Not Satisfiable (status code)" x:for-anchor=""/>
   <x:anchor-alias value="416 (Requested Range Not Satisfiable)"/>
 <t>
-   A server &SHOULD; send a response with this status code if a request
-   included a <x:ref>Range</x:ref> header field (<xref target="header.range"/>),
-   and none of the ranges-specifier values in this field overlap the current
-   extent of the selected resource, and the request did not include an
+   The <x:dfn>416 (Requested Range Not Satisfiable)</x:dfn> status code
+   indicates that none of the ranges-specifier values in the request's
+   <x:ref>Range</x:ref> header field (<xref target="header.range"/>)
+   overlap the current
+   extent of the selected resource and the request did not include an
    <x:ref>If-Range</x:ref> header field (<xref target="header.if-range"/>).
    (For byte-ranges, this means that the first-byte-pos of all of the
    byte-range-spec values were greater than the current length of the selected
-   resource.)
+   representation.)
 </t>
 <t>
    When this status code is sent in response to a byte-range request, the
-   response &SHOULD; include a <x:ref>Content-Range</x:ref> header field
-   specifying the current length of the representation (see <xref target="header.content-range"/>).
-   This response &MUST-NOT; use the multipart/byteranges media type.
+   sender &SHOULD; generate a <x:ref>Content-Range</x:ref> header field
+   specifying the current length of the selected representation
+   (see <xref target="header.content-range"/>).
 </t>
 <figure>
 <preamble>For example:</preamble>
@@ -376,42 +380,46 @@ Content-Type: image/gif
    &lastmod-comparison;.
 </t>
 <t>
-   When a client receives an incomplete <x:ref>200 (OK)</x:ref> or <x:ref>206 (Partial Content)</x:ref>
-   response and already has one or more stored responses for the same method
-   and effective request URI, all of the stored responses with the same
-   strong validator &MAY; be combined with the partial content in this new
-   response.  If none of the stored responses contain the same strong
-   validator, then this new response corresponds to a new representation
-   and &MUST-NOT; be combined with the existing stored responses.
+   When a client receives an incomplete <x:ref>200 (OK)</x:ref> response or a
+   <x:ref>206 (Partial Content)</x:ref> response, and already has one or more
+   partial responses for the same method and effective request URI that have
+   the same strong validator as present in the new response,
+   the recipient &MAY; combine some or all of those responses into a set of
+   continuous ranges. A client &MUST-NOT; combine responses that differ in the
+   strong validator or that do not have a strong validator.
 </t>
 <t>
-   If the new response is an incomplete <x:ref>200 (OK)</x:ref> response, then the header
-   fields of that new response are used for any combined response and replace
-   those of the matching stored responses.
+   If the new response is an incomplete <x:ref>200 (OK)</x:ref> response, then
+   the header fields of that new response are used for any combined response
+   and replace those of the matching stored responses.
 </t>
 <t>
-   If the new response is a <x:ref>206 (Partial Content)</x:ref> response and at least one
-   of the matching stored responses is a <x:ref>200 (OK)</x:ref>, then the combined response
-   header fields consist of the most recent 200 response's header fields.
-   If all of the matching stored responses are 206 responses, then the
-   stored response with the most recent header fields is used as the source of
-   header fields for the combined response, except that the client &MUST;
-   use other header fields provided in the new response, aside from
-   <x:ref>Content-Range</x:ref>, to replace all instances of the corresponding
-   header fields in the stored response.
+   If the new response is a <x:ref>206 (Partial Content)</x:ref> response and
+   at least one of the matching stored responses is a <x:ref>200 (OK)</x:ref>,
+   then the combined response header fields consist of the most recent 200
+   response's header fields. If all of the matching stored responses are 206
+   responses, then the stored response with the most recent header fields is
+   used as the source of header fields for the combined response, except that
+   the client &MUST; use other header fields provided in the new response,
+   aside from <x:ref>Content-Range</x:ref>, to replace all instances of the
+   corresponding header fields in the stored response.
 </t>
 <t>
    The combined response message body consists of the union of partial
    content ranges in the new response and each of the selected responses.
    If the union consists of the entire range of the representation, then the
-   combined response &MUST; be recorded as a complete <x:ref>200 (OK)</x:ref>
-   response with a <x:ref>Content-Length</x:ref> header field that reflects the
-   complete length. Otherwise, the combined response(s) &MUST; include a
-   <x:ref>Content-Range</x:ref> header field describing the included range(s)
-   and be recorded as incomplete.  If the union consists of a discontinuous
-   range of the representation, then the client &MAY; store it as either a
-   multipart range response or as multiple <x:ref>206</x:ref> responses with
-   one continuous range each.
+   client &MUST; record the combined response as if it were a complete
+   <x:ref>200 (OK)</x:ref> response, including a <x:ref>Content-Length</x:ref>
+   header field that reflects the complete length.
+   Otherwise, the client &MUST; record the set of continuous ranges as one of
+   the following:
+   an incomplete <x:ref>200 (OK)</x:ref> response if the combined response is
+   a prefix of the representation,
+   a single <x:ref>206 (Partial Content)</x:ref> response containing a
+   multipart/byteranges body, or
+   multiple <x:ref>206 (Partial Content)</x:ref> responses, each with one
+   continuous range that is indicated by a <x:ref>Content-Range</x:ref> header
+   field.
 </t>
 </section>
 </section>
