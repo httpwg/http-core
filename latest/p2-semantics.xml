@@ -778,7 +778,7 @@
    programmatically determined via HTTP.
    <list style="symbols">
     <t>For a response to a GET or HEAD request, this is an indication that the
-       effective request URI identifies a resource that is subject to content
+       effective request URI refers to a resource that is subject to content
        negotiation and the Content-Location field-value is a more specific
        identifier for the selected representation.</t>
     <t>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
@@ -795,34 +795,30 @@
    </list>
 </t>
 <t>
-   If Content-Location is included in a request message, then it &MAY;
-   be interpreted by the origin server as an indication of where the
-   user agent originally obtained the content of the enclosed
-   representation (prior to any subsequent modification of the content
-   by that user agent).  In other words, the user agent is providing
-   the same representation metadata that it received with the original
-   representation.  However, such interpretation &MUST-NOT; be used to
-   alter the semantics of the method requested by the client.  For
-   example, if a client makes a PUT request on a negotiated resource
-   and the origin server accepts that PUT (without redirection), then the
-   new set of values for that resource is expected to be consistent with
-   the one representation supplied in that PUT; the Content-Location
-   cannot be used as a form of reverse content selection that
-   identifies only one of the negotiated representations to be updated.
-   If the user agent had wanted the latter semantics, it would have applied
-   the PUT directly to the Content-Location URI.
+   A user agent that sends Content-Location in a request message is stating
+   that its value refers to where the user agent originally obtained the
+   content of the enclosed representation (prior to any modifications made by
+   that user agent).  In other words, the user agent is providing a back link
+   to the source of the original representation.
 </t>
 <t>
-   A Content-Location field received in a request message is transitory
-   information that &SHOULD-NOT; be saved with other representation
-   metadata for use in later responses.  The Content-Location's value
-   might be saved for use in other contexts, such as within source links
-   or other metadata.
+   An origin server that receives a Content-Location field in a request
+   message &MUST; treat the information as transitory request context rather
+   than as metadata to be saved verbatim as part of the representation.
+   An origin server &MAY; use that context to guide in processing the
+   request or to save it for other uses, such as within source links or
+   versioning metadata. However, an origin server &MUST-NOT; use such context
+   information to alter the request semantics.
 </t>
 <t>
-   A cache cannot assume that a representation with a Content-Location
-   different from the URI used to retrieve it can be used to respond to
-   later requests on that Content-Location URI.
+   For example, if a client makes a PUT request on a negotiated resource and
+   the origin server accepts that PUT (without redirection), then the new set
+   of values for that resource is expected to be consistent with the one
+   representation supplied in that PUT; the Content-Location cannot be used as
+   a form of reverse content selection identifier to update only one of the
+   negotiated representations. If the user agent had wanted the latter
+   semantics, it would have applied the PUT directly to the Content-Location
+   URI.
 </t>
 </section>
 </section>
@@ -3025,13 +3021,12 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    A 303 response to a GET request indicates that the
    <x:ref>target resource</x:ref> does not have a representation of
    its own that can be transferred by the server over HTTP.
-   The <x:ref>Location</x:ref> URI identifies a resource that is descriptive
-   of the target resource, such that the follow-on representation might be
-   useful to recipients without implying that it adequately represents the
-   target resource. Note that answers to the questions of what can be
-   represented, what representations are adequate, and what might be a useful
-   description are outside the scope of HTTP and thus entirely determined by
-   the URI owner(s).
+   The <x:ref>Location</x:ref> field value refers to a resource that is
+   descriptive of the target resource, such that the follow-on representation
+   might be useful to recipients without implying that it adequately
+   represents the target resource. Note that answers to the questions of what
+   can be represented, what representations are adequate, and what might be a
+   useful description are outside the scope of HTTP.
 </t>
 <t>
    Except for responses to a HEAD request, the representation of a 303 
@@ -3454,9 +3449,15 @@ Content-Type: text/plain
   <x:anchor-alias value="response-header"/>
 <t>
    The response header fields allow the server to pass additional
-   information about the response which cannot be placed in the status-line.
-   These header fields give information about the server and about
-   further access to the <x:ref>target resource</x:ref>.
+   information about the response beyond what is placed in the status-line.
+   These header fields give information about the server, about
+   further access to the <x:ref>target resource</x:ref>, or about related
+   resources.
+</t>
+<t>
+   Although each response header field has a defined meaning, in general,
+   the precise semantics might be further refined by the semantics of the
+   request method and/or response status code. 
 </t>
 
 <section title="Control Data" anchor="response.control.data">
@@ -3674,62 +3675,70 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <iref primary="true" item="Location header field" x:for-anchor=""/>
   <x:anchor-alias value="Location"/>
 <t>
-   The "Location" header field &MAY; be sent in responses to refer to
-   a specific resource in accordance with the semantics of the status
-   code.
+   The "Location" header field is used in some responses to refer to a
+   specific resource in relation to the response. The type of relationship is
+   defined by the combination of request method and status code semantics.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Location"/>
   <x:ref>Location</x:ref> = <x:ref>URI-reference</x:ref>
 </artwork></figure>
 <t>
-   For <x:ref>201 (Created)</x:ref> responses, the Location is the URI of the
-   new resource which was created by the request. For <x:ref>3xx (Redirection)</x:ref>
-   responses, the location &SHOULD; indicate the server's preferred URI for
-   automatic redirection to the resource.
-</t>
-<t>
    The field value consists of a single URI-reference. When it has the form
    of a relative reference (<xref target="RFC3986" x:fmt="," x:sec="4.2"/>),
    the final value is computed by resolving it against the effective request
    URI (<xref target="RFC3986" x:fmt="," x:sec="5"/>). If the original URI, as
-   navigated to by the user agent, did contain a fragment identifier, and the
-   final value does not, then the original URI's fragment identifier is added
-   to the final value.
+   navigated to by the user agent, contains a fragment identifier, and the
+   Location value does not, then the original URI's fragment identifier is
+   appended to the Location value.
+</t>
+<t>
+   For <x:ref>201 (Created)</x:ref> responses, the Location value refers to
+   the primary resource created by the request.
+   For <x:ref>3xx (Redirection)</x:ref> responses, the Location value refers
+   to the preferred target resource for automatically redirecting the request.
 </t>
 <figure>
-<preamble>For example, the original URI "http://www.example.org/~tim", combined with a field value given as:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
+<preamble>For example, a GET request for the URI reference
+   "http://www.example.org/~tim" might result in a
+   <x:ref>303 (See Other)</x:ref> response containing the header field:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
 <artwork type="example">
   Location: /pub/WWW/People.html#tim
 </artwork>
-<postamble>would result in a final value of "http://www.example.org/pub/WWW/People.html#tim"</postamble>
+<postamble>which suggests that the user agent redirect to
+   "http://www.example.org/pub/WWW/People.html#tim"</postamble>
 </figure>
 <figure>
-<preamble>An original URI "http://www.example.org/index.html#larry", combined with a field value given as:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
+<preamble>Likewise, a GET request for the URI reference
+   "http://www.example.org/index.html#larry" might result in a
+   <x:ref>301 (Moved Permanently)</x:ref> response containing the header
+   field:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
 <artwork type="example">
   Location: http://www.example.net/index.html
 </artwork>
-<postamble>would result in a final value of "http://www.example.net/index.html#larry", preserving the original fragment identifier.</postamble>
+<postamble>which suggests that the user agent redirect to
+   "http://www.example.net/index.html#larry", preserving the original fragment
+   identifier.</postamble>
 </figure>
+<t>
+   There are circumstances in which a fragment identifier in a Location
+   value would not be appropriate. For example, the Location header field in a
+   <x:ref>201 (Created)</x:ref> response is supposed to provide a URI that is
+   specific to the created resource.
+</t>
 <x:note>
   <t>
     &Note; Some recipients attempt to recover from Location fields
     that are not valid URI references. This specification does not mandate or
-    define such processing, but does allow it.
+    define such processing, but does allow it for the sake of robustness.
   </t>
 </x:note>
-<t>
-   There are circumstances in which a fragment identifier in a Location URI
-   would not be appropriate. For instance, when it appears in a <x:ref>201
-   (Created)</x:ref> response, where the Location header field specifies the
-   URI for the entire created resource.
-</t>
 <x:note>
   <t>
     &Note; The <x:ref>Content-Location</x:ref> header field
     (&header-content-location;) differs from Location in that the
-    Content-Location identifies the most specific resource corresponding to the
+    Content-Location refers to the most specific resource corresponding to the
     enclosed representation. It is therefore possible for a response to contain
-    header fields for both Location and Content-Location.
+    both the Location and Content-Location header fields.
   </t>
 </x:note>
 </section>
@@ -3979,13 +3988,19 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    is allowed by requiring a Content-Length header field with a value of "0".
 </t>
 <t>
-   New method definitions need to indicate whether they are safe (<xref
+   A new method definition needs to indicate whether it is safe (<xref
    target="safe.methods"/>), idempotent (<xref target="idempotent.methods"/>),
-   cacheable (<xref target="cacheable.methods"/>), and what
+   cacheable (<xref target="cacheable.methods"/>), what
    semantics are to be associated with the payload body if any is present
-   in the request.  If a method is cacheable, the method definition ought
-   to describe how, and under what conditions, a cache can store a response
-   and use it to satisfy a subsequent request.
+   in the request, and what refinements the method makes to header field
+   or status code semantics.
+   If the new method is cacheable, its definition ought to describe how, and
+   under what conditions, a cache can store a response and use it to satisfy a
+   subsequent request.
+   If the new method can be made conditional (<xref target="Part4"/>), the
+   definition ought to describe how to respond when the condition is false.
+   Likewise, if the new method might have some use for partial response
+   semantics (<xref target="Part5"/>), it ought to document this too.
 </t>
 </section>
 
@@ -4077,27 +4092,30 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <t>
    When it is necessary to express semantics for a response that are not
    defined by current status codes, a new status code can be registered.
-   HTTP status codes are generic; they are potentially applicable to
-   any resource, not just one particular media type, "type" of resource, or
-   application. As such, it is preferred that new status codes be
-   registered in a document that isn't specific to a single application.
+   Status codes are generic; they are potentially applicable to any resource,
+   not just one particular media type, kind of resource, or application of
+   HTTP. As such, it is preferred that new status codes be registered in a
+   document that isn't specific to a single application.
 </t>
 <t>
    New status codes are required to fall under one of the categories
    defined in <xref target="status.codes"/>. To allow existing parsers to
-   properly handle them, new status codes cannot disallow a payload,
+   process the response message, new status codes cannot disallow a payload,
    although they can mandate a zero-length payload body.
 </t>
 <t>
    A definition for a new status code ought to explain the request
    conditions that would cause a response containing that status code (e.g.,
    combinations of request header fields and/or method(s)) along with any 
-   dependencies on response header fields (e.g., what fields are required
-   and what fields can modify the semantics). A response that can transfer a
-   payload ought to specify expected cache behavior (e.g., cacheability and
-   freshness criteria, as described in &caching;) and whether the payload has
-   any implied association with an identified resource
-   (<xref target="identifying.payload"/>).
+   dependencies on response header fields (e.g., what fields are required,
+   what fields can modify the semantics, and what header field semantics are
+   further refined when used with the new status code).
+</t>
+<t>
+   A response that can transfer a payload ought to specify expected cache
+   behavior (e.g., cacheability and freshness criteria, as described in
+   &caching;) and whether the payload has any implied association with an
+   identified resource (<xref target="identifying.payload"/>).
 </t>
 </section>
 
@@ -4366,28 +4384,30 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
       <t>Whether the field is a single value, or whether it can be a list
       (delimited by commas; see &header-fields;).</t>
       <t>If it does not use the list syntax, document how to treat messages
-      where the header field occurs multiple times (a sensible default would
-      be to ignore the header field, but this might not always be the right
+      where the field occurs multiple times (a sensible default would
+      be to ignore the field, but this might not always be the right
       choice).</t>
       <t>Note that intermediaries and software libraries might combine
-      multiple header field instances into a single one, despite the header
-      field not allowing this. A robust format enables recipients to discover
-      these situations (good example: "Content-Type", as the comma can only
-      appear inside quoted strings; bad example: "Location", as a comma can
-      occur inside a URI).</t>
+      multiple header field instances into a single one, despite the
+      field's definition not allowing the list syntax. A robust format enables
+      recipients to discover these situations (good example: "Content-Type",
+      as the comma can only appear inside quoted strings;
+      bad example: "Location", as a comma can occur inside a URI).</t>
     </x:lt>
     <x:lt><t>Under what conditions the header field can be used; e.g., only in
-    responses or requests, in all messages, only on responses to a particular
-    request method.</t></x:lt>
+      responses or requests, in all messages, only on responses to a
+      particular request method, etc.</t></x:lt>
+    <x:lt><t>Whether the field semantics are further refined by the context,
+      such as by existing request methods or status codes.</t></x:lt>
     <x:lt><t>Whether it is appropriate to list the field-name in the
-    <x:ref>Connection</x:ref> header field (i.e., if the header field is to
-    be hop-by-hop; see &header-connection;).</t></x:lt>
-    <x:lt><t>Under what conditions intermediaries are allowed to modify the header
-    field's value, insert or delete it.</t></x:lt>
+      <x:ref>Connection</x:ref> header field (i.e., if the header field is to
+      be hop-by-hop; see &header-connection;).</t></x:lt>
+    <x:lt><t>Under what conditions intermediaries are allowed to insert,
+      delete, or modify the field's value.</t></x:lt>
     <x:lt><t>How the header field might interact with caching (see
-    <xref target="Part6"/>).</t></x:lt>
+      <xref target="Part6"/>).</t></x:lt>
     <x:lt><t>Whether the header field is useful or allowable in trailers (see
-    &chunked-encoding;).</t></x:lt>
+      &chunked-encoding;).</t></x:lt>
     <x:lt><t>Whether the header field ought to be preserved across redirects.</t></x:lt>
   </list>
 </t>
@@ -4618,7 +4638,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    content of the data that is transferred, nor is there any a priori
    method of determining the sensitivity of any particular piece of
    information within the context of any given request. Therefore,
-   applications &SHOULD; supply as much control over this information as
+   applications ought to supply as much control over this information as
    possible to the provider of that information. Four header fields are
    worth special mention in this context: <x:ref>Server</x:ref>,
    <x:ref>Via</x:ref>, <x:ref>Referer</x:ref> and <x:ref>From</x:ref>.
@@ -4630,9 +4650,9 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    <x:ref>Server</x:ref> header field a configurable option.
 </t>
 <t>
-   Proxies which serve as a portal through a network firewall &SHOULD;
+   Proxies that serve as a portal through a network firewall &SHOULD;
    take special precautions regarding the transfer of header information
-   that identifies the hosts behind the firewall. In particular, they
+   that might identify hosts behind the firewall. In particular, they
    &SHOULD; remove, or replace with sanitized versions, any <x:ref>Via</x:ref>
    fields generated behind the firewall.
 </t>
