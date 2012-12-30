@@ -3782,7 +3782,9 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </section>
 
 <section title="Selected Representation Header Fields" anchor="selected.representation">
-<t><iref primary="true" item="selected representation"/>
+   <iref primary="true" item="selected representation"/>
+   <x:anchor-alias value="selected representation"/>
+<t>
    We use the term "<x:dfn>selected representation</x:dfn>" to refer to the
    the current representation of the <x:ref>target resource</x:ref> that would have been
    selected in a successful response if the same request had used the
@@ -3808,45 +3810,63 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    <iref item="Vary header field" primary="true" x:for-anchor="" />
    <x:anchor-alias value="Vary"/>
 <t>
-   The "Vary" header field conveys the set of header fields
-   that were used to select the representation.
-</t>
-<t>
-   Caches use this information as part of determining whether a stored
-   response can be used to satisfy a given request (&caching-neg-resp;).
-</t>
-<t>
-   In uncacheable or stale responses, the Vary field value advises the user
-   agent about the criteria that were used to select the representation.
+   The "Vary" header field describes what parts of a request message, aside
+   from the method and request target, might influence the origin server's
+   process for selecting and representing the response. The value consists of
+   either a single asterisk ("*") or a list of header field names
+   (case-insensitive).
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Vary"/>
   <x:ref>Vary</x:ref> = "*" / 1#<x:ref>field-name</x:ref>
 </artwork></figure>
 <t>
-   The set of header fields named by the Vary field value is known as the
-   selecting header fields.
+   A Vary field value of "*" signals that anything about the request might
+   play a role in selecting the response representation, possibly including
+   elements outside the message syntax (e.g., the client's network address),
+   and thus a recipient will not be able to determine whether this response is
+   appropriate for a later request without forwarding the request to the
+   origin server. A proxy &MUST-NOT; generate a Vary field with a "*" value.
 </t>
 <t>
-   A server &SHOULD; include a Vary header field with any cacheable response
-   that is subject to proactive negotiation. Doing so allows a cache to
-   properly interpret future requests on that resource and informs the user
-   agent about the presence of negotiation on that resource. A server &MAY;
-   include a Vary header field with a non-cacheable response that is subject
-   to proactive negotiation, since this might provide the user agent with
-   useful information about the dimensions over which the response varies at
-   the time of the response.
+   A Vary field value consisting of a comma-separated list of names indicates
+   that the named request header fields, known as the selecting header fields,
+   might have a role in selecting the representation. The potential selecting
+   header fields are not limited to those defined by this specification.
 </t>
 <t>
-   A Vary field value of "*" signals that unspecified parameters not limited
-   to the header fields (e.g., the network address of the client), play a
-   role in the selection of the response representation; therefore, a cache
-   cannot determine whether this response is appropriate. A proxy &MUST-NOT;
-   generate the "*" value.
+   An origin server might send Vary with a list of fields for two purposes:
+   <list style="numbers">
+      <x:lt>
+        <t>
+           To inform cache recipients that they &MUST-NOT; use this response
+           to satisfy a later request unless the later request has the
+           same values for the listed fields as the original request
+           (&caching-neg-resp;). In other words, Vary expands the cache key
+           required to match a new request to the stored cache entry.
+        </t>
+      </x:lt>
+      <x:lt>
+        <t>
+           To inform user agent recipients that this response is subject to
+           content negotiation (<xref target="request.conneg"/>) and that a
+           different representation might be sent in a subsequent request if
+           additional parameters are provided in the listed header fields
+           (<x:ref>proactive negotiation</x:ref>).
+        </t>
+      </x:lt>
+   </list>
 </t>
 <t>
-   The field-names given are not limited to the set of standard header
-   fields defined by this specification. Field names are case-insensitive.
+   Unless it has been deliberately configured to prevent cache transparency,
+   an origin server &SHOULD; send a Vary header field in a cacheable
+   response that is subject to proactive negotiation.
 </t>
+<figure><preamble>For example, a response that contains</preamble><artwork type="example">
+  Vary: accept-encoding, accept-language
+</artwork><postamble>indicates that the origin server might have used the
+   request's <x:ref>Accept-Encoding</x:ref> and <x:ref>Accept-Language</x:ref>
+   fields (or lack thereof) as determining factors while choosing this
+   <x:ref>selected representation</x:ref>.</postamble></figure>
 </section>
 </section>
 
