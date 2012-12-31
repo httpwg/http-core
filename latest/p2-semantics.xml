@@ -267,9 +267,9 @@
 </t>
 <t>
    When a client constructs an HTTP/1.1 request message, it sends the
-   "target URI" in one of various forms, as defined in
+   <x:ref>target URI</x:ref> in one of various forms, as defined in
    (&request-target;). When a request is received, the server reconstructs
-   an "effective request URI" for the target resource
+   an <x:ref>effective request URI</x:ref> for the target resource
    (&effective-request-uri;).
 </t>
 <t>
@@ -2023,15 +2023,15 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <t>
    The asterisk "*" character is used to group media types into ranges,
    with "*/*" indicating all media types and "type/*" indicating all
-   subtypes of that type. The media-range &MAY; include media type
+   subtypes of that type. The media-range can include media type
    parameters that are applicable to that range.
 </t>
 <t>
-   Each media-range &MAY; be followed by one or more accept-params,
-   beginning with the "q" parameter for indicating a relative weight,
-   as defined in &qvalue;.
-   The first "q" parameter (if any) separates the media-range
-   parameter(s) from the accept-params.
+   Each media-range might be followed by zero or more applicable media type
+   parameters (e.g., <x:ref>charset</x:ref>), an optional "q" parameter for
+   indicating a relative weight (&qvalue;), and then zero or more extension
+   parameters. The "q" parameter is necessary if any accept-ext are present,
+   since it acts as a separator between the two parameter sets.
 </t>
 <x:note>
   <t>
@@ -2373,27 +2373,23 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="Referer header field" x:for-anchor=""/>
   <x:anchor-alias value="Referer"/>
 <t>
-   The "Referer" [sic] header field allows the client to specify the
-   URI of the resource from which the target URI was obtained (the
-   "referrer", although the header field is misspelled.).
-</t>
-<t>
-   The Referer header field allows servers to generate lists of back-links to
-   resources for interest, logging, optimized caching, etc. It also allows
-   obsolete or mistyped links to be traced for maintenance. Some servers use
-   Referer as a means of controlling where they allow links from (so-called
-   "deep linking"), but legitimate requests do not always
-   contain a Referer header field.
-</t>
-<t>
-   If the target URI was obtained from a source that does not have its own
-   URI (e.g., input from the user keyboard), the Referer field &MUST; either be
-   sent with the value "about:blank", or not be sent at all. Note that this
-   requirement does not apply to sources with non-HTTP URIs (e.g., FTP).
+   The "Referer" [sic] header field allows the user agent to specify a URI
+   reference for the resource from which the <x:ref>target URI</x:ref> was
+   obtained (i.e., the "referrer", though the field name is misspelled).
+   A user agent &MUST; exclude any fragment or userinfo components
+   <xref target="RFC3986"/> when generating the Referer field value.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Referer"/>
   <x:ref>Referer</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
 </artwork></figure>
+<t>
+   Referer allows servers to generate back-links to other resources for
+   simple analytics, logging, optimized caching, etc. It also allows
+   obsolete or mistyped links to be found for maintenance. Some servers use
+   Referer as a means of denying links from other sites (so-called
+   "deep linking") or restricting cross-site request forgery (CSRF),
+   but not all requests contain a Referer header field.
+</t>
 <t>
    Example:
 </t>
@@ -2401,9 +2397,34 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   Referer: http://www.example.org/hypertext/Overview.html
 </artwork></figure>
 <t>
-   If the field value is a relative URI, it &SHOULD; be interpreted
-   relative to the effective request URI. The URI &MUST-NOT; include a fragment. See
-   <xref target="encoding.sensitive.information.in.uris"/> for security considerations.
+   If the target URI was obtained from a source that does not have its own
+   URI (e.g., input from the user keyboard, or an entry within the user's
+   bookmarks/favorites), the user agent &MUST; either exclude Referer or
+   send it with a value of "about:blank".
+</t>
+<t>
+   The Referer field has the potential to reveal information about the request
+   context or browsing history of the user, which is a privacy concern if the
+   referring resource's identifier reveals personal information (such as an
+   account name) or a resource that is supposed to be confidential (such as
+   behind a firewall or internal to a secured service). Most general-purpose
+   user agents do not send the Referer header field when the referring
+   resource is a local "file" or "data" URI. A user agent &SHOULD-NOT; send a
+   <x:ref>Referer</x:ref> header field in a (non-secure) HTTP request if the
+   referring page was received with a secure protocol.
+   See <xref target="encoding.sensitive.information.in.uris"/> for additional
+   security considerations.
+</t>
+<t>
+   Some intermediaries have been known to indiscriminately remove Referer
+   header fields from outgoing requests. This has the unfortunate side-effect
+   of interfering with protection against CSRF attacks, which can be far
+   more harmful to their users. Intermediaries and user agent extensions that
+   wish to limit information disclosure in Referer ought to restrict their
+   changes to specific edits, such as replacing internal domain names with
+   pseudonyms or truncating the query and/or path components.
+   Intermediaries &SHOULD-NOT; modify or delete the Referer field when the
+   field value shares the same scheme and host as the request target.
 </t>
 </section>
 
@@ -4759,25 +4780,25 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
 <section title="Encoding Sensitive Information in URIs" anchor="encoding.sensitive.information.in.uris">
 <t>
-   Because the source of a link might be private information or might
-   reveal an otherwise private information source, it is strongly
-   recommended that the user be able to select whether or not the
-   <x:ref>Referer</x:ref> field is sent. For example, a browser client could
-   have a toggle switch for browsing openly/anonymously, which would
-   respectively enable/disable the sending of Referer and From
-   information.
+   URIs are intended to be shared, not secured, even when they identify secure
+   resources.  URIs are often shown on displays, added to templates when a page
+   is printed, and stored in a variety of unprotected bookmark lists.
+   It is therefore unwise to include information within a URI that
+   is sensitive, personally identifiable, or a risk to disclose.
 </t>
 <t>
-   Clients &SHOULD-NOT; include a <x:ref>Referer</x:ref> header field in a
-   (non-secure) HTTP request if the referring page was transferred with a secure
-   protocol.
+   Since the Referer header field tells a target site about the context that
+   resulted in a request, it has the potential to reveal information about the
+   user's immediate browsing history and any personal information that might
+   be found in the referring resource's URI. Further discussion of Referer
+   considerations can be found in <xref target="header.referer"/>.
 </t>
 <t>
    Authors of services &SHOULD-NOT; use GET-based forms for the submission of
    sensitive data because that data will be placed in the request-target. Many
    existing servers, proxies, and user agents log or display the request-target
-   in places where it might be visible to third parties. Such services can
-   use POST-based form submission instead.
+   in places where it might be visible to third parties. Such services ought
+   to use POST-based form submission instead.
 </t>
 </section>
 
@@ -4880,6 +4901,8 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
     <x:defines>Transfer-Encoding</x:defines>
     <x:defines>Upgrade</x:defines>
     <x:defines>Via</x:defines>
+    <x:defines>effective request URI</x:defines>
+    <x:defines>target URI</x:defines>
   </x:source>
 </reference>
 
