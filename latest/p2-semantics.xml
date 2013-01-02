@@ -1270,9 +1270,6 @@
    The response to a GET request is cacheable and &MAY; be used to satisfy
    subsequent GET and HEAD requests (see &caching;).
 </t>
-<t>
-   See <xref target="encoding.sensitive.information.in.uris"/> for security considerations when used for forms.
-</t>
 </section>
 
 <section title="HEAD" anchor="HEAD">
@@ -1540,11 +1537,16 @@
 <section title="CONNECT" anchor="CONNECT">
   <iref primary="true" item="CONNECT method" x:for-anchor=""/>
 <t>
-   The CONNECT method is only applicable as a request to a proxy.
-   A CONNECT requests that the recipient establish a tunnel to the destination
-   origin server identified by the request-target and, if successful,
-   thereafter restrict its behavior to blind forwarding of packets, in
-   both directions, until the connection is closed.
+   The CONNECT method requests that the recipient establish a tunnel to the
+   destination origin server identified by the request-target and, if
+   successful, thereafter restrict its behavior to blind forwarding of
+   packets, in both directions, until the connection is closed.
+</t>
+<t>
+   CONNECT is intended only for use in requests to a proxy.
+   An origin server that receives a CONNECT request for itself &MAY;
+   respond with a <x:ref>2xx</x:ref> status code to indicate that a connection
+   is established.  However, most origin servers do not implement CONNECT.
 </t>
 <t>
    A client sending a CONNECT request &MUST; send the authority form of
@@ -1561,11 +1563,13 @@ Host: server.example.com:80
    The recipient proxy can establish a tunnel either by directly connecting to
    the request-target or, if configured to use another proxy, by forwarding
    the CONNECT request to the next inbound proxy.
-   Any <x:ref>2xx (Successful)</x:ref> response to a CONNECT request indicates
-   that the sender (and any inbound proxies) will switch to tunnel mode
+   Any <x:ref>2xx (Successful)</x:ref> response indicates
+   that the sender (and all inbound proxies) will switch to tunnel mode
    immediately after the blank line that concludes the successful response's
    header block; data received after that blank line is from the server
    identified by the request-target.
+   Any response other than a successful response indicates that the tunnel
+   has not yet been formed and that the connection remains governed by HTTP.
 </t>
 <t>
    A server &SHOULD-NOT; send any <x:ref>Transfer-Encoding</x:ref> or
@@ -1574,8 +1578,14 @@ Host: server.example.com:80
    fields received in a successful response.
 </t>
 <t>
-   Any response other than a successful response indicates that the tunnel
-   has not yet been formed and that the connection remains governed by HTTP.
+   There are significant risks in establishing a tunnel to arbitrary servers,
+   particularly when the destination is a well-known or reserved TCP port that
+   is not intended for Web traffic. For example, a CONNECT to a request-target
+   of "example.com:25" would suggest that the proxy connect to the reserved
+   port for SMTP traffic; if allowed, that could trick the proxy into
+   relaying spam email. Proxies that support CONNECT &SHOULD; restrict its
+   use to a limited set of known ports or a configurable whitelist of safe
+   request targets.
 </t>
 <t>
    Proxy authentication might be used to establish the
@@ -1598,11 +1608,6 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    sent to the other side and then the intermediary will close both
    connections. If there is outstanding data left undelivered,
    that data will be discarded.
-</t>
-<t>
-   An origin server that receives a CONNECT request for itself &MAY;
-   respond with a <x:ref>2xx</x:ref> status code to indicate that a connection
-   is established.  However, most origin servers do not implement CONNECT.
 </t>
 </section>
 
@@ -2160,7 +2165,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    Most general-purpose user agents do not send Accept-Charset, unless
    specifically configured to do so, because a detailed list of supported
    charsets makes it easier for a server to identify an individual by virtue
-   of the user agent's request characteristics (a.k.a., fingerprinting).
+   of the user agent's request characteristics (<xref target="fingerprinting"/>).
 </t>
 <t>
    If an Accept-Charset header field is present in a request and none of the
@@ -2284,8 +2289,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <t>
    It might be contrary to the privacy expectations of the user to send
    an Accept-Language header field with the complete linguistic preferences of
-   the user in every request. For a discussion of this issue, see
-   <xref target="privacy.issues.connected.to.accept.header.fields"/>.
+   the user in every request (<xref target="fingerprinting"/>).
 </t>
 <t>
    As intelligibility is highly dependent on the individual user, it is
@@ -2413,7 +2417,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    resource is a local "file" or "data" URI. A user agent &SHOULD-NOT; send a
    <x:ref>Referer</x:ref> header field in an unsecured HTTP request if the
    referring page was received with a secure protocol.
-   See <xref target="encoding.sensitive.information.in.uris"/> for additional
+   See <xref target="sensitive.information.in.uris"/> for additional
    security considerations.
 </t>
 <t>
@@ -4689,194 +4693,156 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    use for transferring information over the Internet.
 </t>
 
+<section title="Attacks Based On File and Path Names" anchor="attack.pathname">
+<t>
+   Origin servers frequently make use of their local file system to manage the
+   mapping from effective request URI to resource representations.
+   Implementors need to be aware that most file systems are not designed to
+   protect against malicious file or path names, and thus depend on the
+   origin server to avoid mapping to file names, folders, or directories that
+   have special significance to the system.
+</t>
+<t>
+   For example, UNIX, Microsoft Windows, and other operating systems use ".."
+   as a path component to indicate a directory level above the current one,
+   and use specially named paths or file names to send data to system devices.
+   Similar naming conventions might exist within other types of storage
+   systems. Likewise, local storage systems have an annoying tendency to
+   prefer user-friendliness over security when handling invalid or unexpected
+   characters, recomposition of decomposed characters, and case-normalization
+   of case-insensitive names.
+</t>
+<t>
+   Attacks based on such special names tend to focus on either denial of
+   service (e.g., telling the server to read from a COM port) or disclosure
+   of configuration and source files that are not meant to be served.
+</t>
+</section>
+
 <section title="Personal Information" anchor="personal.information">
 <t>
-   HTTP clients are often privy to large amounts of personal information,
+   Clients are often privy to large amounts of personal information,
    including both information provided by the user to interact with resources
    (e.g., the user's name, location, mail address, passwords, encryption
    keys, etc.) and information about the user's browsing activity over
-   time (e.g., history, bookmarks, etc.). HTTP implementations need to
-   prevent unintentional leakage of this information.
+   time (e.g., history, bookmarks, etc.). Implementations need to
+   prevent unintentional leakage of personal information.
 </t>
 </section>
 
-<section title="Attacks Based On File and Path Names" anchor="attack.pathname">
-<t>
-   Origin servers &SHOULD; be careful to restrict
-   the documents sent in response to HTTP requests to be only those that were
-   intended by the server administrators. If an HTTP server translates
-   HTTP URIs directly into file system calls, the server &MUST; take
-   special care not to serve files that were not intended to be
-   delivered to HTTP clients. For example, UNIX, Microsoft Windows, and
-   other operating systems use ".." as a path component to indicate a
-   directory level above the current one. On such a system, an HTTP
-   server &MUST; disallow any such construct in the request-target if it
-   would otherwise allow access to a resource outside those intended to
-   be accessible via the HTTP server. Similarly, files intended for
-   reference only internally to the server (such as access control
-   files, configuration files, and script code) &MUST; be protected from
-   inappropriate retrieval, since they might contain sensitive
-   information.
-</t>
-</section>
-
-<section title="Transfer of Sensitive Information" anchor="security.sensitive">
-<t>
-   Like any generic data transfer protocol, HTTP cannot regulate the
-   content of the data that is transferred, nor is there any a priori
-   method of determining the sensitivity of any particular piece of
-   information within the context of any given request. Therefore,
-   applications ought to supply as much control over this information as
-   possible to the provider of that information. Four header fields are
-   worth special mention in this context: <x:ref>Server</x:ref>,
-   <x:ref>Via</x:ref>, <x:ref>Referer</x:ref> and <x:ref>From</x:ref>.
-</t>
-<t>
-   Revealing the specific software version of the server might allow the
-   server machine to become more vulnerable to attacks against software
-   that is known to contain security holes. Implementers &SHOULD; make the
-   <x:ref>Server</x:ref> header field a configurable option.
-</t>
-<t>
-   Proxies that serve as a portal through a network firewall &SHOULD;
-   take special precautions regarding the transfer of header information
-   that might identify hosts behind the firewall. In particular, they
-   &SHOULD; remove, or replace with sanitized versions, any <x:ref>Via</x:ref>
-   fields generated behind the firewall.
-</t>
-<t>
-   The <x:ref>Referer</x:ref> header field allows reading patterns to be
-   studied and reverse links drawn. Although it can be very useful, its power
-   can be abused if user details are not separated from the information
-   contained in the Referer. Even when the personal information has been
-   removed, the Referer header field might indicate a private document's URI
-   whose publication would be inappropriate.
-</t>
-<t>
-   The information sent in the <x:ref>From</x:ref> field might conflict with
-   the user's privacy interests or their site's security policy, and hence it
-   &SHOULD-NOT;  be transmitted without the user being able to disable,
-   enable, and modify the contents of the field. The user &MUST; be able
-   to set the contents of this field within a user preference or
-   application defaults configuration.
-</t>
-<t>
-   We suggest, though do not require, that a convenient toggle interface
-   be provided for the user to enable or disable the sending of
-   <x:ref>From</x:ref> and <x:ref>Referer</x:ref> information.
-</t>
-<t>
-   The <x:ref>User-Agent</x:ref> (<xref target="header.user-agent"/>) or
-   <x:ref>Server</x:ref> (<xref target="header.server"/>) header fields can
-   sometimes be used to determine if a specific client or server is more
-   likely to be vulnerable to a known security hole. Unfortunately, this same
-   information is often used for other valuable purposes for which HTTP
-   currently has no better mechanism.
-</t>
-<t>
-   Furthermore, the <x:ref>User-Agent</x:ref> header field might contain enough
-   entropy to be used, possibly in conjunction with other material, to uniquely
-   identify the user.
-</t>
-<t>
-   Some request methods, like TRACE (<xref target="TRACE"/>), expose information
-   that was sent in request header fields within the body of their response. 
-   Clients &SHOULD; be careful with sensitive information, like Cookies, 
-   Authorization credentials, and other header fields that might be used to 
-   collect data from the client.
-</t> 
-</section>
-
-<section title="Encoding Sensitive Information in URIs" anchor="encoding.sensitive.information.in.uris">
+<section title="Sensitive Information in URIs" anchor="sensitive.information.in.uris">
 <t>
    URIs are intended to be shared, not secured, even when they identify secure
-   resources.  URIs are often shown on displays, added to templates when a page
+   resources. URIs are often shown on displays, added to templates when a page
    is printed, and stored in a variety of unprotected bookmark lists.
    It is therefore unwise to include information within a URI that
    is sensitive, personally identifiable, or a risk to disclose.
 </t>
 <t>
-   Since the Referer header field tells a target site about the context that
-   resulted in a request, it has the potential to reveal information about the
-   user's immediate browsing history and any personal information that might
-   be found in the referring resource's URI. Further discussion of Referer
-   considerations can be found in <xref target="header.referer"/>.
-</t>
-<t>
-   Authors of services &SHOULD-NOT; use GET-based forms for the submission of
+   Authors of services ought to avoid GET-based forms for the submission of
    sensitive data because that data will be placed in the request-target. Many
    existing servers, proxies, and user agents log or display the request-target
    in places where it might be visible to third parties. Such services ought
    to use POST-based form submission instead.
 </t>
-</section>
-
-<section title="Location Header Fields: Spoofing and Information Leakage" anchor="location.spoofing-leakage">
 <t>
-   If a single server supports multiple organizations that do not trust
-   one another, then it &MUST; check the values of <x:ref>Location</x:ref> and
-   <x:ref>Content-Location</x:ref> header fields in responses that are
-   generated under control of said organizations to make sure that they do not
-   attempt to invalidate resources over which they have no authority.
-</t>
-<t>
-   Furthermore, appending the fragment identifier from one URI to another
-   one obtained from a <x:ref>Location</x:ref> header field might leak
-   confidential information to the target server &mdash; although the fragment
-   identifier is not transmitted in the final request, it might be visible to
-   the user agent through other means, such as scripting.
+   Since the <x:ref>Referer</x:ref> header field tells a target site about the
+   context that resulted in a request, it has the potential to reveal
+   information about the user's immediate browsing history and any personal
+   information that might be found in the referring resource's URI.
+   Limitations on Referer are described in <xref target="header.referer"/> to
+   address some of its security considerations.
 </t>
 </section>
 
-<section title="Misuse of CONNECT">
+<section title="Product Information" anchor="sensitive.information.in.product">
 <t>
-   Since tunneled data is opaque to the proxy, there are additional 
-   risks to tunneling to other well-known or reserved ports. 
-   An HTTP client CONNECTing to port 25 could relay spam
-   via SMTP, for example. As such, proxies &SHOULD; restrict CONNECT 
-   access to a small number of known ports.
+   The <x:ref>User-Agent</x:ref> (<xref target="header.user-agent"/>),
+   <x:ref>Via</x:ref> (&header-via;), and
+   <x:ref>Server</x:ref> (<xref target="header.server"/>) header fields often
+   reveal information about the respective sender's software systems.
+   In theory, this can make it easier for an attacker to exploit known
+   security holes; in practice, attackers tend to try all potential holes
+   regardless of the apparent software versions being used.
+</t>
+<t>
+   Proxies that serve as a portal through a network firewall ought to take
+   special precautions regarding the transfer of header information that might
+   identify hosts behind the firewall. The <x:ref>Via</x:ref> header field
+   allows intermediaries to replace sensitive machine names with pseudonyms.
 </t>
 </section>
 
-<section title="Privacy Issues Connected to Accept Header Fields" anchor="privacy.issues.connected.to.accept.header.fields">
+<section title="Fragment after Redirects" anchor="fragment.leakage">
 <t>
-   Accept header fields can reveal information about the user to all
-   servers that are accessed. The <x:ref>Accept-Language</x:ref> header field
-   in particular can reveal information the user would consider to be of a
-   private nature, because the understanding of particular languages is often
-   strongly correlated to the membership of a particular ethnic group.
-   User agents that offer the option to configure the contents of an
-   Accept-Language header field to be sent in every request are strongly
-   encouraged to let the configuration process include a message which
-   makes the user aware of the loss of privacy involved.
-</t>
-<t>
-   An approach that limits the loss of privacy would be for a user agent
-   to omit the sending of Accept-Language header fields by default, and to ask
-   the user whether or not to start sending Accept-Language header fields to a
-   server if it detects, by looking for any <x:ref>Vary</x:ref> header fields
-   generated by the server, that such sending could improve the quality
-   of service.
-</t>
-<t>
-   Elaborate user-customized accept header fields sent in every request,
-   in particular if these include quality values, can be used by servers
-   as relatively reliable and long-lived user identifiers. Such user
-   identifiers would allow content providers to do click-trail tracking,
-   and would allow collaborating content providers to match cross-server
-   click-trails or form submissions of individual users. Note that for
-   many users not behind a proxy, the network address of the host
-   running the user agent will also serve as a long-lived user
-   identifier. In environments where proxies are used to enhance
-   privacy, user agents ought to be conservative in offering accept
-   header field configuration options to end users. As an extreme privacy
-   measure, proxies could filter the accept header fields in relayed requests.
-   General purpose user agents that provide a high degree of header field
-   configurability &SHOULD; warn users about the loss of privacy which can
-   be involved.
+   Although fragment identifiers used within URI references are not sent
+   in requests, implementers ought to be aware that they will be visible to
+   the user agent and any extensions or scripts running as a result of the
+   response. In particular, when a redirect occurs and the original request's
+   fragment identifier is inherited by the new reference in
+   <x:ref>Location</x:ref> (<xref target="header.location"/>), this might
+   have the effect of leaking one site's fragment to another site.
+   If the first site uses personal information in fragments, it ought to
+   ensure that redirects to other sites include a (possibly empty) fragment
+   component in order to block that inheritance.
 </t>
 </section>
 
+<section title="Browser Fingerprinting" anchor="fingerprinting">
+<t>
+   Browser fingerprinting is a set of techniques for identifying a specific
+   user agent over time through its unique set of characteristics. These
+   characteristics might include information related to its TCP behavior,
+   feature capabilities, and scripting environment, though of particular
+   interest here is the set of unique characteristics that might be
+   communicated via HTTP. Fingerprinting is considered a privacy concern
+   because it enables tracking of a user agent's behavior over time without
+   the corresponding controls that the user might have over other forms of
+   data collection (e.g., cookies). Many general-purpose user agents
+   (i.e., Web browsers) have taken steps to reduce their fingerprints.
+</t>
+<t>
+   There are a number of request header fields that might reveal information
+   to servers that is sufficiently unique to enable fingerprinting.
+   The <x:ref>From</x:ref> header field is the most obvious, though it is
+   expected that From will only be sent when self-identification is desired by
+   the user. Likewise, Cookie header fields are deliberately designed to
+   enable re-identification, so we can assume that fingerprinting concerns
+   only apply to situations where cookies are disabled or restricted by
+   browser configuration.
+</t>
+<t>
+   The <x:ref>User-Agent</x:ref> header field might contain enough information
+   to uniquely identify a specific device, usually when combined with other
+   characteristics, particularly if the user agent sends excessive details
+   about the user's system or extensions. However, the source of unique
+   information that is least expected by users is
+   <x:ref>proactive negotiation</x:ref> (<xref target="request.conneg"/>),
+   including the <x:ref>Accept</x:ref>, <x:ref>Accept-Charset</x:ref>,
+   <x:ref>Accept-Encoding</x:ref>, and <x:ref>Accept-Language</x:ref>
+   header fields.
+</t>
+<t>
+   In addition to the fingerprinting concern, detailed use of the
+   <x:ref>Accept-Language</x:ref> header field can reveal information the
+   user might consider to be of a private nature, because the understanding of
+   particular languages is often strongly correlated to membership in a
+   particular ethnic group.
+   An approach that limits such loss of privacy would be for a user agent
+   to omit the sending of Accept-Language except for sites that have been
+   whitelisted, perhaps via interaction after detecting a <x:ref>Vary</x:ref>
+   header field that would indicate language negotiation might be useful.
+</t>
+<t>
+   In environments where proxies are used to enhance privacy, user agents
+   ought to be conservative in sending proactive negotiation header fields.
+   General-purpose user agents that provide a high degree of header field
+   configurability ought to inform users about the loss of privacy that might
+   result if too much detail is provided. As an extreme privacy measure,
+   proxies could filter the proactive negotiation header fields in relayed
+   requests.
+</t>
+</section>
 </section>
 
 <section title="Acknowledgments" anchor="acks">
