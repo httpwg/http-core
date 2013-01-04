@@ -526,10 +526,7 @@
 </t>
 <t>
    A cache that does not have a clock available &MUST-NOT; use stored
-   responses without revalidating them on every use. A cache, especially a
-   shared cache, &SHOULD; use a mechanism, such as NTP <xref
-   target="RFC1305"/>, to synchronize its clock with a reliable external
-   standard.
+   responses without revalidating them on every use.
 </t>
 
 
@@ -658,9 +655,9 @@
 
 <section anchor="age.calculations" title="Calculating Age">
 <t>
-   HTTP/1.1 uses the <x:ref>Age</x:ref> header field to convey the estimated
+   The <x:ref>Age</x:ref> header field is used to convey an estimated
    age of the response message when obtained from a cache. The Age field value
-   is the cache's estimate of the amount of time since the response was
+   is the cache's estimate of the number of seconds since the response was
    generated or validated by the origin server. In essence, the Age value is
    the sum of the time that the response has been resident in each of the
    caches along the path from the origin server, plus the amount of time it
@@ -683,9 +680,7 @@
    <x:dfn>date_value</x:dfn>
    <list>
       <t>
-         HTTP/1.1 requires origin servers to send a <x:ref>Date</x:ref> header
-         field, if possible, with every response, giving the time at which the
-         response was generated. The term "date_value" denotes the value of
+         The term "date_value" denotes the value of
          the Date header field, in a form appropriate for arithmetic
          operations. See &header-date; for the definition of the Date header
          field, and for requirements regarding responses without it.
@@ -697,9 +692,9 @@
    <list>
       <t>
          The term "now" means "the current value of the clock at the host
-         performing the calculation". A cache &SHOULD; use NTP (<xref
+         performing the calculation". A host ought to use NTP (<xref
          target="RFC1305"/>) or some similar protocol to synchronize its
-         clocks to a globally accurate time standard.
+         clocks to Coordinated Universal Time.
       </t>
    </list>
 </t>
@@ -765,25 +760,20 @@
 </t>
 <t>
   <list style="symbols">
-     <t>Recipients &SHOULD; assume that an RFC-850 date
-        appearing to be more than 50 years in the future is in fact
-        in the past (this helps solve the "year 2000" problem).</t>
-
      <t>Although all date formats are specified to be case-sensitive, 
-        recipients &SHOULD; match day, week and timezone names
+        cache recipients &SHOULD; match day, week and timezone names
         case-insensitively.</t>
              
-     <t>An implementation &MAY; internally represent a parsed
-        <x:ref>Expires</x:ref> date as earlier than the proper value, but
-        &MUST-NOT; internally represent a parsed Expires date as later than the
-        proper value.</t>
+     <t>If a cache recipient's internal implementation of time has less
+        resolution than the value of an HTTP-date, the recipient &MUST;
+        internally represent a parsed <x:ref>Expires</x:ref> date as the
+        nearest time equal to or earlier than the received value.</t>
 
-     <t>Recipients &MUST; perform all expiration-related calculations in GMT.
-        The local time zone &MUST-NOT; influence the calculation or comparison
-        of an age or expiration time.</t>
+     <t>Cache recipients &MUST-NOT; allow local time zones to influence the
+        calculation or comparison of an age or expiration time.</t>
 
-     <t>Caches &SHOULD; consider dates with time zones other than "GMT"
-        invalid.</t>
+     <t>Cache recipients &SHOULD; consider a date with a zone abbreviation
+        other than "GMT" to be invalid for calculating expiration.</t>
   </list>
 </t>
 </section>
@@ -1591,8 +1581,7 @@ status code:</t>
    will change or cease to exist at, before, or after that time.
 </t>
 <t>
-   The field-value is an absolute date and time as defined by HTTP-date in
-   &http-date;; a sender &MUST; use the rfc1123-date format.
+   The Expires value is an HTTP-date timestamp, as defined in &http-date;.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Expires"/>
   <x:ref>Expires</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -1603,19 +1592,25 @@ status code:</t>
   Expires: Thu, 01 Dec 1994 16:00:00 GMT
 </artwork></figure>
 <t>
-   A cache &MUST; treat other invalid date formats,
-   especially including the value "0", as in the past (i.e., "already
-   expired").
+   A cache recipient &MUST; interpret invalid date formats, especially the
+   value "0", as representing a time in the past (i.e., "already expired").
 </t>
-<x:note>
-   <t>
-       &Note; If a response includes a <x:ref>Cache-Control</x:ref> field with
-       the max-age directive (see <xref target="cache-response-directive.max-age" />),
-       that directive overrides the Expires field. Likewise, the s-maxage
-       directive (<xref target="cache-response-directive.s-maxage" />) overrides
-       the <x:ref>Expires</x:ref> header field in shared caches.
-   </t>
-</x:note>
+<t>
+   If a response includes a <x:ref>Cache-Control</x:ref> field with
+   the max-age directive (<xref target="cache-response-directive.max-age"/>),
+   a recipient &MUST; ignore the Expires field.
+   Likewise, if a response includes the s-maxage directive
+   (<xref target="cache-response-directive.s-maxage" />), a shared cache
+   recipient &MUST; ignore the Expires field. In both these cases, the value
+   in Expires is only intended for recipients that have not yet implemented
+   the Cache-Control field.
+</t>
+<t>
+   An origin server without a clock &MUST-NOT; generate an Expires field
+   unless its value represents a fixed time in the past (always expired)
+   or its value has been associated with the resource by a system or user
+   with a reliable clock.
+</t>
 <t>
    Historically, HTTP required the Expires field-value to be no more than a 
    year in the future. While longer freshness lifetimes are no longer 
@@ -1623,15 +1618,6 @@ status code:</t>
    problems (e.g., clock overflows due to use of 32-bit integers for 
    time values), and many caches will evict a response far sooner than 
    that.
-</t>
-<t>
-   An origin server without a clock &MUST-NOT; assign Expires
-   values to a response unless these values were associated
-   with the resource by a system or user with a reliable clock. It &MAY;
-   assign an Expires value that is known, at or before server
-   configuration time, to be in the past (this allows "pre-expiration"
-   of responses without storing separate Expires values for each
-   resource).
 </t>
 </section>
 

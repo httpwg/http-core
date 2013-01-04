@@ -3515,33 +3515,38 @@ Content-Type: text/plain
 <section title="Date/Time Formats" anchor="http.date">
   <x:anchor-alias value="HTTP-date"/>
 <t>
-   HTTP has historically allowed three different formats
-   for date/time stamps. However, the preferred format is a fixed-length subset
-   of that defined by <xref target="RFC1123"/>:
-</t>
-<figure><artwork type="example" x:indent-with="  ">
-Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 1123
-</artwork></figure>
-<t>
-   The other formats are described here only for compatibility with obsolete
-   implementations.
-</t>
-<figure><artwork type="example" x:indent-with="  ">
-Sunday, 06-Nov-94 08:49:37 GMT ; obsolete RFC 850 format
-Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
-</artwork></figure>
-<t>
-   HTTP always represents dates as an instance of Coordinated Universal Time
-   (UTC), without exception; the first two formats indicate UTC as "GMT" in
-   the three-letter abbreviation for time zone. Recipients &MAY; assume UTC
-   even if the time zone abbreviation is missing, invalid, or might indicate
-   some other time zone.
+   Prior to 1995, there were three different formats commonly used by servers
+   to communicate timestamps.  For compatibility with old implementations, all
+   three are defined here. The preferred format is a fixed-length and
+   single-zone subset of the date and time specification used by the
+   Internet Message Format <xref target="RFC5322"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
-  <x:ref>HTTP-date</x:ref>    = <x:ref>rfc1123-date</x:ref> / <x:ref>obs-date</x:ref>
+  <x:ref>HTTP-date</x:ref>    = <x:ref>IMF-fixdate</x:ref> / <x:ref>obs-date</x:ref>
 </artwork></figure>
+<figure><preamble>An example of the preferred format is</preamble><artwork type="example" x:indent-with="  ">
+Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate
+</artwork></figure>
+<figure><preamble>Examples of the two obsolete formats are</preamble><artwork type="example" x:indent-with="  ">
+Sunday, 06-Nov-94 08:49:37 GMT   ; obsolete RFC 850 format
+Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
+</artwork></figure>
+<t>
+   A recipient that parses a timestamp value in an HTTP header field &MUST;
+   accept all three formats. A sender &MUST; generate the IMF-fixdate
+   format when sending an HTTP-date value in a header field.
+</t>
+<t>
+   An HTTP-date value represents time as an instance of Coordinated Universal
+   Time (UTC). The first two formats indicate UTC by the three-letter
+   abbreviation for Greenwich Mean Time, "GMT", a predecessor of the UTC name;
+   values in the asctime format are assumed to be in UTC.
+   A sender that generates HTTP-date values from a local clock ought to use
+   NTP (<xref target="RFC1305"/>) or some similar protocol to synchronize its
+   clock to UTC.
+</t>
 <t anchor="preferred.date.format">
-  <x:anchor-alias value="rfc1123-date"/>
+  <x:anchor-alias value="IMF-fixdate"/>
   <x:anchor-alias value="time-of-day"/>
   <x:anchor-alias value="hour"/>
   <x:anchor-alias value="minute"/>
@@ -3553,10 +3558,10 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <x:anchor-alias value="GMT"/>
   Preferred format:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc1123-date"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
-  <x:ref>rfc1123-date</x:ref> = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
-  ; fixed length subset of the format defined in
-  ; <xref target="RFC1123" x:fmt="of" x:sec="5.2.14"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="IMF-fixdate"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
+  <x:ref>IMF-fixdate</x:ref>  = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
+  ; fixed length/zone subset of the format defined in
+  ; <xref target="RFC5322" x:fmt="of" x:sec="3.3"/>
   
   <x:ref>day-name</x:ref>     = <x:abnf-char-sequence>"Mon"</x:abnf-char-sequence> ; "Mon", case-sensitive
                / <x:abnf-char-sequence>"Tue"</x:abnf-char-sequence> ; "Tue", case-sensitive
@@ -3584,21 +3589,15 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
                / <x:abnf-char-sequence>"Dec"</x:abnf-char-sequence> ; "Dec", case-sensitive
   <x:ref>year</x:ref>         = 4<x:ref>DIGIT</x:ref>
 
-  <x:ref>GMT</x:ref>   = <x:abnf-char-sequence>"GMT"</x:abnf-char-sequence> ; "GMT", case-sensitive
+  <x:ref>GMT</x:ref>          = <x:abnf-char-sequence>"GMT"</x:abnf-char-sequence> ; "GMT", case-sensitive
 
   <x:ref>time-of-day</x:ref>  = <x:ref>hour</x:ref> ":" <x:ref>minute</x:ref> ":" <x:ref>second</x:ref>
-                 ; 00:00:00 - 23:59:59
+               ; 00:00:00 - 23:59:60 (leap second)
                  
   <x:ref>hour</x:ref>         = 2<x:ref>DIGIT</x:ref>               
   <x:ref>minute</x:ref>       = 2<x:ref>DIGIT</x:ref>               
   <x:ref>second</x:ref>       = 2<x:ref>DIGIT</x:ref>               
 </artwork></figure>
-<t>
-  The semantics of <x:ref>day-name</x:ref>, <x:ref>day</x:ref>,
-  <x:ref>month</x:ref>, <x:ref>year</x:ref>, and <x:ref>time-of-day</x:ref> are the
-  same as those defined for the RFC 5322 constructs
-  with the corresponding name (<xref target="RFC5322" x:fmt="," x:sec="3.3"/>).
-</t>
 <t anchor="obsolete.date.formats">
   <x:anchor-alias value="obs-date"/>
   <x:anchor-alias value="rfc850-date"/>
@@ -3615,43 +3614,47 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
   <x:ref>rfc850-date</x:ref>  = <x:ref>day-name-l</x:ref> "," <x:ref>SP</x:ref> <x:ref>date2</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
   <x:ref>date2</x:ref>        = <x:ref>day</x:ref> "-" <x:ref>month</x:ref> "-" 2<x:ref>DIGIT</x:ref>
-                 ; day-month-year (e.g., 02-Jun-82)
+               ; e.g., 02-Jun-82
 
-  <x:ref>day-name-l</x:ref>   = <x:abnf-char-sequence>"Monday"</x:abnf-char-sequence> ; "Monday", case-sensitive
-         / <x:abnf-char-sequence>"Tuesday"</x:abnf-char-sequence> ; "Tuesday", case-sensitive
+  <x:ref>day-name-l</x:ref>   = <x:abnf-char-sequence>"Monday"</x:abnf-char-sequence>    ; "Monday", case-sensitive
+         / <x:abnf-char-sequence>"Tuesday"</x:abnf-char-sequence>       ; "Tuesday", case-sensitive
          / <x:abnf-char-sequence>"Wednesday"</x:abnf-char-sequence> ; "Wednesday", case-sensitive
-         / <x:abnf-char-sequence>"Thursday"</x:abnf-char-sequence> ; "Thursday", case-sensitive
-         / <x:abnf-char-sequence>"Friday"</x:abnf-char-sequence> ; "Friday", case-sensitive
-         / <x:abnf-char-sequence>"Saturday"</x:abnf-char-sequence> ; "Saturday", case-sensitive
-         / <x:abnf-char-sequence>"Sunday"</x:abnf-char-sequence> ; "Sunday", case-sensitive
+         / <x:abnf-char-sequence>"Thursday"</x:abnf-char-sequence>    ; "Thursday", case-sensitive
+         / <x:abnf-char-sequence>"Friday"</x:abnf-char-sequence>          ; "Friday", case-sensitive
+         / <x:abnf-char-sequence>"Saturday"</x:abnf-char-sequence>    ; "Saturday", case-sensitive
+         / <x:abnf-char-sequence>"Sunday"</x:abnf-char-sequence>          ; "Sunday", case-sensitive
 </artwork></figure>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="asctime-date"/>
   <x:ref>asctime-date</x:ref> = <x:ref>day-name</x:ref> <x:ref>SP</x:ref> <x:ref>date3</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
   <x:ref>date3</x:ref>        = <x:ref>month</x:ref> <x:ref>SP</x:ref> ( 2<x:ref>DIGIT</x:ref> / ( <x:ref>SP</x:ref> 1<x:ref>DIGIT</x:ref> ))
-                 ; month day (e.g., Jun  2)
+               ; e.g., Jun  2
 </artwork></figure>
 <t>
    HTTP-date is case sensitive.
    A sender &MUST-NOT; generate additional whitespace in an HTTP-date beyond
    that specifically included as SP in the grammar.
+   The semantics of <x:ref>day-name</x:ref>, <x:ref>day</x:ref>,
+   <x:ref>month</x:ref>, <x:ref>year</x:ref>, and <x:ref>time-of-day</x:ref>
+   are the same as those defined for the Internet Message Format constructs
+   with the corresponding name (<xref target="RFC5322" x:fmt="," x:sec="3.3"/>).
 </t>
 <t>
-   Recipients that parse a date value &MUST; accept all three formats (for
-   compatibility with HTTP/1.0). A sender &MUST; only generate the RFC 1123
-   format when sending HTTP-date values in header fields.
+   Recipients of a timestamp value in rfc850-date format, which uses a
+   two-digit year, &SHOULD; interpret a timestamp that appears to be more
+   than 50 years in the future as representing the most recent year in the
+   past that had the same last two digits.
 </t>
-<x:note>
-  <t>
-    &Note; Recipients of date values are encouraged to be robust in
-    accepting date values that might have been sent by non-HTTP
-    applications, as is sometimes the case when retrieving or posting
-    messages via proxies/gateways to SMTP or NNTP.
-  </t>
-</x:note>
+<t>
+   Recipients of timestamp values are encouraged to be robust in parsing
+   timestamps unless otherwise restricted by the field definition.
+   For example, messages are occasionally forwarded over HTTP from a non-HTTP
+   source that might generate any of the date and time specifications defined
+   by the Internet Message Format.
+</t>
 <x:note>
   <t>
     &Note; HTTP requirements for the date/time stamp format apply only
-    to their usage within the protocol stream. Clients and servers are
+    to their usage within the protocol stream. Implementations are
     not required to use these formats for user presentation, request
     logging, etc.
   </t>
@@ -3665,8 +3668,7 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
    The "Date" header field represents the date and time at which
    the message was originated, having the same semantics as the Origination
    Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
-   The field value is an HTTP-date, as defined in <xref target="http.date"/>,
-   though a sender &MUST; generate a Date value in the rfc1123-date format.
+   The field value is an HTTP-date, as defined in <xref target="http.date"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Date"/>
   <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -3686,7 +3688,8 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 </t>
 <t>
    An origin server &MUST-NOT; send a Date header field if it does not have a
-   clock capable of providing a reasonable approximation of the current time.
+   clock capable of providing a reasonable approximation of the current
+   instance in Coordinated Universal Time.
    An origin server &MAY; send a Date header field if the response is in the
    <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
    class of status codes.
@@ -5197,17 +5200,16 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
   <seriesInfo name='Doctoral Dissertation, University of California, Irvine' value=''/>
 </reference>
 
-<reference anchor="RFC1123">
-  <front>
-    <title>Requirements for Internet Hosts - Application and Support</title>
-    <author initials="R." surname="Braden" fullname="Robert Braden">
-      <organization>University of Southern California (USC), Information Sciences Institute</organization>
-      <address><email>Braden@ISI.EDU</email></address>
-    </author>
-    <date month="October" year="1989"/>
-  </front>
-  <seriesInfo name="STD" value="3"/>
-  <seriesInfo name="RFC" value="1123"/>
+<reference anchor="RFC1305">
+ <front>
+   <title>Network Time Protocol (Version 3) Specification, Implementation</title>
+   <author fullname="David L. Mills" initials="D." surname="Mills">
+     <organization>University of Delaware, Electrical Engineering Department</organization>
+     <address><email>mills@udel.edu</email></address>
+   </author>
+   <date month="March" year="1992" />
+ </front>
+ <seriesInfo name="RFC" value="1305" />
 </reference>
 
 <reference anchor="RFC1945">
@@ -5992,7 +5994,9 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
 <x:ref>GMT</x:ref> = %x47.4D.54 ; GMT
 
-<x:ref>HTTP-date</x:ref> = rfc1123-date / obs-date
+<x:ref>HTTP-date</x:ref> = IMF-fixdate / obs-date
+
+<x:ref>IMF-fixdate</x:ref> = day-name "," SP date1 SP time-of-day SP GMT
 
 <x:ref>Location</x:ref> = URI-reference
 
@@ -6086,7 +6090,6 @@ Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 <x:ref>quoted-string</x:ref> = &lt;quoted-string, defined in [Part1], Section 3.2.6&gt;
 <x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 
-<x:ref>rfc1123-date</x:ref> = day-name "," SP date1 SP time-of-day SP GMT
 <x:ref>rfc850-date</x:ref> = day-name-l "," SP date2 SP time-of-day SP GMT
 
 <x:ref>second</x:ref> = 2DIGIT
