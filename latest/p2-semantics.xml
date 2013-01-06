@@ -324,7 +324,6 @@
   <c>Content-Encoding</c> <c><xref target="header.content-encoding"/></c>
   <c>Content-Language</c> <c><xref target="header.content-language"/></c>
   <c>Content-Location</c> <c><xref target="header.content-location"/></c>
-  <c>Expires</c> <c>&header-expires;</c>
 </texttable>
 
 <section title="Processing the Data" anchor="data.type">
@@ -1264,13 +1263,14 @@
    be completed without transferring data already held by the client.
 </t>
 <t>
+   The response to a GET request is cacheable; a cache &MAY; use it to satisfy
+   subsequent GET and HEAD requests unless otherwise indicated by the
+   Cache-Control header field (&header-cache-control;).
+</t>
+<t>
    A payload within a GET request message has no defined semantics;
    sending a payload body on a GET request might cause some existing
    implementations to reject the request.
-</t>
-<t>
-   The response to a GET request is cacheable and &MAY; be used to satisfy
-   subsequent GET and HEAD requests (see &caching;).
 </t>
 </section>
 
@@ -1283,17 +1283,19 @@
 <t>
    The HEAD method is identical to GET except that the server &MUST-NOT;
    send a message body in the response (i.e., the response terminates at the
-   end of the header block). The metadata contained in the HTTP header fields
-   in response to a HEAD request &SHOULD; be identical to the information sent
-   in response to a GET request. This method can be used for obtaining
-   metadata about the selected representation without transferring the
-   representation data. This method is often used for testing hypertext links
-   for validity, accessibility, and recent modification.
+   end of the header block). Aside from the payload header fields
+   (<xref target="payload"/>), the server &SHOULD; send the same header fields
+   in response to a HEAD request as it would have sent if the request had been
+   a GET. This method can be used for obtaining metadata about the selected
+   representation without transferring the representation data. This method is
+   often used for testing hypertext links for validity, accessibility, and
+   recent modification.
 </t>
 <t>
-   The response to a HEAD request is cacheable and &MAY; be used to satisfy
-   a subsequent HEAD request. It also has potential side effects on
-   previously stored responses to GET; see &p6-head;.
+   The response to a HEAD request is cacheable; a cache &MAY; use it to
+   satisfy subsequent HEAD requests unless otherwise indicated by the
+   Cache-Control header field (&header-cache-control;). A HEAD response might
+   also have an effect on previously cached responses to GET; see &p6-head;.
 </t>
 <t>
    A payload within a HEAD request message has no defined semantics;
@@ -1733,43 +1735,14 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <ttcol>Header Field Name</ttcol>
   <ttcol>Defined in...</ttcol>
 
+  <c>Cache-Control</c> <c>&header-cache-control;</c>
+  <c>Expect</c> <c><xref target="header.expect"/></c>
   <c>Host</c> <c>&header-host;</c>
   <c>Max-Forwards</c> <c><xref target="header.max-forwards"/></c>
-  <c>Expect</c> <c><xref target="header.expect"/></c>
+  <c>Pragma</c> <c>&header-pragma;</c>
   <c>Range</c> <c>&header-range;</c>
+  <c>TE</c> <c>&header-te;</c>
 </texttable>
-
-<section title="Max-Forwards" anchor="header.max-forwards">
-  <iref primary="true" item="Max-Forwards header field" x:for-anchor=""/>
-  <x:anchor-alias value="Max-Forwards"/>
-<t>
-   The "Max-Forwards" header field provides a mechanism with the
-   TRACE (<xref target="TRACE"/>) and OPTIONS (<xref target="OPTIONS"/>)
-   methods to limit the number of times that the request is forwarded by
-   proxies. This can be useful when the client is attempting to
-   trace a request that appears to be failing or looping mid-chain.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Max-Forwards"/>
-  <x:ref>Max-Forwards</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
-<t>
-   The Max-Forwards value is a decimal integer indicating the remaining
-   number of times this request message can be forwarded.
-</t>
-<t>
-   Each recipient of a TRACE or OPTIONS request
-   containing a Max-Forwards header field &MUST; check and update its
-   value prior to forwarding the request. If the received value is zero
-   (0), the recipient &MUST-NOT; forward the request; instead, it &MUST;
-   respond as the final recipient. If the received Max-Forwards value is
-   greater than zero, then the forwarded message &MUST; contain an updated
-   Max-Forwards field with a value decremented by one (1).
-</t>
-<t>
-   The Max-Forwards header field &MAY; be ignored for all other request
-   methods.
-</t>
-</section>
 
 <section title="Expect" anchor="header.expect">
   <iref primary="true" item="Expect header field" x:for-anchor=""/>
@@ -1941,6 +1914,38 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   </list>
 </t>
 </section>
+</section>
+
+<section title="Max-Forwards" anchor="header.max-forwards">
+  <iref primary="true" item="Max-Forwards header field" x:for-anchor=""/>
+  <x:anchor-alias value="Max-Forwards"/>
+<t>
+   The "Max-Forwards" header field provides a mechanism with the
+   TRACE (<xref target="TRACE"/>) and OPTIONS (<xref target="OPTIONS"/>)
+   methods to limit the number of times that the request is forwarded by
+   proxies. This can be useful when the client is attempting to
+   trace a request that appears to be failing or looping mid-chain.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Max-Forwards"/>
+  <x:ref>Max-Forwards</x:ref> = 1*<x:ref>DIGIT</x:ref>
+</artwork></figure>
+<t>
+   The Max-Forwards value is a decimal integer indicating the remaining
+   number of times this request message can be forwarded.
+</t>
+<t>
+   Each recipient of a TRACE or OPTIONS request
+   containing a Max-Forwards header field &MUST; check and update its
+   value prior to forwarding the request. If the received value is zero
+   (0), the recipient &MUST-NOT; forward the request; instead, it &MUST;
+   respond as the final recipient. If the received Max-Forwards value is
+   greater than zero, then the forwarded message &MUST; contain an updated
+   Max-Forwards field with a value decremented by one (1).
+</t>
+<t>
+   The Max-Forwards header field &MAY; be ignored for all other request
+   methods.
+</t>
 </section>
 </section>
 
@@ -2334,7 +2339,6 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 
   <c>From</c> <c><xref target="header.from"/></c>
   <c>Referer</c> <c><xref target="header.referer"/></c>
-  <c>TE</c> <c>&header-te;</c>
   <c>User-Agent</c> <c><xref target="header.user-agent"/></c>
 </texttable>
 
@@ -3501,15 +3505,18 @@ Content-Type: text/plain
 <section title="Control Data" anchor="response.control.data">
 <t>
    Response header fields can supply control data that supplements the
-   status code or instructs the client where to go next.
+   status code, directs caching, or instructs the client where to go next.
 </t>
 <texttable align="left">
   <ttcol>Header Field Name</ttcol><ttcol>Defined in...</ttcol>
 
   <c>Age</c> <c>&header-age;</c>
+  <c>Cache-Control</c> <c>&header-cache-control;</c>
+  <c>Expires</c> <c>&header-expires;</c>
   <c>Date</c> <c><xref target="header.date"/></c>
   <c>Location</c> <c><xref target="header.location"/></c>
   <c>Retry-After</c> <c><xref target="header.retry-after"/></c>
+  <c>Warning</c> <c>&header-warning;</c>
 </texttable>
 
 <section title="Origination Date" anchor="origination.date">
@@ -3881,6 +3888,13 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    might have a role in selecting the representation. The potential selecting
    header fields are not limited to those defined by this specification.
 </t>
+<figure><preamble>For example, a response that contains</preamble><artwork type="example">
+  Vary: accept-encoding, accept-language
+</artwork><postamble>indicates that the origin server might have used the
+   request's <x:ref>Accept-Encoding</x:ref> and <x:ref>Accept-Language</x:ref>
+   fields (or lack thereof) as determining factors while choosing this
+   <x:ref>selected representation</x:ref>.
+</postamble></figure>
 <t>
    An origin server might send Vary with a list of fields for two purposes:
    <list style="numbers">
@@ -3905,16 +3919,17 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    </list>
 </t>
 <t>
-   Unless it has been deliberately configured to prevent cache transparency,
-   an origin server &SHOULD; send a Vary header field in a cacheable
-   response that is subject to proactive negotiation.
+   An origin server &SHOULD; send a Vary header field when its algorithm for
+   selecting a representation varies based on aspects of the request message
+   other than the method and request target, unless the variance cannot be
+   crossed or the origin server has been deliberately configured to prevent
+   cache transparency. For example, there is no need to send the
+   Authorization field name (&header-authorization;) in Vary because
+   reuse across users is constrained by the field definition. Likewise,
+   Cache-Control directives (&header-cache-control;) might be used to supplant
+   the need for Vary, particularly when the variance is considered less
+   significant than the performance cost of Vary's impact on caching.
 </t>
-<figure><preamble>For example, a response that contains</preamble><artwork type="example">
-  Vary: accept-encoding, accept-language
-</artwork><postamble>indicates that the origin server might have used the
-   request's <x:ref>Accept-Encoding</x:ref> and <x:ref>Accept-Language</x:ref>
-   fields (or lack thereof) as determining factors while choosing this
-   <x:ref>selected representation</x:ref>.</postamble></figure>
 </section>
 </section>
 
