@@ -843,40 +843,45 @@ Content-Encoding: gzip
   </list>
 </t>
 <t>
-   The purpose of this feature is to allow efficient updates of cached
-   information with a minimum amount of transaction overhead.
-  <list><t>
-      &Note; The <x:ref>Range</x:ref> header field modifies the meaning of
-      If-Modified-Since; see &header-range; for full details.
-    </t><t>
-      &Note; If-Modified-Since times are interpreted by the server, whose
-      clock might not be synchronized with the client.
-    </t><t>
-      &Note; When handling an If-Modified-Since header field, some
-      servers will use an exact date comparison function, rather than a
-      less-than function, for deciding whether to send a <x:ref>304 (Not Modified)</x:ref>
-      response. To get best results when sending an If-Modified-Since
-      header field for cache validation, clients are
-      advised to use the exact date string received in a previous
-      <x:ref>Last-Modified</x:ref> header field whenever possible.
-    </t><t>
-      &Note; If a client uses an arbitrary date in the If-Modified-Since
-      header field instead of a date taken from the <x:ref>Last-Modified</x:ref>
-      header field for the same request, the client needs to be aware that this
-      date is interpreted in the server's understanding of time.
-      Unsynchronized clocks and rounding problems, due to the different
-      encodings of time between the client and server, are concerns.
-      This includes the possibility of race conditions if the
-      document has changed between the time it was first requested and
-      the If-Modified-Since date of a subsequent request, and the
-      possibility of clock-skew-related problems if the If-Modified-Since
-      date is derived from the client's clock without correction
-      to the server's clock. Corrections for different time bases
-      between client and server are at best approximate due to network
-      latency.
-    </t>
-  </list>
+   The two purposes of this feature are to allow efficient updates of cached
+   information, with a minimum amount of transaction overhead, and to limit
+   the scope of a web traversal to resources that have recently changed.
 </t>
+<t>
+   When used for cache updates, a cache will typically use the value of the
+   cached message's <x:ref>Last-Modified</x:ref> field to generate the field
+   value of If-Modified-Since. This behavior is most interoperable for cases
+   where clocks are poorly synchronized or when the server has chosen to only
+   honor exact timestamp matches (due to a problem with Last-Modified dates
+   that appear to go "back in time" when the origin server's clock is
+   corrected or a representation is restored from an archived backup).
+   However, caches occasionally generate the field value based on other data,
+   such as the <x:ref>Date</x:ref> header field of the cached message or the
+   local clock time that the message was received, particularly when the
+   cached message does not contain a <x:ref>Last-Modified</x:ref> field.
+</t>
+<t>
+   When used for limiting the scope of retrieval to a recent time window, a
+   user agent will generate an If-Modified-Since field value based on either
+   its own local clock or a <x:ref>Date</x:ref> header field received from the
+   server during a past run. Origin servers that choose an exact timestamp
+   match based on the selected representation's <x:ref>Last-Modified</x:ref>
+   field will not be able to help the user agent limit its data transfers to
+   only those changed during the specified window.
+</t>
+<t>
+   The <x:ref>Range</x:ref> header field modifies the interpretation of
+   If-Modified-Since, as defined in &header-range;.
+</t>
+<x:note>
+  <t>
+     &Note; If a client uses an arbitrary date in the If-Modified-Since
+     header field instead of a date taken from a <x:ref>Last-Modified</x:ref>
+     or <x:ref>Date</x:ref> header field from the origin server, the client
+     ought to be aware that its date will be interpreted according to the
+     server's understanding of time.
+  </t>
+</x:note>
 </section>
 
 <section title="If-Unmodified-Since" anchor="header.if-unmodified-since">
@@ -940,18 +945,14 @@ Content-Encoding: gzip
    <x:ref>200 (OK)</x:ref> response.
 </t>
 <t>
-   A 304 response cannot contain a message-body; it is always
-   terminated by the first empty line after the header fields.
-</t>
-<t>
-   If a <x:ref>200 (OK)</x:ref> response to the same request would have
-   included any of the header fields
+   The server generating a 304 response &MUST; generate any of the following
+   header fields that would have been sent in a <x:ref>200 (OK)</x:ref>
+   response to the same request:
    <x:ref>Cache-Control</x:ref>,
    <x:ref>Content-Location</x:ref>,
    <x:ref>ETag</x:ref>,
-   <x:ref>Expires</x:ref>, or
-   <x:ref>Vary</x:ref>, then
-   the sender &MUST; generate those same header fields in a 304 response.
+   <x:ref>Expires</x:ref>, and
+   <x:ref>Vary</x:ref>.
 </t>
 <t>
    Since the goal of a 304 response is to minimize information transfer
@@ -967,6 +968,10 @@ Content-Encoding: gzip
    outbound client, such as a user agent with its own cache sending a
    conditional GET to a shared proxy, then the proxy &SHOULD; forward the
    304 response to that client.
+</t>
+<t>
+   A 304 response cannot contain a message-body; it is always
+   terminated by the first empty line after the header fields.
 </t>
 </section>
 
