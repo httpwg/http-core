@@ -2632,26 +2632,28 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="1xx Informational (status code class)" x:for-anchor=""/>
   <iref primary="true" item="Status Codes Classes" subitem="1xx Informational" x:for-anchor=""/>
 <t>
-   This class of status code indicates an interim response,
-   consisting only of the status-line and optional header fields, and is
-   terminated by an empty line. There are no required header fields for this
-   class of status code. Since HTTP/1.0 did not define any 1xx status
-   codes, servers &MUST-NOT; send a 1xx response to an HTTP/1.0 client
-   except under experimental conditions.
+   The <x:dfn>1xx (Informational)</x:dfn> class of status code indicates an
+   interim response for communicating connection status or request progress
+   prior to completing the requested action and sending a final response.
+   All 1xx responses consist of only the status-line and optional header
+   fields, and thus are terminated by the empty line at the end of the header
+   block. There are no required header fields for this class of status code.
+   Since HTTP/1.0 did not define any 1xx status codes, servers &MUST-NOT; send
+   a 1xx response to an HTTP/1.0 client except under experimental conditions.
 </t>
 <t>
    A client &MUST; be prepared to accept one or more 1xx status responses
-   prior to a regular response, even if the client does not expect a <x:ref>100
-   (Continue)</x:ref> status message. Unexpected 1xx status responses &MAY; be
-   ignored by a user agent.
+   prior to a final response, even if the client does not expect a
+   <x:ref>100 (Continue)</x:ref> status message.
+   A user agent &MAY; ignore unexpected 1xx status responses.
 </t>
 <t>
    Proxies &MUST; forward 1xx responses, unless the connection between the
    proxy and its client has been closed, or unless the proxy itself
-   requested the generation of the 1xx response. (For example, if a
+   requested the generation of the 1xx response. For example, if a
    proxy adds an "Expect: 100-continue" field when it forwards a request,
    then it need not forward the corresponding <x:ref>100 (Continue)</x:ref>
-   response(s).)
+   response(s).
 </t>
 
 <section title="100 Continue" anchor="status.100">
@@ -2705,8 +2707,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <iref primary="true" item="2xx Successful (status code class)" x:for-anchor=""/>
   <iref primary="true" item="Status Codes Classes" subitem="2xx Successful" x:for-anchor=""/>
 <t>
-   This class of status code indicates that the client's request was
-   successfully received, understood, and accepted.
+   The <x:dfn>2xx (Successful)</x:dfn> class of status code indicates that
+   the client's request was successfully received, understood, and accepted.
 </t>
 
 <section title="200 OK" anchor="status.200">
@@ -2715,7 +2717,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <t>
    The <x:dfn>200 (OK)</x:dfn> status code indicates that the request has
    succeeded. The meaning of a payload sent in the response depends on the
-   request method, as follows:
+   request method. For the methods defined by this specification, the payload
+   can be summarized as:
   <list style="hanging">
     <t hangText="GET">
       a representation of the <x:ref>target resource</x:ref>;
@@ -2724,13 +2727,27 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
       the same representation as GET, but without the representation data;
     </t>
     <t hangText="POST">
-      a representation describing or containing the result of the action;
+      a representation of the status of, or results obtained from, the action;
+    </t>
+    <t hangText="PUT, DELETE">
+      a representation of the status of the action;
+    </t>
+    <t hangText="OPTIONS">
+      a representation of the communications options;
     </t>
     <t hangText="TRACE">
-      a representation containing the request message as received by the
+      a representation of the request message as received by the
       end server.
     </t>
   </list>
+</t>
+<t>
+   Aside from responses to CONNECT, a 200 response always has a payload,
+   though an origin server &MAY; generate a payload body of zero length.
+   If no payload is desired, an origin server ought to send
+   <x:dfn>204 (No Content)</x:dfn> instead.
+   For CONNECT, no payload is allowed because the successful result is a
+   tunnel, which begins immediately after the 200 response header block.
 </t>
 <t>
    Caches &MAY; use a heuristic (see &p6-heuristic;) to determine 
@@ -2743,20 +2760,16 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <x:anchor-alias value="201 (Created)"/>
 <t>
    The <x:dfn>201 (Created)</x:dfn> status code indicates that the request has
-   been fulfilled and has resulted in one or more new resources being created. 
+   been fulfilled and has resulted in one or more new resources being created.
+   The primary resource created by the request is identified by either a
+   <x:ref>Location</x:ref> header field in the response or, if no
+   <x:ref>Location</x:ref> field is received, by the effective request URI.
 </t>
 <t>
-   Newly created resources are typically linked to from the response payload,
-   with the most relevant URI also being carried in the <x:ref>Location</x:ref>
-   header field. If the newly created resource's URI is the same as the
-   effective request URI, the Location field can be omitted.
-</t>
-<t>
-   If an <x:ref>ETag</x:ref> header field is present in a 201 response, its
-   field value is the entity-tag for the representation created, which
-   is the new representation of the resource identified by either the
-   <x:ref>Location</x:ref> header field or, if no Location header field
-   is received, by the effective request URI (see &header-etag;).
+   The 201 response payload typically describes and links to the resource(s)
+   created. See <xref target="selected.representation"/> for discussion of the
+   meaning and purpose of selected representation header fields, such as
+   <x:ref>ETag</x:ref> and <x:ref>Last-Modified</x:ref>, in a 201 response.
 </t>
 </section>
 
@@ -2825,7 +2838,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    user agent does not need to traverse away from its current "document view"
    (if any).  The server assumes that the user agent will provide some
    indication of the success to its user, in accord with its own interface,
-   and apply any new or updated metadata in the response to the active
+   and apply any new or updated metadata in the response to its active
    representation.
 </t>
 <t>
@@ -3858,16 +3871,21 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    <x:anchor-alias value="selected representation"/>
 <t>
    We use the term "<x:dfn>selected representation</x:dfn>" to refer to the
-   the current representation of the <x:ref>target resource</x:ref> that would have been
-   selected in a successful response if the same request had used the
-   method GET and excluded any conditional request header fields.
+   representation of the <x:ref>target resource</x:ref> in a
+   <x:ref>200 (OK)</x:ref> response to <x:ref>GET</x:ref>, or the
+   representation that would have been selected in a successful response if
+   the request had used the method <x:ref>GET</x:ref> and excluded any
+   conditional request header fields.
 </t>
 <t>
-   Additional header fields define metadata about the selected
-   representation, which might differ from the representation included
-   in the message for responses to some state-changing methods.
-   The following header fields are defined as selected representation
-   metadata:
+   The following header fields define metadata about the selected
+   representation at the conclusion of handling the request. In other words,
+   for a successful response to a state-changing method, these fields describe
+   the new representation that has replaced the prior selected representation.
+   For example, an ETag header field in a 201 response communicates the
+   entity-tag of the newly created resource's representation, so that it can
+   be used in later conditional requests to prevent the "lost update"
+   problem <xref target="Part4"/>.
 </t>
 <texttable align="left">
   <ttcol>Header Field Name</ttcol>
