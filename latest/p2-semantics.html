@@ -846,7 +846,9 @@ ul.ind li li {
          readily communicated via the protocol, and that consists of a set of representation metadata and a potentially unbounded stream
          of representation data.
       </p>
-      <p id="rfc.section.3.p.3">We use the term "<dfn>selected representation</dfn>" to refer to the representation of the <a href="#resources" class="smpl">target resource</a> in a <a href="#status.200" class="smpl">200 (OK)</a> response to <a href="#GET" class="smpl">GET</a>, or the representation that would have been selected in a successful response if the request had used the method <a href="#GET" class="smpl">GET</a> and excluded any conditional request header fields.
+      <p id="rfc.section.3.p.3">An origin server might be provided with, or capable of generating, multiple representations that are each intended to reflect
+         the current state of a <a href="#resources" class="smpl">target resource</a>. In such cases, some algorithm is used by the origin server to select one of those representations as most applicable to
+         a given request, usually based on <a href="#content.negotiation" class="smpl">content negotiation</a>. We refer to that one representation as the "<dfn>selected representation</dfn>" and use its particular data and metadata for evaluating conditional requests <a href="#Part4" id="rfc.xref.Part4.1"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a> and constructing the payload for <a href="#status.200" class="smpl">200 (OK)</a> and <a href="p4-conditional.html#status.304" class="smpl">304 (Not Modified)</a> responses to GET (<a href="#GET" id="rfc.xref.GET.1" title="GET">Section&nbsp;4.3.1</a>).
       </p>
       <h2 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1</a>&nbsp;<a id="representation.metadata" href="#representation.metadata">Representation Metadata</a></h2>
       <p id="rfc.section.3.1.p.1">Representation header fields provide metadata about the representation. When a message includes a payload body, the representation
@@ -1074,8 +1076,7 @@ ul.ind li li {
       <ol>
          <li>If the request is GET or HEAD and the response status code is <a href="#status.200" class="smpl">200 (OK)</a>, <a href="#status.204" class="smpl">204 (No Content)</a>, <a href="p5-range.html#status.206" class="smpl">206 (Partial Content)</a>, or <a href="p4-conditional.html#status.304" class="smpl">304 (Not Modified)</a>, the payload's identifier is the effective request URI (<a href="p1-messaging.html#effective.request.uri" title="Effective Request URI">Section 5.5</a> of <a href="#Part1" id="rfc.xref.Part1.11"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing">[Part1]</cite></a>).
          </li>
-         <li>If the request is GET or HEAD and the response status code is <a href="#status.203" class="smpl">203 (Non-Authoritative Information)</a>, the payload is a potentially modified representation of the <a href="#resources" class="smpl">target resource</a>; as such, the effective request URI might only act as an identifier for the payload's representation when a request is made
-            via the same chain of intermediaries.
+         <li>If the request is GET or HEAD and the response status code is <a href="#status.203" class="smpl">203 (Non-Authoritative Information)</a>, the payload is intended to be a representation of the <a href="#resources" class="smpl">target resource</a> that has been modified by an intermediary.
          </li>
          <li>If the response has a <a href="#header.content-location" class="smpl">Content-Location</a> header field and its field-value is a reference to the same URI as the effective request URI, the payload's identifier is
             the effective request URI.
@@ -1096,11 +1097,11 @@ ul.ind li li {
          body parts in <a href="http://tools.ietf.org/html/rfc2557#section-4">Section 4</a> of <a href="#RFC2557" id="rfc.xref.RFC2557.1"><cite title="MIME Encapsulation of Aggregate Documents, such as HTML (MHTML)">[RFC2557]</cite></a>. However, its appearance in an HTTP message has some special implications for HTTP recipients.
       </p>
       <p id="rfc.section.3.1.4.2.p.4">If Content-Location is included in a <a href="#status.2xx" class="smpl">2xx (Successful)</a> response message and its value refers (after conversion to absolute form) to a URI that is the same as the effective request
-         URI, then the response payload <em class="bcp14">SHOULD</em> be considered a current representation of that resource. For a GET or HEAD request, this is the same as the default semantics
-         when no Content-Location is provided by the server. For a state-changing request like PUT or POST, it implies that the server's
-         response contains the new representation of that resource, thereby distinguishing it from representations that might only
-         report about the action (e.g., "It worked!"). This allows authoring applications to update their local copies without the
-         need for a subsequent GET request.
+         URI, then the recipient <em class="bcp14">MAY</em> consider the payload to be a current representation of that resource at the time indicated by the message origination date.
+         For a GET or HEAD request, this is the same as the default semantics when no Content-Location is provided by the server. For
+         a state-changing request like PUT or POST, it implies that the server's response contains the new representation of that resource,
+         thereby distinguishing it from representations that might only report about the action (e.g., "It worked!"). This allows authoring
+         applications to update their local copies without the need for a subsequent GET request.
       </p>
       <p id="rfc.section.3.1.4.2.p.5">If Content-Location is included in a <a href="#status.2xx" class="smpl">2xx (Successful)</a> response message and its field-value refers to a URI that differs from the effective request URI, then the origin server claims
          that the field-value is an identifier for the representation enclosed as the payload. Such a claim can only be trusted if
@@ -1148,7 +1149,7 @@ ul.ind li li {
          an HTML form.
       </p>
       <p id="rfc.section.3.3.p.3">In a response, the payload's purpose is defined by both the request method and the response status code. For example, the
-         payload of a <a href="#status.200" class="smpl">200 (OK)</a> response to GET (<a href="#GET" id="rfc.xref.GET.1" title="GET">Section&nbsp;4.3.1</a>) represents the current state of the <a href="#resources" class="smpl">target resource</a>, as observed at the time of the message origination date (<a href="#header.date" id="rfc.xref.header.date.1" title="Date">Section&nbsp;7.1.1.2</a>), whereas the payload of the same status code in a response to POST might represent either the processing result or the new
+         payload of a <a href="#status.200" class="smpl">200 (OK)</a> response to GET (<a href="#GET" id="rfc.xref.GET.2" title="GET">Section&nbsp;4.3.1</a>) represents the current state of the <a href="#resources" class="smpl">target resource</a>, as observed at the time of the message origination date (<a href="#header.date" id="rfc.xref.header.date.1" title="Date">Section&nbsp;7.1.1.2</a>), whereas the payload of the same status code in a response to POST might represent either the processing result or the new
          state of the target resource after applying the processing. Response messages with an error status code usually contain a
          payload that represents the error condition, such that it describes the error state and what next steps are suggested for
          resolving it.
@@ -1279,7 +1280,7 @@ ul.ind li li {
                <tr>
                   <td class="left">GET</td>
                   <td class="left">Transfer a current representation of the target resource.</td>
-                  <td class="left"><a href="#GET" id="rfc.xref.GET.2" title="GET">4.3.1</a></td>
+                  <td class="left"><a href="#GET" id="rfc.xref.GET.3" title="GET">4.3.1</a></td>
                </tr>
                <tr>
                   <td class="left">HEAD</td>
@@ -1388,7 +1389,7 @@ ul.ind li li {
       <p id="rfc.section.4.3.1.p.2">If the target resource is a data-producing process, the produced data will be sent as the representation, not the source text
          of the process, unless that text happens to be the output of the process.
       </p>
-      <p id="rfc.section.4.3.1.p.3">The semantics of the GET method change to a "conditional GET" if the request message includes an <a href="p4-conditional.html#header.if-modified-since" class="smpl">If-Modified-Since</a>, <a href="p4-conditional.html#header.if-unmodified-since" class="smpl">If-Unmodified-Since</a>, <a href="p4-conditional.html#header.if-match" class="smpl">If-Match</a>, <a href="p4-conditional.html#header.if-none-match" class="smpl">If-None-Match</a>, or <a href="p5-range.html#header.if-range" class="smpl">If-Range</a> header field (<a href="#Part4" id="rfc.xref.Part4.1"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>). A conditional GET requests that the representation be transferred only under the circumstances described by the conditional
+      <p id="rfc.section.4.3.1.p.3">The semantics of the GET method change to a "conditional GET" if the request message includes an <a href="p4-conditional.html#header.if-modified-since" class="smpl">If-Modified-Since</a>, <a href="p4-conditional.html#header.if-unmodified-since" class="smpl">If-Unmodified-Since</a>, <a href="p4-conditional.html#header.if-match" class="smpl">If-Match</a>, <a href="p4-conditional.html#header.if-none-match" class="smpl">If-None-Match</a>, or <a href="p5-range.html#header.if-range" class="smpl">If-Range</a> header field (<a href="#Part4" id="rfc.xref.Part4.2"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>). A conditional GET requests that the representation be transferred only under the circumstances described by the conditional
          header field(s). The conditional GET request is intended to reduce unnecessary network usage by allowing cached representations
          to be refreshed without requiring multiple requests or transferring data already held by the client.
       </p>
@@ -1747,8 +1748,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
       <p id="rfc.section.5.1.2.p.5">The Max-Forwards header field <em class="bcp14">MAY</em> be ignored for all other request methods.
       </p>
       <h2 id="rfc.section.5.2"><a href="#rfc.section.5.2">5.2</a>&nbsp;<a id="request.conditionals" href="#request.conditionals">Conditionals</a></h2>
-      <p id="rfc.section.5.2.p.1">Conditionals are request header fields that indicate a precondition to be tested before applying the method semantics to the <a href="#resources" class="smpl">target resource</a>. Each precondition is based on metadata that is expected to change if the selected representation of the target resource
-         is changed. The HTTP/1.1 conditional request mechanisms are defined in <a href="#Part4" id="rfc.xref.Part4.2"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>.
+      <p id="rfc.section.5.2.p.1">Conditionals are request header fields that indicate a precondition to be tested before applying the method semantics to the <a href="#resources" class="smpl">target resource</a>. Each precondition is based on metadata that is expected to change if the <a href="#representations" class="smpl">selected representation</a> is changed. The HTTP/1.1 conditional request mechanisms are defined in <a href="#Part4" id="rfc.xref.Part4.3"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>.
       </p>
       <div id="rfc.table.u.4">
          <table class="tt full left" cellpadding="3" cellspacing="0">
@@ -1761,19 +1761,19 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
             <tbody>
                <tr>
                   <td class="left">If-Match</td>
-                  <td class="left"><a href="p4-conditional.html#header.if-match" title="If-Match">Section 3.1</a> of <a href="#Part4" id="rfc.xref.Part4.3"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td class="left"><a href="p4-conditional.html#header.if-match" title="If-Match">Section 3.1</a> of <a href="#Part4" id="rfc.xref.Part4.4"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
                <tr>
                   <td class="left">If-None-Match</td>
-                  <td class="left"><a href="p4-conditional.html#header.if-none-match" title="If-None-Match">Section 3.2</a> of <a href="#Part4" id="rfc.xref.Part4.4"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td class="left"><a href="p4-conditional.html#header.if-none-match" title="If-None-Match">Section 3.2</a> of <a href="#Part4" id="rfc.xref.Part4.5"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
                <tr>
                   <td class="left">If-Modified-Since</td>
-                  <td class="left"><a href="p4-conditional.html#header.if-modified-since" title="If-Modified-Since">Section 3.3</a> of <a href="#Part4" id="rfc.xref.Part4.5"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td class="left"><a href="p4-conditional.html#header.if-modified-since" title="If-Modified-Since">Section 3.3</a> of <a href="#Part4" id="rfc.xref.Part4.6"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
                <tr>
                   <td class="left">If-Unmodified-Since</td>
-                  <td class="left"><a href="p4-conditional.html#header.if-unmodified-since" title="If-Unmodified-Since">Section 3.4</a> of <a href="#Part4" id="rfc.xref.Part4.6"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td class="left"><a href="p4-conditional.html#header.if-unmodified-since" title="If-Unmodified-Since">Section 3.4</a> of <a href="#Part4" id="rfc.xref.Part4.7"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
                <tr>
                   <td class="left">If-Range</td>
@@ -2165,7 +2165,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
          </li>
       </ul>
       <h2 id="rfc.section.6.1"><a href="#rfc.section.6.1">6.1</a>&nbsp;<a id="overview.of.status.codes" href="#overview.of.status.codes">Overview of Status Codes</a></h2>
-      <p id="rfc.section.6.1.p.1">The status codes listed below are defined in this specification, <a href="p4-conditional.html#status.code.definitions" title="Status Code Definitions">Section 4</a> of <a href="#Part4" id="rfc.xref.Part4.7"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>, <a href="p5-range.html#status.code.definitions" title="Status Code Definitions">Section 3</a> of <a href="#Part5" id="rfc.xref.Part5.8"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>, and <a href="p7-auth.html#status.code.definitions" title="Status Code Definitions">Section 3</a> of <a href="#Part7" id="rfc.xref.Part7.4"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Authentication">[Part7]</cite></a>. The reason phrases listed here are only recommendations — they can be replaced by local equivalents without affecting the
+      <p id="rfc.section.6.1.p.1">The status codes listed below are defined in this specification, <a href="p4-conditional.html#status.code.definitions" title="Status Code Definitions">Section 4</a> of <a href="#Part4" id="rfc.xref.Part4.8"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>, <a href="p5-range.html#status.code.definitions" title="Status Code Definitions">Section 3</a> of <a href="#Part5" id="rfc.xref.Part5.8"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>, and <a href="p7-auth.html#status.code.definitions" title="Status Code Definitions">Section 3</a> of <a href="#Part7" id="rfc.xref.Part7.4"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Authentication">[Part7]</cite></a>. The reason phrases listed here are only recommendations — they can be replaced by local equivalents without affecting the
          protocol.
       </p>
       <div id="rfc.table.u.9">
@@ -2246,7 +2246,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
                <tr>
                   <td class="left">304</td>
                   <td class="left">Not Modified</td>
-                  <td id="status.304" class="left"><a href="p4-conditional.html#status.304" title="304 Not Modified">Section 4.1</a> of <a href="#Part4" id="rfc.xref.Part4.8"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td id="status.304" class="left"><a href="p4-conditional.html#status.304" title="304 Not Modified">Section 4.1</a> of <a href="#Part4" id="rfc.xref.Part4.9"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
                <tr>
                   <td class="left">305</td>
@@ -2321,7 +2321,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
                <tr>
                   <td class="left">412</td>
                   <td class="left">Precondition Failed</td>
-                  <td id="status.412" class="left"><a href="p4-conditional.html#status.412" title="412 Precondition Failed">Section 4.2</a> of <a href="#Part4" id="rfc.xref.Part4.9"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td id="status.412" class="left"><a href="p4-conditional.html#status.412" title="412 Precondition Failed">Section 4.2</a> of <a href="#Part4" id="rfc.xref.Part4.10"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
                <tr>
                   <td class="left">413</td>
@@ -2426,8 +2426,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
       </p>
       <div id="rfc.iref.73"></div>
       <h3 id="rfc.section.6.3.1"><a href="#rfc.section.6.3.1">6.3.1</a>&nbsp;<a id="status.200" href="#status.200">200 OK</a></h3>
-      <p id="rfc.section.6.3.1.p.1">The <dfn>200 (OK)</dfn> status code indicates that the request has succeeded. The meaning of a payload sent in the response depends on the request
-         method. For the methods defined by this specification, the payload can be summarized as: 
+      <p id="rfc.section.6.3.1.p.1">The <dfn>200 (OK)</dfn> status code indicates that the request has succeeded. The payload sent in a 200 response depends on the request method. For
+         the methods defined by this specification, the intended meaning of the payload can be summarized as: 
       </p>
       <dl>
          <dt>GET</dt>
@@ -2604,10 +2604,10 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
          user agent to a selected resource, since doing so provides the information corresponding to the POST response in a form that
          can be separately identified, bookmarked, and cached independent of the original request.
       </p>
-      <p id="rfc.section.6.4.4.p.3">A 303 response to a GET request indicates that the <a href="#resources" class="smpl">target resource</a> does not have a representation of its own that can be transferred by the server over HTTP. The <a href="#header.location" class="smpl">Location</a> field value refers to a resource that is descriptive of the target resource, such that the follow-on representation might
-         be useful to recipients without implying that it adequately represents the target resource. Note that answers to the questions
-         of what can be represented, what representations are adequate, and what might be a useful description are outside the scope
-         of HTTP.
+      <p id="rfc.section.6.4.4.p.3">A 303 response to a GET request indicates that the origin server does not have a representation of the <a href="#resources" class="smpl">target resource</a> that can be transferred by the server over HTTP. However, the <a href="#header.location" class="smpl">Location</a> field value refers to a resource that is descriptive of the target resource, such that making a retrieval request on that
+         other resource might result in a representation that is useful to recipients without implying that it represents the original
+         target resource. Note that answers to the questions of what can be represented, what representations are adequate, and what
+         might be a useful description are outside the scope of HTTP.
       </p>
       <p id="rfc.section.6.4.4.p.4">Except for responses to a HEAD request, the representation of a 303 response ought to contain a short hypertext note with
          a hyperlink to the same URI reference provided in the <a href="#header.location" class="smpl">Location</a> header field.
@@ -3055,7 +3055,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
          prior <a href="#representations" class="smpl">selected representation</a> as a result of processing the request.
       </p>
       <p id="rfc.section.7.2.p.3">For example, an ETag header field in a 201 response communicates the entity-tag of the newly created resource's representation,
-         so that it can be used in later conditional requests to prevent the "lost update" problem <a href="#Part4" id="rfc.xref.Part4.10"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>.
+         so that it can be used in later conditional requests to prevent the "lost update" problem <a href="#Part4" id="rfc.xref.Part4.11"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>.
       </p>
       <div id="rfc.table.u.11">
          <table class="tt full left" cellpadding="3" cellspacing="0">
@@ -3068,11 +3068,11 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
             <tbody>
                <tr>
                   <td class="left">ETag</td>
-                  <td class="left"><a href="p4-conditional.html#header.etag" title="ETag">Section 2.3</a> of <a href="#Part4" id="rfc.xref.Part4.11"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td class="left"><a href="p4-conditional.html#header.etag" title="ETag">Section 2.3</a> of <a href="#Part4" id="rfc.xref.Part4.12"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
                <tr>
                   <td class="left">Last-Modified</td>
-                  <td class="left"><a href="p4-conditional.html#header.last-modified" title="Last-Modified">Section 2.2</a> of <a href="#Part4" id="rfc.xref.Part4.12"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
+                  <td class="left"><a href="p4-conditional.html#header.last-modified" title="Last-Modified">Section 2.2</a> of <a href="#Part4" id="rfc.xref.Part4.13"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a></td>
                </tr>
             </tbody>
          </table>
@@ -3187,7 +3187,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
       <p id="rfc.section.8.1.2.p.3">A new method definition needs to indicate whether it is safe (<a href="#safe.methods" title="Safe Methods">Section&nbsp;4.2.1</a>), idempotent (<a href="#idempotent.methods" title="Idempotent Methods">Section&nbsp;4.2.2</a>), cacheable (<a href="#cacheable.methods" title="Cacheable Methods">Section&nbsp;4.2.3</a>), what semantics are to be associated with the payload body if any is present in the request, and what refinements the method
          makes to header field or status code semantics. If the new method is cacheable, its definition ought to describe how, and
          under what conditions, a cache can store a response and use it to satisfy a subsequent request. If the new method can be made
-         conditional (<a href="#Part4" id="rfc.xref.Part4.13"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>), the definition ought to describe how to respond when the condition is false. Likewise, if the new method might have some
+         conditional (<a href="#Part4" id="rfc.xref.Part4.14"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>), the definition ought to describe how to respond when the condition is false. Likewise, if the new method might have some
          use for partial response semantics (<a href="#Part5" id="rfc.xref.Part5.12"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>), it ought to document this too.
       </p>
       <h3 id="rfc.section.8.1.3"><a href="#rfc.section.8.1.3">8.1.3</a>&nbsp;<a id="method.registration" href="#method.registration">Registrations</a></h3>
@@ -3222,7 +3222,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
                   <td class="left">GET</td>
                   <td class="left">yes</td>
                   <td class="left">yes</td>
-                  <td class="left"> <a href="#GET" id="rfc.xref.GET.3" title="GET">Section&nbsp;4.3.1</a> 
+                  <td class="left"> <a href="#GET" id="rfc.xref.GET.4" title="GET">Section&nbsp;4.3.1</a> 
                   </td>
                </tr>
                <tr>
@@ -4169,7 +4169,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
          and the undesirable effect of potentially breaking relative links in content-negotiated resources (<a href="#header.content-location" id="rfc.xref.header.content-location.5" title="Content-Location">Section&nbsp;3.1.4.2</a>).
       </p>
       <p id="rfc.section.B.p.6">The Content-MD5 header field has been removed because it was inconsistently implemented with respect to partial responses.</p>
-      <p id="rfc.section.B.p.7">To be consistent with the method-neutral parsing algorithm of <a href="#Part1" id="rfc.xref.Part1.45"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing">[Part1]</cite></a>, the definition of GET has been relaxed so that requests can have a body, even though a body has no meaning for GET (<a href="#GET" id="rfc.xref.GET.4" title="GET">Section&nbsp;4.3.1</a>).
+      <p id="rfc.section.B.p.7">To be consistent with the method-neutral parsing algorithm of <a href="#Part1" id="rfc.xref.Part1.45"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing">[Part1]</cite></a>, the definition of GET has been relaxed so that requests can have a body, even though a body has no meaning for GET (<a href="#GET" id="rfc.xref.GET.5" title="GET">Section&nbsp;4.3.1</a>).
       </p>
       <p id="rfc.section.B.p.8">Servers are no longer required to handle all Content-* header fields and use of <a href="p5-range.html#header.content-range" class="smpl">Content-Range</a> has been explicitly banned in PUT requests (<a href="#PUT" id="rfc.xref.PUT.4" title="PUT">Section&nbsp;4.3.4</a>).
       </p>
@@ -4507,7 +4507,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
                </ul>
             </li>
             <li><a id="rfc.index.G" href="#rfc.index.G"><b>G</b></a><ul>
-                  <li>GET method&nbsp;&nbsp;<a href="#rfc.extref.g.1">3</a>, <a href="#rfc.extref.g.2">3</a>, <a href="#rfc.xref.GET.1">3.3</a>, <a href="#rfc.xref.GET.2">4.1</a>, <a href="#rfc.iref.g.16"><b>4.3.1</b></a>, <a href="#rfc.xref.GET.3">8.1.3</a>, <a href="#rfc.xref.GET.4">B</a></li>
+                  <li>GET method&nbsp;&nbsp;<a href="#rfc.xref.GET.1">3</a>, <a href="#rfc.xref.GET.2">3.3</a>, <a href="#rfc.xref.GET.3">4.1</a>, <a href="#rfc.iref.g.16"><b>4.3.1</b></a>, <a href="#rfc.xref.GET.4">8.1.3</a>, <a href="#rfc.xref.GET.5">B</a></li>
                   <li><tt>Grammar</tt>&nbsp;&nbsp;
                      <ul>
                         <li><tt>Accept</tt>&nbsp;&nbsp;<a href="#rfc.iref.g.25"><b>5.3.2</b></a></li>
@@ -4626,16 +4626,16 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
                         <li><em>Appendix B</em>&nbsp;&nbsp;<a href="#rfc.xref.Part1.32">8.3.1</a></li>
                      </ul>
                   </li>
-                  <li><em>Part4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.1">4.3.1</a>, <a href="#rfc.xref.Part4.2">5.2</a>, <a href="#rfc.xref.Part4.3">5.2</a>, <a href="#rfc.xref.Part4.4">5.2</a>, <a href="#rfc.xref.Part4.5">5.2</a>, <a href="#rfc.xref.Part4.6">5.2</a>, <a href="#rfc.xref.Part4.7">6.1</a>, <a href="#rfc.xref.Part4.8">6.1</a>, <a href="#rfc.xref.Part4.9">6.1</a>, <a href="#rfc.xref.Part4.10">7.2</a>, <a href="#rfc.xref.Part4.11">7.2</a>, <a href="#rfc.xref.Part4.12">7.2</a>, <a href="#rfc.xref.Part4.13">8.1.2</a>, <a href="#Part4"><b>11.1</b></a><ul>
-                        <li><em>Section 2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.12">7.2</a></li>
-                        <li><em>Section 2.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.11">7.2</a></li>
-                        <li><em>Section 3.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.3">5.2</a></li>
-                        <li><em>Section 3.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.4">5.2</a></li>
-                        <li><em>Section 3.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.5">5.2</a></li>
-                        <li><em>Section 3.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.6">5.2</a></li>
-                        <li><em>Section 4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.7">6.1</a></li>
-                        <li><em>Section 4.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.8">6.1</a></li>
-                        <li><em>Section 4.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.9">6.1</a></li>
+                  <li><em>Part4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.1">3</a>, <a href="#rfc.xref.Part4.2">4.3.1</a>, <a href="#rfc.xref.Part4.3">5.2</a>, <a href="#rfc.xref.Part4.4">5.2</a>, <a href="#rfc.xref.Part4.5">5.2</a>, <a href="#rfc.xref.Part4.6">5.2</a>, <a href="#rfc.xref.Part4.7">5.2</a>, <a href="#rfc.xref.Part4.8">6.1</a>, <a href="#rfc.xref.Part4.9">6.1</a>, <a href="#rfc.xref.Part4.10">6.1</a>, <a href="#rfc.xref.Part4.11">7.2</a>, <a href="#rfc.xref.Part4.12">7.2</a>, <a href="#rfc.xref.Part4.13">7.2</a>, <a href="#rfc.xref.Part4.14">8.1.2</a>, <a href="#Part4"><b>11.1</b></a><ul>
+                        <li><em>Section 2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.13">7.2</a></li>
+                        <li><em>Section 2.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.12">7.2</a></li>
+                        <li><em>Section 3.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.4">5.2</a></li>
+                        <li><em>Section 3.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.5">5.2</a></li>
+                        <li><em>Section 3.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.6">5.2</a></li>
+                        <li><em>Section 3.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.7">5.2</a></li>
+                        <li><em>Section 4</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.8">6.1</a></li>
+                        <li><em>Section 4.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.9">6.1</a></li>
+                        <li><em>Section 4.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.10">6.1</a></li>
                      </ul>
                   </li>
                   <li><em>Part5</em>&nbsp;&nbsp;<a href="#rfc.xref.Part5.1">3.1.1.4</a>, <a href="#rfc.xref.Part5.2">3.3</a>, <a href="#rfc.xref.Part5.3">4.3.1</a>, <a href="#rfc.xref.Part5.4">4.3.1</a>, <a href="#rfc.xref.Part5.5">4.3.4</a>, <a href="#rfc.xref.Part5.6">5.1</a>, <a href="#rfc.xref.Part5.7">5.2</a>, <a href="#rfc.xref.Part5.8">6.1</a>, <a href="#rfc.xref.Part5.9">6.1</a>, <a href="#rfc.xref.Part5.10">6.1</a>, <a href="#rfc.xref.Part5.11">7.4</a>, <a href="#rfc.xref.Part5.12">8.1.2</a>, <a href="#Part5"><b>11.1</b></a>, <a href="#rfc.xref.Part5.13">A.6</a><ul>

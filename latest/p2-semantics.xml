@@ -306,12 +306,16 @@
    unbounded stream of representation data.
 </t>
 <t>
-   We use the term "<x:dfn>selected representation</x:dfn>" to refer to the
-   representation of the <x:ref>target resource</x:ref> in a
-   <x:ref>200 (OK)</x:ref> response to <x:ref>GET</x:ref>, or the
-   representation that would have been selected in a successful response if
-   the request had used the method <x:ref>GET</x:ref> and excluded any
-   conditional request header fields.
+   An origin server might be provided with, or capable of generating, multiple
+   representations that are each intended to reflect the current state of a
+   <x:ref>target resource</x:ref>. In such cases, some algorithm is used by
+   the origin server to select one of those representations as most applicable
+   to a given request, usually based on <x:ref>content negotiation</x:ref>.
+   We refer to that one representation as the
+   "<x:dfn>selected representation</x:dfn>" and use its particular data and
+   metadata for evaluating conditional requests <xref target="Part4"/> and
+   constructing the payload for <x:ref>200 (OK)</x:ref> and
+   <x:ref>304 (Not Modified)</x:ref> responses to GET (<xref target="GET"/>).
 </t>
 
 <section title="Representation Metadata" anchor="representation.metadata">
@@ -726,11 +730,9 @@
          the payload's identifier is the effective request URI
          (&effective-request-uri;).</t>
       <t>If the request is GET or HEAD and the response status code is
-         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is a
-         potentially modified representation of the
-         <x:ref>target resource</x:ref>; as such, the effective request URI
-         might only act as an identifier for the payload's representation when
-         a request is made via the same chain of intermediaries.</t>
+         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
+         intended to be a representation of the <x:ref>target resource</x:ref>
+         that has been modified by an intermediary.</t>
       <t>If the response has a <x:ref>Content-Location</x:ref> header field
          and its field-value is a reference to the same URI as the effective
          request URI, the payload's identifier is the effective request URI.</t>
@@ -769,8 +771,9 @@
 <t>
    If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
    response message and its value refers (after conversion to absolute form)
-   to a URI that is the same as the effective request URI, then the response
-   payload &SHOULD; be considered a current representation of that resource.
+   to a URI that is the same as the effective request URI, then
+   the recipient &MAY; consider the payload to be a current representation of
+   that resource at the time indicated by the message origination date.
    For a GET or HEAD request, this is the same as the default semantics
    when no Content-Location is provided by the server.  For a state-changing
    request like PUT or POST, it implies that the server's response contains
@@ -1978,10 +1981,11 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <section title="Conditionals" anchor="request.conditionals">
 <t>
    Conditionals are request header fields that indicate a precondition to be
-   tested before applying the method semantics to the <x:ref>target resource</x:ref>.
-   Each precondition is based on metadata that is expected to change if the
-   selected representation of the target resource is changed.  The HTTP/1.1
-   conditional request mechanisms are defined in <xref target="Part4"/>.
+   tested before applying the method semantics to the
+   <x:ref>target resource</x:ref>. Each precondition is based on metadata that
+   is expected to change if the <x:ref>selected representation</x:ref> is
+   changed. The HTTP/1.1 conditional request mechanisms are defined in
+   <xref target="Part4"/>.
 </t>
 <texttable align="left">
   <ttcol>Header Field Name</ttcol>
@@ -2741,9 +2745,9 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <x:anchor-alias value="200 (OK)"/>
 <t>
    The <x:dfn>200 (OK)</x:dfn> status code indicates that the request has
-   succeeded. The meaning of a payload sent in the response depends on the
-   request method. For the methods defined by this specification, the payload
-   can be summarized as:
+   succeeded. The payload sent in a 200 response depends on the request
+   method. For the methods defined by this specification, the intended meaning
+   of the payload can be summarized as:
   <list style="hanging">
     <t hangText="GET">
       a representation of the <x:ref>target resource</x:ref>;
@@ -3116,15 +3120,16 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    of the original request.
 </t>
 <t>
-   A 303 response to a GET request indicates that the
-   <x:ref>target resource</x:ref> does not have a representation of
-   its own that can be transferred by the server over HTTP.
-   The <x:ref>Location</x:ref> field value refers to a resource that is
-   descriptive of the target resource, such that the follow-on representation
-   might be useful to recipients without implying that it adequately
-   represents the target resource. Note that answers to the questions of what
-   can be represented, what representations are adequate, and what might be a
-   useful description are outside the scope of HTTP.
+   A 303 response to a GET request indicates that the origin server does not
+   have a representation of the <x:ref>target resource</x:ref> that can be
+   transferred by the server over HTTP. However, the
+   <x:ref>Location</x:ref> field value refers to a resource that is
+   descriptive of the target resource, such that making a retrieval request
+   on that other resource might result in a representation that is useful to
+   recipients without implying that it represents the original target resource.
+   Note that answers to the questions of what can be represented, what
+   representations are adequate, and what might be a useful description are
+   outside the scope of HTTP.
 </t>
 <t>
    Except for responses to a HEAD request, the representation of a 303 
