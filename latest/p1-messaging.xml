@@ -43,6 +43,7 @@
   <!ENTITY header-server          "<xref target='Part2' x:rel='#header.server' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-warning         "<xref target='Part6' x:rel='#header.warning' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY idempotent-methods     "<xref target='Part2' x:rel='#idempotent.methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY safe-methods           "<xref target='Part2' x:rel='#safe.methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY methods                "<xref target='Part2' x:rel='#methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY OPTIONS                "<xref target='Part2' x:rel='#OPTIONS' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY qvalue                 "<xref target='Part2' x:rel='#quality.values' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -2836,46 +2837,71 @@ https://www.example.org
    for more information on backward compatibility with HTTP/1.0 clients.
 </t>
 
-<section title="Pipelining" anchor="pipelining">
-<t>
-   A client that supports persistent connections &MAY; "pipeline" its
-   requests (i.e., send multiple requests without waiting for each
-   response). A server &MUST; send its responses to those requests in the
-   same order that the requests were received.
-</t>
-<t>
-   Clients that assume persistent connections and pipeline immediately
-   after connection establishment &SHOULD; be prepared to retry their
-   connection if the first pipelined attempt fails. If a client does
-   such a retry, it &MUST-NOT; pipeline before it knows the connection is
-   persistent. Clients &MUST; also be prepared to resend their requests if
-   the server closes the connection before sending all of the
-   corresponding responses.
-</t>
-<t>
-   Clients &SHOULD-NOT; pipeline requests using non-idempotent request methods
-   or non-idempotent sequences of request methods (see &idempotent-methods;).
-   Otherwise, a premature termination of the transport connection could lead
-   to indeterminate results. A client wishing to send a non-idempotent
-   request &SHOULD; wait to send that request until it has received the
-   response status line for the previous request.
-</t>
-</section>
-
 <section title="Retrying Requests" anchor="persistent.retrying.requests">
 <t>
    Connections can be closed at any time, with or without intention.
    Implementations ought to anticipate the need to recover
    from asynchronous close events.
-   A client &MAY; open a new connection and retransmit an aborted sequence
-   of requests without user interaction so long as the request sequence is
-   idempotent (see &idempotent-methods;).
-   A client &MUST-NOT; automatically retry non-idempotent request sequences,
-   although user agents &MAY; offer a human operator the choice of retrying
-   the request(s). Confirmation by
-   user agent software with semantic understanding of the application
-   &MAY; substitute for user confirmation. An automatic retry &SHOULD-NOT; 
-   be repeated if a second sequence of requests fails.
+</t>
+<t>
+   When an inbound connection is closed prematurely, a client &MAY; open a new
+   connection and automatically retransmit an aborted sequence of requests if
+   all of those requests have idempotent methods (&idempotent-methods;).
+   A proxy &MUST-NOT; automatically retry non-idempotent requests.
+</t>
+<t>
+   A user agent &MUST-NOT; automatically retry a request with a non-idempotent
+   method unless it has some means to know that the request semantics are
+   actually idempotent, regardless of the method, or some means to detect that
+   the original request was never applied. For example, a user agent that
+   knows (through design or configuration) that a POST request to a given
+   resource is safe can repeat that request automatically.
+   Likewise, a user agent designed specifically to operate on a version
+   control repository might be able to recover from partial failure conditions
+   by checking the target resource revision(s) after a failed connection,
+   reverting or fixing any changes that were partially applied, and then
+   automatically retrying the requests that failed.
+</t>
+<t>
+   An automatic retry &SHOULD-NOT; be repeated if it fails.
+</t>
+</section>
+
+<section title="Pipelining" anchor="pipelining">
+   <x:anchor-alias value="pipeline"/>
+<t>
+   A client that supports persistent connections &MAY; "<x:dfn>pipeline</x:dfn>"
+   its requests (i.e., send multiple requests without waiting for each
+   response). A server &MAY; process a sequence of pipelined requests in
+   parallel if they all have safe methods (&safe-methods;), but &MUST; send
+   the corresponding responses in the same order that the requests were
+   received.
+</t>
+<t>
+   A client that pipelines requests &MUST; be prepared to retry those
+   requests if the connection closes before it receives all of the
+   corresponding responses. A client that assumes a persistent connection and
+   pipelines immediately after connection establishment &MUST-NOT; pipeline
+   on a retry connection until it knows the connection is persistent.
+</t>
+<t>
+   Idempotent methods (&idempotent-methods;) are significant to pipelining
+   because they can be automatically retried after a connection failure.
+   A user agent &SHOULD-NOT; pipeline requests after a non-idempotent method
+   until the final response status code for that method has been received,
+   unless the user agent has a means to detect and recover from partial
+   failure conditions involving the pipelined sequence.
+</t>
+<t>
+   An intermediary that receives pipelined requests &MAY; pipeline those
+   requests when forwarding them inbound, since it can rely on the outbound
+   user agent(s) to determine what requests can be safely pipelined. If the
+   inbound connection fails before receiving a response, the pipelining
+   intermediary &MAY; attempt to retry a sequence of requests that have yet
+   to receive a response if the requests all have idempotent methods;
+   otherwise, the pipelining intermediary &SHOULD; forward any received
+   responses and then close the corresponding outbound connection(s) so that
+   the outbound user agent(s) can recover accordingly.
 </t>
 </section>
 </section>
