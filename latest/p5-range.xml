@@ -324,7 +324,7 @@ Content-Type: image/gif
 </section>
 </section>
 
-<section title="Responses to a Range Request">
+<section title="Responses to a Range Request" anchor="range.response">
 <section title="Response to a Single and Multiple Ranges Request">
 <t>
    When an HTTP message includes the content of a single range (for
@@ -563,13 +563,6 @@ Content-Type: image/gif
       </t>    
    </list>
 </t>
-<t>
-   If the server ignores a byte-range-spec (for example if it is
-   syntactically invalid, or if it might be seen as a denial-of-service
-   attack), the server &SHOULD; treat the request as if the invalid <x:ref>Range</x:ref>
-   header field did not exist. (Normally, this means send a <x:ref>200 (OK)</x:ref>
-   response containing the full representation).
-</t>
 </section>
 
 <section title="If-Range" anchor="header.if-range">
@@ -586,9 +579,9 @@ Content-Type: image/gif
 </t>
 <t>
    The "If-Range" header field allows a client to "short-circuit" the second
-   request. Informally, its meaning is "if the representation is unchanged, send
-   me the part(s) that I am missing; otherwise, send me the entire new
-   representation".
+   request. Informally, its meaning is: if the representation is unchanged,
+   send me the part(s) that I am requesting in Range; otherwise, send me the
+   entire representation.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Range"/>
   <x:ref>If-Range</x:ref> = <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref>
@@ -620,9 +613,9 @@ Content-Type: image/gif
    If the validator given in the If-Range header field matches the current
    validator for the selected representation of the target resource, then
    the server &SHOULD; send the specified sub-range of the representation
-   using a <x:ref>206 (Partial Content)</x:ref> response. If the validator does not match,
-   then the server &SHOULD; send the entire representation using a <x:ref>200 (OK)</x:ref>
-   response.
+   using a <x:ref>206 (Partial Content)</x:ref> response. If the validator
+   does not match, then the server &SHOULD; send the entire representation
+   using a <x:ref>200 (OK)</x:ref> response.
 </t>
 </section>
 
@@ -756,9 +749,10 @@ Content-Type: image/gif
   <x:anchor-alias value="other-ranges-specifier"/>
   <x:anchor-alias value="other-range-set"/>
 <t>
-   The "Range" header field defines the GET method (conditional or
-   not) to request one or more sub-ranges of the response representation data, instead
-   of the entire representation data.
+   The "Range" header field on a GET request modifies the method semantics to
+   request transfer of only one or more sub-ranges of the selected
+   representation data in a successful response, rather than the entire
+   representation data.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/>
   <x:ref>Range</x:ref> = <x:ref>byte-ranges-specifier</x:ref> / <x:ref>other-ranges-specifier</x:ref>
@@ -766,39 +760,32 @@ Content-Type: image/gif
   <x:ref>other-range-set</x:ref> = 1*<x:ref>CHAR</x:ref>
 </artwork></figure>
 <t>
-   A server &MAY; ignore the Range header field. However, origin
-   servers and intermediate caches ought to support byte ranges when
-   possible, since Range supports efficient recovery from partially
-   failed transfers, and supports efficient partial retrieval of large
-   representations.
+   A server &MAY; ignore the Range header field. However, origin servers and
+   intermediate caches ought to support byte ranges when possible, since Range
+   supports efficient recovery from partially failed transfers and partial
+   retrieval of large representations. A server &MUST; ignore a Range header
+   field received with a request method other than GET.
 </t>
 <t>
-   If the server supports the Range header field and the specified range or
-   ranges are appropriate for the representation:
-  <list style="symbols">
-     <t>The presence of a Range header field in an unconditional GET modifies
-        what is sent if the GET is otherwise successful. In other
-        words, the response carries a status code of <x:ref>206 (Partial Content)</x:ref>
-        instead of <x:ref>200 (OK)</x:ref>.</t>
-
-     <t>The presence of a Range header field in a conditional GET (a request
-        using one or both of <x:ref>If-Modified-Since</x:ref> and
-        <x:ref>If-None-Match</x:ref>, or one or both of
-        <x:ref>If-Unmodified-Since</x:ref> and <x:ref>If-Match</x:ref>) modifies
-        what is sent if the GET is otherwise successful and the
-        condition is true. It does not affect the <x:ref>304 (Not Modified)</x:ref>
-        response sent if the conditional is false.</t>
-  </list>
+   The Range header field is evaluated after evaluating the preconditions of
+   <xref target="Part4"/> and only if the result of their evaluation is
+   leading toward a <x:ref>200 (OK)</x:ref> response. In other words, Range
+   is ignored when a conditional GET would result in a
+   <x:ref>304 (Not Modified)</x:ref> response.
 </t>
 <t>
-   In some cases, it might be more appropriate to use the If-Range
-   header field (see <xref target="header.if-range"/>) in addition to the Range
-   header field.
+   The If-Range header field (<xref target="header.if-range"/>) can be used as
+   a precondition to applying the Range header field.
 </t>
 <t>
-   If a proxy that supports ranges receives a Range request, forwards 
-   the request to an inbound server, and receives an entire representation in
-   reply, it &MAY; only send the requested range to its client. 
+   If all of the preconditions are true, the server supports the Range header
+   field for the target resource, the specified range(s) are syntactically
+   correct (as defined in <xref target="byte.ranges"/>), and at least one of
+   the ranges has a non-empty intersection with the current selected
+   representation extent, then the server &MAY; respond with a status code of
+   <x:ref>206 (Partial Content)</x:ref> and a payload containing one or more
+   partial representations that correspond to those requested, as defined in
+   <xref target="range.response"/>.
 </t>
 </section>
 </section>
@@ -1251,16 +1238,17 @@ Content-Type: image/gif
   HTTP/1.1 206 Partial Content
   Date: Wed, 15 Nov 1995 06:25:24 GMT
   Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
-  Content-type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+  Content-Length: 1741
+  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
   
   --THIS_STRING_SEPARATES
-  Content-type: application/pdf
-  Content-range: bytes 500-999/8000
+  Content-Type: application/pdf
+  Content-Range: bytes 500-999/8000
   
   ...the first range...
   --THIS_STRING_SEPARATES
-  Content-type: application/pdf
-  Content-range: bytes 7000-7999/8000
+  Content-Type: application/pdf
+  Content-Range: bytes 7000-7999/8000
   
   ...the second range
   --THIS_STRING_SEPARATES--
@@ -1272,16 +1260,17 @@ Content-Type: image/gif
   HTTP/1.1 206 Partial Content
   Date: Tue, 14 Nov 1995 06:25:24 GMT
   Last-Modified: Tue, 14 July 04:58:08 GMT
-  Content-type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+  Content-Length: 2331785
+  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
   
   --THIS_STRING_SEPARATES
-  Content-type: video/example
-  Content-range: exampleunit 1.2-4.3/25
+  Content-Type: video/example
+  Content-Range: exampleunit 1.2-4.3/25
   
   ...the first range...
   --THIS_STRING_SEPARATES
-  Content-type: video/example
-  Content-range: exampleunit 11.2-14.3/25
+  Content-Type: video/example
+  Content-Range: exampleunit 11.2-14.3/25
   
   ...the second range
   --THIS_STRING_SEPARATES--
