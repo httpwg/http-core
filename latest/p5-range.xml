@@ -22,9 +22,10 @@
   <!ENTITY acks                       "<xref target='Part1' x:rel='#acks' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY whitespace                 "<xref target='Part1' x:rel='#whitespace' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY field-components           "<xref target='Part1' x:rel='#field.components' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY http-date                  "<xref target='Part2' x:rel='#http.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY messaging                  "<xref target='Part1' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY semantics                  "<xref target='Part2' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY http-date                  "<xref target='Part2' x:rel='#http.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY representation             "<xref target='Part2' x:rel='#representations' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-tags                "<xref target='Part4' x:rel='#header.etag' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY weak-and-strong-validators "<xref target='Part4' x:rel='#weak.and.strong.validators' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY lastmod-comparison         "<xref target='Part4' x:rel='#lastmod.comparison' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -128,28 +129,27 @@
 <middle>
 <section title="Introduction" anchor="introduction">
 <t>
-   HTTP clients often encounter interrupted data transfers as a result
-   of canceled requests or dropped connections.  When a client has stored
-   a partial representation, it is desirable to request the remainder
-   of that representation in a subsequent request rather than transfer
-   the entire representation.
-   There are also a number of Web applications that benefit from being
-   able to request only a subset of a larger representation, such as a
-   single page of a very large document or only part of an image to be
-   rendered by a device with limited local storage.
+   Hypertext Transfer Protocol (HTTP) clients often encounter interrupted data
+   transfers as a result of canceled requests or dropped connections. When a
+   client has stored a partial representation, it is desirable to request the
+   remainder of that representation in a subsequent request rather than
+   transfer the entire representation. Likewise, devices with limited local
+   storage might benefit from being able to request only a subset of a larger
+   representation, such as a single page of a very large document, or the
+   dimensions of an embedded image.
 </t>
 <t>
-   This document defines HTTP/1.1 range requests,
-   partial responses, and the multipart/byteranges media type.
-   The protocol for range requests is an &OPTIONAL; feature of HTTP,
-   designed so resources or recipients that do not implement this feature
-   can respond as if it is a normal GET request without impacting
-   interoperability.  Partial responses are indicated by a distinct status
-   code to not be mistaken for full responses by intermediate caches
-   that might not implement the feature.
+   This document defines HTTP/1.1 range requests, partial responses, and the
+   multipart/byteranges media type, obsoleting those parts previously defined
+   in <xref target="RFC2616"/>. Range requests are an &OPTIONAL; feature
+   of HTTP, designed so that recipients not implementing this feature (or not
+   supporting it for the target resource) can respond as if it is a normal
+   GET request without impacting interoperability. Partial responses are
+   indicated by a distinct status code to not be mistaken for full responses
+   by caches that might not implement the feature.
 </t>
 <t>
-   Although the HTTP range request mechanism is designed to allow for
+   Although the range request mechanism is designed to allow for
    extensible range types, this specification only defines requests for
    byte ranges.
 </t>
@@ -179,36 +179,35 @@
 
 
 <section title="Range Units" anchor="range.units">
-  <x:anchor-alias value="bytes-unit"/>
-  <x:anchor-alias value="other-range-unit"/>
   <x:anchor-alias value="range-unit"/>
   <x:anchor-alias value="range unit"/>
 <t>
    A representation can be partitioned into subranges according to various
    structural units, depending on the structure inherent in the
-   representation's media type. Such a <x:dfn>range unit</x:dfn> can be used
-   in the <x:ref>Range</x:ref> (<xref target="header.range"/>) and
+   representation's media type. This "<x:dfn>range unit</x:dfn>" is used
+   in the <x:ref>Accept-Ranges</x:ref> (<xref target="header.accept-ranges"/>)
+   response header field to advertise support for range requests, the
+   <x:ref>Range</x:ref> (<xref target="header.range"/>) request header field
+   to delineate the parts of a representation that are requested, and the
    <x:ref>Content-Range</x:ref> (<xref target="header.content-range"/>)
-   header fields to delineate the parts of a representation that are
-   either requested or transferred, respectively.
+   payload header field to describe which part of a representation is being
+   transferred.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="range-unit"/><iref primary="true" item="Grammar" subitem="bytes-unit"/><iref primary="true" item="Grammar" subitem="other-range-unit"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="range-unit"/><iref item="Grammar" subitem="bytes-unit"/><iref item="Grammar" subitem="other-range-unit"/>
   <x:ref>range-unit</x:ref>       = <x:ref>bytes-unit</x:ref> / <x:ref>other-range-unit</x:ref>
-  <x:ref>bytes-unit</x:ref>       = "bytes"
-  <x:ref>other-range-unit</x:ref> = <x:ref>token</x:ref>
 </artwork></figure>
 
 <section title="Byte Ranges" anchor="byte.ranges">
+  <x:anchor-alias value="bytes-unit"/>
 <t>
-   Since all HTTP representations are transferred as sequences
-   of bytes, the concept of a byte range is meaningful for any HTTP
-   representation. (However, not all clients and servers need to support byte-range
-   operations.)
+   Since representation data is transferred in payloads as a sequence of
+   octets, a byte range is a meaningful substructure for any representation
+   transferable over HTTP (&representation;). We define the "bytes" range
+   unit for expressing subranges of the data's octet sequence.
 </t>
-<t>
-   Byte range specifications in HTTP apply to the sequence of bytes in
-   the representation data (not necessarily the same as the message body).
-</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="bytes-unit"/>
+  <x:ref>bytes-unit</x:ref>       = "bytes"
+</artwork></figure>
 <t anchor="rule.ranges-specifier">
   <x:anchor-alias value="byte-range-set"/>
   <x:anchor-alias value="byte-range-spec"/>
@@ -309,7 +308,7 @@
   bytes=0-0,-1
 </artwork></figure>
      </t>
-     <t>Several legal but not canonical specifications of the second 500
+     <t>Other valid (but not canonical) specifications of the second 500
         bytes (byte offsets 500-999, inclusive):
 <figure><artwork type="example" x:indent-with="   ">
   bytes=500-600,601-999
@@ -321,12 +320,16 @@
 </section>
 
 <section title="Other Range Units" anchor="range.units.other">
+  <x:anchor-alias value="other-range-unit"/>
 <t>
-  The only range unit defined by HTTP/1.1 is "bytes"
-  (<xref target="byte.ranges"/>). Additional units can be defined as described
-  in <xref target="range.unit.registry"/>.
+  Range units are intended to be extensible.  New range units ought to be
+  registered with IANA, as defined in <xref target="range.unit.registry"/>.
 </t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="other-range-unit"/>
+  <x:ref>other-range-unit</x:ref> = <x:ref>token</x:ref>
+</artwork></figure>
 </section>
+
 <section title="Accept-Ranges" anchor="header.accept-ranges">
   <iref primary="true" item="Accept-Ranges header field" x:for-anchor=""/>
   <x:anchor-alias value="Accept-Ranges"/>
@@ -824,7 +827,7 @@ Content-Type: image/gif
 
    <c>bytes</c>
    <c>a range of octets</c>
-   <c><xref target="range.units"/></c>
+   <c><xref target="byte.ranges"/></c>
 
    <c>none</c>
    <c>reserved as keyword, indicating no ranges are supported</c>
