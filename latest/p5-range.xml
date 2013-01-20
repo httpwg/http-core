@@ -327,10 +327,150 @@
   in <xref target="range.unit.registry"/>.
 </t>
 </section>
+<section title="Accept-Ranges" anchor="header.accept-ranges">
+  <iref primary="true" item="Accept-Ranges header field" x:for-anchor=""/>
+  <x:anchor-alias value="Accept-Ranges"/>
+  <x:anchor-alias value="acceptable-ranges"/>
+<t>
+   The "Accept-Ranges" header field allows a resource to indicate
+   its acceptance of range requests.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Ranges"/><iref primary="true" item="Grammar" subitem="acceptable-ranges"/>
+  <x:ref>Accept-Ranges</x:ref>     = <x:ref>acceptable-ranges</x:ref>
+  <x:ref>acceptable-ranges</x:ref> = 1#<x:ref>range-unit</x:ref> / "none"
+</artwork></figure>
+<t>
+   Origin servers that accept byte-range requests &MAY; send
+</t>
+<figure><artwork type="example">
+  Accept-Ranges: bytes
+</artwork></figure>
+<t>
+   but are not required to do so. Clients &MAY; generate range
+   requests without having received this header field for the resource
+   involved. Range units are defined in <xref target="range.units"/>.
+</t>
+<t>
+   Servers that do not accept any kind of range request for a
+   resource &MAY; send
+</t>
+<figure><artwork type="example">
+  Accept-Ranges: none
+</artwork></figure>
+<t>
+   to advise the client not to attempt a range request.
+</t>
+</section>
 </section>
 
 
 <section title="Range Requests" anchor="range.requests">
+<section title="Range" anchor="header.range">
+  <iref primary="true" item="Range header field" x:for-anchor=""/>
+  <x:anchor-alias value="Range"/>
+  <x:anchor-alias value="other-ranges-specifier"/>
+  <x:anchor-alias value="other-range-set"/>
+<t>
+   The "Range" header field on a GET request modifies the method semantics to
+   request transfer of only one or more sub-ranges of the selected
+   representation data in a successful response, rather than the entire
+   representation data.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/>
+  <x:ref>Range</x:ref> = <x:ref>byte-ranges-specifier</x:ref> / <x:ref>other-ranges-specifier</x:ref>
+  <x:ref>other-ranges-specifier</x:ref> = <x:ref>other-range-unit</x:ref> "=" <x:ref>other-range-set</x:ref>
+  <x:ref>other-range-set</x:ref> = 1*<x:ref>CHAR</x:ref>
+</artwork></figure>
+<t>
+   A server &MAY; ignore the Range header field. However, origin servers and
+   intermediate caches ought to support byte ranges when possible, since Range
+   supports efficient recovery from partially failed transfers and partial
+   retrieval of large representations. A server &MUST; ignore a Range header
+   field received with a request method other than GET.
+</t>
+<t>
+   An origin server &MUST; ignore a <x:ref>Range</x:ref> header field that
+   contains a range unit it does not understand. A proxy &MAY; either discard
+   a <x:ref>Range</x:ref> header field that contains a range unit it does not
+   understand or pass it to the next inbound server when forwarding the
+   request.
+</t>
+<t>
+   The Range header field is evaluated after evaluating the preconditions of
+   <xref target="Part4"/> and only if the result of their evaluation is
+   leading toward a <x:ref>200 (OK)</x:ref> response. In other words, Range
+   is ignored when a conditional GET would result in a
+   <x:ref>304 (Not Modified)</x:ref> response.
+</t>
+<t>
+   The If-Range header field (<xref target="header.if-range"/>) can be used as
+   a precondition to applying the Range header field.
+</t>
+<t>
+   If all of the preconditions are true, the server supports the Range header
+   field for the target resource, the specified range(s) are syntactically
+   correct (as defined in <xref target="byte.ranges"/>), and at least one of
+   the ranges has a non-empty intersection with the current selected
+   representation extent, then the server &MAY; respond with a status code of
+   <x:ref>206 (Partial Content)</x:ref> and a payload containing one or more
+   partial representations that correspond to those requested, as defined in
+   <xref target="range.response"/>.
+</t>
+</section>
+
+<section title="If-Range" anchor="header.if-range">
+  <iref primary="true" item="If-Range header field" x:for-anchor=""/>
+  <x:anchor-alias value="If-Range"/>
+<t>
+   If a client has a partial copy of a representation and wishes
+   to have an up-to-date copy of the entire representation, it could use the
+   <x:ref>Range</x:ref> header field with a conditional GET (using
+   either or both of <x:ref>If-Unmodified-Since</x:ref> and
+   <x:ref>If-Match</x:ref>.) However, if the condition fails because the
+   representation has been modified, the client would then have to make a
+   second request to obtain the entire current representation.
+</t>
+<t>
+   The "If-Range" header field allows a client to "short-circuit" the second
+   request. Informally, its meaning is: if the representation is unchanged,
+   send me the part(s) that I am requesting in Range; otherwise, send me the
+   entire representation.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Range"/>
+  <x:ref>If-Range</x:ref> = <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref>
+</artwork></figure>
+<t>
+   Clients &MUST-NOT; use an entity-tag marked as weak in an If-Range
+   field value and &MUST-NOT; use a <x:ref>Last-Modified</x:ref> date in an
+   If-Range field value unless it has no entity-tag for the representation and
+   the Last-Modified date it does have for the representation is strong
+   in the sense defined by &lastmod-comparison;.
+</t>
+<t>
+   A server that evaluates a conditional range request that is applicable
+   to one of its representations &MUST; evaluate the condition as false if
+   the entity-tag used as a validator is marked as weak or, when an HTTP-date
+   is used as the validator, if the date value is not strong in the sense
+   defined by &lastmod-comparison;. (A server can distinguish between a
+   valid HTTP-date and any form of entity-tag by examining the first
+   two characters.)
+</t>
+<t>
+   The If-Range header field &SHOULD; only be sent by clients together with
+   a Range header field.  The If-Range header field &MUST; be ignored if it
+   is received in a request that does not include a Range header field.
+   The If-Range header field &MUST; be ignored by a server that does not
+   support the sub-range operation.
+</t>
+<t>
+   If the validator given in the If-Range header field matches the current
+   validator for the selected representation of the target resource, then
+   the server &SHOULD; send the specified sub-range of the representation
+   using a <x:ref>206 (Partial Content)</x:ref> response. If the validator
+   does not match, then the server &SHOULD; send the entire representation
+   using a <x:ref>200 (OK)</x:ref> response.
+</t>
+</section>
 </section>
 
 
@@ -468,104 +608,6 @@ Content-Type: image/gif
 </t>
 </section>
 
-<section title="Combining Ranges" anchor="combining.byte.ranges">
-<t>
-   A response might transfer only a subrange of a representation if the
-   connection closed prematurely or if the request used one or more Range
-   specifications.  After several such transfers, a client might have
-   received several ranges of the same representation.  These ranges can only
-   be safely combined if they all have in common the same strong validator,
-   where "strong validator" is defined to be either an entity-tag that is
-   not marked as weak (&entity-tags;) or, if no entity-tag is provided, a
-   <x:ref>Last-Modified</x:ref> value that is strong in the sense defined by
-   &lastmod-comparison;.
-</t>
-<t>
-   When a client receives an incomplete <x:ref>200 (OK)</x:ref> response or a
-   <x:ref>206 (Partial Content)</x:ref> response, and already has one or more
-   partial responses for the same method and effective request URI that have
-   the same strong validator as present in the new response,
-   the recipient &MAY; combine some or all of those responses into a set of
-   continuous ranges. A client &MUST-NOT; combine responses that differ in the
-   strong validator or that do not have a strong validator.
-</t>
-<t>
-   If the new response is an incomplete <x:ref>200 (OK)</x:ref> response, then
-   the header fields of that new response are used for any combined response
-   and replace those of the matching stored responses.
-</t>
-<t>
-   If the new response is a <x:ref>206 (Partial Content)</x:ref> response and
-   at least one of the matching stored responses is a <x:ref>200 (OK)</x:ref>,
-   then the combined response header fields consist of the most recent 200
-   response's header fields. If all of the matching stored responses are 206
-   responses, then the stored response with the most recent header fields is
-   used as the source of header fields for the combined response, except that
-   the client &MUST; use other header fields provided in the new response,
-   aside from <x:ref>Content-Range</x:ref>, to replace all instances of the
-   corresponding header fields in the stored response.
-</t>
-<t>
-   The combined response message body consists of the union of partial
-   content ranges in the new response and each of the selected responses.
-   If the union consists of the entire range of the representation, then the
-   client &MUST; record the combined response as if it were a complete
-   <x:ref>200 (OK)</x:ref> response, including a <x:ref>Content-Length</x:ref>
-   header field that reflects the complete length.
-   Otherwise, the client &MUST; record the set of continuous ranges as one of
-   the following:
-   an incomplete <x:ref>200 (OK)</x:ref> response if the combined response is
-   a prefix of the representation,
-   a single <x:ref>206 (Partial Content)</x:ref> response containing a
-   multipart/byteranges body, or
-   multiple <x:ref>206 (Partial Content)</x:ref> responses, each with one
-   continuous range that is indicated by a <x:ref>Content-Range</x:ref> header
-   field.
-</t>
-</section>
-</section>
-
-<section title="Header Field Definitions" anchor="header.field.definitions">
-<t>
-   This section defines the syntax and semantics of HTTP/1.1 header fields
-   related to range requests and partial responses.
-</t>
-
-<section title="Accept-Ranges" anchor="header.accept-ranges">
-  <iref primary="true" item="Accept-Ranges header field" x:for-anchor=""/>
-  <x:anchor-alias value="Accept-Ranges"/>
-  <x:anchor-alias value="acceptable-ranges"/>
-<t>
-   The "Accept-Ranges" header field allows a resource to indicate
-   its acceptance of range requests.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Ranges"/><iref primary="true" item="Grammar" subitem="acceptable-ranges"/>
-  <x:ref>Accept-Ranges</x:ref>     = <x:ref>acceptable-ranges</x:ref>
-  <x:ref>acceptable-ranges</x:ref> = 1#<x:ref>range-unit</x:ref> / "none"
-</artwork></figure>
-<t>
-   Origin servers that accept byte-range requests &MAY; send
-</t>
-<figure><artwork type="example">
-  Accept-Ranges: bytes
-</artwork></figure>
-<t>
-   but are not required to do so. Clients &MAY; generate range
-   requests without having received this header field for the resource
-   involved. Range units are defined in <xref target="range.units"/>.
-</t>
-<t>
-   Servers that do not accept any kind of range request for a
-   resource &MAY; send
-</t>
-<figure><artwork type="example">
-  Accept-Ranges: none
-</artwork></figure>
-<t>
-   to advise the client not to attempt a range request.
-</t>
-</section>
-
 <section title="Content-Range" anchor="header.content-range">
   <iref primary="true" item="Content-Range header field" x:for-anchor=""/>
   <x:anchor-alias value="Content-Range"/>
@@ -690,110 +732,59 @@ Content-Type: image/gif
 </t>
 </section>
 
-<section title="If-Range" anchor="header.if-range">
-  <iref primary="true" item="If-Range header field" x:for-anchor=""/>
-  <x:anchor-alias value="If-Range"/>
+<section title="Combining Ranges" anchor="combining.byte.ranges">
 <t>
-   If a client has a partial copy of a representation and wishes
-   to have an up-to-date copy of the entire representation, it could use the
-   <x:ref>Range</x:ref> header field with a conditional GET (using
-   either or both of <x:ref>If-Unmodified-Since</x:ref> and
-   <x:ref>If-Match</x:ref>.) However, if the condition fails because the
-   representation has been modified, the client would then have to make a
-   second request to obtain the entire current representation.
+   A response might transfer only a subrange of a representation if the
+   connection closed prematurely or if the request used one or more Range
+   specifications.  After several such transfers, a client might have
+   received several ranges of the same representation.  These ranges can only
+   be safely combined if they all have in common the same strong validator,
+   where "strong validator" is defined to be either an entity-tag that is
+   not marked as weak (&entity-tags;) or, if no entity-tag is provided, a
+   <x:ref>Last-Modified</x:ref> value that is strong in the sense defined by
+   &lastmod-comparison;.
 </t>
 <t>
-   The "If-Range" header field allows a client to "short-circuit" the second
-   request. Informally, its meaning is: if the representation is unchanged,
-   send me the part(s) that I am requesting in Range; otherwise, send me the
-   entire representation.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Range"/>
-  <x:ref>If-Range</x:ref> = <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref>
-</artwork></figure>
-<t>
-   Clients &MUST-NOT; use an entity-tag marked as weak in an If-Range
-   field value and &MUST-NOT; use a <x:ref>Last-Modified</x:ref> date in an
-   If-Range field value unless it has no entity-tag for the representation and
-   the Last-Modified date it does have for the representation is strong
-   in the sense defined by &lastmod-comparison;.
+   When a client receives an incomplete <x:ref>200 (OK)</x:ref> response or a
+   <x:ref>206 (Partial Content)</x:ref> response, and already has one or more
+   partial responses for the same method and effective request URI that have
+   the same strong validator as present in the new response,
+   the recipient &MAY; combine some or all of those responses into a set of
+   continuous ranges. A client &MUST-NOT; combine responses that differ in the
+   strong validator or that do not have a strong validator.
 </t>
 <t>
-   A server that evaluates a conditional range request that is applicable
-   to one of its representations &MUST; evaluate the condition as false if
-   the entity-tag used as a validator is marked as weak or, when an HTTP-date
-   is used as the validator, if the date value is not strong in the sense
-   defined by &lastmod-comparison;. (A server can distinguish between a
-   valid HTTP-date and any form of entity-tag by examining the first
-   two characters.)
+   If the new response is an incomplete <x:ref>200 (OK)</x:ref> response, then
+   the header fields of that new response are used for any combined response
+   and replace those of the matching stored responses.
 </t>
 <t>
-   The If-Range header field &SHOULD; only be sent by clients together with
-   a Range header field.  The If-Range header field &MUST; be ignored if it
-   is received in a request that does not include a Range header field.
-   The If-Range header field &MUST; be ignored by a server that does not
-   support the sub-range operation.
+   If the new response is a <x:ref>206 (Partial Content)</x:ref> response and
+   at least one of the matching stored responses is a <x:ref>200 (OK)</x:ref>,
+   then the combined response header fields consist of the most recent 200
+   response's header fields. If all of the matching stored responses are 206
+   responses, then the stored response with the most recent header fields is
+   used as the source of header fields for the combined response, except that
+   the client &MUST; use other header fields provided in the new response,
+   aside from <x:ref>Content-Range</x:ref>, to replace all instances of the
+   corresponding header fields in the stored response.
 </t>
 <t>
-   If the validator given in the If-Range header field matches the current
-   validator for the selected representation of the target resource, then
-   the server &SHOULD; send the specified sub-range of the representation
-   using a <x:ref>206 (Partial Content)</x:ref> response. If the validator
-   does not match, then the server &SHOULD; send the entire representation
-   using a <x:ref>200 (OK)</x:ref> response.
-</t>
-</section>
-
-<section title="Range" anchor="header.range">
-  <iref primary="true" item="Range header field" x:for-anchor=""/>
-  <x:anchor-alias value="Range"/>
-  <x:anchor-alias value="other-ranges-specifier"/>
-  <x:anchor-alias value="other-range-set"/>
-<t>
-   The "Range" header field on a GET request modifies the method semantics to
-   request transfer of only one or more sub-ranges of the selected
-   representation data in a successful response, rather than the entire
-   representation data.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/>
-  <x:ref>Range</x:ref> = <x:ref>byte-ranges-specifier</x:ref> / <x:ref>other-ranges-specifier</x:ref>
-  <x:ref>other-ranges-specifier</x:ref> = <x:ref>other-range-unit</x:ref> "=" <x:ref>other-range-set</x:ref>
-  <x:ref>other-range-set</x:ref> = 1*<x:ref>CHAR</x:ref>
-</artwork></figure>
-<t>
-   A server &MAY; ignore the Range header field. However, origin servers and
-   intermediate caches ought to support byte ranges when possible, since Range
-   supports efficient recovery from partially failed transfers and partial
-   retrieval of large representations. A server &MUST; ignore a Range header
-   field received with a request method other than GET.
-</t>
-<t>
-   An origin server &MUST; ignore a <x:ref>Range</x:ref> header field that
-   contains a range unit it does not understand. A proxy &MAY; either discard
-   a <x:ref>Range</x:ref> header field that contains a range unit it does not
-   understand or pass it to the next inbound server when forwarding the
-   request.
-</t>
-<t>
-   The Range header field is evaluated after evaluating the preconditions of
-   <xref target="Part4"/> and only if the result of their evaluation is
-   leading toward a <x:ref>200 (OK)</x:ref> response. In other words, Range
-   is ignored when a conditional GET would result in a
-   <x:ref>304 (Not Modified)</x:ref> response.
-</t>
-<t>
-   The If-Range header field (<xref target="header.if-range"/>) can be used as
-   a precondition to applying the Range header field.
-</t>
-<t>
-   If all of the preconditions are true, the server supports the Range header
-   field for the target resource, the specified range(s) are syntactically
-   correct (as defined in <xref target="byte.ranges"/>), and at least one of
-   the ranges has a non-empty intersection with the current selected
-   representation extent, then the server &MAY; respond with a status code of
-   <x:ref>206 (Partial Content)</x:ref> and a payload containing one or more
-   partial representations that correspond to those requested, as defined in
-   <xref target="range.response"/>.
+   The combined response message body consists of the union of partial
+   content ranges in the new response and each of the selected responses.
+   If the union consists of the entire range of the representation, then the
+   client &MUST; record the combined response as if it were a complete
+   <x:ref>200 (OK)</x:ref> response, including a <x:ref>Content-Length</x:ref>
+   header field that reflects the complete length.
+   Otherwise, the client &MUST; record the set of continuous ranges as one of
+   the following:
+   an incomplete <x:ref>200 (OK)</x:ref> response if the combined response is
+   a prefix of the representation,
+   a single <x:ref>206 (Partial Content)</x:ref> response containing a
+   multipart/byteranges body, or
+   multiple <x:ref>206 (Partial Content)</x:ref> responses, each with one
+   continuous range that is indicated by a <x:ref>Content-Range</x:ref> header
+   field.
 </t>
 </section>
 </section>
