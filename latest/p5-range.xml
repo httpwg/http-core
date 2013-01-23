@@ -479,7 +479,19 @@
 
 
 <section title="Responses to a Range Request" anchor="range.response">
-<section title="Response to a Single and Multiple Ranges Request">
+
+<section title="206 Partial Content" anchor="status.206">
+  <iref primary="true" item="206 Partial Content (status code)" x:for-anchor=""/>
+  <x:anchor-alias value="206"/>
+  <x:anchor-alias value="206 (Partial Content)"/>
+<t>
+   The <x:dfn>206 (Partial Content)</x:dfn> status code indicates that the
+   server has fulfilled the partial GET request for the resource.
+   The request &MUST; have included a <x:ref>Range</x:ref> header field
+   (<xref target="header.range"/>) indicating the desired range, and &MAY; have
+   included an <x:ref>If-Range</x:ref> header field
+   (<xref target="header.if-range"/>) to make the request conditional.
+</t>
 <t>
    When an HTTP message includes the content of a single range (for
    example, a response to a request for a single range, or to a request
@@ -520,35 +532,19 @@ Content-Type: image/gif
    server &SHOULD; send them in the order that they appeared in the
    request.
 </t>
-</section>
-
-<section title="206 Partial Content" anchor="status.206">
-  <iref primary="true" item="206 Partial Content (status code)" x:for-anchor=""/>
-  <x:anchor-alias value="206"/>
-  <x:anchor-alias value="206 (Partial Content)"/>
-<t>
-   The <x:dfn>206 (Partial Content)</x:dfn> status code indicates that the
-   server has fulfilled the partial GET request for the resource.
-   The request &MUST; have included a <x:ref>Range</x:ref> header field
-   (<xref target="header.range"/>) indicating the desired range, and &MAY; have
-   included an <x:ref>If-Range</x:ref> header field
-   (<xref target="header.if-range"/>) to make the request conditional.
-</t>
 <t>
    When a 206 response is generated, the sender &MUST; generate the following
    header fields:
   <list style="symbols">
     <t>
         Either a <x:ref>Content-Range</x:ref> header field
-        (<xref target="header.content-range"/>) indicating
-        the range included with this response, or a multipart/byteranges
-        <x:ref>Content-Type</x:ref> including Content-Range fields for each
-        part. If a <x:ref>Content-Length</x:ref> header field is present in the
-        response, its value &MUST; match the actual number of octets
-        transmitted in the message body.
+        (<xref target="header.content-range"/>) indicating the single range
+        included with this response, or a multipart/byteranges
+        <x:ref>Content-Type</x:ref> indicating that multiple ranges are
+        enclosed as multipart body-parts.
     </t>
     <t>
-        Date
+        <x:ref>Date</x:ref>
     </t>
     <t>
         <x:ref>Cache-Control</x:ref>, <x:ref>ETag</x:ref>,
@@ -570,44 +566,6 @@ Content-Type: image/gif
    Caches &MAY; use a heuristic (see &p6-heuristic;) to determine 
    freshness for 206 responses.
 </t>
-</section>
-
-<section title="416 Range Not Satisfiable" anchor="status.416">
-  <iref primary="true" item="416 Range Not Satisfiable (status code)" x:for-anchor=""/>
-  <x:anchor-alias value="416 (Range Not Satisfiable)"/>
-<t>
-   The <x:dfn>416 (Range Not Satisfiable)</x:dfn> status code
-   indicates that none of the ranges-specifier values in the request's
-   <x:ref>Range</x:ref> header field (<xref target="header.range"/>)
-   overlap the current
-   extent of the selected resource and the request did not include an
-   <x:ref>If-Range</x:ref> header field (<xref target="header.if-range"/>).
-   (For byte-ranges, this means that the first-byte-pos of all of the
-   byte-range-spec values were greater than the current length of the selected
-   representation.)
-</t>
-<t>
-   When this status code is sent in response to a byte-range request, the
-   sender &SHOULD; generate a <x:ref>Content-Range</x:ref> header field
-   specifying the current length of the selected representation
-   (see <xref target="header.content-range"/>).
-</t>
-<figure>
-<preamble>For example:</preamble>
-<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
-HTTP/1.1 416 Range Not Satisfiable
-Date: Mon, 20 Jan 2012 15:41:54 GMT
-Content-Range: bytes */47022
-Content-Type: image/gif
-</artwork></figure>
-<x:note>
-  <t>
-    &Note; Clients cannot depend on servers to send a <x:ref>416 (Range Not
-    Satisfiable)</x:ref> response instead of a <x:ref>200 (OK)</x:ref>
-    response for an unsatisfiable <x:ref>Range</x:ref> header field, since not
-    all servers implement this header field.
-  </t>
-</x:note>
 </section>
 
 <section title="Content-Range" anchor="header.content-range">
@@ -787,6 +745,44 @@ Content-Type: image/gif
    continuous range that is indicated by a <x:ref>Content-Range</x:ref> header
    field.
 </t>
+</section>
+
+<section title="416 Range Not Satisfiable" anchor="status.416">
+  <iref primary="true" item="416 Range Not Satisfiable (status code)" x:for-anchor=""/>
+  <x:anchor-alias value="416 (Range Not Satisfiable)"/>
+<t>
+   The <x:dfn>416 (Range Not Satisfiable)</x:dfn> status code
+   indicates that none of the ranges-specifier values in the request's
+   <x:ref>Range</x:ref> header field (<xref target="header.range"/>)
+   overlap the current
+   extent of the selected resource and the request did not include an
+   <x:ref>If-Range</x:ref> header field (<xref target="header.if-range"/>).
+   (For byte-ranges, this means that the first-byte-pos of all of the
+   byte-range-spec values were greater than the current length of the selected
+   representation.)
+</t>
+<t>
+   When this status code is sent in response to a byte-range request, the
+   sender &SHOULD; generate a <x:ref>Content-Range</x:ref> header field
+   specifying the current length of the selected representation
+   (see <xref target="header.content-range"/>).
+</t>
+<figure>
+<preamble>For example:</preamble>
+<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 416 Range Not Satisfiable
+Date: Mon, 20 Jan 2012 15:41:54 GMT
+Content-Range: bytes */47022
+Content-Type: image/gif
+</artwork></figure>
+<x:note>
+  <t>
+    &Note; Clients cannot depend on servers to send a <x:ref>416 (Range Not
+    Satisfiable)</x:ref> response instead of a <x:ref>200 (OK)</x:ref>
+    response for an unsatisfiable <x:ref>Range</x:ref> header field, since not
+    all servers implement this header field.
+  </t>
+</x:note>
 </section>
 </section>
 
@@ -977,6 +973,7 @@ Content-Type: image/gif
     <x:defines>410 (Gone)</x:defines>
     <x:defines>Content-Location</x:defines>
     <x:defines>Content-Type</x:defines>
+    <x:defines>Date</x:defines>
     <x:defines>Location</x:defines>
     <x:defines>Vary</x:defines>
   </x:source>
