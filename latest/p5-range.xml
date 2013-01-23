@@ -228,13 +228,14 @@
   <x:ref>last-byte-pos</x:ref>   = 1*<x:ref>DIGIT</x:ref>
 </artwork></figure>
 <t>
-   The first-byte-pos value in a byte-range-spec gives the byte-offset
-   of the first byte in a range. The last-byte-pos value gives the
-   byte-offset of the last byte in the range; that is, the byte
-   positions specified are inclusive. Byte offsets start at zero.
+   The <x:ref>first-byte-pos</x:ref> value in a <x:ref>byte-range-spec</x:ref>
+   gives the byte-offset of the first byte in a range.
+   The <x:ref>last-byte-pos</x:ref> value gives the byte-offset of the last
+   byte in the range; that is, the byte positions specified are inclusive.
+   Byte offsets start at zero.
 </t>
 <t>
-   Examples of byte-ranges-specifier values:
+   Examples of <x:ref>byte-ranges-specifier</x:ref> values:
   <list style="symbols">
      <t>The first 500 bytes (byte offsets 0-499, inclusive):
 <figure><artwork type="example" x:indent-with="   ">
@@ -249,33 +250,31 @@
   </list>
 </t>
 <t>
-   If the last-byte-pos value is present, it &MUST; be greater than or
-   equal to the first-byte-pos in that byte-range-spec, or the byte-range-spec
-   is syntactically invalid. The recipient of a byte-range-set
-   that includes one or more syntactically invalid byte-range-spec
-   values &MUST; ignore the header field that includes that byte-range-set.
+   A <x:ref>byte-range-spec</x:ref> is invalid if the
+   <x:ref>last-byte-pos</x:ref> value is present and less than the
+   <x:ref>first-byte-pos</x:ref>.
 </t>
 <t>
-   If the last-byte-pos value is absent, or if the value is greater than
-   or equal to the current length of the representation data, last-byte-pos is
-   taken to be equal to one less than the current length of the representation
-   in bytes.
+   A client can limit the number of bytes requested without knowing the size
+   of the selected representation.
+   If the <x:ref>last-byte-pos</x:ref> value is absent, or if the value is
+   greater than or equal to the current length of the representation data, the
+   byte range is interpreted as the remainder of the representation (i.e., the
+   server replaces the value of <x:ref>last-byte-pos</x:ref> with a value that
+   is one less than the current length of the selected representation).
 </t>
 <t>
-   By its choice of last-byte-pos, a client can limit the number of
-   bytes retrieved without knowing the size of the representation.
+   A client can request the last N bytes of the selected representation using
+   a <x:ref>suffix-byte-range-spec</x:ref>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="suffix-byte-range-spec"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
   <x:ref>suffix-byte-range-spec</x:ref> = "-" <x:ref>suffix-length</x:ref>
   <x:ref>suffix-length</x:ref> = 1*<x:ref>DIGIT</x:ref>
 </artwork></figure>
 <t>
-   A suffix-byte-range-spec is used to specify the suffix of the
-   representation data, of a length given by the suffix-length value. (That is,
-   this form specifies the last N bytes of a representation.) If the
-   representation is shorter than the specified suffix-length, the entire
-   representation is used. For example (assuming a representation of
-   length 10000):
+   If the selected representation is shorter than the specified
+   <x:ref>suffix-length</x:ref>, the entire representation is used.
+   For example (assuming a representation of length 10000):
   <list style="symbols">
      <t>The final 500 bytes (byte offsets 9500-9999, inclusive):
 <figure><artwork type="example" x:indent-with="   ">
@@ -301,23 +300,20 @@
   </list>
 </t>
 <t>
-   If a syntactically valid byte-range-set includes at least one byte-range-spec
-   whose first-byte-pos is less than the current length of
-   the representation, or at least one suffix-byte-range-spec with a non-zero
-   suffix-length, then the byte-range-set is satisfiable.
-   Otherwise, the byte-range-set is unsatisfiable. If the byte-range-set
-   is unsatisfiable, the server &SHOULD; send a response with a 
-   <x:ref>416 (Range Not Satisfiable)</x:ref> status code. Otherwise, the server
-   &SHOULD; send a response with a <x:ref>206 (Partial Content)</x:ref> status code
-   containing the satisfiable ranges of the representation.
+   If a valid <x:ref>byte-range-set</x:ref> includes at least one
+   <x:ref>byte-range-spec</x:ref> with a <x:ref>first-byte-pos</x:ref> that is
+   less than the current length of the representation, or at least one
+   <x:ref>suffix-byte-range-spec</x:ref> with a non-zero
+   <x:ref>suffix-length</x:ref>, then the <x:ref>byte-range-set</x:ref> is
+   satisfiable. Otherwise, the <x:ref>byte-range-set</x:ref> is unsatisfiable.
 </t>
 <t>
    In the byte range syntax, <x:ref>first-byte-pos</x:ref>,
    <x:ref>last-byte-pos</x:ref>, and <x:ref>suffix-length</x:ref> are
-   expressed as decimal number of octets.  Since there is no predefined limit
-   to the length of a payload, recipients &SHOULD; anticipate
-   potentially large decimal numerals and prevent parsing errors due to integer
-   conversion overflows.
+   expressed as decimal number of octets. Since there is no predefined limit
+   to the length of a payload, recipients ought to anticipate potentially
+   large decimal numerals and prevent parsing errors due to integer conversion
+   overflows.
 </t>
 </section>
 
@@ -337,15 +333,15 @@
   <x:anchor-alias value="Accept-Ranges"/>
   <x:anchor-alias value="acceptable-ranges"/>
 <t>
-   The "Accept-Ranges" header field allows a resource to indicate
-   its acceptance of range requests.
+   The "Accept-Ranges" header field allows a server to indicate that it
+   supports range requests for the target resource.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Ranges"/><iref primary="true" item="Grammar" subitem="acceptable-ranges"/>
   <x:ref>Accept-Ranges</x:ref>     = <x:ref>acceptable-ranges</x:ref>
   <x:ref>acceptable-ranges</x:ref> = 1#<x:ref>range-unit</x:ref> / "none"
 </artwork></figure>
 <t>
-   Origin servers that accept byte-range requests &MAY; send
+   Origin servers that support byte-range requests &MAY; send
 </t>
 <figure><artwork type="example">
   Accept-Ranges: bytes
@@ -356,8 +352,8 @@
    involved. Range units are defined in <xref target="range.units"/>.
 </t>
 <t>
-   Servers that do not accept any kind of range request for a
-   resource &MAY; send
+   Servers that do not support any kind of range request for the target
+   resource resource &MAY; send
 </t>
 <figure><artwork type="example">
   Accept-Ranges: none
@@ -377,9 +373,8 @@
   <x:anchor-alias value="other-range-set"/>
 <t>
    The "Range" header field on a GET request modifies the method semantics to
-   request transfer of only one or more sub-ranges of the selected
-   representation data in a successful response, rather than the entire
-   representation data.
+   request transfer of only one or more subranges of the selected
+   representation data, rather than the entire selected representation data.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/>
   <x:ref>Range</x:ref> = <x:ref>byte-ranges-specifier</x:ref> / <x:ref>other-ranges-specifier</x:ref>
@@ -394,11 +389,10 @@
    field received with a request method other than GET.
 </t>
 <t>
-   An origin server &MUST; ignore a <x:ref>Range</x:ref> header field that
-   contains a range unit it does not understand. A proxy &MAY; either discard
-   a <x:ref>Range</x:ref> header field that contains a range unit it does not
-   understand or pass it to the next inbound server when forwarding the
-   request.
+   An origin server &MUST; ignore a Range header field that contains a range
+   unit it does not understand. A proxy &MAY; either discard a Range header
+   field that contains a range unit it does not understand or pass it to the
+   next inbound server when forwarding the request.
 </t>
 <t>
    The Range header field is evaluated after evaluating the preconditions of
@@ -413,13 +407,18 @@
 </t>
 <t>
    If all of the preconditions are true, the server supports the Range header
-   field for the target resource, the specified range(s) are syntactically
-   correct (as defined in <xref target="byte.ranges"/>), and at least one of
-   the ranges has a non-empty intersection with the current selected
-   representation extent, then the server &MAY; respond with a status code of
-   <x:ref>206 (Partial Content)</x:ref> and a payload containing one or more
-   partial representations that correspond to those requested, as defined in
+   field for the target resource, and the specified range(s) are valid and
+   satisfiable (as defined in <xref target="byte.ranges"/>), the
+   server &SHOULD; send a <x:ref>206 (Partial Content)</x:ref> response with a
+   payload containing one or more partial representations that correspond to
+   the satisfiable ranges requested, as defined in
    <xref target="range.response"/>.
+</t>
+<t>
+   If all of the preconditions are true, the server supports the Range header
+   field for the target resource, and the specified range(s) are invalid or
+   unsatisfiable, the server &SHOULD; send a
+   <x:ref>416 (Range Not Satisfiable)</x:ref> response.
 </t>
 </section>
 
@@ -461,19 +460,19 @@
    two characters.)
 </t>
 <t>
-   The If-Range header field &SHOULD; only be sent by clients together with
-   a Range header field.  The If-Range header field &MUST; be ignored if it
-   is received in a request that does not include a Range header field.
-   The If-Range header field &MUST; be ignored by a server that does not
-   support the sub-range operation.
+   A client &MUST-NOT; generate an If-Range header field in a request that
+   does not contain a <x:ref>Range</x:ref> header field.
+   A server &MUST; ignore an If-Range header field received in a request that
+   does not contain a <x:ref>Range</x:ref> header field.
+   An origin server &MUST; ignore an If-Range header field received in a
+   request for a target resource that does not support Range requests.
 </t>
 <t>
    If the validator given in the If-Range header field matches the current
    validator for the selected representation of the target resource, then
-   the server &SHOULD; send the specified sub-range of the representation
-   using a <x:ref>206 (Partial Content)</x:ref> response. If the validator
-   does not match, then the server &SHOULD; send the entire representation
-   using a <x:ref>200 (OK)</x:ref> response.
+   the server &SHOULD; process the Range header field as requested.
+   If the validator does not match, then the server &MUST; ignore the
+   <x:ref>Range</x:ref> header field.
 </t>
 </section>
 </section>
