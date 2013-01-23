@@ -486,19 +486,16 @@
   <x:anchor-alias value="206 (Partial Content)"/>
 <t>
    The <x:dfn>206 (Partial Content)</x:dfn> status code indicates that the
-   server has fulfilled the partial GET request for the resource.
-   The request &MUST; have included a <x:ref>Range</x:ref> header field
-   (<xref target="header.range"/>) indicating the desired range, and &MAY; have
-   included an <x:ref>If-Range</x:ref> header field
-   (<xref target="header.if-range"/>) to make the request conditional.
+   server is successfully fulfilling a range request for the target resource
+   by transferring one or more parts of the selected representation that
+   correspond to the satisfiable ranges found in the requests's
+   <x:ref>Range</x:ref> header field (<xref target="header.range"/>).
 </t>
 <t>
-   When an HTTP message includes the content of a single range (for
-   example, a response to a request for a single range, or to a request
-   for a set of ranges that overlap without any holes), this content is
-   transmitted with a <x:ref>Content-Range</x:ref> header field, and a
-   <x:ref>Content-Length</x:ref> header field showing the number of bytes
-   actually transferred. For example,
+   If a single part is being transferred, the server generating the 206
+   response &MUST; generate a <x:ref>Content-Range</x:ref> header field,
+   describing what range of the selected representation is enclosed, and a
+   payload consisting of the range. For example:
 </t>
 <figure><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
 HTTP/1.1 206 Partial Content
@@ -507,14 +504,37 @@ Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
 Content-Range: bytes 21010-47021/47022
 Content-Length: 26012
 Content-Type: image/gif
+
+... 26012 bytes of image data ...
 </artwork></figure>
 <t>
-   When an HTTP message includes the content of multiple ranges (for
-   example, a response to a request for multiple non-overlapping
-   ranges), these are transmitted as a multipart message. The multipart
-   media type used for this purpose is "multipart/byteranges" as defined
-   in <xref target="internet.media.type.multipart.byteranges"/>.
+   If multiple parts are being transferred, the server generating the 206
+   response &MUST; generate a "multipart/byteranges" payload, as defined
+   in <xref target="internet.media.type.multipart.byteranges"/>, and send a
+   <x:ref>Content-Type</x:ref> header field containing the
+   "multipart/byteranges" media type and its required boundary parameter.
+   For example:
 </t>
+<figure><preamble>
+</preamble><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 206 Partial Content
+Date: Wed, 15 Nov 1995 06:25:24 GMT
+Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
+Content-Length: 1741
+Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+
+--THIS_STRING_SEPARATES
+Content-Type: application/pdf
+Content-Range: bytes 500-999/8000
+
+...the first range...
+--THIS_STRING_SEPARATES
+Content-Type: application/pdf
+Content-Range: bytes 7000-7999/8000
+
+...the second range
+--THIS_STRING_SEPARATES--
+</artwork></figure>
 <t>
    A server &MAY; combine requested ranges when those ranges are overlapping
    (see <xref target="overlapping.ranges"/>).
@@ -817,7 +837,7 @@ Content-Type: image/gif
    below:
 </t>
 <texttable align="left" suppress-title="true" anchor="iana.range.units.table">
-   <ttcol>Range Specifier Name</ttcol>
+   <ttcol>Range Unit Name</ttcol>
    <ttcol>Description</ttcol>
    <ttcol>Reference</ttcol>
 
@@ -1182,14 +1202,14 @@ Content-Type: image/gif
 <iref item="Media Type" subitem="multipart/byteranges" primary="true"/>
 <iref item="multipart/byteranges Media Type" primary="true"/>
 <t>
-   When an HTTP <x:ref>206 (Partial Content)</x:ref> response message includes the
-   content of multiple ranges (a response to a request for multiple
-   non-overlapping ranges), these are transmitted as a multipart
-   message body (<xref target="RFC2046" x:fmt="," x:sec="5.1"/>). The media type for this purpose is called
-   "multipart/byteranges".  The following is to be registered with IANA <xref target="BCP13"/>.
+   When a <x:ref>206 (Partial Content)</x:ref> response message includes the
+   content of multiple ranges, they are transmitted as body-parts in a
+   multipart message body (<xref target="RFC2046" x:fmt="," x:sec="5.1"/>)
+   with the media type of "multipart/byteranges".  The following definition is
+   to be registered with IANA <xref target="BCP13"/>.
 </t>
 <t>
-   The multipart/byteranges media type includes one or more parts, each
+   The multipart/byteranges media type includes one or more body-parts, each
    with its own <x:ref>Content-Type</x:ref> and <x:ref>Content-Range</x:ref>
    fields. The required boundary parameter specifies the boundary string used
    to separate each body-part.
@@ -1244,70 +1264,45 @@ Content-Type: image/gif
     </t>
   </list>
 </t>
-<x:note>
-  <t>
-    &Note; Despite the name "multipart/byteranges" is not limited to the byte ranges only.
-  </t>
-</x:note>
-<figure><preamble>
-   For example:
-</preamble><artwork type="example">
-  HTTP/1.1 206 Partial Content
-  Date: Wed, 15 Nov 1995 06:25:24 GMT
-  Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
-  Content-Length: 1741
-  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
-  
-  --THIS_STRING_SEPARATES
-  Content-Type: application/pdf
-  Content-Range: bytes 500-999/8000
-  
-  ...the first range...
-  --THIS_STRING_SEPARATES
-  Content-Type: application/pdf
-  Content-Range: bytes 7000-7999/8000
-  
-  ...the second range
-  --THIS_STRING_SEPARATES--
-</artwork></figure>
-<figure><preamble>
-   Another example, using the "exampleunit" range unit:
-</preamble>
-<artwork type="example">
-  HTTP/1.1 206 Partial Content
-  Date: Tue, 14 Nov 1995 06:25:24 GMT
-  Last-Modified: Tue, 14 July 04:58:08 GMT
-  Content-Length: 2331785
-  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
-  
-  --THIS_STRING_SEPARATES
-  Content-Type: video/example
-  Content-Range: exampleunit 1.2-4.3/25
-  
-  ...the first range...
-  --THIS_STRING_SEPARATES
-  Content-Type: video/example
-  Content-Range: exampleunit 11.2-14.3/25
-  
-  ...the second range
-  --THIS_STRING_SEPARATES--
-</artwork>
-</figure>
 <t>
-  Notes:
+  Implementation Notes:
   <list style="numbers">
-      <t>Additional CRLFs &MAY; precede the first boundary string in the body.</t>
+      <t>Additional CRLFs might precede the first boundary string in the body.</t>
 
       <t>Although <xref target="RFC2046"/> permits the boundary string to be
          quoted, some existing implementations handle a quoted boundary
          string incorrectly.</t>
 
       <t>A number of clients and servers were coded to an early draft
-         of the byteranges specification to use a media type of
-         multipart/x-byteranges<iref item="multipart/x-byteranges Media Type"/><iref item="Media Type" subitem="multipart/x-byteranges"/>, which is almost, but not quite
-         compatible with the version documented in HTTP/1.1.</t>
+         of the byteranges specification that used a media type of
+         multipart/x-byteranges<iref item="multipart/x-byteranges Media Type"/><iref item="Media Type" subitem="multipart/x-byteranges"/>,
+         which is almost (but not quite) compatible with this type.</t>
   </list>
 </t>
+<t>
+   Despite the name, the "multipart/byteranges" media type is not limited to
+   byte ranges. The following example uses an "exampleunit" range unit:
+</t>
+<figure><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 206 Partial Content
+Date: Tue, 14 Nov 1995 06:25:24 GMT
+Last-Modified: Tue, 14 July 04:58:08 GMT
+Content-Length: 2331785
+Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+
+--THIS_STRING_SEPARATES
+Content-Type: video/example
+Content-Range: exampleunit 1.2-4.3/25
+
+...the first range...
+--THIS_STRING_SEPARATES
+Content-Type: video/example
+Content-Range: exampleunit 11.2-14.3/25
+
+...the second range
+--THIS_STRING_SEPARATES--
+</artwork>
+</figure>
 </section>
 
 <section title="Changes from RFC 2616" anchor="changes.from.rfc.2616">
@@ -1330,7 +1325,7 @@ Content-Type: image/gif
   (<xref target="internet.media.type.multipart.byteranges"/>)
 </t>
 <t>
-  This specification introduces a Range Specifier Registry.
+  This specification introduces a Range Unit Registry.
   (<xref target="range.unit.registry"/>)
 </t>
 </section>

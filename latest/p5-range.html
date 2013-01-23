@@ -779,10 +779,11 @@ ul.ind li li {
       <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a>&nbsp;<a id="range.response" href="#range.response">Responses to a Range Request</a></h1>
       <div id="rfc.iref.20"></div>
       <h2 id="rfc.section.4.1"><a href="#rfc.section.4.1">4.1</a>&nbsp;<a id="status.206" href="#status.206">206 Partial Content</a></h2>
-      <p id="rfc.section.4.1.p.1">The <dfn>206 (Partial Content)</dfn> status code indicates that the server has fulfilled the partial GET request for the resource. The request <em class="bcp14">MUST</em> have included a <a href="#header.range" class="smpl">Range</a> header field (<a href="#header.range" id="rfc.xref.header.range.2" title="Range">Section&nbsp;3.1</a>) indicating the desired range, and <em class="bcp14">MAY</em> have included an <a href="#header.if-range" class="smpl">If-Range</a> header field (<a href="#header.if-range" id="rfc.xref.header.if-range.2" title="If-Range">Section&nbsp;3.2</a>) to make the request conditional.
+      <p id="rfc.section.4.1.p.1">The <dfn>206 (Partial Content)</dfn> status code indicates that the server is successfully fulfilling a range request for the target resource by transferring one
+         or more parts of the selected representation that correspond to the satisfiable ranges found in the requests's <a href="#header.range" class="smpl">Range</a> header field (<a href="#header.range" id="rfc.xref.header.range.2" title="Range">Section&nbsp;3.1</a>).
       </p>
-      <p id="rfc.section.4.1.p.2">When an HTTP message includes the content of a single range (for example, a response to a request for a single range, or to
-         a request for a set of ranges that overlap without any holes), this content is transmitted with a <a href="#header.content-range" class="smpl">Content-Range</a> header field, and a <a href="p1-messaging.html#header.content-length" class="smpl">Content-Length</a> header field showing the number of bytes actually transferred. For example,
+      <p id="rfc.section.4.1.p.2">If a single part is being transferred, the server generating the 206 response <em class="bcp14">MUST</em> generate a <a href="#header.content-range" class="smpl">Content-Range</a> header field, describing what range of the selected representation is enclosed, and a payload consisting of the range. For
+         example:
       </p>
       <div id="rfc.figure.u.17"></div><pre class="text">HTTP/1.1 206 Partial Content
 Date: Wed, 15 Nov 1995 06:25:24 GMT
@@ -790,17 +791,34 @@ Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
 Content-Range: bytes 21010-47021/47022
 Content-Length: 26012
 Content-Type: image/gif
-</pre><p id="rfc.section.4.1.p.4">When an HTTP message includes the content of multiple ranges (for example, a response to a request for multiple non-overlapping
-         ranges), these are transmitted as a multipart message. The multipart media type used for this purpose is "multipart/byteranges"
-         as defined in <a href="#internet.media.type.multipart.byteranges" title="Internet Media Type multipart/byteranges">Appendix&nbsp;A</a>.
+
+... 26012 bytes of image data ...
+</pre><p id="rfc.section.4.1.p.4">If multiple parts are being transferred, the server generating the 206 response <em class="bcp14">MUST</em> generate a "multipart/byteranges" payload, as defined in <a href="#internet.media.type.multipart.byteranges" title="Internet Media Type multipart/byteranges">Appendix&nbsp;A</a>, and send a <a href="p2-semantics.html#header.content-type" class="smpl">Content-Type</a> header field containing the "multipart/byteranges" media type and its required boundary parameter. For example:
       </p>
-      <p id="rfc.section.4.1.p.5">A server <em class="bcp14">MAY</em> combine requested ranges when those ranges are overlapping (see <a href="#overlapping.ranges" title="Overlapping Ranges">Section&nbsp;6.1</a>).
+      <div id="rfc.figure.u.18"></div><pre class="text">HTTP/1.1 206 Partial Content
+Date: Wed, 15 Nov 1995 06:25:24 GMT
+Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
+Content-Length: 1741
+Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+
+--THIS_STRING_SEPARATES
+Content-Type: application/pdf
+Content-Range: bytes 500-999/8000
+
+...the first range...
+--THIS_STRING_SEPARATES
+Content-Type: application/pdf
+Content-Range: bytes 7000-7999/8000
+
+...the second range
+--THIS_STRING_SEPARATES--
+</pre><p id="rfc.section.4.1.p.6">A server <em class="bcp14">MAY</em> combine requested ranges when those ranges are overlapping (see <a href="#overlapping.ranges" title="Overlapping Ranges">Section&nbsp;6.1</a>).
       </p>
-      <p id="rfc.section.4.1.p.6">A response to a request for a single range <em class="bcp14">MUST NOT</em> be sent using the multipart/byteranges media type. A response to a request for multiple ranges, whose result is a single range, <em class="bcp14">MAY</em> be sent as a multipart/byteranges media type with one part. A client that cannot decode a multipart/byteranges message <em class="bcp14">MUST NOT</em> ask for multiple ranges in a single request.
+      <p id="rfc.section.4.1.p.7">A response to a request for a single range <em class="bcp14">MUST NOT</em> be sent using the multipart/byteranges media type. A response to a request for multiple ranges, whose result is a single range, <em class="bcp14">MAY</em> be sent as a multipart/byteranges media type with one part. A client that cannot decode a multipart/byteranges message <em class="bcp14">MUST NOT</em> ask for multiple ranges in a single request.
       </p>
-      <p id="rfc.section.4.1.p.7">When a client asks for multiple ranges in one request, the server <em class="bcp14">SHOULD</em> send them in the order that they appeared in the request.
+      <p id="rfc.section.4.1.p.8">When a client asks for multiple ranges in one request, the server <em class="bcp14">SHOULD</em> send them in the order that they appeared in the request.
       </p>
-      <p id="rfc.section.4.1.p.8">When a 206 response is generated, the sender <em class="bcp14">MUST</em> generate the following header fields: 
+      <p id="rfc.section.4.1.p.9">When a 206 response is generated, the sender <em class="bcp14">MUST</em> generate the following header fields: 
       </p>
       <ul>
          <li>Either a <a href="#header.content-range" class="smpl">Content-Range</a> header field (<a href="#header.content-range" id="rfc.xref.header.content-range.2" title="Content-Range">Section&nbsp;4.2</a>) indicating the single range included with this response, or a multipart/byteranges <a href="p2-semantics.html#header.content-type" class="smpl">Content-Type</a> indicating that multiple ranges are enclosed as multipart body-parts.
@@ -810,16 +828,16 @@ Content-Type: image/gif
          <li> <a href="p6-cache.html#header.cache-control" class="smpl">Cache-Control</a>, <a href="p4-conditional.html#header.etag" class="smpl">ETag</a>, <a href="p6-cache.html#header.expires" class="smpl">Expires</a>, <a href="p2-semantics.html#header.content-location" class="smpl">Content-Location</a> and/or <a href="p2-semantics.html#header.vary" class="smpl">Vary</a>, if the header field would have been sent in a <a href="p2-semantics.html#status.200" class="smpl">200 (OK)</a> response to the same request
          </li>
       </ul>
-      <p id="rfc.section.4.1.p.9">If a 206 is generated in response to a request with an <a href="#header.if-range" class="smpl">If-Range</a> header field, the sender <em class="bcp14">SHOULD NOT</em> generate other representation header fields beyond those described above. Otherwise, the sender <em class="bcp14">MUST</em> generate all of the same representation header fields that would have been sent in a <a href="p2-semantics.html#status.200" class="smpl">200 (OK)</a> response to the same request.
+      <p id="rfc.section.4.1.p.10">If a 206 is generated in response to a request with an <a href="#header.if-range" class="smpl">If-Range</a> header field, the sender <em class="bcp14">SHOULD NOT</em> generate other representation header fields beyond those described above. Otherwise, the sender <em class="bcp14">MUST</em> generate all of the same representation header fields that would have been sent in a <a href="p2-semantics.html#status.200" class="smpl">200 (OK)</a> response to the same request.
       </p>
-      <p id="rfc.section.4.1.p.10">Caches <em class="bcp14">MAY</em> use a heuristic (see <a href="p6-cache.html#heuristic.freshness" title="Calculating Heuristic Freshness">Section 4.1.2</a> of <a href="#Part6" id="rfc.xref.Part6.1"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Caching">[Part6]</cite></a>) to determine freshness for 206 responses.
+      <p id="rfc.section.4.1.p.11">Caches <em class="bcp14">MAY</em> use a heuristic (see <a href="p6-cache.html#heuristic.freshness" title="Calculating Heuristic Freshness">Section 4.1.2</a> of <a href="#Part6" id="rfc.xref.Part6.1"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Caching">[Part6]</cite></a>) to determine freshness for 206 responses.
       </p>
       <div id="rfc.iref.c.1"></div>
       <h2 id="rfc.section.4.2"><a href="#rfc.section.4.2">4.2</a>&nbsp;<a id="header.content-range" href="#header.content-range">Content-Range</a></h2>
       <p id="rfc.section.4.2.p.1">The "Content-Range" header field is sent with a partial representation to specify what range of the full representation is
          enclosed as payload.
       </p>
-      <div id="rfc.figure.u.18"></div><pre class="inline"><span id="rfc.iref.g.18"></span><span id="rfc.iref.g.19"></span><span id="rfc.iref.g.20"></span><span id="rfc.iref.g.21"></span><span id="rfc.iref.g.22"></span><span id="rfc.iref.g.23"></span><span id="rfc.iref.g.24"></span><span id="rfc.iref.g.25"></span>  <a href="#header.content-range" class="smpl">Content-Range</a>       = <a href="#header.content-range" class="smpl">byte-content-range</a>
+      <div id="rfc.figure.u.19"></div><pre class="inline"><span id="rfc.iref.g.18"></span><span id="rfc.iref.g.19"></span><span id="rfc.iref.g.20"></span><span id="rfc.iref.g.21"></span><span id="rfc.iref.g.22"></span><span id="rfc.iref.g.23"></span><span id="rfc.iref.g.24"></span><span id="rfc.iref.g.25"></span>  <a href="#header.content-range" class="smpl">Content-Range</a>       = <a href="#header.content-range" class="smpl">byte-content-range</a>
                       / <a href="#header.content-range" class="smpl">other-content-range</a>
                           
   <a href="#header.content-range" class="smpl">byte-content-range</a>  = <a href="#byte.ranges" class="smpl">bytes-unit</a> <a href="#imported.abnf" class="smpl">SP</a>
@@ -845,12 +863,12 @@ Content-Type: image/gif
          containing a <a href="#header.content-range" class="smpl">byte-range-resp</a> value that reflects the corresponding range being sent. The following example would apply when the complete length of the
          selected representation is known by the sender to be 1234 bytes:
       </p>
-      <div id="rfc.figure.u.19"></div><pre class="text">  Content-Range: bytes 42-1233/1234
+      <div id="rfc.figure.u.20"></div><pre class="text">  Content-Range: bytes 42-1233/1234
 </pre><p id="rfc.section.4.2.p.8">or this second example would apply when the complete length is unknown:</p>
-      <div id="rfc.figure.u.20"></div><pre class="text">  Content-Range: bytes 42-1233/*
+      <div id="rfc.figure.u.21"></div><pre class="text">  Content-Range: bytes 42-1233/*
 </pre><p id="rfc.section.4.2.p.10">A server generating a <a href="#status.416" class="smpl">416 (Range Not Satisfiable)</a> response to a byte range request <em class="bcp14">SHOULD</em> send a Content-Range header field with an <a href="#header.content-range" class="smpl">unsatisfied-range</a> value, as in the following example:
       </p>
-      <div id="rfc.figure.u.21"></div><pre class="text">  Content-Range: bytes */1234
+      <div id="rfc.figure.u.22"></div><pre class="text">  Content-Range: bytes */1234
 </pre><p id="rfc.section.4.2.p.12">The complete-length in a 416 response indicates the current length of the selected representation, which will be known by
          the server generating the response because that is how it determined the range to be unsatisfiable.
       </p>
@@ -860,16 +878,16 @@ Content-Type: image/gif
       <p id="rfc.section.4.2.p.14">More examples of Content-Range values, assuming that the representation contains a total of 1234 bytes: </p>
       <ul>
          <li>The first 500 bytes: 
-            <div id="rfc.figure.u.22"></div><pre class="text">  Content-Range: bytes 0-499/1234
+            <div id="rfc.figure.u.23"></div><pre class="text">  Content-Range: bytes 0-499/1234
 </pre> </li>
          <li>The second 500 bytes: 
-            <div id="rfc.figure.u.23"></div><pre class="text">  Content-Range: bytes 500-999/1234
+            <div id="rfc.figure.u.24"></div><pre class="text">  Content-Range: bytes 500-999/1234
 </pre> </li>
          <li>All except for the first 500 bytes: 
-            <div id="rfc.figure.u.24"></div><pre class="text">  Content-Range: bytes 500-1233/1234
+            <div id="rfc.figure.u.25"></div><pre class="text">  Content-Range: bytes 500-1233/1234
 </pre> </li>
          <li>The last 500 bytes: 
-            <div id="rfc.figure.u.25"></div><pre class="text">  Content-Range: bytes 734-1233/1234
+            <div id="rfc.figure.u.26"></div><pre class="text">  Content-Range: bytes 734-1233/1234
 </pre> </li>
       </ul>
       <h2 id="rfc.section.4.3"><a href="#rfc.section.4.3">4.3</a>&nbsp;<a id="combining.byte.ranges" href="#combining.byte.ranges">Combining Ranges</a></h2>
@@ -893,12 +911,12 @@ Content-Type: image/gif
       </p>
       <div id="rfc.iref.29"></div>
       <h2 id="rfc.section.4.4"><a href="#rfc.section.4.4">4.4</a>&nbsp;<a id="status.416" href="#status.416">416 Range Not Satisfiable</a></h2>
-      <p id="rfc.section.4.4.p.1">The <dfn>416 (Range Not Satisfiable)</dfn> status code indicates that none of the ranges-specifier values in the request's <a href="#header.range" class="smpl">Range</a> header field (<a href="#header.range" id="rfc.xref.header.range.3" title="Range">Section&nbsp;3.1</a>) overlap the current extent of the selected resource and the request did not include an <a href="#header.if-range" class="smpl">If-Range</a> header field (<a href="#header.if-range" id="rfc.xref.header.if-range.3" title="If-Range">Section&nbsp;3.2</a>). (For byte-ranges, this means that the first-byte-pos of all of the byte-range-spec values were greater than the current
+      <p id="rfc.section.4.4.p.1">The <dfn>416 (Range Not Satisfiable)</dfn> status code indicates that none of the ranges-specifier values in the request's <a href="#header.range" class="smpl">Range</a> header field (<a href="#header.range" id="rfc.xref.header.range.3" title="Range">Section&nbsp;3.1</a>) overlap the current extent of the selected resource and the request did not include an <a href="#header.if-range" class="smpl">If-Range</a> header field (<a href="#header.if-range" id="rfc.xref.header.if-range.2" title="If-Range">Section&nbsp;3.2</a>). (For byte-ranges, this means that the first-byte-pos of all of the byte-range-spec values were greater than the current
          length of the selected representation.)
       </p>
       <p id="rfc.section.4.4.p.2">When this status code is sent in response to a byte-range request, the sender <em class="bcp14">SHOULD</em> generate a <a href="#header.content-range" class="smpl">Content-Range</a> header field specifying the current length of the selected representation (see <a href="#header.content-range" id="rfc.xref.header.content-range.3" title="Content-Range">Section&nbsp;4.2</a>).
       </p>
-      <div id="rfc.figure.u.26"></div> 
+      <div id="rfc.figure.u.27"></div> 
       <p>For example:</p>  <pre class="text">HTTP/1.1 416 Range Not Satisfiable
 Date: Mon, 20 Jan 2012 15:41:54 GMT
 Content-Range: bytes */47022
@@ -930,7 +948,7 @@ Content-Type: image/gif
          <table class="tt full left" cellpadding="3" cellspacing="0">
             <thead>
                <tr>
-                  <th>Range Specifier Name</th>
+                  <th>Range Unit Name</th>
                   <th>Description</th>
                   <th>Reference</th>
                </tr>
@@ -1012,7 +1030,7 @@ Content-Type: image/gif
                   <td class="left">If-Range</td>
                   <td class="left">http</td>
                   <td class="left">standard</td>
-                  <td class="left"> <a href="#header.if-range" id="rfc.xref.header.if-range.4" title="If-Range">Section&nbsp;3.2</a> 
+                  <td class="left"> <a href="#header.if-range" id="rfc.xref.header.if-range.3" title="If-Range">Section&nbsp;3.2</a> 
                   </td>
                </tr>
                <tr>
@@ -1117,10 +1135,9 @@ Content-Type: image/gif
       <div id="rfc.iref.m.1"></div>
       <div id="rfc.iref.m.2"></div>
       <h1 id="rfc.section.A" class="np"><a href="#rfc.section.A">A.</a>&nbsp;<a id="internet.media.type.multipart.byteranges" href="#internet.media.type.multipart.byteranges">Internet Media Type multipart/byteranges</a></h1>
-      <p id="rfc.section.A.p.1">When an HTTP <a href="#status.206" class="smpl">206 (Partial Content)</a> response message includes the content of multiple ranges (a response to a request for multiple non-overlapping ranges), these
-         are transmitted as a multipart message body (<a href="#RFC2046" id="rfc.xref.RFC2046.1"><cite title="Multipurpose Internet Mail Extensions (MIME) Part Two: Media Types">[RFC2046]</cite></a>, <a href="http://tools.ietf.org/html/rfc2046#section-5.1">Section 5.1</a>). The media type for this purpose is called "multipart/byteranges". The following is to be registered with IANA <a href="#BCP13" id="rfc.xref.BCP13.1"><cite title="Media Type Specifications and Registration Procedures">[BCP13]</cite></a>.
+      <p id="rfc.section.A.p.1">When a <a href="#status.206" class="smpl">206 (Partial Content)</a> response message includes the content of multiple ranges, they are transmitted as body-parts in a multipart message body (<a href="#RFC2046" id="rfc.xref.RFC2046.1"><cite title="Multipurpose Internet Mail Extensions (MIME) Part Two: Media Types">[RFC2046]</cite></a>, <a href="http://tools.ietf.org/html/rfc2046#section-5.1">Section 5.1</a>) with the media type of "multipart/byteranges". The following definition is to be registered with IANA <a href="#BCP13" id="rfc.xref.BCP13.1"><cite title="Media Type Specifications and Registration Procedures">[BCP13]</cite></a>.
       </p>
-      <p id="rfc.section.A.p.2">The multipart/byteranges media type includes one or more parts, each with its own <a href="p2-semantics.html#header.content-type" class="smpl">Content-Type</a> and <a href="#header.content-range" class="smpl">Content-Range</a> fields. The required boundary parameter specifies the boundary string used to separate each body-part.
+      <p id="rfc.section.A.p.2">The multipart/byteranges media type includes one or more body-parts, each with its own <a href="p2-semantics.html#header.content-type" class="smpl">Content-Type</a> and <a href="#header.content-range" class="smpl">Content-Range</a> fields. The required boundary parameter specifies the boundary string used to separate each body-part.
       </p>
       <p id="rfc.section.A.p.3"> </p>
       <dl>
@@ -1163,56 +1180,35 @@ Content-Type: image/gif
          <dt>Author/Change controller:</dt>
          <dd>IESG</dd>
       </dl>
-      <div class="note" id="rfc.section.A.p.4"> 
-         <p> <b>Note:</b> Despite the name "multipart/byteranges" is not limited to the byte ranges only.
-         </p> 
-      </div>
-      <div id="rfc.figure.u.27"></div>
-      <p>For example:</p><pre class="text">  HTTP/1.1 206 Partial Content
-  Date: Wed, 15 Nov 1995 06:25:24 GMT
-  Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
-  Content-Length: 1741
-  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
-  
-  --THIS_STRING_SEPARATES
-  Content-Type: application/pdf
-  Content-Range: bytes 500-999/8000
-  
-  ...the first range...
-  --THIS_STRING_SEPARATES
-  Content-Type: application/pdf
-  Content-Range: bytes 7000-7999/8000
-  
-  ...the second range
-  --THIS_STRING_SEPARATES--
-</pre><div id="rfc.figure.u.28"></div>
-      <p>Another example, using the "exampleunit" range unit:</p>  <pre class="text">  HTTP/1.1 206 Partial Content
-  Date: Tue, 14 Nov 1995 06:25:24 GMT
-  Last-Modified: Tue, 14 July 04:58:08 GMT
-  Content-Length: 2331785
-  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
-  
-  --THIS_STRING_SEPARATES
-  Content-Type: video/example
-  Content-Range: exampleunit 1.2-4.3/25
-  
-  ...the first range...
-  --THIS_STRING_SEPARATES
-  Content-Type: video/example
-  Content-Range: exampleunit 11.2-14.3/25
-  
-  ...the second range
-  --THIS_STRING_SEPARATES--
-</pre> <p id="rfc.section.A.p.7">Notes: </p>
+      <p id="rfc.section.A.p.4">Implementation Notes: </p>
       <ol>
-         <li>Additional CRLFs <em class="bcp14">MAY</em> precede the first boundary string in the body.
-         </li>
+         <li>Additional CRLFs might precede the first boundary string in the body.</li>
          <li>Although <a href="#RFC2046" id="rfc.xref.RFC2046.2"><cite title="Multipurpose Internet Mail Extensions (MIME) Part Two: Media Types">[RFC2046]</cite></a> permits the boundary string to be quoted, some existing implementations handle a quoted boundary string incorrectly.
          </li>
-         <li>A number of clients and servers were coded to an early draft of the byteranges specification to use a media type of multipart/x-byteranges<span id="rfc.iref.m.3"></span><span id="rfc.iref.m.4"></span>, which is almost, but not quite compatible with the version documented in HTTP/1.1.
+         <li>A number of clients and servers were coded to an early draft of the byteranges specification that used a media type of multipart/x-byteranges<span id="rfc.iref.m.3"></span><span id="rfc.iref.m.4"></span>, which is almost (but not quite) compatible with this type.
          </li>
       </ol>
-      <h1 id="rfc.section.B"><a href="#rfc.section.B">B.</a>&nbsp;<a id="changes.from.rfc.2616" href="#changes.from.rfc.2616">Changes from RFC 2616</a></h1>
+      <p id="rfc.section.A.p.5">Despite the name, the "multipart/byteranges" media type is not limited to byte ranges. The following example uses an "exampleunit"
+         range unit:
+      </p>
+      <div id="rfc.figure.u.28"></div><pre class="text">HTTP/1.1 206 Partial Content
+Date: Tue, 14 Nov 1995 06:25:24 GMT
+Last-Modified: Tue, 14 July 04:58:08 GMT
+Content-Length: 2331785
+Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+
+--THIS_STRING_SEPARATES
+Content-Type: video/example
+Content-Range: exampleunit 1.2-4.3/25
+
+...the first range...
+--THIS_STRING_SEPARATES
+Content-Type: video/example
+Content-Range: exampleunit 11.2-14.3/25
+
+...the second range
+--THIS_STRING_SEPARATES--
+</pre> <h1 id="rfc.section.B"><a href="#rfc.section.B">B.</a>&nbsp;<a id="changes.from.rfc.2616" href="#changes.from.rfc.2616">Changes from RFC 2616</a></h1>
       <p id="rfc.section.B.p.1">A weak validator cannot be used in a <a href="#status.206" class="smpl">206</a> response. (<a href="#status.206" id="rfc.xref.status.206.2" title="206 Partial Content">Section&nbsp;4.1</a>)
       </p>
       <p id="rfc.section.B.p.2">The Content-Range header field only has meaning when the status code explicitly defines its use. (<a href="#header.content-range" id="rfc.xref.header.content-range.5" title="Content-Range">Section&nbsp;4.2</a>)
@@ -1222,7 +1218,7 @@ Content-Type: image/gif
       </p>
       <p id="rfc.section.B.p.4">multipart/byteranges can consist of a single part. (<a href="#internet.media.type.multipart.byteranges" title="Internet Media Type multipart/byteranges">Appendix&nbsp;A</a>)
       </p>
-      <p id="rfc.section.B.p.5">This specification introduces a Range Specifier Registry. (<a href="#range.unit.registry" title="Range Unit Registry">Section&nbsp;5.1</a>)
+      <p id="rfc.section.B.p.5">This specification introduces a Range Unit Registry. (<a href="#range.unit.registry" title="Range Unit Registry">Section&nbsp;5.1</a>)
       </p>
       <h1 id="rfc.section.C"><a href="#rfc.section.C">C.</a>&nbsp;<a id="imported.abnf" href="#imported.abnf">Imported ABNF</a></h1>
       <p id="rfc.section.C.p.1">The following core rules are included by reference, as defined in <a href="http://tools.ietf.org/html/rfc5234#appendix-B.1">Appendix B.1</a> of <a href="#RFC5234" id="rfc.xref.RFC5234.2"><cite title="Augmented BNF for Syntax Specifications: ABNF">[RFC5234]</cite></a>: ALPHA (letters), CR (carriage return), CRLF (CR LF), CTL (controls), DIGIT (decimal 0-9), DQUOTE (double quote), HEXDIG
@@ -1368,7 +1364,7 @@ Content-Type: image/gif
                </ul>
             </li>
             <li><a id="rfc.index.I" href="#rfc.index.I"><b>I</b></a><ul>
-                  <li>If-Range header field&nbsp;&nbsp;<a href="#rfc.xref.header.if-range.1">3.1</a>, <a href="#rfc.iref.i.1"><b>3.2</b></a>, <a href="#rfc.xref.header.if-range.2">4.1</a>, <a href="#rfc.xref.header.if-range.3">4.4</a>, <a href="#rfc.xref.header.if-range.4">5.3</a></li>
+                  <li>If-Range header field&nbsp;&nbsp;<a href="#rfc.xref.header.if-range.1">3.1</a>, <a href="#rfc.iref.i.1"><b>3.2</b></a>, <a href="#rfc.xref.header.if-range.2">4.4</a>, <a href="#rfc.xref.header.if-range.3">5.3</a></li>
                </ul>
             </li>
             <li><a id="rfc.index.M" href="#rfc.index.M"><b>M</b></a><ul>
