@@ -395,6 +395,25 @@
    next inbound server when forwarding the request.
 </t>
 <t>
+   A server that supports range requests ought to ignore or reject a
+   <x:ref>Range</x:ref> header field that consists of more than two
+   overlapping ranges, or a set of many small ranges that are not listed
+   in ascending order, since both are indications of either a broken client or
+   a deliberate denial of service attack (<xref target="overlapping.ranges"/>).
+   A client &SHOULD-NOT; request multiple ranges that are inherently less
+   efficient to process and transfer than a single range that encompasses the
+   same data.
+</t>
+<t>
+   A client that is requesting multiple ranges &SHOULD; list those ranges in
+   ascending order (the order in which they would typically be received in a
+   complete representation) unless there is a specific need to request a later
+   part earlier. For example, a user agent processing a large representation
+   with an internal catalog of parts might need to request later parts first,
+   particularly if the representation consists of pages stored in reverse
+   order and the user agent wishes to transfer one page at a time.
+</t>
+<t>
    The Range header field is evaluated after evaluating the preconditions of
    <xref target="Part4"/> and only if the result of their evaluation is
    leading toward a <x:ref>200 (OK)</x:ref> response. In other words, Range
@@ -505,18 +524,23 @@ Content-Range: bytes 21010-47021/47022
 Content-Length: 26012
 Content-Type: image/gif
 
-... 26012 bytes of image data ...
+... 26012 bytes of partial image data ...
 </artwork></figure>
 <t>
    If multiple parts are being transferred, the server generating the 206
    response &MUST; generate a "multipart/byteranges" payload, as defined
    in <xref target="internet.media.type.multipart.byteranges"/>, and send a
    <x:ref>Content-Type</x:ref> header field containing the
-   "multipart/byteranges" media type and its required boundary parameter.
-   For example:
+   multipart/byteranges media type and its required boundary parameter.
+   Within the header area of each body part in the multipart payload, the
+   server &MUST; generate a <x:ref>Content-Range</x:ref> header field
+   corresponding to the range being enclosed in that body part.
+   If the selected representation would have had a <x:ref>Content-Type</x:ref>
+   header field in a <x:ref>200 (OK)</x:ref> response, the server &SHOULD;
+   generate that same <x:ref>Content-Type</x:ref> field in the header area of
+   each body part. For example:
 </t>
-<figure><preamble>
-</preamble><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+<figure><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
 HTTP/1.1 206 Partial Content
 Date: Wed, 15 Nov 1995 06:25:24 GMT
 Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
@@ -536,49 +560,51 @@ Content-Range: bytes 7000-7999/8000
 --THIS_STRING_SEPARATES--
 </artwork></figure>
 <t>
-   A server &MAY; combine requested ranges when those ranges are overlapping
-   (see <xref target="overlapping.ranges"/>).
+   When multiple ranges are requested, a server &MAY; coalesce any of the
+   ranges that overlap or that are separated by a gap that is smaller than the
+   overhead of sending multiple parts, regardless of the order in which the
+   corresponding byte-range-spec appeared in the received <x:ref>Range</x:ref>
+   header field. Since the typical overhead between parts of a
+   multipart/byteranges payload is around 80 bytes, depending on the selected
+   representation's media type and the chosen boundary parameter length, it
+   can be less efficient to transfer many small disjoint parts than it is to
+   transfer the entire selected representation.
 </t>
 <t>
-   A response to a request for a single range &MUST-NOT; be sent using the
-   multipart/byteranges media type.  A response to a request for
-   multiple ranges, whose result is a single range, &MAY; be sent as a
-   multipart/byteranges media type with one part. A client that cannot
-   decode a multipart/byteranges message &MUST-NOT; ask for multiple
-   ranges in a single request.
+   A server &MUST-NOT; generate a multipart response to a request for a single
+   range, since a client that does not request multiple parts might not
+   support multipart responses. However, a server &MAY; generate a
+   multipart/byteranges payload with only a single body part if multiple
+   ranges were requested and only one range was found to be satisfiable or
+   only one range remained after coalescing.
+   A client that cannot process a multipart/byteranges response &MUST-NOT; ask
+   for multiple ranges in a single request.
 </t>
 <t>
-   When a client asks for multiple ranges in one request, the
-   server &SHOULD; send them in the order that they appeared in the
-   request.
+   When a multipart response payload is generated, the server &SHOULD; send
+   the parts in the same order that the corresponding byte-range-spec appeared
+   in the received <x:ref>Range</x:ref> header field, excluding those ranges
+   that were deemed unsatisfiable or that were coalesced into other ranges.
+   A client that receives a multipart response &MUST; inspect the
+   <x:ref>Content-Range</x:ref> header field present in each body part in
+   order to determine which range is contained in that body part; a client
+   cannot rely on receiving the same ranges that it requested, nor the same
+   order that it requested.
 </t>
 <t>
-   When a 206 response is generated, the sender &MUST; generate the following
-   header fields:
-  <list style="symbols">
-    <t>
-        Either a <x:ref>Content-Range</x:ref> header field
-        (<xref target="header.content-range"/>) indicating the single range
-        included with this response, or a multipart/byteranges
-        <x:ref>Content-Type</x:ref> indicating that multiple ranges are
-        enclosed as multipart body-parts.
-    </t>
-    <t>
-        <x:ref>Date</x:ref>
-    </t>
-    <t>
-        <x:ref>Cache-Control</x:ref>, <x:ref>ETag</x:ref>,
-        <x:ref>Expires</x:ref>, <x:ref>Content-Location</x:ref> and/or
-        <x:ref>Vary</x:ref>, if the header field would have been sent in a
-        <x:ref>200 (OK)</x:ref> response to the same request
-    </t>
-  </list>
+   When a 206 response is generated, the server &MUST; generate the following
+   header fields, in addition to those described above, if the field would
+   have been sent in a <x:ref>200 (OK)</x:ref> response to the same request:
+   <x:ref>Date</x:ref>, <x:ref>Cache-Control</x:ref>, <x:ref>ETag</x:ref>,
+   <x:ref>Expires</x:ref>, <x:ref>Content-Location</x:ref>, and
+   <x:ref>Vary</x:ref>.
 </t>
 <t>
    If a 206 is generated in response to a request with an <x:ref>If-Range</x:ref>
    header field, the sender &SHOULD-NOT; generate other representation header
-   fields beyond those described above.
-   Otherwise, the sender &MUST; generate all of the same representation header
+   fields beyond those described above because the client is understood to
+   already have a prior response containing those header fields.
+   Otherwise, the sender &MUST; generate all of the representation header
    fields that would have been sent in a <x:ref>200 (OK)</x:ref> response
    to the same request.
 </t>
@@ -643,7 +669,7 @@ Content-Range: bytes 7000-7999/8000
 </t>
 <t>
    A server generating a <x:ref>206 (Partial Content)</x:ref> response to a
-   byte range request &MUST; send, in each body-part of a multipart response
+   byte range request &MUST; send, in each body part of a multipart response
    or in the header block of a single part response, a Content-Range header
    field containing a <x:ref>byte-range-resp</x:ref> value that reflects the
    corresponding range being sent. The following example would apply
@@ -936,11 +962,17 @@ Content-Type: image/gif
    in HTTP messaging &messaging; and semantics &semantics;.
 </t>
 
-<section title="Overlapping Ranges" anchor="overlapping.ranges">
+<section title="Denial of Service Attacks using Range" anchor="overlapping.ranges">
 <t>
-   Range requests containing overlapping ranges can lead to a situation
-   where the server is sending far more data than the size of the complete
-   resource representation.
+   Unconstrained multiple range requests are susceptible to denial of service
+   attacks because the effort required to request many overlapping ranges of
+   the same data is tiny compared to the time, memory, and bandwidth consumed
+   by attempting to serve the requested data in many parts.
+   Servers ought to ignore, coalesce, or reject egregious range requests, such
+   as requests for more than two overlapping ranges or for many small ranges
+   in a single set, particularly when the ranges are requested out of order
+   for no apparent reason. Multipart range requests are not designed to
+   support random access.
 </t>
 </section>
 </section>
@@ -1203,16 +1235,16 @@ Content-Type: image/gif
 <iref item="multipart/byteranges Media Type" primary="true"/>
 <t>
    When a <x:ref>206 (Partial Content)</x:ref> response message includes the
-   content of multiple ranges, they are transmitted as body-parts in a
+   content of multiple ranges, they are transmitted as body parts in a
    multipart message body (<xref target="RFC2046" x:fmt="," x:sec="5.1"/>)
    with the media type of "multipart/byteranges".  The following definition is
    to be registered with IANA <xref target="BCP13"/>.
 </t>
 <t>
-   The multipart/byteranges media type includes one or more body-parts, each
+   The multipart/byteranges media type includes one or more body parts, each
    with its own <x:ref>Content-Type</x:ref> and <x:ref>Content-Range</x:ref>
    fields. The required boundary parameter specifies the boundary string used
-   to separate each body-part.
+   to separate each body part.
 </t>
 <t>
   <list style="hanging" x:indent="12em">
