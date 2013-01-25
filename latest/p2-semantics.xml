@@ -98,6 +98,7 @@
   <!ENTITY caching-neg-resp           "<xref target='Part6' x:rel='#caching.negotiated.responses' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY message-body               "<xref target='Part1' x:rel='#message.body' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY multipart-byteranges       "<xref target='Part5' x:rel='#internet.media.type.multipart.byteranges' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY evaluate-conditional       "<xref target='Part4' x:rel='#precedence' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY http-date                  "<xref target='http.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY uri                        "<xref target='Part1' x:rel='#uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY effective-request-uri      "<xref target='Part1' x:rel='#effective.request.uri' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -476,7 +477,7 @@
 <t>
    The "Content-Type" header field indicates the media type of the
    associated representation: either the representation enclosed in
-   the message payload or the selected representation, as determined by the
+   the message payload or the <x:ref>selected representation</x:ref>, as determined by the
    message semantics.  The indicated media type defines both the data format
    and how that data is intended to be processed by a recipient, within the
    scope of the received message semantics, after any content codings
@@ -789,7 +790,7 @@
     <t>For a response to a GET or HEAD request, this is an indication that the
        effective request URI refers to a resource that is subject to content
        negotiation and the Content-Location field-value is a more specific
-       identifier for the selected representation.</t>
+       identifier for the <x:ref>selected representation</x:ref>.</t>
     <t>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
        a Content-Location field-value that is identical to the
        <x:ref>Location</x:ref> field-value indicates that this payload is a
@@ -1131,6 +1132,12 @@
    not allowed for the target resource, the origin server &SHOULD; respond
    with the <x:ref>405 (Method Not Allowed)</x:ref> status code.
 </t>
+<t>
+   A client can send conditional request header fields
+   (<xref target="request.conditionals"/>) to make the requested
+   action conditional on the current state of the target resource
+   (<xref target="Part4"/>).
+</t>
 </section>
 
 <section title="Common Method Properties" anchor="method.properties">
@@ -1243,7 +1250,7 @@
   </rdf:Description>
   <iref primary="true" item="GET method" x:for-anchor=""/>
 <t>
-   The GET method requests transfer of a current representation of
+   The GET method requests transfer of the selected representation for
    the <x:ref>target resource</x:ref>. GET is the primary mechanism of
    information retrieval and the focus of almost all performance
    optimizations. Hence, when people speak of retrieving some identifiable
@@ -1255,24 +1262,9 @@
    unless that text happens to be the output of the process.
 </t>
 <t>
-   The semantics of the GET method change to a "conditional GET" if the
-   request message includes an <x:ref>If-Modified-Since</x:ref>,
-   <x:ref>If-Unmodified-Since</x:ref>, <x:ref>If-Match</x:ref>,
-   <x:ref>If-None-Match</x:ref>, or <x:ref>If-Range</x:ref> header field
-   (<xref target="Part4"/>). A conditional GET requests that the representation
-   be transferred only under the circumstances described by the conditional
-   header field(s). The conditional GET request is intended to reduce
-   unnecessary network usage by allowing cached representations to be refreshed
-   without requiring multiple requests or transferring data already held by the
-   client.
-</t>
-<t>
-   The semantics of the GET method change to a "partial GET" if the request
-   message includes a <x:ref>Range</x:ref> header field (<xref target="Part5"/>).
-   A partial GET requests that only part of the representation be transferred,
-   as described in &header-range;. The partial GET request is intended to reduce
-   unnecessary network usage by allowing partially-retrieved representations to
-   be completed without transferring data already held by the client.
+   A client can alter the semantics of GET to be a "range request", requesting
+   transfer of only some part(s) of the selected representation, by sending a
+   <x:ref>Range</x:ref> header field in the request (<xref target="Part5"/>).
 </t>
 <t>
    A payload within a GET request message has no defined semantics;
@@ -1454,7 +1446,7 @@
    it has in memory remains current as a result of the PUT, thus not in need
    of retrieving again from the origin server, and that the new validator(s)
    received in the response can be used for future conditional requests in
-   order to prevent accidental overwrites.
+   order to prevent accidental overwrites (<xref target="request.conditionals"/>).
 </t>
 <t>
    The fundamental difference between the POST and PUT methods is
@@ -1980,13 +1972,19 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </section>
 
 <section title="Conditionals" anchor="request.conditionals">
+  <iref item="conditional request" primary="true"/>
 <t>
-   Conditionals are request header fields that indicate a precondition to be
-   tested before applying the method semantics to the
-   <x:ref>target resource</x:ref>. Each precondition is based on metadata that
-   is expected to change if the <x:ref>selected representation</x:ref> is
-   changed. The HTTP/1.1 conditional request mechanisms are defined in
-   <xref target="Part4"/>.
+   The HTTP conditional request header fields <xref target="Part4"/> allow a
+   client to place a precondition on the state of the target resource, so that
+   the action corresponding to the method semantics will not be applied if the
+   precondition evaluates to false. Each precondition defined by this
+   specification consists of a comparison between a set of validators obtained
+   from prior representations of the target resource to the current state of
+   validators for the <x:ref>selected representation</x:ref>
+   (<xref target="response.validator"/>). Hence, these preconditions evaluate
+   whether the state of the target resource has changed since a given state
+   known by the client. The effect of such an evaluation depends on the method
+   semantics and choice of conditional, as defined in &evaluate-conditional;.
 </t>
 <texttable align="left">
   <ttcol>Header Field Name</ttcol>
@@ -2861,7 +2859,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    has successfully fulfilled the request and that there is no additional
    content to send in the response payload body. Metadata in the response
    header fields refer to the <x:ref>target resource</x:ref> and its
-   selected representation after the requested action was applied.
+   <x:ref>selected representation</x:ref> after the requested action was applied.
 </t>
 <t>
    For example, if a 204 status code is received in response to a PUT
@@ -4163,8 +4161,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    If the new method is cacheable, its definition ought to describe how, and
    under what conditions, a cache can store a response and use it to satisfy a
    subsequent request.
-   If the new method can be made conditional (<xref target="Part4"/>), the
-   definition ought to describe how to respond when the condition is false.
+   The new method ought to describe whether it can be made conditional
+   (<xref target="request.conditionals"/>) and, if so, how a server responds
+   when the condition is false.
    Likewise, if the new method might have some use for partial response
    semantics (<xref target="Part5"/>), it ought to document this too.
 </t>
@@ -5007,6 +5006,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   <seriesInfo name="Internet-Draft" value="draft-ietf-httpbis-p4-conditional-&ID-VERSION;"/>
   <x:source basename="p4-conditional" href="p4-conditional.xml">
     <x:defines>304 (Not Modified)</x:defines>
+    <x:defines>412 (Precondition Failed)</x:defines>
     <x:defines>ETag</x:defines>
     <x:defines>If-Match</x:defines>
     <x:defines>If-Modified-Since</x:defines>

@@ -23,6 +23,7 @@
   <!ENTITY whitespace                 "<xref target='Part1' x:rel='#whitespace' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY field-components           "<xref target='Part1' x:rel='#field.components' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-date                "<xref target='Part2' x:rel='#header.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY representation             "<xref target='Part2' x:rel='#representations' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY messaging                  "<xref target='Part1' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY semantics                  "<xref target='Part2' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY caching                    "<xref target='Part6' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -123,8 +124,6 @@
    Conditional requests are HTTP requests <xref target="Part2"/> that include
    one or more header fields indicating a precondition to be tested before
    applying the method semantics to the target resource.
-   Each precondition is based on metadata that is expected to change if the
-   selected representation of the target resource is changed.
    This document defines the HTTP/1.1 conditional request mechanisms in terms
    of the architecture, syntax notation, and conformance criteria defined in
    <xref target="Part1"/>.
@@ -136,26 +135,23 @@
    the "lost update" problem: one client accidentally overwriting
    the work of another client that has been acting in parallel.
 </t>
-<t>
+<t><iref primary="true" item="selected representation"/>
    Conditional request preconditions are based on the state of the target
    resource as a whole (its current value set) or the state as observed
    in a previously obtained representation (one value in that set).
    A resource might have multiple current representations, each with its
    own observable state.  The conditional request mechanisms assume that
-   the mapping of requests to corresponding representations will be
-   consistent over time if the server intends to take advantage of
-   conditionals.  Regardless, if the mapping is inconsistent and
-   the server is unable to select the appropriate representation, then
-   no harm will result when the precondition evaluates to false.
+   the mapping of requests to a "selected representation" (&representation;)
+   will be consistent over time if the server intends to take advantage of
+   conditionals. Regardless, if the mapping is inconsistent and the server is
+   unable to select the appropriate representation, then no harm will result
+   when the precondition evaluates to false.
 </t>
-<t><iref primary="true" item="selected representation"/>
-   We use the term "<x:dfn>selected representation</x:dfn>" to refer to
-   the current representation of the target resource that would have been
-   selected in a successful response if the same request had used the method
-   GET and had excluded all of the conditional request header fields.
-   The conditional request preconditions are evaluated by comparing the
-   values provided in the request header fields to the current metadata
-   for the selected representation.
+<t>
+   The conditional request preconditions defined by this specification are
+   evaluated by comparing the validators provided in the conditional request
+   header fields to the current validators for the selected representation
+   in the order defined by <xref target="precedence"/>.
 </t>
 
 <section title="Conformance and Error Handling" anchor="conformance">
@@ -953,7 +949,43 @@ Content-Encoding: gzip
    preconditions after it has successfully performed its normal request checks
    (i.e., just before it would perform the action associated with the request
    method). Preconditions are ignored if the server determines that an error
-   or redirect response applies before they are evaluated.
+   or redirect response applies before they are evaluated. Otherwise, the
+   evaluation depends on both the method semantics and the choice of
+   conditional.
+</t>
+<t>
+   A conditional request header field that is designed specifically for cache
+   validation, which includes <x:ref>If-None-Match</x:ref> and
+   <x:ref>If-Modified-Since</x:ref> when used in a GET or HEAD request,
+   allows cached representations to be refreshed without repeatedly
+   transferring data already held by the client. Evaluating to false is thus
+   an indication that the client can continue to use its local copy of the
+   selected representation, as indicated by the server generating a
+   <x:ref>304 (Not Modified)</x:ref> response that includes only those header
+   fields useful for refreshing the cached representation.
+</t>
+<t>
+   All other conditionals are intended to signal failure when the
+   precondition evaluates to false. For example, an <x:ref>If-Match</x:ref>
+   conditional sent with a state-changing method (e.g., POST, PUT, DELETE) is
+   intended to prevent the request from taking effect on the target resource
+   if the resource state does not match the expected state. In other words,
+   evaluating the condition to false means that the resource has been changed
+   by some other client, perhaps by another user attempting to edit the same
+   resource, and thus preventing the request from being applied saves the
+   client from overwriting some other client's work. This result is indicated
+   by the server generating a <x:ref>412 (Precondition Failed)</x:ref>
+   response.
+</t>
+<t>
+   The conditional request header fields defined by this specification are
+   ignored for request methods that never involve the selection or
+   modification of a <x:ref>selected representation</x:ref> (e.g., CONNECT,
+   OPTIONS, and TRACE). Other conditional request header fields, defined by
+   extensions to HTTP, might place conditions on the state of the target
+   resource in general, such as how the If header field in WebDAV has been
+   defined to make a request conditional on the presence or absence of a lock
+   <xref target="RFC4918"/>.
 </t>
 <t>
    When more than one conditional request header field is present in a request,
@@ -1197,6 +1229,7 @@ Content-Encoding: gzip
     <x:defines>Date</x:defines>
     <x:defines>Location</x:defines>
     <x:defines>Vary</x:defines>
+    <x:defines>selected representation</x:defines>
   </x:source>
 </reference>
 
