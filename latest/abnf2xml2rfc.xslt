@@ -18,7 +18,10 @@
   
   <xsl:variable name="generated"><section title="Collected ABNF" anchor="collected.abnf">
     <xsl:text>&#10;</xsl:text>
-    <figure>
+      <xsl:if test="not(starts-with($abnf,'p1-'))"><t>
+  In the collected ABNF below, list rules are expanded as per <xref target='Part1' x:rel='#notation'/>.
+</t></xsl:if>
+      <figure>
       <xsl:text>&#10;</xsl:text>
       <artwork type="abnf" name="{$abnf}">
         <xsl:for-each select="$lines[substring(.,1,2)!='; ']">
