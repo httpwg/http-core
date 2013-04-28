@@ -30,6 +30,8 @@
   <!ENTITY end-to-end.and-hop-by-hop    "<xref target='Part1' x:rel='#end-to-end.and.hop-by-hop.header-fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status.403                   "<xref target='Part2' x:rel='#status.403' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY caching-authenticated-responses "<xref target='Part6' x:rel='#caching.authenticated.responses' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY caching-rqd-no-store         "<xref target='Part6' x:rel='#cache-request-directive.no-store' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY caching-rsd-private          "<xref target='Part6' x:rel='#cache-response-directive.private' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
 ]>
 <?rfc toc="yes" ?>
 <?rfc symrefs="yes" ?>
@@ -159,8 +161,8 @@
 <t>
    HTTP provides a simple challenge-response authentication framework
    that can be used by a server to challenge a client request and by a
-   client to provide authentication information. It uses an extensible,
-   case-insensitive token to identify the authentication scheme, followed
+   client to provide authentication information. It uses a case-insensitive
+   token as a means to identify the authentication scheme, followed
    by additional information necessary for achieving authentication via that
    scheme. The latter can either be a comma-separated list of parameters or a
    single sequence of characters capable of holding base64-encoded
@@ -230,7 +232,7 @@
 <t>
    Both the <x:ref>Authorization</x:ref> field value and the <x:ref>Proxy-Authorization</x:ref> field value
    contain the client's credentials for the realm of the resource being
-   requested, based upon a challenge received from the server (possibly at
+   requested, based upon a challenge received in a response (possibly at
    some point in the past). When creating their values, the user agent ought to
    do so by selecting the challenge with what it considers to be the most
    secure auth-scheme that it understands, obtaining credentials from the user
@@ -290,8 +292,8 @@
    partitioned into a set of protection spaces, each with its own
    authentication scheme and/or authorization database. The realm value
    is a string, generally assigned by the origin server, that can have
-   additional semantics specific to the authentication scheme. Note that
-   there can be multiple challenges with the same auth-scheme but
+   additional semantics specific to the authentication scheme. Note that a
+   response can have multiple challenges with the same auth-scheme but
    different realms.
 </t>
 <t>
@@ -300,7 +302,7 @@
    same credentials &MAY; be reused for all other requests within that
    protection space for a period of time determined by the
    authentication scheme, parameters, and/or user preference. Unless
-   otherwise defined by the authentication scheme, a single protection
+   specifically allowed by the authentication scheme, a single protection
    space cannot extend outside the scope of its server.
 </t>
 <t>
@@ -361,7 +363,7 @@
     <x:lt>
     <t>
       The "token68" notation was introduced for compatibility with existing
-      authentication schemes and can only be used once per challenge/credentials.
+      authentication schemes and can only be used once per challenge or credential.
       New schemes thus ought to use the "auth-param" syntax instead, because
       otherwise future extensions will be impossible.
     </t>
@@ -403,15 +405,15 @@
     <t>
       The credentials carried in an <x:ref>Authorization</x:ref> header field are specific to
       the User Agent, and therefore have the same effect on HTTP caches as the
-      "private" Cache-Control response directive, within the scope of the
-      request they appear in.
+      "private" Cache-Control response directive (&caching-rsd-private;),
+      within the scope of the request they appear in.
     </t>
     <t>
       Therefore, new authentication schemes that choose not to carry
       credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
       header field) will need to explicitly disallow caching, by mandating the use of
-      either Cache-Control request directives (e.g., "no-store") or response
-      directives (e.g., "private").
+      either Cache-Control request directives (e.g., "no-store",
+      &caching-rqd-no-store;) or response directives (e.g., "private").
     </t>
     </x:lt>
   </list>
@@ -434,7 +436,7 @@
    containing at least one challenge applicable to the target resource.
    If the request included authentication credentials, then the 401 response
    indicates that authorization has been refused for those credentials.
-   The client &MAY; repeat the request with a new or replaced
+   The user agent &MAY; repeat the request with a new or replaced
    <x:ref>Authorization</x:ref> header field (<xref target="header.authorization"/>).
    If the 401 response contains the same challenge as the prior response, and
    the user agent has already attempted authentication at least once, then the
@@ -469,7 +471,7 @@
   <x:anchor-alias value="Authorization"/>
 <t>
    The "Authorization" header field allows a user agent to authenticate
-   itself with a server &mdash; usually, but not necessarily, after receiving a <x:ref>401
+   itself with an origin server &mdash; usually, but not necessarily, after receiving a <x:ref>401
    (Unauthorized)</x:ref> response. Its value consists of credentials containing 
    information of the user agent for the realm of the resource being
    requested.
@@ -524,9 +526,9 @@
 <t>
    The "Proxy-Authorization" header field allows the client to
    identify itself (or its user) to a proxy that requires
-   authentication. Its value consists of
-   credentials containing the authentication information of the user
-   agent for the proxy and/or realm of the resource being requested.
+   authentication. Its value consists of credentials containing the
+   authentication information of the client for the proxy and/or realm of the
+   resource being requested.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Proxy-Authorization"/>
   <x:ref>Proxy-Authorization</x:ref> = <x:ref>credentials</x:ref>
@@ -717,19 +719,19 @@
 <section title="Protection Spaces" anchor="protection.spaces">
 <t>
   Authentication schemes that solely rely on the "realm" mechanism for
-  establishing a protection space will expose credentials to all resources on a
-  server. Clients that have successfully made authenticated requests with a
-  resource can use the same authentication credentials for other resources on
-  the same server. This makes it possible for a different resource to harvest
-  authentication credentials for other resources.
+  establishing a protection space will expose credentials to all resources on
+  an origin server. Clients that have successfully made authenticated requests
+  with a resource can use the same authentication credentials for other
+  resources on the same origin server. This makes it possible for a different
+  resource to harvest authentication credentials for other resources.
 </t>
 <t>
-  This is of particular concern when a server hosts resources for multiple
+  This is of particular concern when an origin server hosts resources for multiple
   parties under the same canonical root URI (<xref target="protection.space"/>).
   Possible mitigation strategies include restricting direct access to
   authentication credentials (i.e., not making the content of the
   <x:ref>Authorization</x:ref> request header field available), and separating protection
-  spaces by using a different host name for each party.
+  spaces by using a different host name (or port number) for each party.
 </t>
 </section>
 </section>
@@ -1168,6 +1170,10 @@
     <t>
       <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/439"/>:
       "terminology: mechanism vs framework vs scheme"
+    </t>
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/463"/>:
+      "Editorial suggestions"
     </t>
   </list>
 </t>
