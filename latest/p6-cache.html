@@ -589,6 +589,7 @@ ul.ind li li {
          <li><a href="#rfc.section.3">3.</a>&nbsp;&nbsp;&nbsp;<a href="#response.cacheability">Storing Responses in Caches</a><ul>
                <li><a href="#rfc.section.3.1">3.1</a>&nbsp;&nbsp;&nbsp;<a href="#incomplete.responses">Storing Incomplete Responses</a></li>
                <li><a href="#rfc.section.3.2">3.2</a>&nbsp;&nbsp;&nbsp;<a href="#caching.authenticated.responses">Storing Responses to Authenticated Requests</a></li>
+               <li><a href="#rfc.section.3.3">3.3</a>&nbsp;&nbsp;&nbsp;<a href="#combining.responses">Combining Partial Content</a></li>
             </ul>
          </li>
          <li><a href="#rfc.section.4">4.</a>&nbsp;&nbsp;&nbsp;<a href="#constructing.responses.from.caches">Constructing Responses from Caches</a><ul>
@@ -600,11 +601,10 @@ ul.ind li li {
                   </ul>
                </li>
                <li><a href="#rfc.section.4.2">4.2</a>&nbsp;&nbsp;&nbsp;<a href="#validation.model">Validation</a><ul>
-                     <li><a href="#rfc.section.4.2.1">4.2.1</a>&nbsp;&nbsp;&nbsp;<a href="#freshening.responses">Freshening Responses with 304 Not Modified</a></li>
+                     <li><a href="#rfc.section.4.2.1">4.2.1</a>&nbsp;&nbsp;&nbsp;<a href="#freshening.responses">Freshening Stored Responses upon Validation</a></li>
                   </ul>
                </li>
                <li><a href="#rfc.section.4.3">4.3</a>&nbsp;&nbsp;&nbsp;<a href="#caching.negotiated.responses">Calculating Secondary Keys with Vary</a></li>
-               <li><a href="#rfc.section.4.4">4.4</a>&nbsp;&nbsp;&nbsp;<a href="#combining.responses">Combining Partial Content</a></li>
             </ul>
          </li>
          <li><a href="#rfc.section.5">5.</a>&nbsp;&nbsp;&nbsp;<a href="#head.effects">Updating Caches with HEAD Responses</a></li>
@@ -844,7 +844,7 @@ ul.ind li li {
             (OK)</a>, and the entire response header block has been received, a cache <em class="bcp14">MAY</em> store an incomplete response message body if the cache entry is recorded as incomplete. Likewise, a <a href="p5-range.html#status.206" class="smpl">206 (Partial Content)</a> response <em class="bcp14">MAY</em> be stored as if it were an incomplete <a href="p2-semantics.html#status.200" class="smpl">200
             (OK)</a> cache entry. However, a cache <em class="bcp14">MUST NOT</em> store incomplete or partial content responses if it does not support the <a href="p5-range.html#header.range" class="smpl">Range</a> and <a href="p5-range.html#header.content-range" class="smpl">Content-Range</a> header fields or if it does not understand the range units used in those fields.
       </p>
-      <p id="rfc.section.3.1.p.2">A cache <em class="bcp14">MAY</em> complete a stored incomplete response by making a subsequent range request (<a href="#Part5" id="rfc.xref.Part5.1"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>) and combining the successful response with the stored entry, as defined in <a href="#combining.responses" title="Combining Partial Content">Section&nbsp;4.4</a>. A cache <em class="bcp14">MUST NOT</em> use an incomplete response to answer requests unless the response has been made complete or the request is partial and specifies
+      <p id="rfc.section.3.1.p.2">A cache <em class="bcp14">MAY</em> complete a stored incomplete response by making a subsequent range request (<a href="#Part5" id="rfc.xref.Part5.1"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>) and combining the successful response with the stored entry, as defined in <a href="#combining.responses" title="Combining Partial Content">Section&nbsp;3.3</a>. A cache <em class="bcp14">MUST NOT</em> use an incomplete response to answer requests unless the response has been made complete or the request is partial and specifies
          a range that is wholly within the incomplete response. A cache <em class="bcp14">MUST NOT</em> send a partial response to a client without explicitly marking it as such using the <a href="p5-range.html#status.206" class="smpl">206 (Partial Content)</a> status code.
       </p>
       <h2 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2</a>&nbsp;<a id="caching.authenticated.responses" href="#caching.authenticated.responses">Storing Responses to Authenticated Requests</a></h2>
@@ -856,6 +856,21 @@ ul.ind li li {
          served stale (<a href="#serving.stale.responses" title="Serving Stale Responses">Section&nbsp;4.1.4</a>) by shared caches. In particular, a response with either "max-age=0, must-revalidate" or "s-maxage=0" cannot be used to satisfy
          a subsequent request without revalidating it on the origin server.
       </p>
+      <h2 id="rfc.section.3.3"><a href="#rfc.section.3.3">3.3</a>&nbsp;<a id="combining.responses" href="#combining.responses">Combining Partial Content</a></h2>
+      <p id="rfc.section.3.3.p.1">A response might transfer only a partial representation if the connection closed prematurely or if the request used one or
+         more Range specifiers (<a href="#Part5" id="rfc.xref.Part5.2"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>). After several such transfers, a cache might have received several ranges of the same representation. A cache <em class="bcp14">MAY</em> combine these ranges into a single stored response, and reuse that response to satisfy later requests, if they all share the
+         same strong validator and the cache complies with the client requirements in <a href="p5-range.html#combining.byte.ranges" title="Combining Ranges">Section 4.3</a> of <a href="#Part5" id="rfc.xref.Part5.3"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>.
+      </p>
+      <p id="rfc.section.3.3.p.2">When combining the new response with one or more stored responses, a cache <em class="bcp14">MUST</em>: 
+      </p>
+      <ul>
+         <li>delete any <a href="#header.warning" class="smpl">Warning</a> header fields in the stored response with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.1" title="Warning">Section&nbsp;7.5</a>);
+         </li>
+         <li>retain any <a href="#header.warning" class="smpl">Warning</a> header fields in the stored response with warn-code 2xx; and,
+         </li>
+         <li>use other header fields provided in the new response, aside from <a href="p5-range.html#header.content-range" class="smpl">Content-Range</a>, to replace all instances of the corresponding header fields in the stored response.
+         </li>
+      </ul>
       <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a>&nbsp;<a id="constructing.responses.from.caches" href="#constructing.responses.from.caches">Constructing Responses from Caches</a></h1>
       <p id="rfc.section.4.p.1">When presented with a request, a cache <em class="bcp14">MUST NOT</em> reuse a stored response, unless: 
       </p>
@@ -1037,7 +1052,7 @@ ul.ind li li {
       <p id="rfc.section.4.1.4.p.3">A cache <em class="bcp14">MUST NOT</em> send stale responses unless it is disconnected (i.e., it cannot contact the origin server or otherwise find a forward path)
          or doing so is explicitly allowed (e.g., by the max-stale request directive; see <a href="#cache-request-directive" title="Request Cache-Control Directives">Section&nbsp;7.2.1</a>).
       </p>
-      <p id="rfc.section.4.1.4.p.4">A cache <em class="bcp14">SHOULD</em> append a <a href="#header.warning" class="smpl">Warning</a> header field with the 110 warn-code (see <a href="#header.warning" id="rfc.xref.header.warning.1" title="Warning">Section&nbsp;7.5</a>) to stale responses. Likewise, a cache <em class="bcp14">SHOULD</em> add the 112 warn-code to stale responses if the cache is disconnected.
+      <p id="rfc.section.4.1.4.p.4">A cache <em class="bcp14">SHOULD</em> append a <a href="#header.warning" class="smpl">Warning</a> header field with the 110 warn-code (see <a href="#header.warning" id="rfc.xref.header.warning.2" title="Warning">Section&nbsp;7.5</a>) to stale responses. Likewise, a cache <em class="bcp14">SHOULD</em> add the 112 warn-code to stale responses if the cache is disconnected.
       </p>
       <p id="rfc.section.4.1.4.p.5">note that if a cache receives a first-hand response (either an entire response, or a <a href="p4-conditional.html#status.304" class="smpl">304 (Not Modified)</a> response) that it would normally forward to the requesting client, and the received response is no longer fresh, the cache
          can forward it to the requesting client without adding a new <a href="#header.warning" class="smpl">Warning</a> (but without removing any existing Warning header fields). A cache shouldn't attempt to validate a response simply because
@@ -1057,7 +1072,7 @@ ul.ind li li {
       <p id="rfc.section.4.2.p.4">Cache handling of a response to a conditional request is dependent upon its status code:</p>
       <p id="rfc.section.4.2.p.5"> </p>
       <ul>
-         <li>A <a href="p4-conditional.html#status.304" class="smpl">304 (Not Modified)</a> response status code indicates that the stored response can be updated and reused; see <a href="#freshening.responses" title="Freshening Responses with 304 Not Modified">Section&nbsp;4.2.1</a>.
+         <li>A <a href="p4-conditional.html#status.304" class="smpl">304 (Not Modified)</a> response status code indicates that the stored response can be updated and reused; see <a href="#freshening.responses" title="Freshening Stored Responses upon Validation">Section&nbsp;4.2.1</a>.
          </li>
          <li>A full response (i.e., one with a payload body) indicates that none of the stored responses nominated in the conditional request
             is suitable. Instead, the cache can use the full response to satisfy the request and <em class="bcp14">MAY</em> replace the stored response(s).
@@ -1066,7 +1081,7 @@ ul.ind li li {
             if the server failed to respond. In the latter case, it can send a previously stored response (see <a href="#serving.stale.responses" title="Serving Stale Responses">Section&nbsp;4.1.4</a>).
          </li>
       </ul>
-      <h3 id="rfc.section.4.2.1"><a href="#rfc.section.4.2.1">4.2.1</a>&nbsp;<a id="freshening.responses" href="#freshening.responses">Freshening Responses with 304 Not Modified</a></h3>
+      <h3 id="rfc.section.4.2.1"><a href="#rfc.section.4.2.1">4.2.1</a>&nbsp;<a id="freshening.responses" href="#freshening.responses">Freshening Stored Responses upon Validation</a></h3>
       <p id="rfc.section.4.2.1.p.1">When a cache receives a <a href="p4-conditional.html#status.304" class="smpl">304 (Not Modified)</a> response and already has one or more stored <a href="p2-semantics.html#status.200" class="smpl">200 (OK)</a> responses for the same cache key, the cache needs to identify which of the stored responses are updated by this new response
          and then update the stored response(s) with the new information provided in the <a href="p4-conditional.html#status.304" class="smpl">304</a> response.
       </p>
@@ -1087,7 +1102,7 @@ ul.ind li li {
       <p id="rfc.section.4.2.1.p.3">If a stored response is selected for update, the cache <em class="bcp14">MUST</em>: 
       </p>
       <ul>
-         <li>delete any <a href="#header.warning" class="smpl">Warning</a> header fields in the stored response with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.2" title="Warning">Section&nbsp;7.5</a>);
+         <li>delete any <a href="#header.warning" class="smpl">Warning</a> header fields in the stored response with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.3" title="Warning">Section&nbsp;7.5</a>);
          </li>
          <li>retain any <a href="#header.warning" class="smpl">Warning</a> header fields in the stored response with warn-code 2xx; and,
          </li>
@@ -1121,21 +1136,6 @@ ul.ind li li {
       <p id="rfc.section.4.3.p.7">If no selected response is available, the cache cannot satisfy the presented request. Typically, it is forwarded to the origin
          server in a (possibly conditional; see <a href="#validation.model" title="Validation">Section&nbsp;4.2</a>) request.
       </p>
-      <h2 id="rfc.section.4.4"><a href="#rfc.section.4.4">4.4</a>&nbsp;<a id="combining.responses" href="#combining.responses">Combining Partial Content</a></h2>
-      <p id="rfc.section.4.4.p.1">A response might transfer only a partial representation if the connection closed prematurely or if the request used one or
-         more Range specifiers (<a href="#Part5" id="rfc.xref.Part5.2"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>). After several such transfers, a cache might have received several ranges of the same representation. A cache <em class="bcp14">MAY</em> combine these ranges into a single stored response, and reuse that response to satisfy later requests, if they all share the
-         same strong validator and the cache complies with the client requirements in <a href="p5-range.html#combining.byte.ranges" title="Combining Ranges">Section 4.3</a> of <a href="#Part5" id="rfc.xref.Part5.3"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Range Requests">[Part5]</cite></a>.
-      </p>
-      <p id="rfc.section.4.4.p.2">When combining the new response with one or more stored responses, a cache <em class="bcp14">MUST</em>: 
-      </p>
-      <ul>
-         <li>delete any <a href="#header.warning" class="smpl">Warning</a> header fields in the stored response with warn-code 1xx (see <a href="#header.warning" id="rfc.xref.header.warning.3" title="Warning">Section&nbsp;7.5</a>);
-         </li>
-         <li>retain any <a href="#header.warning" class="smpl">Warning</a> header fields in the stored response with warn-code 2xx; and,
-         </li>
-         <li>use other header fields provided in the new response, aside from <a href="p5-range.html#header.content-range" class="smpl">Content-Range</a>, to replace all instances of the corresponding header fields in the stored response.
-         </li>
-      </ul>
       <h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a>&nbsp;<a id="head.effects" href="#head.effects">Updating Caches with HEAD Responses</a></h1>
       <p id="rfc.section.5.p.1">A response to the HEAD method is identical to what an equivalent request made with a GET would have been, except it lacks
          a body. This property of HEAD responses is used to both invalidate and update cached GET responses.
@@ -2168,8 +2168,8 @@ Pragma: no-cache
                         <li><em>Section 2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Part4.2">4.1.2</a></li>
                      </ul>
                   </li>
-                  <li><em>Part5</em>&nbsp;&nbsp;<a href="#rfc.xref.Part5.1">3.1</a>, <a href="#rfc.xref.Part5.2">4.4</a>, <a href="#rfc.xref.Part5.3">4.4</a>, <a href="#Part5"><b>12.1</b></a><ul>
-                        <li><em>Section 4.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Part5.3">4.4</a></li>
+                  <li><em>Part5</em>&nbsp;&nbsp;<a href="#rfc.xref.Part5.1">3.1</a>, <a href="#rfc.xref.Part5.2">3.3</a>, <a href="#rfc.xref.Part5.3">3.3</a>, <a href="#Part5"><b>12.1</b></a><ul>
+                        <li><em>Section 4.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Part5.3">3.3</a></li>
                      </ul>
                   </li>
                   <li><em>Part7</em>&nbsp;&nbsp;<a href="#rfc.xref.Part7.1">3</a>, <a href="#rfc.xref.Part7.2">3.2</a>, <a href="#Part7"><b>12.1</b></a><ul>
@@ -2221,7 +2221,7 @@ Pragma: no-cache
                </ul>
             </li>
             <li><a id="rfc.index.W" href="#rfc.index.W"><b>W</b></a><ul>
-                  <li>Warning header field&nbsp;&nbsp;<a href="#rfc.xref.header.warning.1">4.1.4</a>, <a href="#rfc.xref.header.warning.2">4.2.1</a>, <a href="#rfc.xref.header.warning.3">4.4</a>, <a href="#rfc.xref.header.warning.4">5</a>, <a href="#rfc.iref.w.1"><b>7.5</b></a>, <a href="#rfc.xref.header.warning.5">9.3</a>, <a href="#rfc.xref.header.warning.6">A</a>, <a href="#rfc.xref.header.warning.7">A</a></li>
+                  <li>Warning header field&nbsp;&nbsp;<a href="#rfc.xref.header.warning.1">3.3</a>, <a href="#rfc.xref.header.warning.2">4.1.4</a>, <a href="#rfc.xref.header.warning.3">4.2.1</a>, <a href="#rfc.xref.header.warning.4">5</a>, <a href="#rfc.iref.w.1"><b>7.5</b></a>, <a href="#rfc.xref.header.warning.5">9.3</a>, <a href="#rfc.xref.header.warning.6">A</a>, <a href="#rfc.xref.header.warning.7">A</a></li>
                </ul>
             </li>
          </ul>
