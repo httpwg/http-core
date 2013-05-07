@@ -143,12 +143,11 @@
    messages.
 </t>
 
-<section anchor="intro.purpose" title="Purpose">
 <iref item="cache" />
 <t>
    An HTTP <x:dfn>cache</x:dfn> is a local store of response messages and the
-   subsystem that controls its message storage, retrieval, and deletion. A
-   cache stores cacheable responses in order to reduce the response time and
+   subsystem that controls storage, retrieval, and deletion of messages in it.
+   A cache stores cacheable responses in order to reduce the response time and
    network bandwidth consumption on future, equivalent requests. Any client or
    server &MAY; employ a cache, though a cache cannot be used by a server that
    is acting as a tunnel.
@@ -159,13 +158,12 @@
    A stored response is considered "fresh", as defined in
    <xref target="expiration.model" />, if the response can be reused without
    "validation" (checking with the origin server to see if the cached response
-   remains valid for this request).  A fresh cache response can therefore
-   reduce both latency and network transfers each time it is reused.
+   remains valid for this request).  A fresh response can therefore
+   reduce both latency and network overhead each time it is reused.
    When a cached response is not fresh, it might still be reusable if it can
    be freshened by validation (<xref target="validation.model" />) or if the
-   origin is unavailable.
+   origin is unavailable (xref target="serving.stale.responses" />).
 </t>
-</section>
 
 <section anchor="intro.terminology" title="Terminology">
 <t>
@@ -226,8 +224,8 @@
    <iref item="age" />
    <x:dfn>age</x:dfn>
    <list>
-      <t>The age of a response is the time since it was sent by, or
-      successfully validated with, the origin server.</t>
+      <t>The time since a response was sent by, or successfully validated
+      with, the origin server.</t>
    </list>
 </t>
 <t>
@@ -243,7 +241,7 @@
    <x:dfn>freshness lifetime</x:dfn>
    <list>
       <t>The length of time between the generation of a response and its
-      expiration time.</t>
+      expiration time (either explicit or heuristic).</t>
    </list>
 </t>
 <t>
@@ -258,17 +256,16 @@
    <iref item="stale" />
    <x:dfn>stale</x:dfn>
    <list>
-      <t>A response is stale if its age has passed its freshness lifetime
-      (either explicit or heuristic).</t>
+      <t>A response is stale if its age has passed its freshness lifetime.</t>
    </list>
 </t>
 <t>
    <iref item="validator" />
    <x:dfn>validator</x:dfn>
    <list>
-      <t>A protocol element (e.g., an entity-tag or a <x:ref>Last-Modified</x:ref>
-      time) that is used to find out whether a stored response is an equivalent
-      copy of a representation. See &weak-and-strong;.</t>
+      <t>A protocol element (e.g., an entity-tag or a
+      <x:ref>Last-Modified</x:ref> time) that is used to find out whether a
+      stored response is an equivalent copy of a representation. .</t>
    </list>
 </t>
 <t>
@@ -277,10 +274,8 @@
    <x:dfn>strong validator</x:dfn>
    <list>
       <t>A validator that is defined by the origin server such that its
-         current value will change if the representation data changes; i.e.,
-         an entity-tag that is not marked as weak (&entity-tags;) or,
-         if no entity-tag is provided, a <x:ref>Last-Modified</x:ref> value
-         that is strong in the sense defined by &lastmod-comparison;.</t>
+         current value will change if the representation data changes.
+         See &weak-and-strong;</t>
    </list>
 </t>
 </section>
@@ -335,10 +330,11 @@
    (&semantics;) while eliminating the transfer of information already held
    in the cache.  Although caching is an entirely &OPTIONAL; feature of HTTP,
    we assume that reusing the cached response is desirable and that such
-   reuse is the default behavior when no requirement or locally-desired
+   reuse is the default behavior when no requirement or local
    configuration prevents it.  Therefore, HTTP cache requirements are focused
    on preventing a cache from either storing a non-reusable response or
-   reusing a stored response inappropriately.
+   reusing a stored response inappropriately, rather than mandating that
+   caches always store and reuse particular responses.
 </t>
 <t>
    Each <x:dfn>cache entry</x:dfn> consists of a cache key and one or more
@@ -353,10 +349,10 @@
    caching and defines something suitable for use as a cache key.
 </t>
 <t>
-   The default <x:dfn>cache key</x:dfn> consists of the request method and
+   The primary <x:dfn>cache key</x:dfn> consists of the request method and
    target URI.  However, since HTTP caches in common use today are typically
    limited to caching responses to GET, many implementations simply decline
-   other methods and use only the URI as the key.
+   other methods and use only the URI as the primary cache key.
 </t>
 <t>
    If a request target is subject to content negotiation, its cache entry
@@ -389,7 +385,8 @@
             <xref target="header.expires"/>), or</t>
             <t>contains a max-age response cache directive (see <xref
             target="cache-response-directive.max-age" />), or</t>
-            <t>contains a s-maxage response cache directive and the cache is
+            <t>contains a s-maxage response cache directive (see <xref
+            target="cache-response-directive.s-maxage" />) and the cache is
             shared, or</t>
             <t>contains a Cache Control Extension (see <xref
             target="cache.control.extensions" />) that allows it to be cached,
@@ -408,11 +405,11 @@
 </t>
 <t>
    In this context, a cache has "understood" a request method or a response
-   status code if it recognizes it and implements any cache-specific
-   behavior.
+   status code if it recognizes it and implements all specified
+   caching-related behavior.
 </t>
 <t>
-   Note that, in normal operation, many caches will not store a response that
+   Note that, in normal operation, some caches will not store a response that
    has neither a cache validator nor an explicit expiration time, as such
    responses are not usually useful to store. However, caches are not
    prohibited from storing such responses.
@@ -473,7 +470,7 @@
 <section anchor="constructing.responses.from.caches" 
    title="Constructing Responses from Caches">
 <t>
-   For a presented request, a cache &MUST-NOT; send a stored response,
+   When presented with a request, a cache &MUST-NOT; reuse a stored response,
    unless:
    <list style="symbols">
       <t>The presented effective request URI (&effective-request-uri;) and
@@ -506,10 +503,11 @@
    cache-control extension; see <xref target="cache.control.extensions" />.
 </t>
 <t>
-   When a stored response is used to satisfy a request without validation,
-   a cache &MUST; send a single <x:ref>Age</x:ref> header field
-   (<xref target="header.age"/>) in the response with a value equal to the
-   stored response's current_age; see <xref target="age.calculations" />.
+   When a stored response is used to satisfy a request without validation, a
+   cache &MUST; generate an <x:ref>Age</x:ref> header field (<xref
+   target="header.age"/>), replacing any present in the response with a value
+   equal to the stored response's current_age; see <xref
+   target="age.calculations" />.
 </t>
 <t>
    A cache &MUST; write through requests with methods that are unsafe
@@ -524,16 +522,16 @@
 <t>
    When more than one suitable response is stored, a cache &MUST; use the 
    most recent response (as determined by the <x:ref>Date</x:ref> header
-   field). It can also forward a request with "Cache-Control: max-age=0" or
+   field). It can also forward the request with "Cache-Control: max-age=0" or
    "Cache-Control: no-cache" to disambiguate which response to use.
 </t>
 <t>
    A cache that does not have a clock available &MUST-NOT; use stored
-   responses without revalidating them on every use.
+   responses without revalidating them upon every use.
 </t>
 
 
-<section anchor="expiration.model" title="Freshness Model">
+<section anchor="expiration.model" title="Freshness">
 <t>
    When a response is "fresh" in the cache, it can be used to satisfy
    subsequent requests without contacting the origin server, thereby improving
@@ -570,8 +568,8 @@
 </artwork>
 </figure>
 <t>
-   The freshness_lifetime is defined in <xref
-   target="calculating.freshness.lifetime" />; the current_age is defined in
+   freshness_lifetime is defined in <xref
+   target="calculating.freshness.lifetime" />; current_age is defined in
    <xref target="age.calculations" />.
 </t>
 <t>
@@ -612,8 +610,9 @@
 <t>
    When there is more than one value present for a given directive (e.g., two
    <x:ref>Expires</x:ref> header fields, multiple Cache-Control: max-age
-   directives), it is considered invalid. Caches are encouraged to consider
-   responses that have invalid freshness information to be stale.
+   directives), the directive's value is considered invalid. Caches are
+   encouraged to consider responses that have invalid freshness information to
+   be stale.
 </t>
 </section>
 
@@ -652,7 +651,7 @@
       &Note; <xref target="RFC2616" x:fmt="of" x:sec="13.9"/> prohibited caches
       from calculating heuristic freshness for URIs with query components
       (i.e., those containing '?'). In practice, this has not been widely
-      implemented. Therefore, servers are encouraged to send explicit
+      implemented. Therefore, origin servers are encouraged to send explicit
       directives (e.g., Cache-Control: no-cache) if they wish to preclude
       caching.
    </t>
@@ -810,18 +809,18 @@
    cache is disconnected.
 </t>
 <t>
-   If a cache receives a first-hand response (either an entire response, or a
-   <x:ref>304 (Not Modified)</x:ref> response) that it would normally forward
-   to the requesting client, and the received response is no longer fresh, the
-   cache can forward it to the requesting client without adding a new
-   <x:ref>Warning</x:ref> (but without removing any existing Warning header
-   fields). A cache shouldn't attempt to validate a response simply because
-   that response became stale in transit.
+   note that if a cache receives a first-hand response (either an entire
+   response, or a <x:ref>304 (Not Modified)</x:ref> response) that it would
+   normally forward to the requesting client, and the received response is no
+   longer fresh, the cache can forward it to the requesting client without
+   adding a new <x:ref>Warning</x:ref> (but without removing any existing
+   Warning header fields). A cache shouldn't attempt to validate a response
+   simply because that response became stale in transit.
 </t>
 </section>
 </section>
 
-<section anchor="validation.model" title="Validation Model">
+<section anchor="validation.model" title="Validation">
 <t>
    When a cache has one or more stored responses for a requested URI, but
    cannot serve any of them (e.g., because they are not fresh, or one cannot
@@ -840,11 +839,12 @@
 </t>
 <t>
    Additionally, a cache can add an <x:ref>If-None-Match</x:ref> header field
-   whose value is that of the <x:ref>ETag</x:ref> header field(s) from all
-   responses stored for the requested URI, if present. However, if any of the
-   stored responses contains only partial content, the cache shouldn't
-   include its entity-tag in the If-None-Match header field unless the request
-   is for a range that would be fully satisfied by that stored response.
+   whose value is that of the <x:ref>ETag</x:ref> header field(s) from
+   relevant responses stored for the primary cache key, if present. However,
+   if any of the stored responses contains only partial content, the cache
+   shouldn't include its entity-tag in the If-None-Match header field unless
+   the request is for a range that would be fully satisfied by that stored
+   response.
 </t>
 
 <t>Cache handling of a response to a conditional request is dependent upon its
@@ -888,22 +888,22 @@ status code:</t>
    <list style="symbols">
     <t>
      If the new response contains a strong validator, then that strong
-     validator identifies the selected representation.  All of the stored
-     responses with the same strong validator are selected.
-     If none of the stored responses contain the same strong validator, 
-     then the new response &MUST-NOT; be used to update any stored responses.
+     validator identifies the selected representation for update. All of the
+     stored responses with the same strong validator are selected. If none of
+     the stored responses contain the same strong validator, then the new
+     response &MUST-NOT; be used to update any stored responses.
     </t>
     <t>
      If the new response contains a weak validator and that validator
      corresponds to one of the cache's stored responses, then the most
-     recent of those matching stored responses is selected.
+     recent of those matching stored responses is selected for update.
     </t>
     <t>
      If the new response does not include any form of validator (such as in
      the case where a client generates an If-Modified-Since request from a
      source other than the Last-Modified response header field), and there is
      only one stored response, and that stored response also lacks a
-     validator, then that stored response is selected.
+     validator, then that stored response is selected for update.
     </t>
    </list>
 </t>
@@ -1078,9 +1078,9 @@ status code:</t>
 </t>
 <t>
    Note that this does not guarantee that all appropriate responses are
-   invalidated. For example, the request that caused the change at the origin
-   server might not have gone through the cache where a response is stored.
-</t>
+   invalidated. For example, a state-changing request might invalidate
+   responses in the caches it travels through, but relevant responses still
+   might be stored in other caches that it has not.</t>
 </section>
 
 
@@ -1134,9 +1134,7 @@ status code:</t>
 </t>
 <x:note>
    <t>
-       &Note; HTTP/1.0 caches might not implement Cache-Control and
-       might only implement Pragma: no-cache (see <xref target="header.pragma"
-       />).
+       &Note; some HTTP/1.0 caches might not implement Cache-Control.
    </t>
 </x:note>
 <t>
@@ -1234,9 +1232,9 @@ status code:</t>
 </t>
 <t>
    The "max-stale" request directive indicates that the client is willing
-   to accept a response that has exceeded its expiration time. If max-stale
+   to accept a response that has exceeded its freshness lifetime. If max-stale
    is assigned a value, then the client is willing to accept a response
-   that has exceeded its expiration time by no more than the specified
+   that has exceeded its freshness lifetime by no more than the specified
    number of seconds. If no value is assigned to max-stale, then the client
    is willing to accept a stale response of any age.
 </t>
@@ -1336,7 +1334,7 @@ status code:</t>
    response message.
 </t>
 <t>
-   The field-names given are not limited to the set of standard header
+   The field-names given are not limited to the set of header
    fields defined by this specification. Field names are case-insensitive.
 </t>
 <t>
@@ -1382,15 +1380,15 @@ status code:</t>
    caching of the rest of the response.
 </t> 
 <t>
-   The field-names given are not limited to the set of standard header
+   The field-names given are not limited to the set of header
    fields defined by this specification. Field names are case-insensitive.
 </t>
 <t>
-   &Note; Many HTTP/1.0 caches will not recognize or obey
-   this directive. Also, no-cache response directives with field-names are
-   often handled by implementations as if an unqualified no-cache directive
-   was received; i.e., the special handling for the qualified form is not
-   widely implemented.
+   &Note; Although it has been back-ported to many implementations, some
+   HTTP/1.0 caches will not recognize or obey this directive. Also, no-cache
+   response directives with field-names are often handled by implementations
+   as if an unqualified no-cache directive was received; i.e., the special
+   handling for the qualified form is not widely implemented.
 </t>
 <t>
    &Note; This directive uses the quoted-string form of the argument syntax.
@@ -1509,17 +1507,21 @@ status code:</t>
 <section anchor="cache.control.extensions" title="Cache Control Extensions">
 <t>
    The Cache-Control header field can be extended through the use of one or
-   more cache-extension tokens, each with an optional value. Informational
-   extensions (those that do not require a change in cache behavior) can be
-   added without changing the semantics of other directives. Behavioral
-   extensions are designed to work by acting as modifiers to the existing base
-   of cache directives. Both the new directive and the standard directive are
-   supplied, such that applications that do not understand the new directive
-   will default to the behavior specified by the standard directive, and those
-   that understand the new directive will recognize it as modifying the
-   requirements associated with the standard directive. In this way,
-   extensions to the cache-control directives can be made without requiring
-   changes to the base protocol.
+   more cache-extension tokens, each with an optional value.
+</t>
+<t>
+   Informational extensions (those that do not require a change in cache
+   behavior) can be added without changing the semantics of other directives.
+   Behavioral extensions are designed to work by acting as modifiers to the
+   existing base of cache directives.
+</t>
+<t>   
+   Both the new directive and the standard directive are supplied, such that
+   applications that do not understand the new directive will default to the
+   behavior specified by the standard directive, and those that understand the
+   new directive will recognize it as modifying the requirements associated
+   with the standard directive. In this way, extensions to the cache-control
+   directives can be made without requiring changes to the base protocol.
 </t>
 <t>
    This extension mechanism depends on an HTTP cache obeying all of the
@@ -1560,7 +1562,9 @@ status code:</t>
       <t>When the directive does not take an argument, what it means when an
       argument is present,</t>
       <t>When the directive requires an argument, what it means when it is
-      missing.</t>
+      missing,</t>
+      <t>Whether the directive is specific to requests, responses, or able
+        to be used in either.</t>
    </list>
 </t>
 <t>
