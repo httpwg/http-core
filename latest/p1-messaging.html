@@ -1131,6 +1131,16 @@ Content-Type: text/plain
          rely on incremental delivery of partial messages, since some implementations will buffer or delay message forwarding for the
          sake of network efficiency, security checks, or payload transformations.
       </p>
+      <p id="rfc.section.3.p.6">A sender <em class="bcp14">MUST NOT</em> send whitespace between the start-line and the first header field. A recipient that receives whitespace between the start-line
+         and the first header field <em class="bcp14">MUST</em> either reject the message as invalid or consume each whitespace-preceded line without further processing of it (i.e., ignore
+         the entire line, along with any subsequent lines preceded by whitespace, until a properly formed header field is received
+         or the header block is terminated).
+      </p>
+      <p id="rfc.section.3.p.7">The presence of such whitespace in a request might be an attempt to trick a server into ignoring that field or processing
+         the line after it as a new request, either of which might result in a security vulnerability if other implementations within
+         the request chain interpret the same message differently. Likewise, the presence of such whitespace in a response might be
+         ignored by some clients or cause others to cease parsing.
+      </p>
       <h2 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1</a>&nbsp;<a id="start.line" href="#start.line">Start Line</a></h2>
       <p id="rfc.section.3.1.p.1">An HTTP message can either be a request from client to server or a response from server to client. Syntactically, the two
          types of message differ only in the start-line, which is either a request-line (for requests) or a status-line (for responses),
@@ -1141,16 +1151,7 @@ Content-Type: text/plain
          request method) and clients are implemented to only expect a response.
       </p>
       <div id="rfc.figure.u.12"></div><pre class="inline"><span id="rfc.iref.g.28"></span>  <a href="#http.message" class="smpl">start-line</a>     = <a href="#request.line" class="smpl">request-line</a> / <a href="#status.line" class="smpl">status-line</a>
-</pre><p id="rfc.section.3.1.p.4">A sender <em class="bcp14">MUST NOT</em> send whitespace between the start-line and the first header field. The presence of such whitespace in a request might be an
-         attempt to trick a server into ignoring that field or processing the line after it as a new request, either of which might
-         result in a security vulnerability if other implementations within the request chain interpret the same message differently.
-         Likewise, the presence of such whitespace in a response might be ignored by some clients or cause others to cease parsing.
-      </p>
-      <p id="rfc.section.3.1.p.5">A recipient that receives whitespace between the start-line and the first header field <em class="bcp14">MUST</em> either reject the message as invalid or consume each whitespace-preceded line without further processing of it (i.e., ignore
-         the entire line, along with any subsequent lines preceded by whitespace, until a properly formed header field is received
-         or the header block is terminated).
-      </p>
-      <h3 id="rfc.section.3.1.1"><a href="#rfc.section.3.1.1">3.1.1</a>&nbsp;<a id="request.line" href="#request.line">Request Line</a></h3>
+</pre><h3 id="rfc.section.3.1.1"><a href="#rfc.section.3.1.1">3.1.1</a>&nbsp;<a id="request.line" href="#request.line">Request Line</a></h3>
       <p id="rfc.section.3.1.1.p.1">A request-line begins with a method token, followed by a single space (SP), the request-target, another single space (SP),
          the protocol version, and ending with CRLF.
       </p>
@@ -1274,20 +1275,15 @@ Content-Type: text/plain
       </p>
       <p id="rfc.section.3.2.4.p.4">Historically, HTTP header field values could be extended over multiple lines by preceding each extra line with at least one
          space or horizontal tab (obs-fold). This specification deprecates such line folding except within the message/http media type
-         (<a href="#internet.media.type.message.http" title="Internet Media Type message/http">Section&nbsp;7.3.1</a>). Senders <em class="bcp14">MUST NOT</em> generate messages that include line folding (i.e., that contain any field-value that contains a match to the <a href="#header.fields" class="smpl">obs-fold</a> rule) unless the message is intended for packaging within the message/http media type. When an <a href="#header.fields" class="smpl">obs-fold</a> is received in a message, recipients <em class="bcp14">MUST</em> do one of: 
+         (<a href="#internet.media.type.message.http" title="Internet Media Type message/http">Section&nbsp;7.3.1</a>). Senders <em class="bcp14">MUST NOT</em> generate messages that include line folding (i.e., that contain any field-value that contains a match to the <a href="#header.fields" class="smpl">obs-fold</a> rule) unless the message is intended for packaging within the message/http media type.
       </p>
-      <ul>
-         <li>accept the message and replace any embedded <a href="#header.fields" class="smpl">obs-fold</a> whitespace with either a single <a href="#core.rules" class="smpl">SP</a> or a matching number of <a href="#core.rules" class="smpl">SP</a> octets (to avoid buffer copying) prior to interpreting the field value or forwarding the message downstream;
-         </li>
-         <li>if it is a request, reject the message by sending a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a> response with a representation explaining that obsolete line folding is unacceptable; or,
-         </li>
-         <li>if it is a response, discard the message and generate a <a href="p2-semantics.html#status.502" class="smpl">502 (Bad Gateway)</a> response with a representation explaining that unacceptable line folding was received.
-         </li>
-      </ul>
-      <p> Recipients that choose not to implement <a href="#header.fields" class="smpl">obs-fold</a> processing (as described above) <em class="bcp14">MUST NOT</em> accept messages containing header fields with leading whitespace, as this can expose them to attacks that exploit this difference
-         in processing.
+      <p id="rfc.section.3.2.4.p.5">A server that receives an <a href="#header.fields" class="smpl">obs-fold</a> in a request message that is not within a message/http container <em class="bcp14">MUST</em> either reject the message by sending a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a>, preferably with a representation explaining that obsolete line folding is unacceptable, or replace each received <a href="#header.fields" class="smpl">obs-fold</a> with one or more <a href="#core.rules" class="smpl">SP</a> octets prior to interpreting the field value or forwarding the message downstream.
       </p>
-      <p id="rfc.section.3.2.4.p.5">Historically, HTTP has allowed field content with text in the ISO-8859-1 <a href="#ISO-8859-1" id="rfc.xref.ISO-8859-1.1"><cite title="Information technology -- 8-bit single-byte coded graphic character sets -- Part 1: Latin alphabet No. 1">[ISO-8859-1]</cite></a> charset, supporting other charsets only through use of <a href="#RFC2047" id="rfc.xref.RFC2047.1"><cite title="MIME (Multipurpose Internet Mail Extensions) Part Three: Message Header Extensions for Non-ASCII Text">[RFC2047]</cite></a> encoding. In practice, most HTTP header field values use only a subset of the US-ASCII charset <a href="#USASCII" id="rfc.xref.USASCII.3"><cite title="Coded Character Set -- 7-bit American Standard Code for Information Interchange">[USASCII]</cite></a>. Newly defined header fields <em class="bcp14">SHOULD</em> limit their field values to US-ASCII octets. Recipients <em class="bcp14">SHOULD</em> treat other octets in field content (obs-text) as opaque data.
+      <p id="rfc.section.3.2.4.p.6">A proxy or gateway that receives an <a href="#header.fields" class="smpl">obs-fold</a> in a response message that is not within a message/http container <em class="bcp14">MUST</em> either discard the message and replace it with a <a href="p2-semantics.html#status.502" class="smpl">502 (Bad Gateway)</a> response, preferably with a representation explaining that unacceptable line folding was received, or replace each received <a href="#header.fields" class="smpl">obs-fold</a> with one or more <a href="#core.rules" class="smpl">SP</a> octets prior to interpreting the field value or forwarding the message downstream.
+      </p>
+      <p id="rfc.section.3.2.4.p.7">A user agent that receives an <a href="#header.fields" class="smpl">obs-fold</a> in a response message that is not within a message/http container <em class="bcp14">MUST</em> replace each received <a href="#header.fields" class="smpl">obs-fold</a> with one or more <a href="#core.rules" class="smpl">SP</a> octets prior to interpreting the field value.
+      </p>
+      <p id="rfc.section.3.2.4.p.8">Historically, HTTP has allowed field content with text in the ISO-8859-1 <a href="#ISO-8859-1" id="rfc.xref.ISO-8859-1.1"><cite title="Information technology -- 8-bit single-byte coded graphic character sets -- Part 1: Latin alphabet No. 1">[ISO-8859-1]</cite></a> charset, supporting other charsets only through use of <a href="#RFC2047" id="rfc.xref.RFC2047.1"><cite title="MIME (Multipurpose Internet Mail Extensions) Part Three: Message Header Extensions for Non-ASCII Text">[RFC2047]</cite></a> encoding. In practice, most HTTP header field values use only a subset of the US-ASCII charset <a href="#USASCII" id="rfc.xref.USASCII.3"><cite title="Coded Character Set -- 7-bit American Standard Code for Information Interchange">[USASCII]</cite></a>. Newly defined header fields <em class="bcp14">SHOULD</em> limit their field values to US-ASCII octets. Recipients <em class="bcp14">SHOULD</em> treat other octets in field content (obs-text) as opaque data.
       </p>
       <h3 id="rfc.section.3.2.5"><a href="#rfc.section.3.2.5">3.2.5</a>&nbsp;<a id="field.limits" href="#field.limits">Field Limits</a></h3>
       <p id="rfc.section.3.2.5.p.1">HTTP does not place a pre-defined limit on the length of each header field or on the length of the header block as a whole.
