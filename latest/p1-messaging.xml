@@ -1087,15 +1087,14 @@ Content-Type: text/plain
    the request, as defined in <xref target="request-target"/>.
 </t>
 <t>
-   No whitespace is allowed inside the method, request-target, and
-   protocol version.  Hence, recipients typically parse the request-line
-   into its component parts by splitting on whitespace
-   (see <xref target="message.robustness"/>).
+   Recipients typically parse the request-line into its component parts by
+   splitting on whitespace (see <xref target="message.robustness"/>), since
+   no whitespace is allowed in the three components.
+   Unfortunately, some user agents fail to properly encode or exclude
+   whitespace found in hypertext references, resulting in those disallowed
+   characters being sent in a request-target.
 </t>
 <t>
-   Unfortunately, some user agents fail to properly encode hypertext
-   references that have embedded whitespace, sending the characters directly
-   instead of properly encoding or excluding the disallowed characters.
    Recipients of an invalid request-line &SHOULD; respond with either a
    <x:ref>400 (Bad Request)</x:ref> error or a <x:ref>301 (Moved Permanently)</x:ref>
    redirect with the request-target properly encoded.  Recipients &SHOULD-NOT;
@@ -2020,12 +2019,12 @@ Content-Type: text/plain
 </t>
 <figure><artwork type="code">
   length := 0
-  read chunk-size, chunk-ext (if any) and CRLF
+  read chunk-size, chunk-ext (if any), and CRLF
   while (chunk-size &gt; 0) {
      read chunk-data and CRLF
      append chunk-data to decoded-body
      length := length + chunk-size
-     read chunk-size and CRLF
+     read chunk-size, chunk-ext (if any), and CRLF
   }
   read header-field
   while (header-field not empty) {
@@ -3027,7 +3026,7 @@ https://www.example.org
 </t>
 <t>
    A server that receives a <x:ref>close</x:ref> connection option &MUST;
-   initiate a lingering close (see below) of the connection after it sends the
+   initiate a close of the connection (see below) after it sends the
    final response to the request that contained <x:ref>close</x:ref>.
    The server &SHOULD; send a <x:ref>close</x:ref> connection option
    in its final response on that connection. The server &MUST-NOT; process
@@ -3035,7 +3034,7 @@ https://www.example.org
 </t>
 <t>
    A server that sends a <x:ref>close</x:ref> connection option &MUST;
-   initiate a lingering close of the connection after it sends the
+   initiate a close of the connection (see below) after it sends the
    response containing <x:ref>close</x:ref>. The server &MUST-NOT; process
    any further requests received on that connection.
 </t>
@@ -3057,13 +3056,13 @@ https://www.example.org
    and interpreted by the client's HTTP parser.
 </t>
 <t>
-   To avoid the TCP reset problem, a server can perform a lingering close on a
-   connection by closing only the write side of the read/write connection
-   (a half-close) and continuing to read from the connection until the
-   connection is closed by the client or the server is reasonably certain
-   that its own TCP stack has received the client's acknowledgement of the
-   packet(s) containing the server's last response. It is then safe for the
-   server to fully close the connection.
+   To avoid the TCP reset problem, servers typically close a connection in
+   stages. First, the server performs a half-close by closing only the write
+   side of the read/write connection. The server then continues to read from
+   the connection until it receives a corresponding close by the client, or
+   until the server is reasonably certain that its own TCP stack has received
+   the client's acknowledgement of the packet(s) containing the server's last
+   response. Finally, the server fully closes the connection.
 </t>
 <t>
    It is unknown whether the reset problem is exclusive to TCP or might also

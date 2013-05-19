@@ -1165,11 +1165,10 @@ Content-Type: text/plain
       <div id="rfc.iref.r.6"></div>
       <p id="rfc.section.3.1.1.p.6">The request-target identifies the target resource upon which to apply the request, as defined in <a href="#request-target" title="Request Target">Section&nbsp;5.3</a>.
       </p>
-      <p id="rfc.section.3.1.1.p.7">No whitespace is allowed inside the method, request-target, and protocol version. Hence, recipients typically parse the request-line
-         into its component parts by splitting on whitespace (see <a href="#message.robustness" title="Message Parsing Robustness">Section&nbsp;3.5</a>).
+      <p id="rfc.section.3.1.1.p.7">Recipients typically parse the request-line into its component parts by splitting on whitespace (see <a href="#message.robustness" title="Message Parsing Robustness">Section&nbsp;3.5</a>), since no whitespace is allowed in the three components. Unfortunately, some user agents fail to properly encode or exclude
+         whitespace found in hypertext references, resulting in those disallowed characters being sent in a request-target.
       </p>
-      <p id="rfc.section.3.1.1.p.8">Unfortunately, some user agents fail to properly encode hypertext references that have embedded whitespace, sending the characters
-         directly instead of properly encoding or excluding the disallowed characters. Recipients of an invalid request-line <em class="bcp14">SHOULD</em> respond with either a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a> error or a <a href="p2-semantics.html#status.301" class="smpl">301 (Moved Permanently)</a> redirect with the request-target properly encoded. Recipients <em class="bcp14">SHOULD NOT</em> attempt to autocorrect and then process the request without a redirect, since the invalid request-line might be deliberately
+      <p id="rfc.section.3.1.1.p.8">Recipients of an invalid request-line <em class="bcp14">SHOULD</em> respond with either a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a> error or a <a href="p2-semantics.html#status.301" class="smpl">301 (Moved Permanently)</a> redirect with the request-target properly encoded. Recipients <em class="bcp14">SHOULD NOT</em> attempt to autocorrect and then process the request without a redirect, since the invalid request-line might be deliberately
          crafted to bypass security filters along the request chain.
       </p>
       <p id="rfc.section.3.1.1.p.9">HTTP does not place a pre-defined limit on the length of a request-line. A server that receives a method longer than any that
@@ -1619,12 +1618,12 @@ Content-Type: text/plain
       <h3 id="rfc.section.4.1.2"><a href="#rfc.section.4.1.2">4.1.2</a>&nbsp;<a id="decoding.chunked" href="#decoding.chunked">Decoding chunked</a></h3>
       <p id="rfc.section.4.1.2.p.1">A process for decoding the chunked transfer coding can be represented in pseudo-code as:</p>
       <div id="rfc.figure.u.34"></div><pre class="text">  length := 0
-  read chunk-size, chunk-ext (if any) and CRLF
+  read chunk-size, chunk-ext (if any), and CRLF
   while (chunk-size &gt; 0) {
      read chunk-data and CRLF
      append chunk-data to decoded-body
      length := length + chunk-size
-     read chunk-size and CRLF
+     read chunk-size, chunk-ext (if any), and CRLF
   }
   read header-field
   while (header-field not empty) {
@@ -2087,9 +2086,9 @@ Host: www.example.org
       </p>
       <p id="rfc.section.6.6.p.2">A client that sends a <a href="#header.connection" class="smpl">close</a> connection option <em class="bcp14">MUST NOT</em> send further requests on that connection (after the one containing <a href="#header.connection" class="smpl">close</a>) and <em class="bcp14">MUST</em> close the connection after reading the final response message corresponding to this request.
       </p>
-      <p id="rfc.section.6.6.p.3">A server that receives a <a href="#header.connection" class="smpl">close</a> connection option <em class="bcp14">MUST</em> initiate a lingering close (see below) of the connection after it sends the final response to the request that contained <a href="#header.connection" class="smpl">close</a>. The server <em class="bcp14">SHOULD</em> send a <a href="#header.connection" class="smpl">close</a> connection option in its final response on that connection. The server <em class="bcp14">MUST NOT</em> process any further requests received on that connection.
+      <p id="rfc.section.6.6.p.3">A server that receives a <a href="#header.connection" class="smpl">close</a> connection option <em class="bcp14">MUST</em> initiate a close of the connection (see below) after it sends the final response to the request that contained <a href="#header.connection" class="smpl">close</a>. The server <em class="bcp14">SHOULD</em> send a <a href="#header.connection" class="smpl">close</a> connection option in its final response on that connection. The server <em class="bcp14">MUST NOT</em> process any further requests received on that connection.
       </p>
-      <p id="rfc.section.6.6.p.4">A server that sends a <a href="#header.connection" class="smpl">close</a> connection option <em class="bcp14">MUST</em> initiate a lingering close of the connection after it sends the response containing <a href="#header.connection" class="smpl">close</a>. The server <em class="bcp14">MUST NOT</em> process any further requests received on that connection.
+      <p id="rfc.section.6.6.p.4">A server that sends a <a href="#header.connection" class="smpl">close</a> connection option <em class="bcp14">MUST</em> initiate a close of the connection (see below) after it sends the response containing <a href="#header.connection" class="smpl">close</a>. The server <em class="bcp14">MUST NOT</em> process any further requests received on that connection.
       </p>
       <p id="rfc.section.6.6.p.5">A client that receives a <a href="#header.connection" class="smpl">close</a> connection option <em class="bcp14">MUST</em> cease sending requests on that connection and close the connection after reading the response message containing the close;
          if additional pipelined requests had been sent on the connection, the client <em class="bcp14">SHOULD</em> assume that they will not be processed by the server.
@@ -2100,10 +2099,10 @@ Host: www.example.org
          reset packet to the client; unfortunately, the reset packet might erase the client's unacknowledged input buffers before they
          can be read and interpreted by the client's HTTP parser.
       </p>
-      <p id="rfc.section.6.6.p.7">To avoid the TCP reset problem, a server can perform a lingering close on a connection by closing only the write side of the
-         read/write connection (a half-close) and continuing to read from the connection until the connection is closed by the client
-         or the server is reasonably certain that its own TCP stack has received the client's acknowledgement of the packet(s) containing
-         the server's last response. It is then safe for the server to fully close the connection.
+      <p id="rfc.section.6.6.p.7">To avoid the TCP reset problem, servers typically close a connection in stages. First, the server performs a half-close by
+         closing only the write side of the read/write connection. The server then continues to read from the connection until it receives
+         a corresponding close by the client, or until the server is reasonably certain that its own TCP stack has received the client's
+         acknowledgement of the packet(s) containing the server's last response. Finally, the server fully closes the connection.
       </p>
       <p id="rfc.section.6.6.p.8">It is unknown whether the reset problem is exclusive to TCP or might also be found in other transport connection protocols.</p>
       <div id="rfc.iref.u.5"></div>
