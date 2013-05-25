@@ -3086,14 +3086,9 @@ https://www.example.org
    for transitioning from HTTP/1.1 to some other protocol on the same
    connection.  A client &MAY; send a list of protocols in the Upgrade
    header field of a request to invite the server to switch to one or
-   more of those protocols before sending the final response.
-   A server &MUST; send an Upgrade header field in <x:ref>101 (Switching
-   Protocols)</x:ref> responses to indicate which protocol(s) are being
-   switched to, and &MUST; send it in <x:ref>426 (Upgrade Required)</x:ref>
-   responses to indicate acceptable protocols.
-   A server &MAY; send an Upgrade header field in any other response to
-   indicate that they might be willing to upgrade to one of the
-   specified protocols for a future request.
+   more of those protocols, in order of descending preference, before sending
+   the final response. A server &MAY; ignore a received Upgrade header field
+   if it wishes to continue using the current protocol on that connection.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Upgrade"/>
   <x:ref>Upgrade</x:ref>          = 1#<x:ref>protocol</x:ref>
@@ -3102,6 +3097,27 @@ https://www.example.org
   <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
   <x:ref>protocol-version</x:ref> = <x:ref>token</x:ref>
 </artwork></figure>
+<t>
+   A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the new protocol(s) to
+   which the connection is being switched; if multiple protocol layers are
+   being switched, the new protocols &MUST; be listed in layer-ascending
+   order. A server &MUST-NOT; switch to a protocol that was not indicated by
+   the client in the corresponding request's Upgrade header field.
+   A server &MAY; choose to ignore the order of preference indicated by the
+   client and select the new protocol(s) based on other factors, such as the
+   nature of the request or the current load on the server.
+</t>
+<t>
+   A server that sends a <x:ref>426 (Upgrade Required)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the acceptable protocols,
+   in order of descending preference.
+</t>
+<t>
+   A server &MAY; send an Upgrade header field in any other response to
+   advertise that it implements support for upgrading to the listed protocols,
+   in order of descending preference, when appropriate for a future request.
+</t>
 <figure><preamble>
    The following is a hypothetical example sent by a client:
 </preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
@@ -3112,24 +3128,16 @@ Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11
 
 </artwork></figure>
 <t>
-   Upgrade eases the difficult transition between incompatible protocols by
-   allowing the client to initiate a request in the more commonly
-   supported protocol while indicating to the server that it would like
-   to use a "better" protocol if available (where "better" is determined
-   by the server, possibly according to the nature of the request method
-   or target resource).
-</t>
-<t>
    Upgrade cannot be used to insist on a protocol change; its acceptance and
    use by the server is optional. The capabilities and nature of the
    application-level communication after the protocol change is entirely
-   dependent upon the new protocol chosen, although the first action
+   dependent upon the new protocol(s) chosen, although the first action
    after changing the protocol &MUST; be a response to the initial HTTP
    request that contained the Upgrade header field.
 </t>
 <t>
    For example, if the Upgrade header field is received in a GET request
-   and the server decides to switch protocols, then it first responds
+   and the server decides to switch protocols, it first responds
    with a <x:ref>101 (Switching Protocols)</x:ref> message in HTTP/1.1 and
    then immediately follows that with the new protocol's equivalent of a
    response to a GET on the target resource.  This allows a connection to be
@@ -3149,19 +3157,19 @@ Upgrade: HTTP/2.0
 (as defined by new protocol) to the "GET /hello.txt" request ...]
 </artwork></figure>
 <t>
-   When Upgrade is sent, a sender &MUST; also send a 
+   When Upgrade is sent, the sender &MUST; also send a 
    <x:ref>Connection</x:ref> header field (<xref target="header.connection"/>)
-   that contains the "upgrade" connection option, in order to prevent Upgrade
+   that contains an "upgrade" connection option, in order to prevent Upgrade
    from being accidentally forwarded by intermediaries that might not implement
    the listed protocols.  A server &MUST; ignore an Upgrade header field that
    is received in an HTTP/1.0 request.
 </t>
 <t>
-   The Upgrade header field only applies to switching application-level
-   protocols on the existing connection; it cannot be used
-   to switch to a protocol on a different connection. For that purpose, it is
-   more appropriate to use a <x:ref>3xx (Redirection)</x:ref> response
-   (&status-3xx;).
+   The Upgrade header field only applies to switching protocols on top of the
+   existing connection; it cannot be used to switch the underlying connection
+   (transport) protocol, nor to switch the existing communication to a
+   different connection. For those purposes, it is more appropriate to use a
+   <x:ref>3xx (Redirection)</x:ref> response (&status-3xx;).
 </t>
 <t>
    This specification only defines the protocol name "HTTP" for use by
