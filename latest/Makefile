@@ -6,8 +6,7 @@ stylesheet = ../myxml2rfc.xslt
 reduction  = ../../rfc2629xslt/clean-for-DTD.xslt
 bap  = ../../abnfparser/bap
 
-TARGETS_XML= p0-introduction.xml \
-          p1-messaging.xml \
+TARGETS_XML= p1-messaging.xml \
           p2-semantics.xml \
           p4-conditional.xml \
           p5-range.xml \
