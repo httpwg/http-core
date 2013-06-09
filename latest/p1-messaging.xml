@@ -511,12 +511,8 @@ Content-Type: text/plain
    A gateway communicates with inbound servers using any protocol that
    it desires, including private extensions to HTTP that are outside
    the scope of this specification.  However, an HTTP-to-HTTP gateway
-   that wishes to interoperate with third-party HTTP servers &MUST;
-   conform to HTTP user agent requirements on the gateway's inbound
-   connection and &MUST; implement the <x:ref>Connection</x:ref>
-   (<xref target="header.connection"/>) and <x:ref>Via</x:ref>
-   (<xref target="header.via"/>) header fields for both inbound and outbound
-   connections.
+   that wishes to interoperate with third-party HTTP servers ought to conform
+   to user agent requirements on the gateway's inbound connection.
 </t>
 <t><iref primary="true" item="tunnel"/>
    A "<x:dfn>tunnel</x:dfn>" acts as a blind relay between two connections
@@ -964,7 +960,7 @@ Content-Type: text/plain
 </t>
 <t>
    If the port is equal to the default port for a scheme, the normal form is
-   to elide the port subcomponent. When not being used in absolute form as the
+   to omit the port subcomponent. When not being used in absolute form as the
    request target of an OPTIONS request, an empty path component is equivalent
    to an absolute path of "/", so the normal form is to provide a path of "/"
    instead. The scheme and host are case-insensitive and normally provided in
@@ -2571,44 +2567,52 @@ https://www.example.org
   <x:anchor-alias value="received-protocol"/>
   <x:anchor-alias value="Via"/>
 <t>
-   The "Via" header field &MUST; be sent by a proxy or gateway in forwarded
-   messages to indicate the intermediate protocols and recipients between the
-   user agent and the server on requests, and between the origin server and
-   the client on responses. It is analogous to the "Received" field
-   used by email systems (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>).
-   Via is used in HTTP for tracking message forwards,
+   The "Via" header field indicates the presence of intermediate protocols and
+   recipients between the user agent and the server (on requests) or between
+   the origin server and the client (on responses), similar to the
+   "Received" header field in email
+   (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>).
+   Via can be used for tracking message forwards,
    avoiding request loops, and identifying the protocol capabilities of
-   all senders along the request/response chain.
+   senders along the request/response chain.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
-  <x:ref>Via</x:ref>               = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref>
-                          [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+  <x:ref>Via</x:ref> = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+
   <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
                       ; see <xref target="header.upgrade"/>
   <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
   <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
 </artwork></figure>
 <t>
-   The received-protocol indicates the protocol version of the message
-   received by the server or client along each segment of the
-   request/response chain. The received-protocol version is appended to
-   the Via field value when the message is forwarded so that information
-   about the protocol capabilities of upstream applications remains
-   visible to all recipients.
-</t>
-<t>
-   The protocol-name is excluded if and only if it would be "HTTP". The
-   received-by field is normally the host and optional port number of a
-   recipient server or client that subsequently forwarded the message.
-   However, if the real host is considered to be sensitive information,
-   it &MAY; be replaced by a pseudonym. If the port is not given, it &MAY;
-   be assumed to be the default port of the received-protocol.
-</t>
-<t>
    Multiple Via field values represent each proxy or gateway that has
-   forwarded the message. Each recipient &MUST; append its information
-   such that the end result is ordered according to the sequence of
-   forwarding applications.
+   forwarded the message. Each intermediary appends its own information
+   about how the message was received, such that the end result is ordered
+   according to the sequence of forwarding recipients.
+</t>
+<t>
+   A proxy &MUST; send an appropriate Via header field, as described below, in
+   each message that it forwards.
+   An HTTP-to-HTTP gateway &MUST; send an appropriate Via header field in
+   each inbound request message and &MAY; send a Via header field in
+   forwarded response messages.
+</t>
+<t>
+   For each intermediary, the received-protocol indicates the protocol and
+   protocol version used by the upstream sender of the message. Hence, the
+   Via field value records the advertised protocol capabilities of the
+   request/response chain such that they remain visible to downstream
+   recipients; this can be useful for determining what backwards-incompatible
+   features might be safe to use in response, or within a later request, as
+   described in <xref target="http.version"/>. For brevity, the protocol-name
+   is omitted when the received protocol is HTTP.
+</t>
+<t>
+   The received-by field is normally the host and optional port number of a
+   recipient server or client that subsequently forwarded the message.
+   However, if the real host is considered to be sensitive information, it
+   &MAY; be replaced by a pseudonym. If the port is not given, it &MAY; be
+   assumed to be the default port of the received-protocol.
 </t>
 <t>
    Comments &MAY; be used in the Via header field to identify the software
@@ -2626,7 +2630,7 @@ https://www.example.org
    Via header field:
 </t>
 <figure><artwork type="example">
-  Via: 1.0 fred, 1.1 p.example.net (Apache/1.1)
+  Via: 1.0 fred, 1.1 p.example.net
 </artwork></figure>
 <t>
    A proxy or gateway used as a portal through a network firewall
