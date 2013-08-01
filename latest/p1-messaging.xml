@@ -729,17 +729,10 @@ Content-Type: text/plain
    HTTP/1.1.
 </t>
 <t>
-   New header fields can be defined such that, when they are
-   understood by a recipient, they might override or enhance the
-   interpretation of previously defined header fields.  When an
-   implementation receives an unrecognized header field, the recipient
-   &MUST; ignore that header field for local processing regardless of
-   the message's HTTP version.  An unrecognized header field received
-   by a proxy &MUST; be forwarded downstream unless the header field's
-   field-name is listed in the message's <x:ref>Connection</x:ref> header field
-   (see <xref target="header.connection"/>).
-   These requirements allow HTTP's functionality to be enhanced without
-   requiring prior update of deployed intermediaries.
+   New header fields can be introduced without changing the protocol version
+   if their defined semantics allow them to be safely ignored by recipients
+   that do not recognize them. Header field extensibility is discussed in
+   <xref target="field.extensibility"/>.
 </t>
 <t>
    Intermediaries that process HTTP messages (i.e., all intermediaries
@@ -888,14 +881,16 @@ Content-Type: text/plain
    a potential resource within that origin server's name space.
 </t>
 <t>
+   A sender &MUST-NOT; generate an "http" URI with an empty host identifier.
+   A recipient that processes such a URI reference &MUST; reject it as invalid. 
+</t>
+<t>
    If the host identifier is provided as an IP address,
    then the origin server is any listener on the indicated TCP port at
    that IP address. If host is a registered name, then that name is
    considered an indirect identifier and the recipient might use a name
    resolution service, such as DNS, to find the address of a listener
    for that host.
-   The host &MUST-NOT; be empty; if an "http" URI is received with an
-   empty host, then it &MUST; be rejected as invalid. 
    If the port subcomponent is empty or not given, then TCP port 80 is
    assumed (the default reserved port for WWW services).
 </t>
@@ -939,8 +934,8 @@ Content-Type: text/plain
    configuration of authentication information, such as within command
    invocation options, configuration files, or bookmark lists, even
    though such usage might expose a user identifier or password.
-   Senders &MUST; exclude the userinfo subcomponent (and its "@"
-   delimiter) when an "http" URI is transmitted within a message as a
+   Senders &MUST-NOT; generate the userinfo subcomponent (and its "@"
+   delimiter) when an "http" URI reference is generated within a message as a
    request target or header field value.
    Recipients of an "http" URI reference &SHOULD; parse for userinfo and
    treat its presence as an error, since it is likely being used to obscure
@@ -963,8 +958,9 @@ Content-Type: text/plain
    All of the requirements listed above for the "http" scheme are also
    requirements for the "https" scheme, except that a default TCP port
    of 443 is assumed if the port subcomponent is empty or not given,
-   and the TCP connection &MUST; be secured, end-to-end, through the
-   use of strong encryption prior to sending the first HTTP request.
+   and the user agent &MUST; ensure that its connection to the origin
+   server is secured through the use of strong encryption, end-to-end,
+   prior to sending the first HTTP request.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
   <x:ref>https-URI</x:ref> = "https:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
@@ -1156,10 +1152,10 @@ Content-Type: text/plain
    HTTP does not place a pre-defined limit on the length of a request-line.
    A server that receives a method longer than any that it implements
    &SHOULD; respond with a <x:ref>501 (Not Implemented)</x:ref> status code.
-   A server &MUST; be prepared to receive URIs of unbounded length and
-   respond with the <x:ref>414 (URI Too Long)</x:ref> status code if the received
-   request-target would be longer than the server wishes to handle
-   (see &status-414;).
+   A server ought to be prepared to receive URIs of unbounded length, as
+   described in <xref target="conformance"/>, and &MUST; respond with a
+   <x:ref>414 (URI Too Long)</x:ref> status code if the received
+   request-target is longer than the server wishes to parse (see &status-414;).
 </t>
 <t>
    Various ad-hoc limitations on request-line length are found in practice.
@@ -1237,23 +1233,30 @@ Content-Type: text/plain
 
 <section title="Field Extensibility" anchor="field.extensibility">
 <t>
-   HTTP header fields are fully extensible: there is no limit on the
+   Header fields are fully extensible: there is no limit on the
    introduction of new field names, each presumably defining new semantics,
    nor on the number of header fields used in a given message.  Existing
    fields are defined in each part of this specification and in many other
    specifications outside the core standard.
-   New header fields can be introduced without changing the protocol version
-   if their defined semantics allow them to be safely ignored by recipients
-   that do not recognize them.
 </t>
 <t>
-   New HTTP header fields ought to be registered with IANA in the
-   Message Header Field Registry, as described in &iana-header-registry;.
+   New header fields can be defined such that, when they are understood by a
+   recipient, they might override or enhance the interpretation of previously
+   defined header fields, define preconditions on request evaluation, or
+   refine the meaning of responses.
+</t>
+<t>
    A proxy &MUST; forward unrecognized header fields unless the
    field-name is listed in the <x:ref>Connection</x:ref> header field
    (<xref target="header.connection"/>) or the proxy is specifically
    configured to block, or otherwise transform, such fields.
    Other recipients &SHOULD; ignore unrecognized header fields.
+   These requirements allow HTTP's functionality to be enhanced without
+   requiring prior update of deployed intermediaries.
+</t>
+<t>
+   All defined header fields ought to be registered with IANA in the
+   Message Header Field Registry, as described in &iana-header-registry;.
 </t>
 </section>
 
@@ -1276,9 +1279,9 @@ Content-Type: text/plain
    or the header field is a well-known exception (as noted below).
 </t>
 <t>
-   Multiple header fields with the same field name can be combined into
-   one "field-name: field-value" pair, without changing the semantics of the
-   message, by appending each subsequent field value to the combined
+   A recipient &MAY; combine multiple header fields with the same field name
+   into one "field-name: field-value" pair, without changing the semantics of
+   the message, by appending each subsequent field value to the combined
    field value in order, separated by a comma. The order in which
    header fields with the same field name are received is therefore
    significant to the interpretation of the combined field value;
@@ -1410,22 +1413,24 @@ Content-Type: text/plain
 <section title="Field Limits" anchor="field.limits">
 <t>
    HTTP does not place a pre-defined limit on the length of each header field
-   or on the length of the header block as a whole.  Various ad-hoc
-   limitations on individual header field length are found in practice,
-   often depending on the specific field semantics.
+   or on the length of the header block as a whole, as described in
+   <xref target="conformance"/>. Various ad-hoc limitations on individual
+   header field length are found in practice, often depending on the specific
+   field semantics.
 </t>
 <t>
-   A server &MUST; be prepared to receive request header fields of unbounded
-   length and respond with an appropriate <x:ref>4xx (Client Error)</x:ref>
-   status code if the received header field(s) are larger than the server
-   wishes to process.
+   A server ought to be prepared to receive request header fields of unbounded
+   length and &MUST; respond with an appropriate
+   <x:ref>4xx (Client Error)</x:ref> status code if the received header
+   field(s) are larger than the server wishes to process.
 </t>
 <t>
-   A client &MUST; be prepared to receive response header fields of unbounded
-   length. A client &MAY; discard or truncate received header fields that are
-   larger than the client wishes to process if the field semantics are such
-   that the dropped value(s) can be safely ignored without changing the
-   response semantics.
+   A client ought to be prepared to receive response header fields of
+   unbounded length.
+   A client &MAY; discard or truncate received header fields that are larger
+   than the client wishes to process if the field semantics are such that the
+   dropped value(s) can be safely ignored without changing the
+   message framing or response semantics.
 </t>
 </section>
 
@@ -1436,9 +1441,7 @@ Content-Type: text/plain
   <x:anchor-alias value="special"/>
   <x:anchor-alias value="word"/>
    Many HTTP header field values consist of words (token or quoted-string)
-   separated by whitespace or special characters. These special characters
-   &MUST; be in a quoted string to be used within a parameter value (as defined
-   in <xref target="transfer.codings"/>).
+   separated by whitespace or special characters.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="word"/><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/><iref primary="true" item="Grammar" subitem="special"><!--unused production--></iref>
   <x:ref>word</x:ref>           = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
@@ -1573,18 +1576,17 @@ Content-Type: text/plain
    security from those that are characteristics of the selected resource.
 </t>
 <t>
-   All HTTP/1.1 recipients &MUST; implement the chunked transfer coding
+   All HTTP/1.1 recipients &MUST; be able to parse the chunked transfer coding
    (<xref target="chunked.encoding"/>) because it plays a crucial role in
    framing messages when the payload body size is not known in advance.
-   If chunked is applied to a payload body, the sender &MUST-NOT; apply
-   chunked more than once (i.e., chunking an already chunked message is not
-   allowed).
-   If any transfer coding is applied to a request payload body, the
-   sender &MUST; apply chunked as the final transfer coding to ensure that
-   the message is properly framed.
-   If any transfer coding is applied to a response payload body, the
-   sender &MUST; either apply chunked as the final transfer coding or
-   terminate the message by closing the connection.
+   A sender &MUST-NOT; apply chunked more than once to a message body
+   (i.e., chunking an already chunked message is not allowed).
+   If any transfer coding other than chunked is applied to a request payload
+   body, the sender &MUST; apply chunked as the final transfer coding to
+   ensure that the message is properly framed.
+   If any transfer coding other than chunked is applied to a response payload
+   body, the sender &MUST; either apply chunked as the final transfer coding
+   or terminate the message by closing the connection.
 </t>
 <figure><preamble>
    For example,
@@ -1776,15 +1778,18 @@ Content-Type: text/plain
      If a message is received without <x:ref>Transfer-Encoding</x:ref> and with
      either multiple <x:ref>Content-Length</x:ref> header fields having
      differing field-values or a single Content-Length header field having an
-     invalid value, then the message framing is invalid and &MUST; be treated
-     as an error to prevent request or response smuggling.
+     invalid value, then the message framing is invalid and
+     the recipient &MUST; treat it as an unrecoverable error to prevent
+     request or response smuggling.
      If this is a request message, the server &MUST; respond with
      a <x:ref>400 (Bad Request)</x:ref> status code and then close the connection.
-     If this is a response message received by a proxy, the proxy
-     &MUST; close the connection to the server, discard the received response,
-     and send a <x:ref>502 (Bad Gateway)</x:ref> response to the client.
-     If this is a response message received by a user agent, it &MUST; be
-     treated as an error by discarding the message and closing the connection.
+     If this is a response message received by a proxy,
+     the proxy &MUST; close the connection to the server, discard the received
+     response, and send a <x:ref>502 (Bad Gateway)</x:ref> response to the
+     client.
+     If this is a response message received by a user agent,
+     the user agent &MUST; close the connection to the server and discard the
+     received response.
     </t></x:lt>
     <x:lt><t>
      If a valid <x:ref>Content-Length</x:ref> header field is present without
@@ -2022,14 +2027,15 @@ Content-Type: text/plain
    chunked message in order to supply metadata that might be dynamically
    generated while the message body is sent, such as a message integrity
    check, digital signature, or post-processing status.
-   The trailer &MUST-NOT; contain fields that need to be known before a
-   recipient processes the body, such as <x:ref>Transfer-Encoding</x:ref>,
-   <x:ref>Content-Length</x:ref>, and <x:ref>Trailer</x:ref>.
+   A sender &MUST-NOT; generate a trailer containing a field that needs to be
+   known before a recipient processes the body, such as
+   <x:ref>Transfer-Encoding</x:ref>, <x:ref>Content-Length</x:ref>, and
+   <x:ref>Trailer</x:ref>.
 </t>
 <t>
    When a message includes a message body encoded with the chunked
    transfer coding and the sender desires to send metadata in the form of
-   trailer fields at the end of the message, the sender &SHOULD; send a
+   trailer fields at the end of the message, the sender &SHOULD; generate a
    <x:ref>Trailer</x:ref> header field before the message body to indicate
    which fields will be present in the trailers. This allows the recipient
    to prepare for receipt of that metadata before it starts processing the body,
@@ -2040,11 +2046,7 @@ Content-Type: text/plain
   <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
 </artwork></figure>
 <t>
-   If no <x:ref>Trailer</x:ref> header field is present, the sender of a
-   chunked message body &SHOULD; send an empty trailer.
-</t>
-<t>
-   A server &MUST; send an empty trailer with the chunked transfer coding
+   A server &MUST; generate an empty trailer with the chunked transfer coding
    unless at least one of the following is true:
   <list style="numbers">
     <t>the request included a <x:ref>TE</x:ref> header field that indicates
@@ -2052,11 +2054,10 @@ Content-Type: text/plain
     described in <xref target="header.te"/>; or,</t>
      
     <t>the trailer fields consist entirely of optional metadata and the
-    recipient could use the message (in a manner acceptable to the server where
-    the field originated) without receiving that metadata. In other words,
-    the server that generated the header field is willing to accept the
-    possibility that the trailer fields might be silently discarded along
-    the path to the client.</t>
+    recipient could use the message (in a manner acceptable to the generating
+    server) without receiving that metadata. In other words, the generating
+    server is willing to accept the possibility that the trailer fields might
+    be silently discarded along the path to the client.</t>
   </list>
 </t>
 <t>
@@ -2090,7 +2091,7 @@ Content-Type: text/plain
   Remove Trailer from existing header fields
 </artwork></figure>
 <t>
-   All recipients &MUST; be able to receive and decode the
+   All recipients &MUST; be able to parse and decode the
    chunked transfer coding and &MUST; ignore chunk-ext extensions
    they do not understand.
 </t>
@@ -2309,8 +2310,7 @@ Content-Type: text/plain
    If the target URI's path component is empty, then the client &MUST; send
    "/" as the path within the origin-form of request-target.
    A <x:ref>Host</x:ref> header field is also sent, as defined in
-   <xref target="header.host"/>, containing the target URI's
-   authority component (excluding any userinfo).
+   <xref target="header.host"/>.
 </t>
 <t>
    For example, a client wishing to retrieve a representation of the resource
@@ -2359,11 +2359,11 @@ GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
   <x:h>authority-form</x:h>
 </t>
 <t>
-   The <x:dfn>authority-form</x:dfn> of request-target is only used for CONNECT requests
-   (&CONNECT;).  When making a CONNECT request to establish a tunnel through
-   one or more proxies, a client &MUST; send only the target URI's
-   authority component (excluding any userinfo) as the request-target.
-   For example,
+   The <x:dfn>authority-form</x:dfn> of request-target is only used for
+   CONNECT requests (&CONNECT;). When making a CONNECT request to establish a
+   tunnel through one or more proxies, a client &MUST; send only the target
+   URI's authority component (excluding any userinfo and its "@" delimiter) as
+   the request-target. For example,
 </t>
 <figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 CONNECT www.example.com:80 HTTP/1.1
@@ -2411,20 +2411,24 @@ Host: www.example.org:8001
    The "Host" header field in a request provides the host and port
    information from the target URI, enabling the origin
    server to distinguish among resources while servicing requests
-   for multiple host names on a single IP address.  Since the Host
-   field-value is critical information for handling a request, it
-   &SHOULD; be sent as the first header field following the request-line.
+   for multiple host names on a single IP address.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Host"/>
   <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="http.uri"/>
 </artwork></figure>
 <t>
-   A client &MUST; send a Host header field in all HTTP/1.1 request
-   messages.  If the target URI includes an authority component, then
-   the Host field-value &MUST; be identical to that authority component
-   after excluding any userinfo (<xref target="http.uri"/>).
+   A client &MUST; send a Host header field in all HTTP/1.1 request messages.
+   If the target URI includes an authority component, then a client &MUST;
+   send a field-value for Host that is identical to that authority
+   component, excluding any userinfo subcomponent and its "@" delimiter
+   (<xref target="http.uri"/>).
    If the authority component is missing or undefined for the target URI,
-   then the Host header field &MUST; be sent with an empty field-value.
+   then a client &MUST; send a Host header field with an empty field-value.
+</t>
+<t>
+   Since the Host field-value is critical information for handling a request,
+   a user agent &SHOULD; generate Host as the first header field following the
+   request-line. 
 </t>
 <t>
    For example, a GET request to the origin server for
@@ -2435,7 +2439,7 @@ GET /pub/WWW/ HTTP/1.1
 Host: www.example.org
 </artwork></figure>
 <t>
-   The Host header field &MUST; be sent in an HTTP/1.1 request even
+   A client &MUST; send a Host header field in an HTTP/1.1 request even
    if the request-target is in the absolute-form, since this
    allows the Host information to be forwarded through ancient HTTP/1.0
    proxies that might not have implemented Host.
@@ -2444,8 +2448,8 @@ Host: www.example.org
    When a proxy receives a request with an absolute-form of
    request-target, the proxy &MUST; ignore the received
    Host header field (if any) and instead replace it with the host
-   information of the request-target.  If the proxy forwards the request,
-   it &MUST; generate a new Host field-value based on the received
+   information of the request-target.  A proxy that forwards such a request
+   &MUST; generate a new Host field-value based on the received
    request-target rather than forward the received Host field-value.
 </t>
 <t>
@@ -2587,15 +2591,16 @@ https://www.example.org
    can enhance (or interfere) with either direction of the stream.
 </t>
 <t>
-   Intermediaries that forward a message &MUST; implement the
+   An intermediary not acting as a tunnel &MUST; implement the
    <x:ref>Connection</x:ref> header field, as specified in
-   <xref target="header.connection"/>, to exclude fields that are only
-   intended for the incoming connection.
+   <xref target="header.connection"/>, and exclude fields from being forwarded
+   that are only intended for the incoming connection.
 </t>
 <t>
-   In order to avoid request loops, a proxy that forwards requests to other
-   proxies &MUST; be able to recognize and exclude all of its own server
-   names, including any aliases, local variations, or literal IP addresses.
+   An intermediary &MUST-NOT; forward a message to itself unless it is
+   protected from an infinite request loop. In general, an intermediary ought
+   to recognize its own server names, including any aliases, local variations,
+   or literal IP addresses, and respond to such requests directly.
 </t>
 
 <section title="Via" anchor="header.via">
@@ -2648,15 +2653,16 @@ https://www.example.org
 <t>
    The received-by field is normally the host and optional port number of a
    recipient server or client that subsequently forwarded the message.
-   However, if the real host is considered to be sensitive information, it
-   &MAY; be replaced by a pseudonym. If the port is not given, it &MAY; be
-   assumed to be the default port of the received-protocol.
+   However, if the real host is considered to be sensitive information, a
+   sender &MAY; replace it with a pseudonym. If a port is not provided,
+   a recipient &MAY; interpret that as meaning it was received on the default
+   TCP port, if any, for the received-protocol.
 </t>
 <t>
-   Comments &MAY; be used in the Via header field to identify the software
-   of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
+   A sender &MAY; generate comments in the Via header field to identify the
+   software of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
    <x:ref>Server</x:ref> header fields. However, all comments in the Via field
-   are optional and &MAY; be removed by any recipient prior to forwarding the
+   are optional and a recipient &MAY; remove them prior to forwarding the
    message.
 </t>
 <t>
@@ -2671,14 +2677,14 @@ https://www.example.org
   Via: 1.0 fred, 1.1 p.example.net
 </artwork></figure>
 <t>
-   A proxy or gateway used as a portal through a network firewall
+   An intermediary used as a portal through a network firewall
    &SHOULD-NOT; forward the names and ports of hosts within the firewall
-   region unless it is explicitly enabled to do so. If not enabled, the
-   received-by host of any host behind the firewall &SHOULD; be replaced
-   by an appropriate pseudonym for that host.
+   region unless it is explicitly enabled to do so. If not enabled, such an
+   intermediary &SHOULD; replace each received-by host of any host behind the
+   firewall by an appropriate pseudonym for that host.
 </t>
 <t>
-   A proxy or gateway &MAY; combine an ordered subsequence of Via header
+   An intermediary &MAY; combine an ordered subsequence of Via header
    field entries into a single such entry if the entries have identical
    received-protocol values. For example,
 </t>
@@ -2858,8 +2864,8 @@ https://www.example.org
   Connection: close
 </artwork></figure>
 <t>
-   in either the request or the response header fields indicates that
-   the connection &MUST; be closed after the current request/response
+   in either the request or the response header fields indicates that the
+   sender is going to close the connection after the current request/response
    is complete (<xref target="persistent.tear-down"/>).
 </t>
 <t>
@@ -2917,7 +2923,7 @@ https://www.example.org
    without a "keep-alive" connection option.
 </t>
 <t>
-   In order to remain persistent, all messages on a connection &MUST;
+   In order to remain persistent, all messages on a connection need to
    have a self-defined message length (i.e., one not defined by closure
    of the connection), as described in <xref target="message.body"/>.
    A server &MUST; read the entire request message body or close
@@ -2967,7 +2973,7 @@ https://www.example.org
    automatically retrying the requests that failed.
 </t>
 <t>
-   An automatic retry &SHOULD-NOT; be repeated if it fails.
+   A client &SHOULD-NOT; automatically retry a failed automatic retry.
 </t>
 </section>
 
@@ -2982,16 +2988,20 @@ https://www.example.org
    received.
 </t>
 <t>
-   A client that pipelines requests &MUST; be prepared to retry those
-   requests if the connection closes before it receives all of the
-   corresponding responses. A client that assumes a persistent connection and
-   pipelines immediately after connection establishment &MUST-NOT; pipeline
-   on a retry connection until it knows the connection is persistent.
+   A client that pipelines requests &SHOULD; retry unanswered requests if the
+   connection closes before it receives all of the corresponding responses.
+   When retrying pipelined requests after a failed connection (a connection
+   not explicitly closed by the server in its last complete response), a
+   client &MUST-NOT; pipeline immediately after connection establishment,
+   since the first remaining request in the prior pipeline might have caused
+   an error response that can be lost again if multiple requests are sent on a
+   prematurely closed connection (see the TCP reset problem described in
+   <xref target="persistent.tear-down"/>).
 </t>
 <t>
    Idempotent methods (&idempotent-methods;) are significant to pipelining
    because they can be automatically retried after a connection failure.
-   A user agent &SHOULD-NOT; pipeline requests after a non-idempotent method
+   A user agent &SHOULD-NOT; pipeline requests after a non-idempotent method,
    until the final response status code for that method has been received,
    unless the user agent has a means to detect and recover from partial
    failure conditions involving the pipelined sequence.
@@ -3162,7 +3172,7 @@ https://www.example.org
    A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
    &MUST; send an Upgrade header field to indicate the new protocol(s) to
    which the connection is being switched; if multiple protocol layers are
-   being switched, the new protocols &MUST; be listed in layer-ascending
+   being switched, the sender &MUST; list the protocols in layer-ascending
    order. A server &MUST-NOT; switch to a protocol that was not indicated by
    the client in the corresponding request's Upgrade header field.
    A server &MAY; choose to ignore the order of preference indicated by the
@@ -3192,9 +3202,12 @@ Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11
    Upgrade cannot be used to insist on a protocol change; its acceptance and
    use by the server is optional. The capabilities and nature of the
    application-level communication after the protocol change is entirely
-   dependent upon the new protocol(s) chosen, although the first action
-   after changing the protocol &MUST; be a response to the initial HTTP
-   request that contained the Upgrade header field.
+   dependent upon the new protocol(s) chosen. However, immediately after
+   sending the 101 response, the server is expected to continue responding to
+   the original request as if it had received its equivalent within the new
+   protocol (i.e., the server still has an outstanding request to satisfy
+   after the protocol has been changed, and is expected to do so without
+   requiring the request to be repeated).
 </t>
 <t>
    For example, if the Upgrade header field is received in a GET request

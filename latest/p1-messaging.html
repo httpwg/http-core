@@ -1006,9 +1006,8 @@ Content-Type: text/plain
          behavior of a recipient in the absence of such a field can change. Unless specified otherwise, header fields defined in HTTP/1.1
          are defined for all versions of HTTP/1.x. In particular, the <a href="#header.host" class="smpl">Host</a> and <a href="#header.connection" class="smpl">Connection</a> header fields ought to be implemented by all HTTP/1.x implementations whether or not they advertise conformance with HTTP/1.1.
       </p>
-      <p id="rfc.section.2.6.p.7">New header fields can be defined such that, when they are understood by a recipient, they might override or enhance the interpretation
-         of previously defined header fields. When an implementation receives an unrecognized header field, the recipient <em class="bcp14">MUST</em> ignore that header field for local processing regardless of the message's HTTP version. An unrecognized header field received
-         by a proxy <em class="bcp14">MUST</em> be forwarded downstream unless the header field's field-name is listed in the message's <a href="#header.connection" class="smpl">Connection</a> header field (see <a href="#header.connection" id="rfc.xref.header.connection.1" title="Connection">Section&nbsp;6.1</a>). These requirements allow HTTP's functionality to be enhanced without requiring prior update of deployed intermediaries.
+      <p id="rfc.section.2.6.p.7">New header fields can be introduced without changing the protocol version if their defined semantics allow them to be safely
+         ignored by recipients that do not recognize them. Header field extensibility is discussed in <a href="#field.extensibility" title="Field Extensibility">Section&nbsp;3.2.1</a>.
       </p>
       <p id="rfc.section.2.6.p.8">Intermediaries that process HTTP messages (i.e., all intermediaries other than those acting as tunnels) <em class="bcp14">MUST</em> send their own HTTP-version in forwarded messages. In other words, they <em class="bcp14">MUST NOT</em> blindly forward the first line of an HTTP message without ensuring that the protocol version in that message matches a version
          to which that intermediary is conformant for both the receiving and sending of messages. Forwarding an HTTP message without
@@ -1079,30 +1078,32 @@ Content-Type: text/plain
 </pre><p id="rfc.section.2.7.1.p.3">The HTTP origin server is identified by the generic syntax's <a href="#uri" class="smpl">authority</a> component, which includes a host identifier and optional TCP port (<a href="#RFC3986" id="rfc.xref.RFC3986.13"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="http://tools.ietf.org/html/rfc3986#section-3.2.2">Section 3.2.2</a>). The remainder of the URI, consisting of both the hierarchical path component and optional query component, serves as an
          identifier for a potential resource within that origin server's name space.
       </p>
-      <p id="rfc.section.2.7.1.p.4">If the host identifier is provided as an IP address, then the origin server is any listener on the indicated TCP port at that
-         IP address. If host is a registered name, then that name is considered an indirect identifier and the recipient might use
-         a name resolution service, such as DNS, to find the address of a listener for that host. The host <em class="bcp14">MUST NOT</em> be empty; if an "http" URI is received with an empty host, then it <em class="bcp14">MUST</em> be rejected as invalid. If the port subcomponent is empty or not given, then TCP port 80 is assumed (the default reserved
-         port for WWW services).
+      <p id="rfc.section.2.7.1.p.4">A sender <em class="bcp14">MUST NOT</em> generate an "http" URI with an empty host identifier. A recipient that processes such a URI reference <em class="bcp14">MUST</em> reject it as invalid.
       </p>
-      <p id="rfc.section.2.7.1.p.5">Regardless of the form of host identifier, access to that host is not implied by the mere presence of its name or address.
+      <p id="rfc.section.2.7.1.p.5">If the host identifier is provided as an IP address, then the origin server is any listener on the indicated TCP port at that
+         IP address. If host is a registered name, then that name is considered an indirect identifier and the recipient might use
+         a name resolution service, such as DNS, to find the address of a listener for that host. If the port subcomponent is empty
+         or not given, then TCP port 80 is assumed (the default reserved port for WWW services).
+      </p>
+      <p id="rfc.section.2.7.1.p.6">Regardless of the form of host identifier, access to that host is not implied by the mere presence of its name or address.
          The host might or might not exist and, even when it does exist, might or might not be running an HTTP server or listening
          to the indicated port. The "http" URI scheme makes use of the delegated nature of Internet names and addresses to establish
          a naming authority (whatever entity has the ability to place an HTTP server at that Internet name or address) and allows that
          authority to determine which names are valid and how they might be used.
       </p>
-      <p id="rfc.section.2.7.1.p.6">When an "http" URI is used within a context that calls for access to the indicated resource, a client <em class="bcp14">MAY</em> attempt access by resolving the host to an IP address, establishing a TCP connection to that address on the indicated port,
+      <p id="rfc.section.2.7.1.p.7">When an "http" URI is used within a context that calls for access to the indicated resource, a client <em class="bcp14">MAY</em> attempt access by resolving the host to an IP address, establishing a TCP connection to that address on the indicated port,
          and sending an HTTP request message (<a href="#http.message" title="Message Format">Section&nbsp;3</a>) containing the URI's identifying data (<a href="#message.routing" title="Message Routing">Section&nbsp;5</a>) to the server. If the server responds to that request with a non-interim HTTP response message, as described in <a href="p2-semantics.html#status.codes" title="Response Status Codes">Section 6</a> of <a href="#Part2" id="rfc.xref.Part2.5"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>, then that response is considered an authoritative answer to the client's request.
       </p>
-      <p id="rfc.section.2.7.1.p.7">Although HTTP is independent of the transport protocol, the "http" scheme is specific to TCP-based services because the name
+      <p id="rfc.section.2.7.1.p.8">Although HTTP is independent of the transport protocol, the "http" scheme is specific to TCP-based services because the name
          delegation process depends on TCP for establishing authority. An HTTP service based on some other underlying connection protocol
          would presumably be identified using a different URI scheme, just as the "https" scheme (below) is used for resources that
          require an end-to-end secured connection. Other protocols might also be used to provide access to "http" identified resources
          — it is only the authoritative interface that is specific to TCP.
       </p>
-      <p id="rfc.section.2.7.1.p.8">The URI generic syntax for authority also includes a deprecated userinfo subcomponent (<a href="#RFC3986" id="rfc.xref.RFC3986.14"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="http://tools.ietf.org/html/rfc3986#section-3.2.1">Section 3.2.1</a>) for including user authentication information in the URI. Some implementations make use of the userinfo component for internal
+      <p id="rfc.section.2.7.1.p.9">The URI generic syntax for authority also includes a deprecated userinfo subcomponent (<a href="#RFC3986" id="rfc.xref.RFC3986.14"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="http://tools.ietf.org/html/rfc3986#section-3.2.1">Section 3.2.1</a>) for including user authentication information in the URI. Some implementations make use of the userinfo component for internal
          configuration of authentication information, such as within command invocation options, configuration files, or bookmark lists,
-         even though such usage might expose a user identifier or password. Senders <em class="bcp14">MUST</em> exclude the userinfo subcomponent (and its "@" delimiter) when an "http" URI is transmitted within a message as a request
-         target or header field value. Recipients of an "http" URI reference <em class="bcp14">SHOULD</em> parse for userinfo and treat its presence as an error, since it is likely being used to obscure the authority for the sake
+         even though such usage might expose a user identifier or password. Senders <em class="bcp14">MUST NOT</em> generate the userinfo subcomponent (and its "@" delimiter) when an "http" URI reference is generated within a message as a
+         request target or header field value. Recipients of an "http" URI reference <em class="bcp14">SHOULD</em> parse for userinfo and treat its presence as an error, since it is likely being used to obscure the authority for the sake
          of phishing attacks.
       </p>
       <h3 id="rfc.section.2.7.2"><a href="#rfc.section.2.7.2">2.7.2</a>&nbsp;<a id="https.uri" href="#https.uri">https URI scheme</a></h3>
@@ -1112,7 +1113,8 @@ Content-Type: text/plain
          namespace governed by a potential HTTP origin server listening to a given TCP port for TLS-secured connections (<a href="#RFC0793" id="rfc.xref.RFC0793.2"><cite title="Transmission Control Protocol">[RFC0793]</cite></a>, <a href="#RFC5246" id="rfc.xref.RFC5246.2"><cite title="The Transport Layer Security (TLS) Protocol Version 1.2">[RFC5246]</cite></a>).
       </p>
       <p id="rfc.section.2.7.2.p.2">All of the requirements listed above for the "http" scheme are also requirements for the "https" scheme, except that a default
-         TCP port of 443 is assumed if the port subcomponent is empty or not given, and the TCP connection <em class="bcp14">MUST</em> be secured, end-to-end, through the use of strong encryption prior to sending the first HTTP request.
+         TCP port of 443 is assumed if the port subcomponent is empty or not given, and the user agent <em class="bcp14">MUST</em> ensure that its connection to the origin server is secured through the use of strong encryption, end-to-end, prior to sending
+         the first HTTP request.
       </p>
       <div id="rfc.figure.u.9"></div><pre class="inline"><span id="rfc.iref.g.27"></span>  <a href="#https.uri" class="smpl">https-URI</a> = "https:" "//" <a href="#uri" class="smpl">authority</a> <a href="#uri" class="smpl">path-abempty</a> [ "?" <a href="#uri" class="smpl">query</a> ]
               [ "#" <a href="#uri" class="smpl">fragment</a> ]
@@ -1205,7 +1207,7 @@ Content-Type: text/plain
          crafted to bypass security filters along the request chain.
       </p>
       <p id="rfc.section.3.1.1.p.9">HTTP does not place a pre-defined limit on the length of a request-line. A server that receives a method longer than any that
-         it implements <em class="bcp14">SHOULD</em> respond with a <a href="p2-semantics.html#status.501" class="smpl">501 (Not Implemented)</a> status code. A server <em class="bcp14">MUST</em> be prepared to receive URIs of unbounded length and respond with the <a href="p2-semantics.html#status.414" class="smpl">414 (URI Too Long)</a> status code if the received request-target would be longer than the server wishes to handle (see <a href="p2-semantics.html#status.414" title="414 URI Too Long">Section 6.5.12</a> of <a href="#Part2" id="rfc.xref.Part2.7"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>).
+         it implements <em class="bcp14">SHOULD</em> respond with a <a href="p2-semantics.html#status.501" class="smpl">501 (Not Implemented)</a> status code. A server ought to be prepared to receive URIs of unbounded length, as described in <a href="#conformance" title="Conformance and Error Handling">Section&nbsp;2.5</a>, and <em class="bcp14">MUST</em> respond with a <a href="p2-semantics.html#status.414" class="smpl">414 (URI Too Long)</a> status code if the received request-target is longer than the server wishes to parse (see <a href="p2-semantics.html#status.414" title="414 URI Too Long">Section 6.5.12</a> of <a href="#Part2" id="rfc.xref.Part2.7"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>).
       </p>
       <p id="rfc.section.3.1.1.p.10">Various ad-hoc limitations on request-line length are found in practice. It is <em class="bcp14">RECOMMENDED</em> that all HTTP senders and recipients support, at a minimum, request-line lengths of 8000 octets.
       </p>
@@ -1240,12 +1242,17 @@ Content-Type: text/plain
          the <a href="p2-semantics.html#header.date" class="smpl">Date</a> header field is defined in <a href="p2-semantics.html#header.date" title="Date">Section 7.1.1.2</a> of <a href="#Part2" id="rfc.xref.Part2.9"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a> as containing the origination timestamp for the message in which it appears.
       </p>
       <h3 id="rfc.section.3.2.1"><a href="#rfc.section.3.2.1">3.2.1</a>&nbsp;<a id="field.extensibility" href="#field.extensibility">Field Extensibility</a></h3>
-      <p id="rfc.section.3.2.1.p.1">HTTP header fields are fully extensible: there is no limit on the introduction of new field names, each presumably defining
-         new semantics, nor on the number of header fields used in a given message. Existing fields are defined in each part of this
-         specification and in many other specifications outside the core standard. New header fields can be introduced without changing
-         the protocol version if their defined semantics allow them to be safely ignored by recipients that do not recognize them.
+      <p id="rfc.section.3.2.1.p.1">Header fields are fully extensible: there is no limit on the introduction of new field names, each presumably defining new
+         semantics, nor on the number of header fields used in a given message. Existing fields are defined in each part of this specification
+         and in many other specifications outside the core standard.
       </p>
-      <p id="rfc.section.3.2.1.p.2">New HTTP header fields ought to be registered with IANA in the Message Header Field Registry, as described in <a href="p2-semantics.html#header.field.registry" title="Header Field Registry">Section 8.3</a> of <a href="#Part2" id="rfc.xref.Part2.10"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>. A proxy <em class="bcp14">MUST</em> forward unrecognized header fields unless the field-name is listed in the <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.2" title="Connection">Section&nbsp;6.1</a>) or the proxy is specifically configured to block, or otherwise transform, such fields. Other recipients <em class="bcp14">SHOULD</em> ignore unrecognized header fields.
+      <p id="rfc.section.3.2.1.p.2">New header fields can be defined such that, when they are understood by a recipient, they might override or enhance the interpretation
+         of previously defined header fields, define preconditions on request evaluation, or refine the meaning of responses.
+      </p>
+      <p id="rfc.section.3.2.1.p.3">A proxy <em class="bcp14">MUST</em> forward unrecognized header fields unless the field-name is listed in the <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.1" title="Connection">Section&nbsp;6.1</a>) or the proxy is specifically configured to block, or otherwise transform, such fields. Other recipients <em class="bcp14">SHOULD</em> ignore unrecognized header fields. These requirements allow HTTP's functionality to be enhanced without requiring prior update
+         of deployed intermediaries.
+      </p>
+      <p id="rfc.section.3.2.1.p.4">All defined header fields ought to be registered with IANA in the Message Header Field Registry, as described in <a href="p2-semantics.html#header.field.registry" title="Header Field Registry">Section 8.3</a> of <a href="#Part2" id="rfc.xref.Part2.10"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>.
       </p>
       <h3 id="rfc.section.3.2.2"><a href="#rfc.section.3.2.2">3.2.2</a>&nbsp;<a id="field.order" href="#field.order">Field Order</a></h3>
       <p id="rfc.section.3.2.2.p.1">The order in which header fields with differing field names are received is not significant. However, it is "good practice"
@@ -1255,10 +1262,10 @@ Content-Type: text/plain
       <p id="rfc.section.3.2.2.p.2">A sender <em class="bcp14">MUST NOT</em> generate multiple header fields with the same field name in a message unless either the entire field value for that header
          field is defined as a comma-separated list [i.e., #(values)] or the header field is a well-known exception (as noted below).
       </p>
-      <p id="rfc.section.3.2.2.p.3">Multiple header fields with the same field name can be combined into one "field-name: field-value" pair, without changing
-         the semantics of the message, by appending each subsequent field value to the combined field value in order, separated by
-         a comma. The order in which header fields with the same field name are received is therefore significant to the interpretation
-         of the combined field value; a proxy <em class="bcp14">MUST NOT</em> change the order of these field values when forwarding a message.
+      <p id="rfc.section.3.2.2.p.3">A recipient <em class="bcp14">MAY</em> combine multiple header fields with the same field name into one "field-name: field-value" pair, without changing the semantics
+         of the message, by appending each subsequent field value to the combined field value in order, separated by a comma. The order
+         in which header fields with the same field name are received is therefore significant to the interpretation of the combined
+         field value; a proxy <em class="bcp14">MUST NOT</em> change the order of these field values when forwarding a message.
       </p>
       <div class="note" id="rfc.section.3.2.2.p.4">
          <p><b>Note:</b> In practice, the "Set-Cookie" header field (<a href="#RFC6265" id="rfc.xref.RFC6265.2"><cite title="HTTP State Management Mechanism">[RFC6265]</cite></a>) often appears multiple times in a response message and does not use the list syntax, violating the above requirements on
@@ -1318,20 +1325,18 @@ Content-Type: text/plain
       <p id="rfc.section.3.2.4.p.8">Historically, HTTP has allowed field content with text in the ISO-8859-1 <a href="#ISO-8859-1" id="rfc.xref.ISO-8859-1.1"><cite title="Information technology -- 8-bit single-byte coded graphic character sets -- Part 1: Latin alphabet No. 1">[ISO-8859-1]</cite></a> charset, supporting other charsets only through use of <a href="#RFC2047" id="rfc.xref.RFC2047.1"><cite title="MIME (Multipurpose Internet Mail Extensions) Part Three: Message Header Extensions for Non-ASCII Text">[RFC2047]</cite></a> encoding. In practice, most HTTP header field values use only a subset of the US-ASCII charset <a href="#USASCII" id="rfc.xref.USASCII.3"><cite title="Coded Character Set -- 7-bit American Standard Code for Information Interchange">[USASCII]</cite></a>. Newly defined header fields <em class="bcp14">SHOULD</em> limit their field values to US-ASCII octets. Recipients <em class="bcp14">SHOULD</em> treat other octets in field content (obs-text) as opaque data.
       </p>
       <h3 id="rfc.section.3.2.5"><a href="#rfc.section.3.2.5">3.2.5</a>&nbsp;<a id="field.limits" href="#field.limits">Field Limits</a></h3>
-      <p id="rfc.section.3.2.5.p.1">HTTP does not place a pre-defined limit on the length of each header field or on the length of the header block as a whole.
-         Various ad-hoc limitations on individual header field length are found in practice, often depending on the specific field
+      <p id="rfc.section.3.2.5.p.1">HTTP does not place a pre-defined limit on the length of each header field or on the length of the header block as a whole,
+         as described in <a href="#conformance" title="Conformance and Error Handling">Section&nbsp;2.5</a>. Various ad-hoc limitations on individual header field length are found in practice, often depending on the specific field
          semantics.
       </p>
-      <p id="rfc.section.3.2.5.p.2">A server <em class="bcp14">MUST</em> be prepared to receive request header fields of unbounded length and respond with an appropriate <a href="p2-semantics.html#status.4xx" class="smpl">4xx (Client Error)</a> status code if the received header field(s) are larger than the server wishes to process.
+      <p id="rfc.section.3.2.5.p.2">A server ought to be prepared to receive request header fields of unbounded length and <em class="bcp14">MUST</em> respond with an appropriate <a href="p2-semantics.html#status.4xx" class="smpl">4xx (Client Error)</a> status code if the received header field(s) are larger than the server wishes to process.
       </p>
-      <p id="rfc.section.3.2.5.p.3">A client <em class="bcp14">MUST</em> be prepared to receive response header fields of unbounded length. A client <em class="bcp14">MAY</em> discard or truncate received header fields that are larger than the client wishes to process if the field semantics are such
-         that the dropped value(s) can be safely ignored without changing the response semantics.
+      <p id="rfc.section.3.2.5.p.3">A client ought to be prepared to receive response header fields of unbounded length. A client <em class="bcp14">MAY</em> discard or truncate received header fields that are larger than the client wishes to process if the field semantics are such
+         that the dropped value(s) can be safely ignored without changing the message framing or response semantics.
       </p>
       <h3 id="rfc.section.3.2.6"><a href="#rfc.section.3.2.6">3.2.6</a>&nbsp;<a id="field.components" href="#field.components">Field value components</a></h3>
       <div id="rule.token.separators">
-         <p id="rfc.section.3.2.6.p.1">    Many HTTP header field values consist of words (token or quoted-string) separated by whitespace or special characters. These
-            special characters <em class="bcp14">MUST</em> be in a quoted string to be used within a parameter value (as defined in <a href="#transfer.codings" title="Transfer Codings">Section&nbsp;4</a>).
-         </p>
+         <p id="rfc.section.3.2.6.p.1">    Many HTTP header field values consist of words (token or quoted-string) separated by whitespace or special characters.</p>
       </div>
       <div id="rfc.figure.u.20"></div><pre class="inline"><span id="rfc.iref.g.43"></span><span id="rfc.iref.g.44"></span><span id="rfc.iref.g.45"></span><span id="rfc.iref.g.46"></span>  <a href="#rule.token.separators" class="smpl">word</a>           = <a href="#rule.token.separators" class="smpl">token</a> / <a href="#rule.quoted-string" class="smpl">quoted-string</a>
 
@@ -1399,10 +1404,9 @@ Content-Type: text/plain
          primarily intended to accurately delimit a dynamically generated payload and to distinguish payload encodings that are only
          applied for transport efficiency or security from those that are characteristics of the selected resource.
       </p>
-      <p id="rfc.section.3.3.1.p.4">All HTTP/1.1 recipients <em class="bcp14">MUST</em> implement the chunked transfer coding (<a href="#chunked.encoding" title="Chunked Transfer Coding">Section&nbsp;4.1</a>) because it plays a crucial role in framing messages when the payload body size is not known in advance. If chunked is applied
-         to a payload body, the sender <em class="bcp14">MUST NOT</em> apply chunked more than once (i.e., chunking an already chunked message is not allowed). If any transfer coding is applied
-         to a request payload body, the sender <em class="bcp14">MUST</em> apply chunked as the final transfer coding to ensure that the message is properly framed. If any transfer coding is applied
-         to a response payload body, the sender <em class="bcp14">MUST</em> either apply chunked as the final transfer coding or terminate the message by closing the connection.
+      <p id="rfc.section.3.3.1.p.4">All HTTP/1.1 recipients <em class="bcp14">MUST</em> be able to parse the chunked transfer coding (<a href="#chunked.encoding" title="Chunked Transfer Coding">Section&nbsp;4.1</a>) because it plays a crucial role in framing messages when the payload body size is not known in advance. A sender <em class="bcp14">MUST NOT</em> apply chunked more than once to a message body (i.e., chunking an already chunked message is not allowed). If any transfer
+         coding other than chunked is applied to a request payload body, the sender <em class="bcp14">MUST</em> apply chunked as the final transfer coding to ensure that the message is properly framed. If any transfer coding other than
+         chunked is applied to a response payload body, the sender <em class="bcp14">MUST</em> either apply chunked as the final transfer coding or terminate the message by closing the connection.
       </p>
       <div id="rfc.figure.u.27"></div>
       <p>For example,</p><pre class="text">  Transfer-Encoding: gzip, chunked
@@ -1495,7 +1499,7 @@ Content-Type: text/plain
          </li>
          <li>
             <p>If a message is received without <a href="#header.transfer-encoding" class="smpl">Transfer-Encoding</a> and with either multiple <a href="#header.content-length" class="smpl">Content-Length</a> header fields having differing field-values or a single Content-Length header field having an invalid value, then the message
-               framing is invalid and <em class="bcp14">MUST</em> be treated as an error to prevent request or response smuggling. If this is a request message, the server <em class="bcp14">MUST</em> respond with a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a> status code and then close the connection. If this is a response message received by a proxy, the proxy <em class="bcp14">MUST</em> close the connection to the server, discard the received response, and send a <a href="p2-semantics.html#status.502" class="smpl">502 (Bad Gateway)</a> response to the client. If this is a response message received by a user agent, it <em class="bcp14">MUST</em> be treated as an error by discarding the message and closing the connection.
+               framing is invalid and the recipient <em class="bcp14">MUST</em> treat it as an unrecoverable error to prevent request or response smuggling. If this is a request message, the server <em class="bcp14">MUST</em> respond with a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a> status code and then close the connection. If this is a response message received by a proxy, the proxy <em class="bcp14">MUST</em> close the connection to the server, discard the received response, and send a <a href="p2-semantics.html#status.502" class="smpl">502 (Bad Gateway)</a> response to the client. If this is a response message received by a user agent, the user agent <em class="bcp14">MUST</em> close the connection to the server and discard the received response.
             </p>
          </li>
          <li>
@@ -1619,27 +1623,25 @@ Content-Type: text/plain
       <h3 id="rfc.section.4.1.1"><a href="#rfc.section.4.1.1">4.1.1</a>&nbsp;<a id="header.trailer" href="#header.trailer">Trailer</a></h3>
       <p id="rfc.section.4.1.1.p.1">A trailer allows the sender to include additional fields at the end of a chunked message in order to supply metadata that
          might be dynamically generated while the message body is sent, such as a message integrity check, digital signature, or post-processing
-         status. The trailer <em class="bcp14">MUST NOT</em> contain fields that need to be known before a recipient processes the body, such as <a href="#header.transfer-encoding" class="smpl">Transfer-Encoding</a>, <a href="#header.content-length" class="smpl">Content-Length</a>, and <a href="#header.trailer" class="smpl">Trailer</a>.
+         status. A sender <em class="bcp14">MUST NOT</em> generate a trailer containing a field that needs to be known before a recipient processes the body, such as <a href="#header.transfer-encoding" class="smpl">Transfer-Encoding</a>, <a href="#header.content-length" class="smpl">Content-Length</a>, and <a href="#header.trailer" class="smpl">Trailer</a>.
       </p>
       <p id="rfc.section.4.1.1.p.2">When a message includes a message body encoded with the chunked transfer coding and the sender desires to send metadata in
-         the form of trailer fields at the end of the message, the sender <em class="bcp14">SHOULD</em> send a <a href="#header.trailer" class="smpl">Trailer</a> header field before the message body to indicate which fields will be present in the trailers. This allows the recipient to
+         the form of trailer fields at the end of the message, the sender <em class="bcp14">SHOULD</em> generate a <a href="#header.trailer" class="smpl">Trailer</a> header field before the message body to indicate which fields will be present in the trailers. This allows the recipient to
          prepare for receipt of that metadata before it starts processing the body, which is useful if the message is being streamed
          and the recipient wishes to confirm an integrity check on the fly.
       </p>
       <div id="rfc.figure.u.33"></div><pre class="inline"><span id="rfc.iref.g.75"></span>  <a href="#header.trailer" class="smpl">Trailer</a> = 1#<a href="#header.fields" class="smpl">field-name</a>
-</pre><p id="rfc.section.4.1.1.p.4">If no <a href="#header.trailer" class="smpl">Trailer</a> header field is present, the sender of a chunked message body <em class="bcp14">SHOULD</em> send an empty trailer.
-      </p>
-      <p id="rfc.section.4.1.1.p.5">A server <em class="bcp14">MUST</em> send an empty trailer with the chunked transfer coding unless at least one of the following is true: 
+</pre><p id="rfc.section.4.1.1.p.4">A server <em class="bcp14">MUST</em> generate an empty trailer with the chunked transfer coding unless at least one of the following is true: 
       </p>
       <ol>
          <li>the request included a <a href="#header.te" class="smpl">TE</a> header field that indicates "trailers" is acceptable in the transfer coding of the response, as described in <a href="#header.te" id="rfc.xref.header.te.2" title="TE">Section&nbsp;4.3</a>; or,
          </li>
          <li>the trailer fields consist entirely of optional metadata and the recipient could use the message (in a manner acceptable to
-            the server where the field originated) without receiving that metadata. In other words, the server that generated the header
-            field is willing to accept the possibility that the trailer fields might be silently discarded along the path to the client.
+            the generating server) without receiving that metadata. In other words, the generating server is willing to accept the possibility
+            that the trailer fields might be silently discarded along the path to the client.
          </li>
       </ol>
-      <p id="rfc.section.4.1.1.p.6">The above requirement prevents the need for an infinite buffer when a message is being received by an HTTP/1.1 (or later)
+      <p id="rfc.section.4.1.1.p.5">The above requirement prevents the need for an infinite buffer when a message is being received by an HTTP/1.1 (or later)
          proxy and forwarded to an HTTP/1.0 recipient.
       </p>
       <h3 id="rfc.section.4.1.2"><a href="#rfc.section.4.1.2">4.1.2</a>&nbsp;<a id="decoding.chunked" href="#decoding.chunked">Decoding chunked</a></h3>
@@ -1660,7 +1662,7 @@ Content-Type: text/plain
   Content-Length := length
   Remove "chunked" from Transfer-Encoding
   Remove Trailer from existing header fields
-</pre><p id="rfc.section.4.1.2.p.3">All recipients <em class="bcp14">MUST</em> be able to receive and decode the chunked transfer coding and <em class="bcp14">MUST</em> ignore chunk-ext extensions they do not understand.
+</pre><p id="rfc.section.4.1.2.p.3">All recipients <em class="bcp14">MUST</em> be able to parse and decode the chunked transfer coding and <em class="bcp14">MUST</em> ignore chunk-ext extensions they do not understand.
       </p>
       <h2 id="rfc.section.4.2"><a href="#rfc.section.4.2">4.2</a>&nbsp;<a id="compression.codings" href="#compression.codings">Compression Codings</a></h2>
       <p id="rfc.section.4.2.p.1">The codings defined below can be used to compress the payload of a message.</p>
@@ -1710,7 +1712,7 @@ Content-Type: text/plain
       <p id="rfc.section.4.3.p.8">If the TE field-value is empty or if no TE field is present, the only acceptable transfer coding is chunked. A message with
          no transfer coding is always acceptable.
       </p>
-      <p id="rfc.section.4.3.p.9">Since the TE header field only applies to the immediate connection, a sender of TE <em class="bcp14">MUST</em> also send a "TE" connection option within the <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.3" title="Connection">Section&nbsp;6.1</a>) in order to prevent the TE field from being forwarded by intermediaries that do not support its semantics.
+      <p id="rfc.section.4.3.p.9">Since the TE header field only applies to the immediate connection, a sender of TE <em class="bcp14">MUST</em> also send a "TE" connection option within the <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.2" title="Connection">Section&nbsp;6.1</a>) in order to prevent the TE field from being forwarded by intermediaries that do not support its semantics.
       </p>
       <h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a>&nbsp;<a id="message.routing" href="#message.routing">Message Routing</a></h1>
       <p id="rfc.section.5.p.1">HTTP request message routing is determined by each client based on the target resource, the client's proxy configuration,
@@ -1765,7 +1767,7 @@ Content-Type: text/plain
       </div>
       <p id="rfc.section.5.3.p.4">The most common form of request-target is the <dfn>origin-form</dfn>. When making a request directly to an origin server, other than a CONNECT or server-wide OPTIONS request (as detailed below),
          a client <em class="bcp14">MUST</em> send only the absolute path and query components of the target URI as the request-target. If the target URI's path component
-         is empty, then the client <em class="bcp14">MUST</em> send "/" as the path within the origin-form of request-target. A <a href="#header.host" class="smpl">Host</a> header field is also sent, as defined in <a href="#header.host" id="rfc.xref.header.host.1" title="Host">Section&nbsp;5.4</a>, containing the target URI's authority component (excluding any userinfo).
+         is empty, then the client <em class="bcp14">MUST</em> send "/" as the path within the origin-form of request-target. A <a href="#header.host" class="smpl">Host</a> header field is also sent, as defined in <a href="#header.host" id="rfc.xref.header.host.1" title="Host">Section&nbsp;5.4</a>.
       </p>
       <p id="rfc.section.5.3.p.5">For example, a client wishing to retrieve a representation of the resource identified as</p>
       <div id="rfc.figure.u.38"></div><pre class="text">http://www.example.org/where?q=now
@@ -1791,7 +1793,7 @@ Host: www.example.org
          <p id="rfc.section.5.3.p.15"><span id="rfc.iref.a.3"></span> <b>authority-form</b> 
          </p>
       </div>
-      <p id="rfc.section.5.3.p.16">The <dfn>authority-form</dfn> of request-target is only used for CONNECT requests (<a href="p2-semantics.html#CONNECT" title="CONNECT">Section 4.3.6</a> of <a href="#Part2" id="rfc.xref.Part2.19"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>). When making a CONNECT request to establish a tunnel through one or more proxies, a client <em class="bcp14">MUST</em> send only the target URI's authority component (excluding any userinfo) as the request-target. For example,
+      <p id="rfc.section.5.3.p.16">The <dfn>authority-form</dfn> of request-target is only used for CONNECT requests (<a href="p2-semantics.html#CONNECT" title="CONNECT">Section 4.3.6</a> of <a href="#Part2" id="rfc.xref.Part2.19"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>). When making a CONNECT request to establish a tunnel through one or more proxies, a client <em class="bcp14">MUST</em> send only the target URI's authority component (excluding any userinfo and its "@" delimiter) as the request-target. For example,
       </p>
       <div id="rfc.figure.u.41"></div><pre class="text2">CONNECT www.example.com:80 HTTP/1.1
 </pre><div id="asterisk-form">
@@ -1814,28 +1816,29 @@ Host: www.example.org:8001
       <div id="rfc.iref.h.6"></div>
       <h2 id="rfc.section.5.4"><a href="#rfc.section.5.4">5.4</a>&nbsp;<a id="header.host" href="#header.host">Host</a></h2>
       <p id="rfc.section.5.4.p.1">The "Host" header field in a request provides the host and port information from the target URI, enabling the origin server
-         to distinguish among resources while servicing requests for multiple host names on a single IP address. Since the Host field-value
-         is critical information for handling a request, it <em class="bcp14">SHOULD</em> be sent as the first header field following the request-line.
+         to distinguish among resources while servicing requests for multiple host names on a single IP address.
       </p>
       <div id="rfc.figure.u.45"></div><pre class="inline"><span id="rfc.iref.g.86"></span>  <a href="#header.host" class="smpl">Host</a> = <a href="#uri" class="smpl">uri-host</a> [ ":" <a href="#uri" class="smpl">port</a> ] ; <a href="#http.uri" title="http URI scheme">Section&nbsp;2.7.1</a>
-</pre><p id="rfc.section.5.4.p.3">A client <em class="bcp14">MUST</em> send a Host header field in all HTTP/1.1 request messages. If the target URI includes an authority component, then the Host
-         field-value <em class="bcp14">MUST</em> be identical to that authority component after excluding any userinfo (<a href="#http.uri" title="http URI scheme">Section&nbsp;2.7.1</a>). If the authority component is missing or undefined for the target URI, then the Host header field <em class="bcp14">MUST</em> be sent with an empty field-value.
+</pre><p id="rfc.section.5.4.p.3">A client <em class="bcp14">MUST</em> send a Host header field in all HTTP/1.1 request messages. If the target URI includes an authority component, then a client <em class="bcp14">MUST</em> send a field-value for Host that is identical to that authority component, excluding any userinfo subcomponent and its "@"
+         delimiter (<a href="#http.uri" title="http URI scheme">Section&nbsp;2.7.1</a>). If the authority component is missing or undefined for the target URI, then a client <em class="bcp14">MUST</em> send a Host header field with an empty field-value.
       </p>
-      <p id="rfc.section.5.4.p.4">For example, a GET request to the origin server for &lt;http://www.example.org/pub/WWW/&gt; would begin with:</p>
+      <p id="rfc.section.5.4.p.4">Since the Host field-value is critical information for handling a request, a user agent <em class="bcp14">SHOULD</em> generate Host as the first header field following the request-line.
+      </p>
+      <p id="rfc.section.5.4.p.5">For example, a GET request to the origin server for &lt;http://www.example.org/pub/WWW/&gt; would begin with:</p>
       <div id="rfc.figure.u.46"></div><pre class="text2">GET /pub/WWW/ HTTP/1.1
 Host: www.example.org
-</pre><p id="rfc.section.5.4.p.6">The Host header field <em class="bcp14">MUST</em> be sent in an HTTP/1.1 request even if the request-target is in the absolute-form, since this allows the Host information
-         to be forwarded through ancient HTTP/1.0 proxies that might not have implemented Host.
+</pre><p id="rfc.section.5.4.p.7">A client <em class="bcp14">MUST</em> send a Host header field in an HTTP/1.1 request even if the request-target is in the absolute-form, since this allows the
+         Host information to be forwarded through ancient HTTP/1.0 proxies that might not have implemented Host.
       </p>
-      <p id="rfc.section.5.4.p.7">When a proxy receives a request with an absolute-form of request-target, the proxy <em class="bcp14">MUST</em> ignore the received Host header field (if any) and instead replace it with the host information of the request-target. If
-         the proxy forwards the request, it <em class="bcp14">MUST</em> generate a new Host field-value based on the received request-target rather than forward the received Host field-value.
+      <p id="rfc.section.5.4.p.8">When a proxy receives a request with an absolute-form of request-target, the proxy <em class="bcp14">MUST</em> ignore the received Host header field (if any) and instead replace it with the host information of the request-target. A proxy
+         that forwards such a request <em class="bcp14">MUST</em> generate a new Host field-value based on the received request-target rather than forward the received Host field-value.
       </p>
-      <p id="rfc.section.5.4.p.8">Since the Host header field acts as an application-level routing mechanism, it is a frequent target for malware seeking to
+      <p id="rfc.section.5.4.p.9">Since the Host header field acts as an application-level routing mechanism, it is a frequent target for malware seeking to
          poison a shared cache or redirect a request to an unintended server. An interception proxy is particularly vulnerable if it
          relies on the Host field-value for redirecting requests to internal servers, or for use as a cache key in a shared cache,
          without first verifying that the intercepted connection is targeting a valid IP address for that host.
       </p>
-      <p id="rfc.section.5.4.p.9">A server <em class="bcp14">MUST</em> respond with a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a> status code to any HTTP/1.1 request message that lacks a Host header field and to any request message that contains more than
+      <p id="rfc.section.5.4.p.10">A server <em class="bcp14">MUST</em> respond with a <a href="p2-semantics.html#status.400" class="smpl">400 (Bad Request)</a> status code to any HTTP/1.1 request message that lacks a Host header field and to any request message that contains more than
          one Host header field or a Host header field with an invalid field-value.
       </p>
       <div id="rfc.iref.e.1"></div>
@@ -1890,9 +1893,10 @@ Host: www.example.org
          characteristics similar to a pipe-and-filter architecture, there are no inherent limits to the extent an intermediary can
          enhance (or interfere) with either direction of the stream.
       </p>
-      <p id="rfc.section.5.7.p.2">Intermediaries that forward a message <em class="bcp14">MUST</em> implement the <a href="#header.connection" class="smpl">Connection</a> header field, as specified in <a href="#header.connection" id="rfc.xref.header.connection.4" title="Connection">Section&nbsp;6.1</a>, to exclude fields that are only intended for the incoming connection.
+      <p id="rfc.section.5.7.p.2">An intermediary not acting as a tunnel <em class="bcp14">MUST</em> implement the <a href="#header.connection" class="smpl">Connection</a> header field, as specified in <a href="#header.connection" id="rfc.xref.header.connection.3" title="Connection">Section&nbsp;6.1</a>, and exclude fields from being forwarded that are only intended for the incoming connection.
       </p>
-      <p id="rfc.section.5.7.p.3">In order to avoid request loops, a proxy that forwards requests to other proxies <em class="bcp14">MUST</em> be able to recognize and exclude all of its own server names, including any aliases, local variations, or literal IP addresses.
+      <p id="rfc.section.5.7.p.3">An intermediary <em class="bcp14">MUST NOT</em> forward a message to itself unless it is protected from an infinite request loop. In general, an intermediary ought to recognize
+         its own server names, including any aliases, local variations, or literal IP addresses, and respond to such requests directly.
       </p>
       <div id="rfc.iref.v.1"></div>
       <h3 id="rfc.section.5.7.1"><a href="#rfc.section.5.7.1">5.7.1</a>&nbsp;<a id="header.via" href="#header.via">Via</a></h3>
@@ -1919,19 +1923,19 @@ Host: www.example.org
          safe to use in response, or within a later request, as described in <a href="#http.version" title="Protocol Versioning">Section&nbsp;2.6</a>. For brevity, the protocol-name is omitted when the received protocol is HTTP.
       </p>
       <p id="rfc.section.5.7.1.p.6">The received-by field is normally the host and optional port number of a recipient server or client that subsequently forwarded
-         the message. However, if the real host is considered to be sensitive information, it <em class="bcp14">MAY</em> be replaced by a pseudonym. If the port is not given, it <em class="bcp14">MAY</em> be assumed to be the default port of the received-protocol.
+         the message. However, if the real host is considered to be sensitive information, a sender <em class="bcp14">MAY</em> replace it with a pseudonym. If a port is not provided, a recipient <em class="bcp14">MAY</em> interpret that as meaning it was received on the default TCP port, if any, for the received-protocol.
       </p>
-      <p id="rfc.section.5.7.1.p.7">Comments <em class="bcp14">MAY</em> be used in the Via header field to identify the software of each recipient, analogous to the <a href="p2-semantics.html#header.user-agent" class="smpl">User-Agent</a> and <a href="p2-semantics.html#header.server" class="smpl">Server</a> header fields. However, all comments in the Via field are optional and <em class="bcp14">MAY</em> be removed by any recipient prior to forwarding the message.
+      <p id="rfc.section.5.7.1.p.7">A sender <em class="bcp14">MAY</em> generate comments in the Via header field to identify the software of each recipient, analogous to the <a href="p2-semantics.html#header.user-agent" class="smpl">User-Agent</a> and <a href="p2-semantics.html#header.server" class="smpl">Server</a> header fields. However, all comments in the Via field are optional and a recipient <em class="bcp14">MAY</em> remove them prior to forwarding the message.
       </p>
       <p id="rfc.section.5.7.1.p.8">For example, a request message could be sent from an HTTP/1.0 user agent to an internal proxy code-named "fred", which uses
          HTTP/1.1 to forward the request to a public proxy at p.example.net, which completes the request by forwarding it to the origin
          server at www.example.com. The request received by www.example.com would then have the following Via header field:
       </p>
       <div id="rfc.figure.u.52"></div><pre class="text">  Via: 1.0 fred, 1.1 p.example.net
-</pre><p id="rfc.section.5.7.1.p.10">A proxy or gateway used as a portal through a network firewall <em class="bcp14">SHOULD NOT</em> forward the names and ports of hosts within the firewall region unless it is explicitly enabled to do so. If not enabled,
-         the received-by host of any host behind the firewall <em class="bcp14">SHOULD</em> be replaced by an appropriate pseudonym for that host.
+</pre><p id="rfc.section.5.7.1.p.10">An intermediary used as a portal through a network firewall <em class="bcp14">SHOULD NOT</em> forward the names and ports of hosts within the firewall region unless it is explicitly enabled to do so. If not enabled,
+         such an intermediary <em class="bcp14">SHOULD</em> replace each received-by host of any host behind the firewall by an appropriate pseudonym for that host.
       </p>
-      <p id="rfc.section.5.7.1.p.11">A proxy or gateway <em class="bcp14">MAY</em> combine an ordered subsequence of Via header field entries into a single such entry if the entries have identical received-protocol
+      <p id="rfc.section.5.7.1.p.11">An intermediary <em class="bcp14">MAY</em> combine an ordered subsequence of Via header field entries into a single such entry if the entries have identical received-protocol
          values. For example,
       </p>
       <div id="rfc.figure.u.53"></div><pre class="text">  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
@@ -2013,7 +2017,8 @@ Host: www.example.org
          For example,
       </p>
       <div id="rfc.figure.u.56"></div><pre class="text">  Connection: close
-</pre><p id="rfc.section.6.1.p.12">in either the request or the response header fields indicates that the connection <em class="bcp14">MUST</em> be closed after the current request/response is complete (<a href="#persistent.tear-down" id="rfc.xref.persistent.tear-down.1" title="Tear-down">Section&nbsp;6.6</a>).
+</pre><p id="rfc.section.6.1.p.12">in either the request or the response header fields indicates that the sender is going to close the connection after the current
+         request/response is complete (<a href="#persistent.tear-down" id="rfc.xref.persistent.tear-down.1" title="Tear-down">Section&nbsp;6.6</a>).
       </p>
       <p id="rfc.section.6.1.p.13">A client that does not support <a href="#persistent.connections" class="smpl">persistent connections</a> <em class="bcp14">MUST</em> send the "close" connection option in every request message.
       </p>
@@ -2042,7 +2047,8 @@ Host: www.example.org
       </p>
       <p id="rfc.section.6.3.p.4">A client <em class="bcp14">MAY</em> reuse a persistent connection until it sends or receives a <a href="#header.connection" class="smpl">close</a> connection option or receives an HTTP/1.0 response without a "keep-alive" connection option.
       </p>
-      <p id="rfc.section.6.3.p.5">In order to remain persistent, all messages on a connection <em class="bcp14">MUST</em> have a self-defined message length (i.e., one not defined by closure of the connection), as described in <a href="#message.body" title="Message Body">Section&nbsp;3.3</a>. A server <em class="bcp14">MUST</em> read the entire request message body or close the connection after sending its response, since otherwise the remaining data
+      <p id="rfc.section.6.3.p.5">In order to remain persistent, all messages on a connection need to have a self-defined message length (i.e., one not defined
+         by closure of the connection), as described in <a href="#message.body" title="Message Body">Section&nbsp;3.3</a>. A server <em class="bcp14">MUST</em> read the entire request message body or close the connection after sending its response, since otherwise the remaining data
          on a persistent connection would be misinterpreted as the next request. Likewise, a client <em class="bcp14">MUST</em> read the entire response message body if it intends to reuse the same connection for a subsequent request.
       </p>
       <p id="rfc.section.6.3.p.6">A proxy server <em class="bcp14">MUST NOT</em> maintain a persistent connection with an HTTP/1.0 client (see <a href="http://tools.ietf.org/html/rfc2068#section-19.7.1">Section 19.7.1</a> of <a href="#RFC2068" id="rfc.xref.RFC2068.3"><cite title="Hypertext Transfer Protocol -- HTTP/1.1">[RFC2068]</cite></a> for information and discussion of the problems with the Keep-Alive header field implemented by many HTTP/1.0 clients).
@@ -2063,15 +2069,17 @@ Host: www.example.org
          to recover from partial failure conditions by checking the target resource revision(s) after a failed connection, reverting
          or fixing any changes that were partially applied, and then automatically retrying the requests that failed.
       </p>
-      <p id="rfc.section.6.3.1.p.4">An automatic retry <em class="bcp14">SHOULD NOT</em> be repeated if it fails.
+      <p id="rfc.section.6.3.1.p.4">A client <em class="bcp14">SHOULD NOT</em> automatically retry a failed automatic retry.
       </p>
       <h3 id="rfc.section.6.3.2"><a href="#rfc.section.6.3.2">6.3.2</a>&nbsp;<a id="pipelining" href="#pipelining">Pipelining</a></h3>
       <p id="rfc.section.6.3.2.p.1">A client that supports persistent connections <em class="bcp14">MAY</em> "<dfn>pipeline</dfn>" its requests (i.e., send multiple requests without waiting for each response). A server <em class="bcp14">MAY</em> process a sequence of pipelined requests in parallel if they all have safe methods (<a href="p2-semantics.html#safe.methods" title="Safe Methods">Section 4.2.1</a> of <a href="#Part2" id="rfc.xref.Part2.25"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>), but <em class="bcp14">MUST</em> send the corresponding responses in the same order that the requests were received.
       </p>
-      <p id="rfc.section.6.3.2.p.2">A client that pipelines requests <em class="bcp14">MUST</em> be prepared to retry those requests if the connection closes before it receives all of the corresponding responses. A client
-         that assumes a persistent connection and pipelines immediately after connection establishment <em class="bcp14">MUST NOT</em> pipeline on a retry connection until it knows the connection is persistent.
+      <p id="rfc.section.6.3.2.p.2">A client that pipelines requests <em class="bcp14">SHOULD</em> retry unanswered requests if the connection closes before it receives all of the corresponding responses. When retrying pipelined
+         requests after a failed connection (a connection not explicitly closed by the server in its last complete response), a client <em class="bcp14">MUST NOT</em> pipeline immediately after connection establishment, since the first remaining request in the prior pipeline might have caused
+         an error response that can be lost again if multiple requests are sent on a prematurely closed connection (see the TCP reset
+         problem described in <a href="#persistent.tear-down" id="rfc.xref.persistent.tear-down.2" title="Tear-down">Section&nbsp;6.6</a>).
       </p>
-      <p id="rfc.section.6.3.2.p.3">Idempotent methods (<a href="p2-semantics.html#idempotent.methods" title="Idempotent Methods">Section 4.2.2</a> of <a href="#Part2" id="rfc.xref.Part2.26"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>) are significant to pipelining because they can be automatically retried after a connection failure. A user agent <em class="bcp14">SHOULD NOT</em> pipeline requests after a non-idempotent method until the final response status code for that method has been received, unless
+      <p id="rfc.section.6.3.2.p.3">Idempotent methods (<a href="p2-semantics.html#idempotent.methods" title="Idempotent Methods">Section 4.2.2</a> of <a href="#Part2" id="rfc.xref.Part2.26"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content">[Part2]</cite></a>) are significant to pipelining because they can be automatically retried after a connection failure. A user agent <em class="bcp14">SHOULD NOT</em> pipeline requests after a non-idempotent method, until the final response status code for that method has been received, unless
          the user agent has a means to detect and recover from partial failure conditions involving the pipelined sequence.
       </p>
       <p id="rfc.section.6.3.2.p.4">An intermediary that receives pipelined requests <em class="bcp14">MAY</em> pipeline those requests when forwarding them inbound, since it can rely on the outbound user agent(s) to determine what requests
@@ -2114,7 +2122,7 @@ Host: www.example.org
       <div id="rfc.iref.c.13"></div>
       <div id="rfc.iref.c.14"></div>
       <h2 id="rfc.section.6.6"><a href="#rfc.section.6.6">6.6</a>&nbsp;<a id="persistent.tear-down" href="#persistent.tear-down">Tear-down</a></h2>
-      <p id="rfc.section.6.6.p.1">The <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.5" title="Connection">Section&nbsp;6.1</a>) provides a "<a href="#header.connection" class="smpl">close</a>" connection option that a sender <em class="bcp14">SHOULD</em> send when it wishes to close the connection after the current request/response pair.
+      <p id="rfc.section.6.6.p.1">The <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.4" title="Connection">Section&nbsp;6.1</a>) provides a "<a href="#header.connection" class="smpl">close</a>" connection option that a sender <em class="bcp14">SHOULD</em> send when it wishes to close the connection after the current request/response pair.
       </p>
       <p id="rfc.section.6.6.p.2">A client that sends a <a href="#header.connection" class="smpl">close</a> connection option <em class="bcp14">MUST NOT</em> send further requests on that connection (after the one containing <a href="#header.connection" class="smpl">close</a>) and <em class="bcp14">MUST</em> close the connection after reading the final response message corresponding to this request.
       </p>
@@ -2149,7 +2157,7 @@ Host: www.example.org
   <a href="#header.upgrade" class="smpl">protocol-name</a>    = <a href="#rule.token.separators" class="smpl">token</a>
   <a href="#header.upgrade" class="smpl">protocol-version</a> = <a href="#rule.token.separators" class="smpl">token</a>
 </pre><p id="rfc.section.6.7.p.3">A server that sends a <a href="p2-semantics.html#status.101" class="smpl">101 (Switching Protocols)</a> response <em class="bcp14">MUST</em> send an Upgrade header field to indicate the new protocol(s) to which the connection is being switched; if multiple protocol
-         layers are being switched, the new protocols <em class="bcp14">MUST</em> be listed in layer-ascending order. A server <em class="bcp14">MUST NOT</em> switch to a protocol that was not indicated by the client in the corresponding request's Upgrade header field. A server <em class="bcp14">MAY</em> choose to ignore the order of preference indicated by the client and select the new protocol(s) based on other factors, such
+         layers are being switched, the sender <em class="bcp14">MUST</em> list the protocols in layer-ascending order. A server <em class="bcp14">MUST NOT</em> switch to a protocol that was not indicated by the client in the corresponding request's Upgrade header field. A server <em class="bcp14">MAY</em> choose to ignore the order of preference indicated by the client and select the new protocol(s) based on other factors, such
          as the nature of the request or the current load on the server.
       </p>
       <p id="rfc.section.6.7.p.4">A server that sends a <a href="p2-semantics.html#status.426" class="smpl">426 (Upgrade Required)</a> response <em class="bcp14">MUST</em> send an Upgrade header field to indicate the acceptable protocols, in order of descending preference.
@@ -2165,7 +2173,9 @@ Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11
 
 </pre><p id="rfc.section.6.7.p.7">Upgrade cannot be used to insist on a protocol change; its acceptance and use by the server is optional. The capabilities
          and nature of the application-level communication after the protocol change is entirely dependent upon the new protocol(s)
-         chosen, although the first action after changing the protocol <em class="bcp14">MUST</em> be a response to the initial HTTP request that contained the Upgrade header field.
+         chosen. However, immediately after sending the 101 response, the server is expected to continue responding to the original
+         request as if it had received its equivalent within the new protocol (i.e., the server still has an outstanding request to
+         satisfy after the protocol has been changed, and is expected to do so without requiring the request to be repeated).
       </p>
       <p id="rfc.section.6.7.p.8">For example, if the Upgrade header field is received in a GET request and the server decides to switch protocols, it first
          responds with a <a href="p2-semantics.html#status.101" class="smpl">101 (Switching Protocols)</a> message in HTTP/1.1 and then immediately follows that with the new protocol's equivalent of a response to a GET on the target
@@ -2180,7 +2190,7 @@ Upgrade: HTTP/2.0
 
 [... data stream switches to HTTP/2.0 with an appropriate response
 (as defined by new protocol) to the "GET /hello.txt" request ...]
-</pre><p id="rfc.section.6.7.p.10">When Upgrade is sent, the sender <em class="bcp14">MUST</em> also send a <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.6" title="Connection">Section&nbsp;6.1</a>) that contains an "upgrade" connection option, in order to prevent Upgrade from being accidentally forwarded by intermediaries
+</pre><p id="rfc.section.6.7.p.10">When Upgrade is sent, the sender <em class="bcp14">MUST</em> also send a <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.5" title="Connection">Section&nbsp;6.1</a>) that contains an "upgrade" connection option, in order to prevent Upgrade from being accidentally forwarded by intermediaries
          that might not implement the listed protocols. A server <em class="bcp14">MUST</em> ignore an Upgrade header field that is received in an HTTP/1.0 request.
       </p>
       <p id="rfc.section.6.7.p.11">The Upgrade header field only applies to switching protocols on top of the existing connection; it cannot be used to switch
@@ -2214,7 +2224,7 @@ Upgrade: HTTP/2.0
                   <td class="left">Connection</td>
                   <td class="left">http</td>
                   <td class="left">standard</td>
-                  <td class="left"><a href="#header.connection" id="rfc.xref.header.connection.7" title="Connection">Section&nbsp;6.1</a> 
+                  <td class="left"><a href="#header.connection" id="rfc.xref.header.connection.6" title="Connection">Section&nbsp;6.1</a> 
                   </td>
                </tr>
                <tr>
@@ -2270,7 +2280,7 @@ Upgrade: HTTP/2.0
          </table>
       </div>
       <p id="rfc.section.7.1.p.3">Furthermore, the header field-name "Close" shall be registered as "reserved", since using that name as an HTTP header field
-         might conflict with the "close" connection option of the "<a href="#header.connection" class="smpl">Connection</a>" header field (<a href="#header.connection" id="rfc.xref.header.connection.8" title="Connection">Section&nbsp;6.1</a>).
+         might conflict with the "close" connection option of the "<a href="#header.connection" class="smpl">Connection</a>" header field (<a href="#header.connection" id="rfc.xref.header.connection.7" title="Connection">Section&nbsp;6.1</a>).
       </p>
       <div id="rfc.table.u.1">
          <table class="tt full left" cellpadding="3" cellspacing="0">
@@ -2980,10 +2990,10 @@ Upgrade: HTTP/2.0
       </p>
       <p id="rfc.section.A.2.p.26">Gateways do not need to generate <a href="#header.via" class="smpl">Via</a> header fields anymore. (<a href="#header.via" id="rfc.xref.header.via.2" title="Via">Section&nbsp;5.7.1</a>)
       </p>
-      <p id="rfc.section.A.2.p.27">Exactly when "close" connection options have to be sent has been clarified. (<a href="#header.connection" id="rfc.xref.header.connection.9" title="Connection">Section&nbsp;6.1</a>)
+      <p id="rfc.section.A.2.p.27">Exactly when "close" connection options have to be sent has been clarified. (<a href="#header.connection" id="rfc.xref.header.connection.8" title="Connection">Section&nbsp;6.1</a>)
       </p>
       <p id="rfc.section.A.2.p.28">"hop-by-hop" header fields are required to appear in the Connection header field; just because they're defined as hop-by-hop
-         in this specification doesn't exempt them. (<a href="#header.connection" id="rfc.xref.header.connection.10" title="Connection">Section&nbsp;6.1</a>)
+         in this specification doesn't exempt them. (<a href="#header.connection" id="rfc.xref.header.connection.9" title="Connection">Section&nbsp;6.1</a>)
       </p>
       <p id="rfc.section.A.2.p.29">The limit of two connections per server has been removed. (<a href="#persistent.connections" title="Persistence">Section&nbsp;6.3</a>)
       </p>
@@ -3278,10 +3288,10 @@ Upgrade: HTTP/2.0
                   <li>captive portal&nbsp;&nbsp;<a href="#rfc.iref.c.3"><b>2.3</b></a></li>
                   <li>chunked (Coding Format)&nbsp;&nbsp;<a href="#rfc.iref.c.6">3.3.1</a>, <a href="#rfc.iref.c.8">3.3.3</a>, <a href="#rfc.iref.c.9"><b>4.1</b></a></li>
                   <li>client&nbsp;&nbsp;<a href="#rfc.iref.c.1"><b>2.1</b></a></li>
-                  <li>close&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">2.6</a>, <a href="#rfc.xref.header.connection.2">3.2.1</a>, <a href="#rfc.xref.header.connection.3">4.3</a>, <a href="#rfc.xref.header.connection.4">5.7</a>, <a href="#rfc.iref.c.12"><b>6.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">6.1</a>, <a href="#rfc.iref.c.14">6.6</a>, <a href="#rfc.xref.header.connection.5">6.6</a>, <a href="#rfc.xref.header.connection.6">6.7</a>, <a href="#rfc.xref.header.connection.7">7.1</a>, <a href="#rfc.xref.header.connection.8">7.1</a>, <a href="#rfc.xref.header.connection.9">A.2</a>, <a href="#rfc.xref.header.connection.10">A.2</a></li>
+                  <li>close&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">3.2.1</a>, <a href="#rfc.xref.header.connection.2">4.3</a>, <a href="#rfc.xref.header.connection.3">5.7</a>, <a href="#rfc.iref.c.12"><b>6.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">6.1</a>, <a href="#rfc.xref.persistent.tear-down.2">6.3.2</a>, <a href="#rfc.iref.c.14">6.6</a>, <a href="#rfc.xref.header.connection.4">6.6</a>, <a href="#rfc.xref.header.connection.5">6.7</a>, <a href="#rfc.xref.header.connection.6">7.1</a>, <a href="#rfc.xref.header.connection.7">7.1</a>, <a href="#rfc.xref.header.connection.8">A.2</a>, <a href="#rfc.xref.header.connection.9">A.2</a></li>
                   <li>compress (Coding Format)&nbsp;&nbsp;<a href="#rfc.iref.c.10">4.2.1</a></li>
                   <li>connection&nbsp;&nbsp;<a href="#rfc.iref.c.2"><b>2.1</b></a></li>
-                  <li>Connection header field&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">2.6</a>, <a href="#rfc.xref.header.connection.2">3.2.1</a>, <a href="#rfc.xref.header.connection.3">4.3</a>, <a href="#rfc.xref.header.connection.4">5.7</a>, <a href="#rfc.iref.c.11"><b>6.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">6.1</a>, <a href="#rfc.iref.c.13">6.6</a>, <a href="#rfc.xref.header.connection.5">6.6</a>, <a href="#rfc.xref.header.connection.6">6.7</a>, <a href="#rfc.xref.header.connection.7">7.1</a>, <a href="#rfc.xref.header.connection.8">7.1</a>, <a href="#rfc.xref.header.connection.9">A.2</a>, <a href="#rfc.xref.header.connection.10">A.2</a></li>
+                  <li>Connection header field&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">3.2.1</a>, <a href="#rfc.xref.header.connection.2">4.3</a>, <a href="#rfc.xref.header.connection.3">5.7</a>, <a href="#rfc.iref.c.11"><b>6.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">6.1</a>, <a href="#rfc.xref.persistent.tear-down.2">6.3.2</a>, <a href="#rfc.iref.c.13">6.6</a>, <a href="#rfc.xref.header.connection.4">6.6</a>, <a href="#rfc.xref.header.connection.5">6.7</a>, <a href="#rfc.xref.header.connection.6">7.1</a>, <a href="#rfc.xref.header.connection.7">7.1</a>, <a href="#rfc.xref.header.connection.8">A.2</a>, <a href="#rfc.xref.header.connection.9">A.2</a></li>
                   <li>Content-Length header field&nbsp;&nbsp;<a href="#rfc.iref.c.7"><b>3.3.2</b></a>, <a href="#rfc.xref.header.content-length.1">7.1</a>, <a href="#rfc.xref.header.content-length.2">A.2</a></li>
                </ul>
             </li>
