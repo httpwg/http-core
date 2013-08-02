@@ -1975,7 +1975,6 @@ Content-Type: text/plain
   <x:anchor-alias value="chunk-ext-val"/>
   <x:anchor-alias value="chunk-size"/>
   <x:anchor-alias value="last-chunk"/>
-  <x:anchor-alias value="trailer-part"/>
   <x:anchor-alias value="quoted-str-nf"/>
   <x:anchor-alias value="qdtext-nf"/>
 <t>
@@ -1986,7 +1985,7 @@ Content-Type: text/plain
    information necessary for the recipient to verify that it has
    received the full message.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="chunked-body"><!--terminal production--></iref><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="true" item="Grammar" subitem="trailer-part"/><iref primary="true" item="Grammar" subitem="quoted-str-nf"/><iref primary="true" item="Grammar" subitem="qdtext-nf"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="chunked-body"><!--terminal production--></iref><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="false" item="Grammar" subitem="trailer-part"/><iref primary="true" item="Grammar" subitem="quoted-str-nf"/><iref primary="true" item="Grammar" subitem="qdtext-nf"/>
   <x:ref>chunked-body</x:ref>   = *<x:ref>chunk</x:ref>
                    <x:ref>last-chunk</x:ref>
                    <x:ref>trailer-part</x:ref>
@@ -2001,7 +2000,6 @@ Content-Type: text/plain
   <x:ref>chunk-ext-name</x:ref> = <x:ref>token</x:ref>
   <x:ref>chunk-ext-val</x:ref>  = <x:ref>token</x:ref> / <x:ref>quoted-str-nf</x:ref>
   <x:ref>chunk-data</x:ref>     = 1*<x:ref>OCTET</x:ref> ; a sequence of chunk-size octets
-  <x:ref>trailer-part</x:ref>   = *( <x:ref>header-field</x:ref> <x:ref>CRLF</x:ref> )
   
   <x:ref>quoted-str-nf</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext-nf</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
                  ; like <x:ref>quoted-string</x:ref>, but disallowing line folding
@@ -2019,9 +2017,8 @@ Content-Type: text/plain
    trailer, and finally terminated by an empty line.
 </t>
 
-<section title="Trailer" anchor="header.trailer">
-  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
-  <x:anchor-alias value="Trailer"/>
+<section title="Chunked Trailer Part" anchor="chunked.trailer.part">
+  <x:anchor-alias value="trailer-part"/>
 <t>
    A trailer allows the sender to include additional fields at the end of a
    chunked message in order to supply metadata that might be dynamically
@@ -2030,18 +2027,8 @@ Content-Type: text/plain
    identical to header fields, except they are sent in a chunked trailer
    instead of the message header block.
 </t>
-<t>
-   When a message includes a message body encoded with the chunked
-   transfer coding and the sender desires to send metadata in the form of
-   trailer fields at the end of the message, the sender &SHOULD; generate a
-   <x:ref>Trailer</x:ref> header field before the message body to indicate
-   which fields will be present in the trailers. This allows the recipient
-   to prepare for receipt of that metadata before it starts processing the body,
-   which is useful if the message is being streamed and the recipient wishes
-   to confirm an integrity check on the fly.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
-  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="trailer-part"/>
+  <x:ref>trailer-part</x:ref>   = *( <x:ref>header-field</x:ref> <x:ref>CRLF</x:ref> )
 </artwork></figure>
 <t>
    A sender &MUST-NOT; generate a trailer that contains a field which needs to
@@ -2079,7 +2066,7 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Decoding chunked" anchor="decoding.chunked">
+<section title="Decoding Chunked" anchor="decoding.chunked">
 <t>
    A process for decoding the chunked transfer coding
    can be represented in pseudo-code as:
@@ -2190,7 +2177,7 @@ Content-Type: text/plain
 <t>
    The presence of the keyword "trailers" indicates that the client is willing
    to accept trailer fields in a chunked transfer coding, as defined in
-   <xref target="chunked.encoding"/>, on behalf of itself and any downstream
+   <xref target="chunked.trailer.part"/>, on behalf of itself and any downstream
    clients. For requests from an intermediary, this implies that either:
    (a) all downstream clients are willing to accept trailer fields in the
    forwarded response; or,
@@ -2219,6 +2206,24 @@ Content-Type: text/plain
    in order to prevent the TE field from being forwarded by intermediaries
    that do not support its semantics.
 </t>
+</section>
+
+<section title="Trailer" anchor="header.trailer">
+  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
+  <x:anchor-alias value="Trailer"/>
+<t>
+   When a message includes a message body encoded with the chunked
+   transfer coding and the sender desires to send metadata in the form of
+   trailer fields at the end of the message, the sender &SHOULD; generate a
+   <x:ref>Trailer</x:ref> header field before the message body to indicate
+   which fields will be present in the trailers. This allows the recipient
+   to prepare for receipt of that metadata before it starts processing the body,
+   which is useful if the message is being streamed and the recipient wishes
+   to confirm an integrity check on the fly.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
+  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
+</artwork></figure>
 </section>
 </section>
 
