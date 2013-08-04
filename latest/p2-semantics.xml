@@ -586,8 +586,9 @@
   Content-Encoding: gzip
 </artwork></figure>
 <t>
-   If multiple encodings have been applied to a representation, the content
-   codings &MUST; be listed in the order in which they were applied.
+   If one or more encodings have been applied to a representation, the sender
+   that applied the encodings &MUST; generate a Content-Encoding header field
+   that lists the content codings in the order in which they were applied.
    Additional information about the encoding parameters &MAY; be provided
    by other header fields not defined by this specification.
 </t>
@@ -1210,8 +1211,8 @@
    For example, it is common for Web-based content editing software
    to use actions within query parameters, such as "page?do=delete".
    If the purpose of such a resource is to perform an unsafe action, then
-   the resource &MUST; disable or disallow that action when it is accessed
-   using a safe request method.  Failure to do so will result in
+   the resource owner &MUST; disable or disallow that action when it is
+   accessed using a safe request method. Failure to do so will result in
    unfortunate side-effects when automated processes perform a GET on
    every URI reference for the sake of link maintenance, pre-fetching,
    building a search index, etc.
@@ -1593,7 +1594,7 @@
    The CONNECT method requests that the recipient establish a tunnel to the
    destination origin server identified by the request-target and, if
    successful, thereafter restrict its behavior to blind forwarding of
-   packets, in both directions, until the connection is closed.
+   packets, in both directions, until the tunnel is closed.
 </t>
 <t>
    CONNECT is intended only for use in requests to a proxy.
@@ -1625,20 +1626,10 @@ Host: server.example.com:80
    has not yet been formed and that the connection remains governed by HTTP.
 </t>
 <t>
-   A server &SHOULD-NOT; send any <x:ref>Transfer-Encoding</x:ref> or
-   <x:ref>Content-Length</x:ref> header fields in a successful response.
-   A client &MUST; ignore any Content-Length or Transfer-Encoding header
-   fields received in a successful response.
-</t>
-<t>
-   There are significant risks in establishing a tunnel to arbitrary servers,
-   particularly when the destination is a well-known or reserved TCP port that
-   is not intended for Web traffic. For example, a CONNECT to a request-target
-   of "example.com:25" would suggest that the proxy connect to the reserved
-   port for SMTP traffic; if allowed, that could trick the proxy into
-   relaying spam email. Proxies that support CONNECT &SHOULD; restrict its
-   use to a limited set of known ports or a configurable whitelist of safe
-   request targets.
+   A tunnel is closed when a tunnel intermediary detects that either side
+   has closed its connection: the intermediary &MUST; attempt to send any
+   outstanding data that came from the closed side to the other side, close
+   both connections, and then discard any remaining data left undelivered.
 </t>
 <t>
    Proxy authentication might be used to establish the
@@ -1651,11 +1642,21 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 
 </artwork></figure>
 <t>
-   When a tunnel intermediary detects that either side has closed its
-   connection, any outstanding data that came from that side will first be
-   sent to the other side and then the intermediary will close both
-   connections. If there is outstanding data left undelivered,
-   that data will be discarded.
+   There are significant risks in establishing a tunnel to arbitrary servers,
+   particularly when the destination is a well-known or reserved TCP port that
+   is not intended for Web traffic. For example, a CONNECT to a request-target
+   of "example.com:25" would suggest that the proxy connect to the reserved
+   port for SMTP traffic; if allowed, that could trick the proxy into
+   relaying spam email. Proxies that support CONNECT &SHOULD; restrict its
+   use to a limited set of known ports or a configurable whitelist of safe
+   request targets.
+</t>
+<t>
+   A server &SHOULD-NOT; send any <x:ref>Transfer-Encoding</x:ref> or
+   <x:ref>Content-Length</x:ref> header fields in a successful response
+   to CONNECT.
+   A client &MUST; ignore any Content-Length or Transfer-Encoding header
+   fields received in a successful response to CONNECT.
 </t>
 <t>
    A payload within a CONNECT request message has no defined semantics;
@@ -1742,7 +1743,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    (<xref target="header.max-forwards"/>).
 </t>
 <t>
-   A client &MUST-NOT; send header fields in a TRACE request containing
+   A client &MUST-NOT; generate header fields in a TRACE request containing
    sensitive data that might be disclosed by the response. For example, it
    would be foolish for a user agent to send stored user credentials
    <xref target="Part7"/> or cookies <xref target="RFC6265"/> in a TRACE
@@ -1830,7 +1831,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    for values (expect-value).
 </t>
 <t>
-   The Expect header field &MUST; be forwarded if the request is forwarded.
+   An intermediary &MUST; forward a received Expect header field if the
+   request is forwarded.
 </t>
 <t>
    Many older HTTP/1.0 and HTTP/1.1 servers do not understand the Expect
@@ -1866,31 +1868,32 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    reject the message without looking at the body.
 </t>
 <t>
-   Requirements for HTTP/1.1 clients:
+   Requirements for clients:
   <list style="symbols">
     <t>
-        If a client will wait for a <x:ref>100 (Continue)</x:ref> response before
-        sending the payload body, it &MUST; send an <x:ref>Expect</x:ref> header
-        field with the "100-continue" expectation.
+     If a client will wait for a <x:ref>100 (Continue)</x:ref> response before
+     sending the payload body, it &MUST; send an <x:ref>Expect</x:ref> header
+     field with the "100-continue" expectation.
     </t>
     <t>
-        A client &MUST-NOT; send an <x:ref>Expect</x:ref> header field with
-        the "100-continue" expectation if it does not intend to send a payload
-        body.
+     A client &MUST-NOT; send an <x:ref>Expect</x:ref> header field with
+     the "100-continue" expectation if it does not intend to send a payload
+     body.
+    </t>
+    <t>
+     Because of the presence of older implementations, the protocol allows
+     ambiguous situations in which a client might send "Expect: 100-continue"
+     without receiving either a <x:ref>417 (Expectation Failed)</x:ref> or a
+     <x:ref>100 (Continue)</x:ref> status code. Therefore, when a client sends
+     this header field to an origin server (possibly via a proxy) from which
+     it has never seen a <x:ref>100 (Continue)</x:ref> status code, the
+     client &SHOULD-NOT; wait for an indefinite period before sending the
+     payload body.
     </t>
   </list>
 </t>
 <t>
-   Because of the presence of older implementations, the protocol allows
-   ambiguous situations in which a client might send "Expect: 100-continue"
-   without receiving either a <x:ref>417 (Expectation Failed)</x:ref> 
-   or a <x:ref>100 (Continue)</x:ref> status code. Therefore, when a client sends this
-   header field to an origin server (possibly via a proxy) from which it
-   has never seen a <x:ref>100 (Continue)</x:ref> status code, the client &SHOULD-NOT;  
-   wait for an indefinite period before sending the payload body.
-</t>
-<t>
-   Requirements for HTTP/1.1 origin servers:
+   Requirements for origin servers:
   <list style="symbols">
     <t> Upon receiving a request that includes an <x:ref>Expect</x:ref> header
         field with the "100-continue" expectation, an origin server &MUST;
@@ -1941,7 +1944,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
     </list>
 </t>
 <t>
-   Requirements for HTTP/1.1 proxies:
+   Requirements for proxies:
   <list style="symbols">
     <t> If a proxy receives a request that includes an <x:ref>Expect</x:ref>
         header field with the "100-continue" expectation, and the proxy
@@ -1957,8 +1960,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
     <t> Proxies &SHOULD; maintain a record of the HTTP version
         numbers received from recently-referenced next-hop servers.
     </t>
-    <t> A proxy &MUST-NOT; forward a <x:ref>100 (Continue)</x:ref> response if the
-        request message was received from an HTTP/1.0 (or earlier)
+    <t> A proxy &MUST-NOT; forward a <x:ref>100 (Continue)</x:ref> response if
+        the request message was received from an HTTP/1.0 (or earlier)
         client and did not include an <x:ref>Expect</x:ref> header field with
         the "100-continue" expectation. This requirement overrides the
         general rule for forwarding of <x:ref>1xx</x:ref> responses
@@ -1987,17 +1990,19 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    number of times this request message can be forwarded.
 </t>
 <t>
-   Each recipient of a TRACE or OPTIONS request
-   containing a Max-Forwards header field &MUST; check and update its
-   value prior to forwarding the request. If the received value is zero
-   (0), the recipient &MUST-NOT; forward the request; instead, it &MUST;
-   respond as the final recipient. If the received Max-Forwards value is
-   greater than zero, then the forwarded message &MUST; contain an updated
-   Max-Forwards field with a value decremented by one (1).
+   Each intermediary that receives a TRACE or OPTIONS request containing a
+   Max-Forwards header field &MUST; check and update its value prior to
+   forwarding the request. If the received value is zero (0), the intermediary
+   &MUST-NOT; forward the request; instead, the intermediary &MUST; respond as
+   the final recipient. If the received Max-Forwards value is greater than
+   zero, the intermediary &MUST; generate an updated Max-Forwards field in the
+   forwarded message with a field-value that is the lesser of: a) the received
+   value decremented by one (1), or b) the recipient's maximum supported value
+   for Max-Forwards.
 </t>
 <t>
-   The Max-Forwards header field &MAY; be ignored for all other request
-   methods.
+   A recipient &MAY; ignore a Max-Forwards header field received with any
+   other request methods.
 </t>
 </section>
 </section>
@@ -2608,8 +2613,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    understanding is obviously desirable. However, clients &MUST;
    understand the class of any status code, as indicated by the first
    digit, and treat an unrecognized status code as being equivalent to the
-   x00 status code of that class, with the exception that a response with an
-   unrecognized status code &MUST-NOT; be cached.
+   x00 status code of that class, with the exception that
+   a recipient &MUST-NOT; cache a response with an unrecognized status code.
 </t>
 <t>
    For example, if an unrecognized status code of 471 is received by a client,
@@ -2739,8 +2744,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    A user agent &MAY; ignore unexpected 1xx status responses.
 </t>
 <t>
-   Proxies &MUST; forward 1xx responses, unless the connection between the
-   proxy and its client has been closed, or unless the proxy itself
+   A proxy &MUST; forward 1xx responses unless the proxy itself
    requested the generation of the 1xx response. For example, if a
    proxy adds an "Expect: 100-continue" field when it forwards a request,
    then it need not forward the corresponding <x:ref>100 (Continue)</x:ref>
@@ -3692,8 +3696,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </artwork></figure>
 <t>
    A recipient that parses a timestamp value in an HTTP header field &MUST;
-   accept all three formats. A sender &MUST; generate the IMF-fixdate
-   format when sending an HTTP-date value in a header field.
+   accept all three HTTP-date formats. When a sender generates a header field
+   that contains one or more timestamps defined as HTTP-date,
+   the sender &MUST; generate those timestamps in the IMF-fixdate format.
 </t>
 <t>
    An HTTP-date value represents time as an instance of Coordinated Universal
