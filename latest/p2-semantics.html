@@ -826,7 +826,7 @@ ul.ind li li {
          defined in <a href="#RFC6365" id="rfc.xref.RFC6365.1"><cite title="Terminology Used in Internationalization in the IETF">[RFC6365]</cite></a>.
       </p>
       <h1 id="rfc.section.2"><a href="#rfc.section.2">2.</a>&nbsp;<a id="resources" href="#resources">Resources</a></h1>
-      <p id="rfc.section.2.p.1">The target of a HTTP request is called a resource. HTTP does not limit the nature of a resource; it merely defines an interface
+      <p id="rfc.section.2.p.1">The target of an HTTP request is called a resource. HTTP does not limit the nature of a resource; it merely defines an interface
          that might be used to interact with resources. Each resource is identified by a Uniform Resource Identifier (URI), as described
          in <a href="p1-messaging.html#uri" title="Uniform Resource Identifiers">Section 2.7</a> of <a href="#Part1" id="rfc.xref.Part1.4"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing">[Part1]</cite></a>.
       </p>
@@ -1072,7 +1072,7 @@ ul.ind li li {
       <p id="rfc.section.3.1.4.1.p.2">For a request message: </p>
       <ul>
          <li>If the request has a <a href="#header.content-location" class="smpl">Content-Location</a> header field, then the sender asserts that the payload is a representation of the resource identified by the Content-Location
-            field-value. However, such an assertion cannot be trusted unless it can be verified by other means (not defined by this document).
+            field-value. However, such an assertion cannot be trusted unless it can be verified by other means (not defined by this specification).
             The information might still be useful for revision history links.
          </li>
          <li>Otherwise, the payload is unidentified.</li>
@@ -1088,7 +1088,7 @@ ul.ind li li {
          </li>
          <li>If the response has a <a href="#header.content-location" class="smpl">Content-Location</a> header field and its field-value is a reference to a URI different from the effective request URI, then the sender asserts
             that the payload is a representation of the resource identified by the Content-Location field-value. However, such an assertion
-            cannot be trusted unless it can be verified by other means (not defined by this document).
+            cannot be trusted unless it can be verified by other means (not defined by this specification).
          </li>
          <li>Otherwise, the payload is unidentified.</li>
       </ol>
@@ -1201,7 +1201,11 @@ ul.ind li li {
          on the user agent characteristics, and "Transparent Content Negotiation" (<a href="#RFC2295" id="rfc.xref.RFC2295.1"><cite title="Transparent Content Negotiation in HTTP">[RFC2295]</cite></a>), where content selection is performed by an intermediary. These patterns are not mutually exclusive, and each has trade-offs
          in applicability and practicality.
       </p>
-      <p id="rfc.section.3.4.p.3">Note that, in all cases, the resource determines which representations might be considered to be the "same information".</p>
+      <p id="rfc.section.3.4.p.3">Note that, in all cases, HTTP is not aware of the resource semantics. The consistency with which an origin server responds
+         to requests, over time and over the varying dimensions of content negotiation, and thus the "sameness" of a resource's observed
+         representations over time, is determined entirely by whatever entity or algorithm selects or generates those responses. HTTP
+         pays no attention to the man behind the curtain.
+      </p>
       <h3 id="rfc.section.3.4.1"><a href="#rfc.section.3.4.1">3.4.1</a>&nbsp;<a id="proactive.negotiation" href="#proactive.negotiation">Proactive Negotiation</a></h3>
       <p id="rfc.section.3.4.1.p.1">When content negotiation preferences are sent by the user agent in a request to encourage an algorithm located at the server
          to select the preferred representation, it is called <dfn>proactive negotiation</dfn> (a.k.a., <dfn>server-driven negotiation</dfn>). Selection is based on the available representations for a response (the dimensions over which it might vary, such as language,
@@ -1234,16 +1238,21 @@ ul.ind li li {
          user agents with differing request information.
       </p>
       <h3 id="rfc.section.3.4.2"><a href="#rfc.section.3.4.2">3.4.2</a>&nbsp;<a id="reactive.negotiation" href="#reactive.negotiation">Reactive Negotiation</a></h3>
-      <p id="rfc.section.3.4.2.p.1">With <dfn>reactive negotiation</dfn> (a.k.a., <dfn>agent-driven negotiation</dfn>), selection of the best representation for a response is performed by the user agent after receiving an initial response
-         from the origin server with a list of alternative resources. If the user agent is not satisfied by the initial response, it
-         can perform a GET request on one or more of the alternative resources, selected based on metadata included in the list, to
-         obtain a different form of representation. Selection of alternatives might be performed automatically by the user agent or
-         manually by the user selecting from a generated (possibly hypertext) menu.
+      <p id="rfc.section.3.4.2.p.1">With <dfn>reactive negotiation</dfn> (a.k.a., <dfn>agent-driven negotiation</dfn>), selection of the best response representation (regardless of the status code) is performed by the user agent after receiving
+         an initial response from the origin server that contains a list of resources for alternative representations. If the user
+         agent is not satisfied by the initial response representation, it can perform a GET request on one or more of the alternative
+         resources, selected based on metadata included in the list, to obtain a different form of representation for that response.
+         Selection of alternatives might be performed automatically by the user agent or manually by the user selecting from a generated
+         (possibly hypertext) menu.
       </p>
-      <p id="rfc.section.3.4.2.p.2">A server can send a <a href="#status.300" class="smpl">300 (Multiple Choices)</a> response to indicate that reactive negotiation by the user agent is desired, or a <a href="#status.406" class="smpl">406 (Not Acceptable)</a> status code to indicate that proactive negotiation has failed. In both cases, the response ought to include information about
-         the available representations so that the user or user agent can react by making a selection.
+      <p id="rfc.section.3.4.2.p.2">Note that the above refers to representations of the response, in general, not representations of the resource. The alternative
+         representations are only considered representations of the target resource if the response in which those alternatives are
+         provided has the semantics of being a representation of the target resource (e.g., a <a href="#status.200" class="smpl">200 (OK)</a> response to a GET request) or has the semantics of providing links to alternative representations for the target resource
+         (e.g., a <a href="#status.300" class="smpl">300 (Multiple Choices)</a> response to a GET request).
       </p>
-      <p id="rfc.section.3.4.2.p.3">Reactive negotiation can also be supported in successful responses (e.g., <a href="#status.200" class="smpl">200 (OK)</a> responses) if the payload format allows it.
+      <p id="rfc.section.3.4.2.p.3">A server might choose not to send an initial representation, other than than the list of alternatives, and thereby indicate
+         that reactive negotiation by the user agent is preferred. For example, the alternatives listed in responses with the <a href="#status.300" class="smpl">300 (Multiple Choices)</a> and <a href="#status.406" class="smpl">406 (Not Acceptable)</a> status codes include information about the available representations so that the user or user agent can react by making a
+         selection.
       </p>
       <p id="rfc.section.3.4.2.p.4">Reactive negotiation is advantageous when the response would vary over commonly-used dimensions (such as type, language, or
          encoding), when the origin server is unable to determine a user agent's capabilities from examining the request, and generally
@@ -1257,10 +1266,11 @@ ul.ind li li {
       <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a>&nbsp;<a id="methods" href="#methods">Request Methods</a></h1>
       <h2 id="rfc.section.4.1"><a href="#rfc.section.4.1">4.1</a>&nbsp;<a id="method.overview" href="#method.overview">Overview</a></h2>
       <p id="rfc.section.4.1.p.1">The request method token is the primary source of request semantics; it indicates the purpose for which the client has made
-         this request and what is expected by the client as a successful result. The request semantics might be further specialized
-         by the semantics of some header fields when present in a request (<a href="#request.header.fields" title="Request Header Fields">Section&nbsp;5</a>) if those additional semantics do not conflict with the method.
+         this request and what is expected by the client as a successful result.
       </p>
-      <p id="rfc.section.4.1.p.2">For example, a client can send conditional request header fields (<a href="#request.conditionals" title="Conditionals">Section&nbsp;5.2</a>) to make the requested action conditional on the current state of the target resource (<a href="#Part4" id="rfc.xref.Part4.2"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>).
+      <p id="rfc.section.4.1.p.2">The request method's semantics might be further specialized by the semantics of some header fields when present in a request
+         (<a href="#request.header.fields" title="Request Header Fields">Section&nbsp;5</a>) if those additional semantics do not conflict with the method. For example, a client can send conditional request header
+         fields (<a href="#request.conditionals" title="Conditionals">Section&nbsp;5.2</a>) to make the requested action conditional on the current state of the target resource (<a href="#Part4" id="rfc.xref.Part4.2"><cite title="Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests">[Part4]</cite></a>).
       </p>
       <div id="rfc.figure.u.17"></div><pre class="inline"><span id="rfc.iref.g.15"></span>  <a href="#method.overview" class="smpl">method</a> = <a href="#imported.abnf" class="smpl">token</a>
 </pre><p id="rfc.section.4.1.p.4">HTTP was originally designed to be usable as an interface to distributed object systems. The request method was envisioned
