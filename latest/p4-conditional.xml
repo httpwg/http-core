@@ -686,14 +686,24 @@ Content-Encoding: gzip
    If the condition is met, the server &MAY; perform the request method.
 </t>
 <t>
-   Origin servers &MUST-NOT; perform the requested method if the condition is
-   not met; instead they &MUST; respond with the <x:ref>412 (Precondition
-   Failed)</x:ref> status code.
+   An origin server &MUST-NOT; perform the requested method if the condition
+   is not met; instead the origin server &MUST; respond with either:
+   a) the <x:ref>412 (Precondition Failed)</x:ref> status code; or,
+   b) one of the <x:ref>2xx (Successful)</x:ref> status codes if the origin
+   server has verified that a state change is being requested and the final
+   state is already reflected in the current state of the target resource
+   (i.e., the change requested by the user agent has already succeeded, but
+   the user agent might not be aware of that due to the prior response message
+   being lost or because a compatible change was made by some other user
+   agent). In the latter case, the origin server &MUST-NOT; send a
+   <x:ref>204 (No Content)</x:ref> status code unless it can verify that the
+   request is a duplicate of an immediately prior change made by the same user
+   agent.
 </t>
 <t>
-   Proxy servers using a cached response as the selected representation
+   A proxy using a cached response as the selected representation
    &MUST-NOT; perform the requested method if the condition is not met;
-   instead, they &MUST; forward the request towards the origin server.
+   instead, the proxy &MUST; forward the request towards the origin server.
 </t>
 <t>
    Examples:
@@ -852,11 +862,11 @@ Content-Encoding: gzip
 <t>
    The "If-Unmodified-Since" header field can be used to make a request
    method conditional by modification date: if the selected representation
-   has been modified since the time specified in this field, then the
-   server &MUST-NOT; perform the requested operation and &MUST; instead
-   respond with the <x:ref>412 (Precondition Failed)</x:ref> status code.
-   If the selected representation has not been modified since the time
-   specified in this field, the server &MAY; perform the request.
+   has not been modified since the time specified in this field, then the
+   condition is met.  If-Unmodified-Since is useful for resource update
+   requests, when the resource does not provide entity-tag values, as a means
+   for protecting against accidental overwrites when multiple clients are
+   acting in parallel on the same resource (i.e., the "lost update" problem).
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Unmodified-Since"/>
   <x:ref>If-Unmodified-Since</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -867,6 +877,29 @@ Content-Encoding: gzip
 <figure><artwork type="example">
   If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT
 </artwork></figure>
+<t>
+   If the condition is met, the server &MAY; perform the request method.
+</t>
+<t>
+   An origin server &MUST-NOT; perform the requested method if the condition
+   is not met; instead the origin server &MUST; respond with either:
+   a) the <x:ref>412 (Precondition Failed)</x:ref> status code; or,
+   b) one of the <x:ref>2xx (Successful)</x:ref> status codes if the origin
+   server has verified that a state change is being requested and the final
+   state is already reflected in the current state of the target resource
+   (i.e., the change requested by the user agent has already succeeded, but
+   the user agent might not be aware of that due to the prior response message
+   being lost or because a compatible change was made by some other user
+   agent). In the latter case, the origin server &MUST-NOT; send a
+   <x:ref>204 (No Content)</x:ref> status code unless it can verify that the
+   request is a duplicate of an immediately prior change made by the same user
+   agent.
+</t>
+<t>
+   A proxy using a cached response as the selected representation
+   &MUST-NOT; perform the requested method if the condition is not met;
+   instead, the proxy &MUST; forward the request towards the origin server.
+</t>
 <t>
    A server &MUST; ignore the If-Unmodified-Since header field if the
    received value is not a valid HTTP-date.
@@ -1017,14 +1050,18 @@ Content-Encoding: gzip
      <t anchor="precedence1">When <x:ref>If-Match</x:ref> is present, evaluate it:
        <list style="symbols">
          <t>if true, continue to step <xref target="precedence3" format="counter"/></t>
-         <t>if false, respond <x:ref>412 (Precondition Failed)</x:ref></t>
+         <t>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
+            it can be determined that the state-changing request has already
+            succeeded (see <xref target="header.if-match"/>)</t>
        </list>
      </t>
      <t anchor="precedence2">When <x:ref>If-Match</x:ref> is not present and
         <x:ref>If-Unmodified-Since</x:ref> is present, evaluate it:
        <list style="symbols">
          <t>if true, continue to step <xref target="precedence3" format="counter"/></t>
-         <t>if false, respond <x:ref>412 (Precondition Failed)</x:ref></t>
+         <t>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
+            it can be determined that the state-changing request has already
+            succeeded (see <xref target="header.if-unmodified-since"/>)</t>
        </list>
      </t>
      <t anchor="precedence3">When <x:ref>If-None-Match</x:ref> is present, evaluate it:
@@ -1233,6 +1270,7 @@ Content-Encoding: gzip
     <x:defines>2xx</x:defines>
     <x:defines>2xx (Successful)</x:defines>
     <x:defines>200 (OK)</x:defines>
+    <x:defines>204 (No Content)</x:defines>
     <x:defines>Accept-Encoding</x:defines>
     <x:defines>Content-Location</x:defines>
     <x:defines>Content-Type</x:defines>
