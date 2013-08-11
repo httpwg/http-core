@@ -28,6 +28,7 @@
   <!ENTITY messaging                  "<xref target='Part1' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY semantics                  "<xref target='Part2' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY caching                    "<xref target='Part6' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY cache-key                  "<xref target='Part6' x:rel='#constructing.responses.from.caches' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY freshening-responses       "<xref target='Part6' x:rel='#freshening.responses' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-accept-encoding     "<xref target='Part2' x:rel='#header.accept-encoding' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-if-range            "<xref target='Part5' x:rel='#header.if-range' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -660,30 +661,54 @@ Content-Encoding: gzip
   <iref primary="true" item="If-Match header field" x:for-anchor=""/>
   <x:anchor-alias value="If-Match"/>
 <t>
-   The "If-Match" header field can be used to make a request method conditional
-   on the current existence or value of an entity-tag for one or more
-   representations of the target resource.
-</t>
-<t>
-   If-Match is generally useful for resource update requests, such as PUT
-   requests, as a means for protecting against accidental overwrites when
-   multiple clients are acting in parallel on the same resource (i.e., the
-   "lost update" problem).  An If-Match field-value of "*" places the
-   precondition on the existence of any current representation for the
-   target resource.
+   The "If-Match" header field makes the request method conditional on either
+   the existence of a current representation for the target resource, when
+   the field-value is "*", or on the selected representation having an
+   entity-tag that matches one of those provided in the field-value.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Match"/>
   <x:ref>If-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
 </artwork></figure>
 <t>
-   The If-Match condition is met if and only if any of the entity-tags listed
-   in the If-Match field value match the entity-tag of the selected
-   representation using the weak comparison function (as per <xref
-   target="entity.tag.comparison"/>), or if "*" is given and any current
+   Examples:
+</t>
+<figure><artwork type="example">
+  If-Match: "xyzzy"
+  If-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
+  If-Match: *
+</artwork></figure>
+<t>
+   If the request semantics (method and header fields) allow the request to be
+   satisfied with a cached response, a cache &SHOULD; evaluate the condition
+   based on its currently stored set of suitable responses for that request
+   (see &cache-key;).
+   If the field-value is "*" and any suitable response is currently stored,
+   or if the field-value is a list of entity-tag values and at least one of
+   the suitable responses has an <x:ref>ETag</x:ref> header field with a
+   value matching an entity-tag in that list, then the cache &SHOULD; reuse
+   the most suitable of those matching responses to satisfy the request.
+   If the condition is not met, none of the cached responses is suitable for
+   reuse in response to this request.
+</t>
+<t>
+   If the request semantics cannot be satisfied with a cached response, the
+   conditional is only evaluated when received by an origin server.
+   For example, If-Match is most often used with state-changing requests,
+   such as PUT, to prevent accidental overwrites when multiple user agents
+   might be acting in parallel on the same resource (i.e., to prevent the
+   "lost update" problem).
+</t>
+<t>
+   When the If-Match field-value consists of a list of entity-tag values,
+   the condition is met if any of the entity-tags listed match, using the weak
+   comparison function (as per <xref target="entity.tag.comparison"/>), the
+   entity-tag of the selected representation.
+   When the If-Match field-value is "*", the condition is met if any current
    representation exists for the target resource.
 </t>
 <t>
-   If the condition is met, the server &MAY; perform the request method.
+   If the condition is met, the origin server &MAY; perform the requested
+   method.
 </t>
 <t>
    An origin server &MUST-NOT; perform the requested method if the condition
@@ -693,26 +718,12 @@ Content-Encoding: gzip
    server has verified that a state change is being requested and the final
    state is already reflected in the current state of the target resource
    (i.e., the change requested by the user agent has already succeeded, but
-   the user agent might not be aware of that due to the prior response message
-   being lost or because a compatible change was made by some other user
-   agent). In the latter case, the origin server &MUST-NOT; send a
-   <x:ref>204 (No Content)</x:ref> status code unless it can verify that the
-   request is a duplicate of an immediately prior change made by the same user
-   agent.
+   the user agent might not be aware of that because the prior response message
+   was lost or a compatible change was made by some other user agent).
+   In the latter case, the origin server &MUST-NOT; send a validator header
+   field in the response unless it can verify that the request is a duplicate
+   of an immediately prior change made by the same user agent.
 </t>
-<t>
-   A proxy using a cached response as the selected representation
-   &MUST-NOT; perform the requested method if the condition is not met;
-   instead, the proxy &MUST; forward the request towards the origin server.
-</t>
-<t>
-   Examples:
-</t>
-<figure><artwork type="example">
-  If-Match: "xyzzy"
-  If-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
-  If-Match: *
-</artwork></figure>
 </section>
 
 <section title="If-None-Match" anchor="header.if-none-match">
@@ -860,13 +871,11 @@ Content-Encoding: gzip
   <iref primary="true" item="If-Unmodified-Since header field" x:for-anchor=""/>
   <x:anchor-alias value="If-Unmodified-Since"/>
 <t>
-   The "If-Unmodified-Since" header field can be used to make a request
-   method conditional by modification date: if the selected representation
-   has not been modified since the time specified in this field, then the
-   condition is met.  If-Unmodified-Since is useful for resource update
-   requests, when the resource does not provide entity-tag values, as a means
-   for protecting against accidental overwrites when multiple clients are
-   acting in parallel on the same resource (i.e., the "lost update" problem).
+   The "If-Unmodified-Since" header field makes the request method conditional
+   on the selected representation's last modification date being earlier or
+   equal to the date provided in the field-value. This field accomplishes the
+   same purpose as <x:ref>If-Match</x:ref> for cases where the user agent does
+   not have an entity-tag for the representation.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Unmodified-Since"/>
   <x:ref>If-Unmodified-Since</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -878,7 +887,35 @@ Content-Encoding: gzip
   If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT
 </artwork></figure>
 <t>
-   If the condition is met, the server &MAY; perform the request method.
+   A server &MUST; ignore If-Unmodified-Since if the selected representation
+   has an entity-tag and the request contains an If-Match header field;
+   the condition in If-Match, when applicable, is considered to be a more
+   accurate replacement for the condition in If-Unmodified-Since.
+</t>
+<t>
+   A server &MUST; ignore the If-Unmodified-Since header field if the
+   received field-value is not a valid HTTP-date.
+</t>
+<t>
+   If the request semantics (method and header fields) allow the request to be
+   satisfied with a cached response, a cache &SHOULD; evaluate the condition
+   based on its currently stored set of suitable responses for that request
+   (see &cache-key;).
+   If the most suitable response has a <x:ref>Last-Modified</x:ref> date that
+   is earlier or equal to the date given in If-Unmodified-Since, the
+   cache &SHOULD; reuse that response to satisfy the request.
+   If the condition is not met, none of the stored responses is suitable for
+   reuse in response to this request.
+</t>
+<t>
+   If the request semantics cannot be satisfied with a cached response, the
+   conditional is only evaluated when received by an origin server.
+   If the selected representation has not been modified since the time
+   specified in this field, then the condition is met.
+</t>
+<t>
+   If the condition is met, the origin server &MAY; perform the requested
+   method.
 </t>
 <t>
    An origin server &MUST-NOT; perform the requested method if the condition
@@ -888,21 +925,11 @@ Content-Encoding: gzip
    server has verified that a state change is being requested and the final
    state is already reflected in the current state of the target resource
    (i.e., the change requested by the user agent has already succeeded, but
-   the user agent might not be aware of that due to the prior response message
-   being lost or because a compatible change was made by some other user
-   agent). In the latter case, the origin server &MUST-NOT; send a
-   <x:ref>204 (No Content)</x:ref> status code unless it can verify that the
-   request is a duplicate of an immediately prior change made by the same user
-   agent.
-</t>
-<t>
-   A proxy using a cached response as the selected representation
-   &MUST-NOT; perform the requested method if the condition is not met;
-   instead, the proxy &MUST; forward the request towards the origin server.
-</t>
-<t>
-   A server &MUST; ignore the If-Unmodified-Since header field if the
-   received value is not a valid HTTP-date.
+   the user agent might not be aware of that because the prior response message
+   was lost or a compatible change was made by some other user agent).
+   In the latter case, the origin server &MUST-NOT; send a validator header
+   field in the response unless it can verify that the request is a duplicate
+   of an immediately prior change made by the same user agent.
 </t>
 </section>
 
