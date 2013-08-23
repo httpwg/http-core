@@ -150,10 +150,10 @@
    when the precondition evaluates to false.
 </t>
 <t>
-   The conditional request preconditions defined by this specification are
-   evaluated by comparing the validators provided in the conditional request
-   header fields to the current validators for the selected representation
-   in the order defined by <xref target="precedence"/>.
+   The conditional request preconditions defined by this specification
+   (<xref target="preconditions"/>) are evaluated when applicable to the
+   recipient (<xref target="evaluation"/>) according to their order of
+   precedence (<xref target="precedence"/>).
 </t>
 
 <section title="Conformance and Error Handling" anchor="conformance">
@@ -649,22 +649,27 @@ Content-Encoding: gzip
 </section>
 </section>
 
-<section title="Precondition Header Fields" anchor="header.field.definitions">
+<section title="Precondition Header Fields" anchor="preconditions">
 <t>
    This section defines the syntax and semantics of HTTP/1.1 header fields
    for applying preconditions on requests.
-   <xref target="precedence"/> defines when the preconditions are applied and
-   the order of evaluation when more than one precondition is present.
+   <xref target="evaluation"/> defines when the preconditions are applied.
+   <xref target="precedence"/> defines the order of evaluation when more than
+   one precondition is present.
 </t>
 
 <section title="If-Match" anchor="header.if-match">
   <iref primary="true" item="If-Match header field" x:for-anchor=""/>
   <x:anchor-alias value="If-Match"/>
 <t>
-   The "If-Match" header field makes the request method conditional on either
-   the existence of a current representation for the target resource, when
-   the field-value is "*", or on the selected representation having an
-   entity-tag that matches one of those provided in the field-value.
+   The "If-Match" header field makes the request method conditional on the
+   recipient cache or origin server either having at least one current
+   representation of the target resource, when the field-value is "*", or
+   having a current representation of the target resource that has an
+   entity-tag matching a member of the list of entity-tags provided in the
+   field-value.
+   A recipient &MUST; use the strong comparison function when comparing
+   entity-tags for If-Match (<xref target="entity.tag.comparison"/>).
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Match"/>
   <x:ref>If-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
@@ -678,51 +683,48 @@ Content-Encoding: gzip
   If-Match: *
 </artwork></figure>
 <t>
-   If the request semantics (method and header fields) allow the request to be
-   satisfied with a cached response, a cache &SHOULD; evaluate the condition
-   based on its currently stored set of suitable responses for that request
-   (see &cache-key;).
-   If the field-value is "*" and any suitable response is currently stored,
-   or if the field-value is a list of entity-tag values and at least one of
-   the suitable responses has an <x:ref>ETag</x:ref> header field with a
-   value matching an entity-tag in that list, then the cache &SHOULD; reuse
-   the most suitable of those matching responses to satisfy the request.
-   If the condition is not met, none of the cached responses is suitable for
-   reuse in response to this request.
+   If-Match is most often used with state-changing methods (e.g., POST, PUT,
+   DELETE) to prevent accidental overwrites when multiple user agents might be
+   acting in parallel on the same resource (i.e., to prevent the "lost update"
+   problem). It can also be used with safe methods to abort a request if the
+   <x:ref>selected representation</x:ref> does not match one already stored
+   (or partially stored) from a prior request.
 </t>
 <t>
-   If the request semantics cannot be satisfied with a cached response, the
-   conditional is only evaluated when received by an origin server.
-   For example, If-Match is most often used with state-changing requests,
-   such as PUT, to prevent accidental overwrites when multiple user agents
-   might be acting in parallel on the same resource (i.e., to prevent the
-   "lost update" problem).
+   An origin server that receives an If-Match header field &MUST; evaluate the
+   condition prior to performing the method (<xref target="evaluation"/>).
+   If the field-value is "*", the condition is false if the origin server
+   does not have a current representation for the target resource.
+   If the field-value is a list of entity-tags, the condition is false if
+   none of the listed tags match the entity-tag of the selected representation.
 </t>
 <t>
-   When the If-Match field-value consists of a list of entity-tag values,
-   the condition is met if any of the entity-tags listed match, using the weak
-   comparison function (as per <xref target="entity.tag.comparison"/>), the
-   entity-tag of the selected representation.
-   When the If-Match field-value is "*", the condition is met if any current
-   representation exists for the target resource.
-</t>
-<t>
-   If the condition is met, the origin server &MAY; perform the requested
-   method.
-</t>
-<t>
-   An origin server &MUST-NOT; perform the requested method if the condition
-   is not met; instead the origin server &MUST; respond with either:
+   An origin server &MUST-NOT; perform the requested method if a received
+   If-Match condition evaluates to false; instead the origin server &MUST;
+   respond with either:
    a) the <x:ref>412 (Precondition Failed)</x:ref> status code; or,
    b) one of the <x:ref>2xx (Successful)</x:ref> status codes if the origin
    server has verified that a state change is being requested and the final
    state is already reflected in the current state of the target resource
    (i.e., the change requested by the user agent has already succeeded, but
-   the user agent might not be aware of that because the prior response message
+   the user agent might not be aware of it, perhaps because the prior response
    was lost or a compatible change was made by some other user agent).
    In the latter case, the origin server &MUST-NOT; send a validator header
    field in the response unless it can verify that the request is a duplicate
    of an immediately prior change made by the same user agent.
+</t>
+<t>
+   If the request semantics can be satisfied with a cached response, a
+   recipient cache &MUST; evaluate the condition as part of its selection
+   process for determining a suitable response for that primary cache key
+   (see &cache-key;).
+   The cache &MUST; generate a <x:ref>412 (Precondition Failed)</x:ref>
+   response if the field-value is "*" and no suitable response is stored, or
+   if the field-value is a list of entity-tags and none of them match the
+   entity-tag of a suitable stored response.
+   Otherwise, the cache &MUST; generate a successful <x:ref>2xx</x:ref>
+   response that reuses the most recent of its matching stored responses to
+   satisfy the request.
 </t>
 </section>
 
@@ -730,53 +732,17 @@ Content-Encoding: gzip
   <iref primary="true" item="If-None-Match header field" x:for-anchor=""/>
   <x:anchor-alias value="If-None-Match"/>
 <t>
-   The "If-None-Match" header field can be used to make a request method
-   conditional on not matching any of the current entity-tag values for
-   representations of the target resource.
-</t>
-<t>
-   If-None-Match is primarily used in conditional GET requests to enable
-   efficient updates of cached information with a minimum amount of transaction
-   overhead. A client that has one or more representations previously obtained
-   from the target resource can send If-None-Match with a list of the
-   associated entity-tags in the hope of receiving a <x:ref>304 (Not
-   Modified)</x:ref> response if at least one of those representations matches
-   the selected representation.
-</t>
-<t>
-   If-None-Match can also be used with a value of "*" to prevent an unsafe
-   request method (e.g., PUT) from inadvertently modifying an existing
-   representation of the target resource when the client believes that
-   the resource does not have a current representation (&safe-methods;).
-   This is a variation on the "lost update" problem that might arise if more
-   than one client attempts to create an initial representation for the target
-   resource.
+   The "If-None-Match" header field makes the request method conditional on
+   the recipient cache or origin server either not having a current
+   representation for the target resource, when the field-value is "*", or
+   not having a current representation that has an entity-tag matching a
+   member of the list of entity-tags provided in the field-value.
+   A recipient &MUST; use the weak comparison function when comparing
+   entity-tags for If-None-Match (<xref target="entity.tag.comparison"/>).
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-None-Match"/>
   <x:ref>If-None-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
 </artwork></figure>
-<t>
-   The If-None-Match condition is met if and only if none of the entity-tags
-   listed in the If-None-Match field value match the entity-tag of the selected
-   representation using the weak comparison function (as per <xref
-   target="entity.tag.comparison"/>), or if "*" is given and no current
-   representation exists for that resource.
-</t>
-<t>
-   If the condition is not met, the server &MUST-NOT; perform the requested
-   method. Instead, if the request method was GET or HEAD, the server &SHOULD;
-   respond with a <x:ref>304 (Not Modified)</x:ref> status code, including the
-   cache-related header fields (particularly <x:ref>ETag</x:ref>) of the
-   selected representation that has a matching entity-tag. For all other
-   request methods, the server &MUST; respond with a <x:ref>412 (Precondition
-   Failed)</x:ref> status code when the condition is not met.
-</t>
-<t>
-   If the condition is met, the server &MAY; perform the requested method and
-   &MUST; ignore any <x:ref>If-Modified-Since</x:ref> header field(s) in the
-   request. That is, if no entity-tags match, then the server &MUST-NOT; send
-   a <x:ref>304 (Not Modified)</x:ref> response.
-</t>
 <t>
    Examples:
 </t>
@@ -787,6 +753,63 @@ Content-Encoding: gzip
   If-None-Match: W/"xyzzy", W/"r2d2xxxx", W/"c3piozzzz"
   If-None-Match: *
 </artwork></figure>
+<t>
+   If-None-Match is primarily used in conditional GET requests to enable
+   efficient updates of cached information with a minimum amount of
+   transaction overhead. When a client desires to update one or more stored
+   responses that have entity-tags, the client &SHOULD; generate an
+   If-None-Match header field containing a list of those entity-tags when
+   making a GET request; this allows recipient servers to send a
+   <x:ref>304 (Not Modified)</x:ref> response to indicate when one of those
+   stored responses matches the selected representation.
+</t>
+<t>
+   If-None-Match can also be used with a value of "*" to prevent an unsafe
+   request method (e.g., PUT) from inadvertently modifying an existing
+   representation of the target resource when the client believes that
+   the resource does not have a current representation (&safe-methods;).
+   This is a variation on the "lost update" problem that might arise if more
+   than one client attempts to create an initial representation for the target
+   resource.
+</t>
+<t>
+   An origin server that receives an If-None-Match header field &MUST;
+   evaluate the condition prior to performing the method
+   (<xref target="evaluation"/>).
+   If the field-value is "*", the condition is false if the origin server
+   has a current representation for the target resource.
+   If the field-value is a list of entity-tags, the condition is false if
+   one of the listed tags match the entity-tag of the selected representation.
+</t>
+<t>
+   An origin server &MUST-NOT; perform the requested method if the condition
+   evaluates to false; instead, the origin server &MUST; respond with either
+   a) the <x:ref>304 (Not Modified)</x:ref> status code if the request method
+   is GET or HEAD; or,
+   b) the <x:ref>412 (Precondition Failed)</x:ref> status code for all other
+   request methods.
+</t>
+<t>
+   If the request semantics can be satisfied with a cached response, a
+   recipient cache &SHOULD; evaluate the condition as part of its selection
+   process for determining a suitable response for that primary cache key
+   (see &cache-key;). If the field-value is "*" and a suitable response is
+   stored, or the field-value is a list of entity-tags and at least one of
+   them match the entity-tag of a suitable stored response, the cache &SHOULD;
+   generate a <x:ref>304 (Not Modified)</x:ref> response using the most
+   suitable of those matching responses as the selected representation.
+   Otherwise, if the cache has one or more suitable stored responses that
+   do not match the condition, the cache &SHOULD; generate a successful
+   <x:ref>2xx</x:ref> response that reuses the most suitable of those stored
+   responses to satisfy the request. Finally, if the cache has no suitable
+   stored responses, the cache &SHOULD; forward the conditional request toward
+   the origin server; if the received condition contains a list of entity-tags
+   and the cache has its own set of stored responses for that primary cache
+   key, the cache &SHOULD; take the union of the received set with the set of
+   entity-tags for its own stored set of responses (fresh or stale) and
+   generate an <x:ref>If-None-Match</x:ref> header field containing that union
+   when it forwards the request toward the origin server.
+</t>
 </section>
 
 <section title="If-Modified-Since" anchor="header.if-modified-since">
@@ -795,8 +818,11 @@ Content-Encoding: gzip
 <t>
    The "If-Modified-Since" header field can be used with GET or HEAD to make
    the method conditional by modification date: if the selected representation
-   has not been modified since the time specified in this field, then
-   do not perform the request method; instead, respond as detailed below.
+   has not been modified since the time specified in this field, then respond
+   with a <x:ref>304 (Not Modified)</x:ref> status code and only send
+   metadata that might be useful for identifying or updating a cached
+   representation. Hence, transfer of the selected representation's data is
+   avoided if that data has not changed.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Modified-Since"/>
   <x:ref>If-Modified-Since</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -808,31 +834,32 @@ Content-Encoding: gzip
   If-Modified-Since: Sat, 29 Oct 1994 19:43:31 GMT
 </artwork></figure>
 <t>
-   A GET method with an If-Modified-Since header field and no <x:ref>Range</x:ref>
-   header field requests that the selected representation be transferred only if
-   it has been modified since the date given by the If-Modified-Since
-   header field.
-   The algorithm for determining this includes the following cases:
-  <list style="numbers">
-      <t>If the request would normally result in anything other than a
-         <x:ref>200 (OK)</x:ref> status code, or if the passed If-Modified-Since date is
-         invalid, the response is exactly the same as for a normal GET.
-         A date that is later than the server's current time is
-         invalid.</t>
-
-      <t>If the selected representation has been modified since the
-         If-Modified-Since date, the response is exactly the same as for
-         a normal GET.</t>
-
-      <t>If the selected representation has not been modified since a valid
-         If-Modified-Since date, the server &SHOULD; send a
-         <x:ref>304 (Not Modified)</x:ref> response.</t>
-  </list>
+   A recipient &MUST; ignore If-Modified-Since if the request contains an
+   <x:ref>If-None-Match</x:ref> header field; the condition in
+   <x:ref>If-None-Match</x:ref> is considered to be a more accurate
+   replacement for the condition in If-Modified-Since and the two are only
+   combined for the sake of interoperating with older intermediaries that
+   might not implement <x:ref>If-None-Match</x:ref>.
 </t>
 <t>
-   The two purposes of this feature are to allow efficient updates of cached
-   information, with a minimum amount of transaction overhead, and to limit
-   the scope of a web traversal to resources that have recently changed.
+   A recipient &MUST; ignore the If-Modified-Since header field if the
+   received field-value is not a valid HTTP-date, or if the request method
+   is neither GET nor HEAD.
+</t>
+<t>
+   A recipient &MUST; interpret an If-Modified-Since field-value's timestamp
+   in terms of the origin server's clock.  A recipient cache that evaluates
+   this precondition &SHOULD; make its comparisons with
+   respect to a stored <x:ref>Last-Modified</x:ref> or <x:ref>Date</x:ref>
+   header field, when available in a prior response from that origin server,
+   rather than comparing it to a timestamp generated by its own clock.
+</t>
+<t>
+   If-Modified-Since is typically used for two distinct purposes:
+   1) to allow efficient updates of a cached representation that does not
+   have an entity-tag; and,
+   2) to limit the scope of a web traversal to resources that have recently
+   changed.
 </t>
 <t>
    When used for cache updates, a cache will typically use the value of the
@@ -856,15 +883,28 @@ Content-Encoding: gzip
    field will not be able to help the user agent limit its data transfers to
    only those changed during the specified window.
 </t>
-<x:note>
-  <t>
-     &Note; If a client uses an arbitrary date in the If-Modified-Since
-     header field instead of a date taken from a <x:ref>Last-Modified</x:ref>
-     or <x:ref>Date</x:ref> header field from the origin server, the client
-     ought to be aware that its date will be interpreted according to the
-     server's understanding of time.
-  </t>
-</x:note>
+<t>
+   If the request semantics can be satisfied with a cached response, a
+   recipient cache &SHOULD; evaluate the condition as part of its selection
+   process for determining a suitable response for that primary cache key
+   (see &cache-key;).
+   The cache &SHOULD; forward the conditional request toward the origin server
+   if it does not have any suitable stored responses.
+   The cache &SHOULD; generate a successful
+   <x:ref>2xx</x:ref> response, reusing the most recent of its stored
+   responses to satisfy the request, if one of the following is true:
+   1) a stored response has a <x:ref>Last-Modified</x:ref> field-value that
+   is more recent than the conditional timestamp;
+   2) no <x:ref>Last-Modified</x:ref> field is present, but a stored
+   response has a <x:ref>Date</x:ref> field-value that is more recent than the
+   conditional timestamp; or,
+   3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present,
+   but the cache recorded a stored response as having been received at a
+   time more recent than the conditional timestamp.
+   Otherwise, the cache &SHOULD; generate a <x:ref>304 (Not Modified)</x:ref>
+   response using the most recent of the stored responses as the selected
+   representation.
+</t>
 </section>
 
 <section title="If-Unmodified-Since" anchor="header.if-unmodified-since">
@@ -887,39 +927,40 @@ Content-Encoding: gzip
   If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT
 </artwork></figure>
 <t>
-   A server &MUST; ignore If-Unmodified-Since if the selected representation
-   has an entity-tag and the request contains an If-Match header field;
-   the condition in If-Match, when applicable, is considered to be a more
-   accurate replacement for the condition in If-Unmodified-Since.
+   A recipient &MUST; ignore If-Unmodified-Since if the request contains an
+   <x:ref>If-Match</x:ref> header field; the condition in
+   <x:ref>If-Match</x:ref> is considered to be a more accurate replacement for
+   the condition in If-Unmodified-Since and the two are only combined for the
+   sake of interoperating with older intermediaries that might not implement
+   <x:ref>If-Match</x:ref>.
 </t>
 <t>
-   A server &MUST; ignore the If-Unmodified-Since header field if the
+   A recipient &MUST; ignore the If-Unmodified-Since header field if the
    received field-value is not a valid HTTP-date.
 </t>
 <t>
-   If the request semantics (method and header fields) allow the request to be
-   satisfied with a cached response, a cache &SHOULD; evaluate the condition
-   based on its currently stored set of suitable responses for that request
-   (see &cache-key;).
-   If the most suitable response has a <x:ref>Last-Modified</x:ref> date that
-   is earlier or equal to the date given in If-Unmodified-Since, the
-   cache &SHOULD; reuse that response to satisfy the request.
-   If the condition is not met, none of the stored responses is suitable for
-   reuse in response to this request.
+   A recipient &MUST; interpret an If-Unmodified-Since field-value's timestamp
+   in terms of the origin server's clock.
 </t>
 <t>
-   If the request semantics cannot be satisfied with a cached response, the
-   conditional is only evaluated when received by an origin server.
-   If the selected representation has not been modified since the time
-   specified in this field, then the condition is met.
+   If-Unmodified-Since is most often used with state-changing methods
+   (e.g., POST, PUT, DELETE) to prevent accidental overwrites when multiple
+   user agents might be acting in parallel on a resource that resource does
+   not supply entity-tags with its representations (i.e., to prevent the
+   "lost update" problem). It can also be used with safe methods to abort a
+   request if the <x:ref>selected representation</x:ref> does not match one
+   already stored (or partially stored) from a prior request.
 </t>
 <t>
-   If the condition is met, the origin server &MAY; perform the requested
-   method.
+   An origin server that receives an If-Unmodified-Since header field &MUST;
+   evaluate the condition prior to performing the method
+   (<xref target="evaluation"/>). The condition is false if the selected
+   representation has been modified since the time specified in this field.
 </t>
 <t>
-   An origin server &MUST-NOT; perform the requested method if the condition
-   is not met; instead the origin server &MUST; respond with either:
+   An origin server &MUST-NOT; perform the requested method if a received
+   If-Unmodified-Since condition evaluates to false; instead the
+   origin server &MUST; respond with either:
    a) the <x:ref>412 (Precondition Failed)</x:ref> status code; or,
    b) one of the <x:ref>2xx (Successful)</x:ref> status codes if the origin
    server has verified that a state change is being requested and the final
@@ -931,14 +972,30 @@ Content-Encoding: gzip
    field in the response unless it can verify that the request is a duplicate
    of an immediately prior change made by the same user agent.
 </t>
+<t>
+   If the request semantics can be satisfied with a cached response, a
+   recipient cache &MUST; evaluate the condition as part of its selection
+   process for determining a suitable response for that primary cache key
+   (see &cache-key;).
+   The cache &MUST; forward the conditional request toward the origin server
+   if it does not have any suitable stored responses.
+   The cache &MUST; generate a successful <x:ref>2xx</x:ref> response that
+   reuses the most recent of its suitable stored responses to satisfy the
+   request if that stored response has a <x:ref>Last-Modified</x:ref> date
+   that is equal to or earlier than the date given in If-Unmodified-Since.
+   Otherwise, the cache &MUST; respond with a
+   <x:ref>412 (Precondition Failed)</x:ref> status code.
+</t>
 </section>
 
 <section title="If-Range" anchor="header.if-range">
 <t>
    The "If-Range" header field provides a special conditional request
-   mechanism that is similar to <x:ref>If-Match</x:ref> and
-   <x:ref>If-Unmodified-Since</x:ref> but specific to range requests.
-   If-Range is defined in &header-if-range;.
+   mechanism that is similar the <x:ref>If-Match</x:ref> and
+   <x:ref>If-Unmodified-Since</x:ref> fields but instructs the recipient to
+   ignore the <x:ref>Range</x:ref> header field if the validator doesn't
+   match, resulting in transfer of the new selected representation instead of
+   a 412 response. If-Range is defined in &header-if-range;.
 </t>
 </section>
 
@@ -997,7 +1054,7 @@ Content-Encoding: gzip
   <x:anchor-alias value="412 (Precondition Failed)"/>
 <t>
    The <x:dfn>412 (Precondition Failed)</x:dfn> status code indicates that one
-   or more preconditions given in the request header fields evaluated to false
+   or more conditions given in the request header fields evaluated to false
    when tested on the server. This response code allows the client to place
    preconditions on the current resource state (its current representations
    and metadata) and thus prevent the request method from being applied if the
@@ -1006,73 +1063,61 @@ Content-Encoding: gzip
 </section>
 </section>
 
-<section title="Evaluation and Precedence" anchor="precedence">
+<section title="Evaluation" anchor="evaluation">
 <t>
-   For each conditional request, a server &MUST; evaluate the request
+   Except when excluded below, a server &MUST; evaluate received request
    preconditions after it has successfully performed its normal request checks
-   (i.e., just before it would perform the action associated with the request
-   method). Preconditions are ignored if the server determines that an error
-   or redirect response applies before they are evaluated. Otherwise, the
-   evaluation depends on both the method semantics and the choice of
-   conditional.
+   and just before it would perform the action associated with the request
+   method.
+   A server &MUST; ignore all received preconditions if its response to the
+   same request without those conditions would have been a status code other
+   than a <x:ref>2xx</x:ref> or <x:ref>412 (Precondition Failed)</x:ref>.
+   In other words, redirects and failures take precedence over the evaluation
+   of preconditions in conditional requests.
 </t>
 <t>
-   A conditional request header field that is designed specifically for cache
-   validation, which includes <x:ref>If-None-Match</x:ref> and
-   <x:ref>If-Modified-Since</x:ref> when used in a GET or HEAD request,
-   allows cached representations to be refreshed without repeatedly
-   transferring data already held by the client. Evaluating to false is thus
-   an indication that the client can continue to use its local copy of the
-   selected representation, as indicated by the server generating a
-   <x:ref>304 (Not Modified)</x:ref> response that includes only those header
-   fields useful for refreshing the cached representation.
+   A server that is not the origin server for the target resource and cannot
+   act as a cache for requests on the target resource &MUST-NOT; evaluate the
+   conditional request header fields defined by this specification, and
+   &MUST; forward them if the request is forwarded, since the generating
+   client intends that they be evaluated by a server that can provide a
+   current representation.
+   Likewise, a server &MUST; ignore the conditional request header fields
+   defined by this specification when received with a request method that does
+   not involve the selection or modification of a
+   <x:ref>selected representation</x:ref>, such as CONNECT, OPTIONS, or TRACE.
 </t>
 <t>
-   All other conditionals are intended to signal failure when the
-   precondition evaluates to false. For example, an <x:ref>If-Match</x:ref>
-   conditional sent with a state-changing method (e.g., POST, PUT, DELETE) is
-   intended to prevent the request from taking effect on the target resource
-   if the resource state does not match the expected state. In other words,
-   evaluating the condition to false means that the resource has been changed
-   by some other client, perhaps by another user attempting to edit the same
-   resource, and thus preventing the request from being applied saves the
-   client from overwriting some other client's work. This result is indicated
-   by the server generating a <x:ref>412 (Precondition Failed)</x:ref>
+   Conditional request header fields that are defined by extensions to HTTP
+   might place conditions on all recipients, on the state of the target
+   resource in general, or on a group of resources. For instance, the "If"
+   header field in WebDAV can make a request conditional on various aspects
+   of multiple resources, such as locks, if the recipient understands and
+   implements that field (<xref target="RFC4918" x:fmt="," x:sec="10.4"/>).
+</t>
+<t>
+   Although conditional request header fields are defined as being usable with
+   the HEAD method (to keep HEAD's semantics consistent with those of GET),
+   there is no point in sending a conditional HEAD because a successful
+   response is around the same size as a <x:ref>304 (Not Modified)</x:ref>
+   response and more useful than a <x:ref>412 (Precondition Failed)</x:ref>
    response.
 </t>
-<t>
-   The conditional request header fields defined by this specification are
-   ignored for request methods that never involve the selection or
-   modification of a <x:ref>selected representation</x:ref> (e.g., CONNECT,
-   OPTIONS, and TRACE). Other conditional request header fields, defined by
-   extensions to HTTP, might place conditions on the state of the target
-   resource in general, or on a group of resources. For instance, the If header
-   field in WebDAV can make a request conditional on various aspects (such
-   as locks) of multiple resources
-   (<xref target="RFC4918" x:fmt="," x:sec="10.4"/>).
-</t>
+</section>
+
+<section title="Precedence" anchor="precedence">
 <t>
    When more than one conditional request header field is present in a request,
    the order in which the fields are evaluated becomes important. In practice,
    the fields defined in this document are consistently implemented in a
-   single, logical order, due to the fact that entity tags are presumed to be
-   more accurate than date validators. For example, the only reason to send
-   both <x:ref>If-Modified-Since</x:ref> and <x:ref>If-None-Match</x:ref> in
-   the same GET request is to support intermediary caches that might not have
-   implemented <x:ref>If-None-Match</x:ref>, so it makes sense to ignore the
-   <x:ref>If-Modified-Since</x:ref> when entity tags are understood and
-   available for the selected representation.
+   single, logical order, since "lost update" preconditions have more strict
+   requirements than cache validation, a validated cache is more efficient
+   than a partial response, and entity tags are presumed to be more accurate
+   than date validators.
 </t>
 <t>
-   The general rule of conditional precedence is that exact match conditions
-   are evaluated before cache-validating conditions and, within that order, 
-   last-modified conditions are only evaluated if the corresponding
-   entity tag condition is not present (or not applicable because the
-   selected representation does not have an entity tag).
-</t>
-<t>
-   Specifically, the fields defined by this specification are evaluated
-   as follows:
+   A recipient cache or origin server &MUST; evaluate the request
+   preconditions defined by this specification in the following order:
    <list style="numbers">
      <t anchor="precedence1">When <x:ref>If-Match</x:ref> is present, evaluate it:
        <list style="symbols">
