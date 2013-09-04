@@ -1629,7 +1629,7 @@ Pragma: no-cache
   <x:ref>Warning</x:ref>       = 1#<x:ref>warning-value</x:ref>
   
   <x:ref>warning-value</x:ref> = <x:ref>warn-code</x:ref> <x:ref>SP</x:ref> <x:ref>warn-agent</x:ref> <x:ref>SP</x:ref> <x:ref>warn-text</x:ref>
-                                        [<x:ref>SP</x:ref> <x:ref>warn-date</x:ref>]
+                                          <x:ref>SP</x:ref> <x:ref>warn-date</x:ref>
   
   <x:ref>warn-code</x:ref>  = 3<x:ref>DIGIT</x:ref>
   <x:ref>warn-agent</x:ref> = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
@@ -1668,19 +1668,27 @@ Pragma: no-cache
    </list>
 </t>
 <t>
-   If an implementation sends a message with one or more Warning header fields
-   to a receiver whose version is HTTP/1.0 or lower, then the sender &MUST;
-   include in each warning-value a warn-date that matches the
-   <x:ref>Date</x:ref> header field in the message.
+   HTTP/1.0 caches will cache all Warnings in responses, without deleting the
+   ones in the first category. Thus, Warnings in responses carry a warning-date
+   field, which can help in detecting an erroneously cached Warning.
 </t>
 <t>
-   If a system receives a message with a warning-value that includes a
-   warn-date, and that warn-date is different from the <x:ref>Date</x:ref>
-   value in the response, then that warning-value &MUST; be deleted from the
-   message before storing, forwarding, or using it (preventing the
-   consequences of naive caching of Warning header fields). If all of the
-   warning-values are deleted for this reason, the Warning header field &MUST;
-   be deleted as well.
+   RFC 2616 made the Warning header field's warn-date component optional; it 
+   was only required to be sent when the recipient's version was HTTP/1.0 or lower.
+   However, deployment experience has shown that many intermediaries
+   do not process the Warning header field as required by RFC 2616. This results in 
+   situations where the field can appear in messages where it is not applicable, because
+   a warning-value has not been removed by an intermediary.
+</t>
+<t>
+   As a result, this specification shifts responsibility for processing of Warning from 
+   intermediaries to the recipient that is actually consuming them.
+</t>
+<t>
+   Generators of Warning header fields &MUST; include in every warning-value
+   a warn-date that matches the <x:ref>Date</x:ref> header field in the message. Recipients that
+   process a Warning header field &MUST; ignore (and &MAY; remove before forwarding)
+   a warning-value whose warn-date is different from the Date value in the response.
 </t>
 <t>
    The following warn-codes are defined by this specification, each with a
@@ -2439,7 +2447,9 @@ Pragma: no-cache
 <t>
   Some requirements regarding production of the <x:ref>Warning</x:ref> 
   header fields have been relaxed, as it is not widely implemented.
-  Furthermore, the <x:ref>Warning</x:ref> header field no longer uses RFC 2047 encoding,
+  Furthermore, presence of the warn-date component has been made required
+  (dropping requirements specific to HTTP/1.0). Finally, the
+  <x:ref>Warning</x:ref> header field no longer uses RFC 2047 encoding,
   nor allows multiple languages, as these aspects were not implemented.
   (<xref target="header.warning" />)
 </t>
@@ -2540,8 +2550,7 @@ Pragma: no-cache
 <x:ref>warn-code</x:ref> = 3DIGIT
 <x:ref>warn-date</x:ref> = DQUOTE HTTP-date DQUOTE
 <x:ref>warn-text</x:ref> = quoted-string
-<x:ref>warning-value</x:ref> = warn-code SP warn-agent SP warn-text [ SP warn-date
- ]
+<x:ref>warning-value</x:ref> = warn-code SP warn-agent SP warn-text SP warn-date
 </artwork>
 </figure>
 </section>
@@ -2676,7 +2685,13 @@ Pragma: no-cache
 
 <section title="Since draft-ietf-httpbis-p6-cache-23" anchor="changes.since.23">
 <t>
-   None yet.
+  Closed issues:
+  <list style="symbols">
+    <t>
+      <eref target="http://tools.ietf.org/wg/httpbis/trac/ticket/486"/>:
+      "Requiring proxies to process warn-date"
+    </t>
+  </list>
 </t>
 </section>
 </section>
