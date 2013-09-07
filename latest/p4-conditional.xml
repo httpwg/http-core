@@ -29,6 +29,7 @@
   <!ENTITY semantics                  "<xref target='Part2' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY caching                    "<xref target='Part6' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY cache-key                  "<xref target='Part6' x:rel='#constructing.responses.from.caches' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY cache-validation-received  "<xref target='Part6' x:rel='#validation.received' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY freshening-responses       "<xref target='Part6' x:rel='#freshening.responses' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-accept-encoding     "<xref target='Part2' x:rel='#header.accept-encoding' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-if-range            "<xref target='Part5' x:rel='#header.if-range' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -657,6 +658,10 @@ Content-Encoding: gzip
    <xref target="precedence"/> defines the order of evaluation when more than
    one precondition is present.
 </t>
+<t>
+   Requirements on a cache when handling a received conditional request are
+   defined in &cache-validation-received;.
+</t>
 
 <section title="If-Match" anchor="header.if-match">
   <iref primary="true" item="If-Match header field" x:for-anchor=""/>
@@ -712,19 +717,6 @@ Content-Encoding: gzip
    In the latter case, the origin server &MUST-NOT; send a validator header
    field in the response unless it can verify that the request is a duplicate
    of an immediately prior change made by the same user agent.
-</t>
-<t>
-   If the request semantics can be satisfied with a cached response, a
-   recipient cache &MUST; evaluate the condition as part of its selection
-   process for determining a suitable response for that primary cache key
-   (see &cache-key;).
-   The cache &MUST; generate a <x:ref>412 (Precondition Failed)</x:ref>
-   response if the field-value is "*" and no suitable response is stored, or
-   if the field-value is a list of entity-tags and none of them match the
-   entity-tag of a suitable stored response.
-   Otherwise, the cache &MUST; generate a successful <x:ref>2xx</x:ref>
-   response that reuses the most recent of its matching stored responses to
-   satisfy the request.
 </t>
 </section>
 
@@ -788,27 +780,6 @@ Content-Encoding: gzip
    is GET or HEAD; or,
    b) the <x:ref>412 (Precondition Failed)</x:ref> status code for all other
    request methods.
-</t>
-<t>
-   If the request semantics can be satisfied with a cached response, a
-   recipient cache &SHOULD; evaluate the condition as part of its selection
-   process for determining a suitable response for that primary cache key
-   (see &cache-key;). If the field-value is "*" and a suitable response is
-   stored, or the field-value is a list of entity-tags and at least one of
-   them match the entity-tag of a suitable stored response, the cache &SHOULD;
-   generate a <x:ref>304 (Not Modified)</x:ref> response using the most
-   suitable of those matching responses as the selected representation.
-   Otherwise, if the cache has one or more suitable stored responses that
-   do not match the condition, the cache &SHOULD; generate a successful
-   <x:ref>2xx</x:ref> response that reuses the most suitable of those stored
-   responses to satisfy the request. Finally, if the cache has no suitable
-   stored responses, the cache &SHOULD; forward the conditional request toward
-   the origin server; if the received condition contains a list of entity-tags
-   and the cache has its own set of stored responses for that primary cache
-   key, the cache &SHOULD; take the union of the received set with the set of
-   entity-tags for its own stored set of responses (fresh or stale) and
-   generate an <x:ref>If-None-Match</x:ref> header field containing that union
-   when it forwards the request toward the origin server.
 </t>
 </section>
 
@@ -883,28 +854,6 @@ Content-Encoding: gzip
    field will not be able to help the user agent limit its data transfers to
    only those changed during the specified window.
 </t>
-<t>
-   If the request semantics can be satisfied with a cached response, a
-   recipient cache &SHOULD; evaluate the condition as part of its selection
-   process for determining a suitable response for that primary cache key
-   (see &cache-key;).
-   The cache &SHOULD; forward the conditional request toward the origin server
-   if it does not have any suitable stored responses.
-   The cache &SHOULD; generate a successful
-   <x:ref>2xx</x:ref> response, reusing the most recent of its stored
-   responses to satisfy the request, if one of the following is true:
-   1) a stored response has a <x:ref>Last-Modified</x:ref> field-value that
-   is more recent than the conditional timestamp;
-   2) no <x:ref>Last-Modified</x:ref> field is present, but a stored
-   response has a <x:ref>Date</x:ref> field-value that is more recent than the
-   conditional timestamp; or,
-   3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present,
-   but the cache recorded a stored response as having been received at a
-   time more recent than the conditional timestamp.
-   Otherwise, the cache &SHOULD; generate a <x:ref>304 (Not Modified)</x:ref>
-   response using the most recent of the stored responses as the selected
-   representation.
-</t>
 </section>
 
 <section title="If-Unmodified-Since" anchor="header.if-unmodified-since">
@@ -972,20 +921,6 @@ Content-Encoding: gzip
    field in the response unless it can verify that the request is a duplicate
    of an immediately prior change made by the same user agent.
 </t>
-<t>
-   If the request semantics can be satisfied with a cached response, a
-   recipient cache &MUST; evaluate the condition as part of its selection
-   process for determining a suitable response for that primary cache key
-   (see &cache-key;).
-   The cache &MUST; forward the conditional request toward the origin server
-   if it does not have any suitable stored responses.
-   The cache &MUST; generate a successful <x:ref>2xx</x:ref> response that
-   reuses the most recent of its suitable stored responses to satisfy the
-   request if that stored response has a <x:ref>Last-Modified</x:ref> date
-   that is equal to or earlier than the date given in If-Unmodified-Since.
-   Otherwise, the cache &MUST; respond with a
-   <x:ref>412 (Precondition Failed)</x:ref> status code.
-</t>
 </section>
 
 <section title="If-Range" anchor="header.if-range">
@@ -998,7 +933,6 @@ Content-Encoding: gzip
    a 412 response. If-Range is defined in &header-if-range;.
 </t>
 </section>
-
 </section>
 
 <section title="Status Code Definitions" anchor="status.code.definitions">

@@ -28,12 +28,19 @@
   <!ENTITY messaging                   "<xref target='Part1' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY semantics                   "<xref target='Part2' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY conditional                 "<xref target='Part4' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY conditional-precedence      "<xref target='Part4' x:rel='#precedence' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY partial                     "<xref target='Part5' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY combining-byte-ranges       "<xref target='Part5' x:rel='#combining.byte.ranges' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY http-date                   "<xref target='Part2' x:rel='#http.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-authorization        "<xref target='Part7' x:rel='#header.authorization' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-connection           "<xref target='Part1' x:rel='#header.connection' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-date                 "<xref target='Part2' x:rel='#header.date' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY header-etag                 "<xref target='Part4' x:rel='#header.etag' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY header-if-match             "<xref target='Part4' x:rel='#header.if-match' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY header-if-none-match        "<xref target='Part4' x:rel='#header.if-none-match' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY header-if-modified-since    "<xref target='Part4' x:rel='#header.if-modified-since' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY header-if-unmodified-since  "<xref target='Part4' x:rel='#header.if-unmodified-since' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY header-if-range             "<xref target='Part5' x:rel='#header.if-range' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-last-modified        "<xref target='Part4' x:rel='#header.last-modified' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-vary                 "<xref target='Part2' x:rel='#header.vary' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY header-via                  "<xref target='Part1' x:rel='#header.via' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -438,7 +445,7 @@
 </t>
 <t>
    Also, note that unsafe requests might invalidate already stored responses;
-   see <xref target="invalidation.after.updates.or.deletions" />.
+   see <xref target="invalidation" />.
 </t>
 <t>
    When more than one suitable response is stored, a cache &MUST; use the 
@@ -832,36 +839,156 @@
    cannot serve any of them (e.g., because they are not fresh, or one cannot
    be selected; see <xref target="caching.negotiated.responses"/>), it can use
    the conditional request mechanism &conditional; in the forwarded request to
-   give the origin server an opportunity to both select a valid stored
-   response to be used, and to update it. This process is known as
+   give the next inbound server an opportunity to select a valid stored
+   response to use, updating the stored metadata in the process, or to replace
+   the stored response(s) with a new response. This process is known as
    "validating" or "revalidating" the stored response.
 </t>
-<iref item="validator" />
+
+<section anchor="validation.sent" title="Sending a Validation Request"><iref item="validator" />
 <t>
-   When sending such a conditional request, a cache adds a 
-   <x:dfn>validator</x:dfn> (or more than one), that is used to find
-   out whether a stored response is an equivalent copy of a current
+   When sending a conditional request for cache validation, a cache sends one
+   or more precondition header fields containing <x:dfn>validator</x:dfn>
+   metadata from its stored response(s), which is then compared by recipients
+   to determine whether a stored response is equivalent to a current
    representation of the resource.
 </t>
 <t>
-   One such validator is the <x:ref>If-Modified-Since</x:ref> header field,
-   whose value is that of the <x:ref>Last-Modified</x:ref> header field from
-   the selected (see <xref target="caching.negotiated.responses"/>) stored
-   response, if available.
+   One such validator is the timestamp given in a <x:ref>Last-Modified</x:ref>
+   header field (&header-last-modified;), which can be used in an
+   <x:ref>If-Modified-Since</x:ref> header field for response validation, or
+   in an <x:ref>If-Unmodified-Since</x:ref> or <x:ref>If-Range</x:ref> header
+   field for representation selection (i.e., the client is referring
+   specifically to a previously obtained representation with that timestamp).
 </t>
 <t>
-   Another is the <x:ref>If-None-Match</x:ref> header field,
-   whose value is that of the <x:ref>ETag</x:ref> header field(s) from
-   relevant responses stored for the primary cache key, if present. However,
-   if any of the stored responses contains only partial content, the cache
-   ought not include its entity-tag in the If-None-Match header field unless
-   the request is for a range that would be fully satisfied by that stored
-   response.
+   Another validator is the entity-tag given in an <x:ref>ETag</x:ref> header
+   field (&header-etag;). One or more entity-tags, indicating one or more
+   stored responses, can be used in an <x:ref>If-None-Match</x:ref> header
+   field for response validation, or in an <x:ref>If-Match</x:ref> or
+   <x:ref>If-Range</x:ref> header field for representation selection (i.e.,
+   the client is referring specifically to one or more previously obtained
+   representations with the listed entity-tags).
 </t>
+</section>
 
-<t>Cache handling of a response to a conditional request is dependent upon its
-status code:</t>
+<section anchor="validation.received" title="Handling a Received Validation Request">
+<t>
+   Each client in the request chain may have its own cache, so it is common
+   for a cache at an intermediary or origin server to receive conditional
+   requests from other (outbound) caches. Likewise, some user agents make use
+   of conditional requests to limit data transfers to recently modified
+   representations or to complete the transfer of partially retrieved
+   representations.
+</t>
+<t>
+   If the request semantics can be satisfied with a cached response and a
+   recipient cache has at least one response stored for this primary cache
+   key, the cache &MUST; evaluate received precondition header fields as part
+   of its selection process for determining a suitable response.
+   A cache &MUST-NOT; evaluate received precondition header fields in a
+   request with semantics that cannot be satisfied with a cached response, or
+   for which the cache has no prior stored responses, since such preconditions
+   are intended for some other (inbound) server.
+</t>
+<t>
+   The proper evaluation of conditional requests by a cache depends on the
+   received precondition header fields and their precedence, as defined in
+   &conditional-precedence;.
+</t>
+<t>
+   A request containing an <x:ref>If-Match</x:ref> header field
+   (&header-if-match;) indicates that the client wants to receive an error
+   response if the cache has a stored response that cannot be used to answer
+   this request.
+   The cache &MUST; generate a <x:ref>412 (Precondition Failed)</x:ref>
+   response if the field-value is "*" and no suitable response is stored, or
+   if the field-value is a list of entity-tags and none of them match the
+   entity-tag of a suitable stored response.
+   Otherwise, the cache &MUST; generate a <x:ref>2xx (Successful)</x:ref>
+   response that reuses the most recent of its matching stored responses to
+   satisfy the request.
+</t>
+<t>
+   A request containing an <x:ref>If-Unmodified-Since</x:ref> header field
+   (&header-if-unmodified-since;) indicates that the client wants to receive
+   an error response if the cache has a stored response that cannot be used
+   to answer this request.
+   The cache &MUST; generate a <x:ref>412 (Precondition Failed)</x:ref>
+   response if one of the following is true:
+   1) a stored response has a <x:ref>Last-Modified</x:ref> field-value that
+   is more recent than the conditional timestamp;
+   2) no <x:ref>Last-Modified</x:ref> field is present, but a stored
+   response has a <x:ref>Date</x:ref> field-value that is more recent than the
+   conditional timestamp; or,
+   3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present,
+   but the cache recorded a stored response as having been received at a
+   time more recent than the conditional timestamp.
+   Otherwise, the cache &MUST; generate a <x:ref>2xx (Successful)</x:ref>
+   response that reuses the most recent of its matching stored responses to
+   satisfy the request.
+</t>
+<t>
+   A request containing an <x:ref>If-None-Match</x:ref> header field
+   (&header-if-none-match;) indicates that the client wants to validate one
+   or more of its stored responses.
+   If the field-value is "*" and any suitable response is
+   stored, or the field-value is a list of entity-tags and at least one of
+   them match the entity-tag of a suitable stored response, the cache &MUST;
+   generate a <x:ref>304 (Not Modified)</x:ref> response using the most
+   suitable of those matching responses as the selected representation.
+   Otherwise, if the cache has one or more suitable stored responses that
+   do not match the condition, the cache &MUST; generate a
+   <x:ref>2xx (Successful)</x:ref> response that reuses the most suitable of
+   those stored responses to satisfy the request.
+   Finally, if the cache has no suitable stored responses, the cache &SHOULD;
+   forward the conditional request toward the origin server; if the received
+   condition contains a list of entity-tags and the cache has its own set of
+   stored responses for that primary cache key, the cache &SHOULD; take the
+   union of the received set with the set of entity-tags for its own stored
+   set of responses (fresh or stale) and generate an
+   <x:ref>If-None-Match</x:ref> header field containing that union when it
+   forwards the request toward the origin server.
+   However, if a stored responses contains only partial content, the cache
+   &MUST-NOT; include its entity-tag in the union unless the request is for
+   a range that would be fully satisfied by that stored response.
+</t>
+<t>
+   A request containing an <x:ref>If-Modified-Since</x:ref> header field
+   (&header-if-modified-since;) indicates that the client wants to validate
+   one or more of its stored responses by modification date if the stored
+   responses have no entity-tag or the recipient does not implement
+   <x:ref>If-None-Match</x:ref>.
+   The cache &MUST; generate a <x:ref>2xx (Successful)</x:ref> response,
+   reusing the most recent of its stored responses to satisfy the request,
+   if one of the following is true:
+   1) a stored response has a <x:ref>Last-Modified</x:ref> field-value that
+   is more recent than the conditional timestamp;
+   2) no <x:ref>Last-Modified</x:ref> field is present, but a stored
+   response has a <x:ref>Date</x:ref> field-value that is more recent than the
+   conditional timestamp; or,
+   3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present,
+   but the cache recorded a stored response as having been received at a
+   time more recent than the conditional timestamp.
+   Otherwise, if the cache has one or more suitable stored responses, the
+   cache &MUST; generate a <x:ref>304 (Not Modified)</x:ref> response using
+   the most recent of its suitable stored responses as the selected
+   representation.
+   Finally, if the cache has no suitable stored responses, the cache &SHOULD;
+   forward the conditional request toward the origin server.
+</t>
+<t>
+   A cache that implements partial responses to range requests, as defined in
+   &partial;, also needs to evaluate a received <x:ref>If-Range</x:ref> header
+   field (&header-if-range;) in respect to its selected stored response.
+</t>
+</section>
 
+<section anchor="validation.response" title="Handling a Validation Response">
+<t>
+   Cache handling of a response to a conditional request is dependent upon its
+   status code:
+</t>
 <t>
    <list style="symbols">
       <t>
@@ -872,19 +999,20 @@ status code:</t>
       <t>
          A full response (i.e., one with a payload body) indicates that none
          of the stored responses nominated in the conditional request is
-         suitable. Instead, the cache can use the full response to
+         suitable. Instead, the cache &MUST; use the full response to
          satisfy the request and &MAY; replace the stored response(s).
       </t>
       <t>
          However, if a cache receives a <x:ref>5xx (Server Error)</x:ref>
          response while attempting to validate a response, it can either
          forward this response to the requesting client, or act as if the
-         server failed to respond. In the latter case, it can send a
+         server failed to respond. In the latter case, the cache &MAY; send a
          previously stored response (see <xref
          target="serving.stale.responses" />).
       </t>
    </list>
 </t>
+</section>
 
 <section anchor="freshening.responses" title="Freshening Stored Responses upon Validation">
 <t>
@@ -935,17 +1063,15 @@ status code:</t>
 </t>
 </section>
 
-</section>
-
-</section>
-
-
-<section anchor="head.effects" title="Updating Caches with HEAD Responses">
+<section anchor="head.effects" title="Freshening Responses via HEAD">
 <t>
    A response to the HEAD method is identical to what an equivalent request
    made with a GET would have been, except it lacks a body. This property
-   of HEAD responses is used to both invalidate and update cached GET
-   responses.
+   of HEAD responses can be used to invalidate or update a cached GET
+   response if the more efficient conditional GET request mechanism is not
+   available (due to no validators being present in the stored response) or
+   if transmission of the representation body is not desired even if it has
+   changed.
 </t>
 <t>
    If one or more stored GET responses can be selected (as per <xref
@@ -967,17 +1093,16 @@ status code:</t>
          with warn-code 1xx (see <xref target="header.warning" />);</t>
       <t>retain any <x:ref>Warning</x:ref> header fields in the stored response
          with warn-code 2xx; and,</t>
-      <t>use other header fields provided in the response to replace
+      <t>use other header fields provided in the HEAD response to replace
          all instances of the corresponding header fields in the stored
          response.</t>
    </list>
 </t>
-
+</section>
 </section>
 
 
-<section anchor="invalidation.after.updates.or.deletions" 
-   title="Request Methods that Invalidate">
+<section anchor="invalidation" title="Invalidation">
 <t>
    Because unsafe request methods (&safe-methods;) such as PUT, POST or DELETE
    have the potential for changing state on the origin server, intervening
@@ -1014,7 +1139,7 @@ status code:</t>
    responses in the caches it travels through, but relevant responses still
    might be stored in other caches that it has not.</t>
 </section>
-
+</section>
 
 
 
@@ -2156,8 +2281,11 @@ Pragma: no-cache
     <x:source basename="p4-conditional" href="p4-conditional.xml">
       <x:defines>304</x:defines>
       <x:defines>304 (Not Modified)</x:defines>
+      <x:defines>412 (Precondition Failed)</x:defines>
       <x:defines>ETag</x:defines>
       <x:defines>If-Modified-Since</x:defines>
+      <x:defines>If-Unmodified-Since</x:defines>
+      <x:defines>If-Match</x:defines>
       <x:defines>If-None-Match</x:defines>
       <x:defines>Last-Modified</x:defines>
     </x:source>
@@ -2184,6 +2312,7 @@ Pragma: no-cache
     <x:source basename="p5-range" href="p5-range.xml">
       <x:defines>206 (Partial Content)</x:defines>
       <x:defines>Content-Range</x:defines>
+      <x:defines>If-Range</x:defines>
       <x:defines>Range</x:defines>
     </x:source>
   </reference>
@@ -2395,11 +2524,11 @@ Pragma: no-cache
 <t>
   Requirements regarding denial of service attack avoidance when performing
   invalidation have been clarified.
-  (<xref target="invalidation.after.updates.or.deletions" />)
+  (<xref target="invalidation" />)
 </t>
 <t>
   Cache invalidation only occurs when a successful response is received.
-  (<xref target="invalidation.after.updates.or.deletions" />)
+  (<xref target="invalidation" />)
 </t>
 <t>
   Cache directives are explicitly defined to be case-insensitive.
