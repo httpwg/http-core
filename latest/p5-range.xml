@@ -28,6 +28,7 @@
   <!ENTITY representation             "<xref target='Part2' x:rel='#representations' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY entity-tags                "<xref target='Part4' x:rel='#header.etag' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY weak-and-strong-validators "<xref target='Part4' x:rel='#weak.and.strong.validators' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY entity-tag-comparison      "<xref target='Part4' x:rel='#entity.tag.comparison' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY lastmod-comparison         "<xref target='Part4' x:rel='#lastmod.comparison' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY p6-heuristic               "<xref target='Part6' x:rel='#heuristic.freshness' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
 ]>
@@ -449,7 +450,7 @@
    to have an up-to-date copy of the entire representation, it could use the
    <x:ref>Range</x:ref> header field with a conditional GET (using
    either or both of <x:ref>If-Unmodified-Since</x:ref> and
-   <x:ref>If-Match</x:ref>.) However, if the condition fails because the
+   <x:ref>If-Match</x:ref>.) However, if the precondition fails because the
    representation has been modified, the client would then have to make a
    second request to obtain the entire current representation.
 </t>
@@ -463,23 +464,6 @@
   <x:ref>If-Range</x:ref> = <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref>
 </artwork></figure>
 <t>
-   A client &MUST-NOT; generate an If-Range header field containing an
-   entity-tag that is marked as weak.
-   A client &MUST-NOT; generate an If-Range header field containing a
-   <x:ref>Last-Modified</x:ref> date unless the client has no entity-tag for
-   the corresponding representation and the Last-Modified date is strong
-   in the sense defined by &lastmod-comparison;.
-</t>
-<t>
-   A server that evaluates a conditional range request that is applicable
-   to one of its representations &MUST; evaluate the condition as false if
-   the entity-tag used as a validator is marked as weak or, when an HTTP-date
-   is used as the validator, if the date value is not strong in the sense
-   defined by &lastmod-comparison;. (A server can distinguish between a
-   valid HTTP-date and any form of entity-tag by examining the first
-   two characters.)
-</t>
-<t>
    A client &MUST-NOT; generate an If-Range header field in a request that
    does not contain a <x:ref>Range</x:ref> header field.
    A server &MUST; ignore an If-Range header field received in a request that
@@ -488,10 +472,27 @@
    request for a target resource that does not support Range requests.
 </t>
 <t>
+   A client &MUST-NOT; generate an If-Range header field containing an
+   entity-tag that is marked as weak.
+   A client &MUST-NOT; generate an If-Range header field containing an
+   <x:ref>HTTP-date</x:ref> unless the client has no entity-tag for
+   the corresponding representation and the date is a strong validator
+   in the sense defined by &lastmod-comparison;.
+</t>
+<t>
+   A server that evaluates an If-Range precondition &MUST; use the strong
+   comparison function when comparing entity-tags (&entity-tag-comparison;)
+   and &MUST; evaluate the condition as false if an <x:ref>HTTP-date</x:ref>
+   validator is provided that is not a strong validator in the sense defined
+   by &lastmod-comparison;.
+   (A server can distinguish between a valid <x:ref>HTTP-date</x:ref> and any
+   form of entity-tag by examining the first two characters.)
+</t>
+<t>
    If the validator given in the If-Range header field matches the current
    validator for the selected representation of the target resource, then
-   the server &SHOULD; process the Range header field as requested.
-   If the validator does not match, then the server &MUST; ignore the
+   the server &SHOULD; process the <x:ref>Range</x:ref> header field as
+   requested. If the validator does not match, the server &MUST; ignore the
    <x:ref>Range</x:ref> header field.
 </t>
 </section>
@@ -747,11 +748,8 @@ Content-Range: bytes 7000-7999/8000
    connection closed prematurely or if the request used one or more Range
    specifications.  After several such transfers, a client might have
    received several ranges of the same representation.  These ranges can only
-   be safely combined if they all have in common the same strong validator,
-   where "strong validator" is defined to be either an entity-tag that is
-   not marked as weak (&entity-tags;) or, if no entity-tag is provided, a
-   <x:ref>Last-Modified</x:ref> value that is strong in the sense defined by
-   &lastmod-comparison;.
+   be safely combined if they all have in common the same strong validator
+   (&weak-and-strong-validators;).
 </t>
 <t>
    A client that has received multiple partial responses to GET requests on a
