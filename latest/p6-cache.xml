@@ -19,7 +19,7 @@
   <!ENTITY architecture                "<xref target='Part1' x:rel='#architecture' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY conformance                 "<xref target='Part1' x:rel='#conformance' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY notation                    "<xref target='Part1' x:rel='#notation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY abnf-extension             "<xref target='Part1' x:rel='#abnf.extension' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY abnf-extension              "<xref target='Part1' x:rel='#abnf.extension' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY acks                        "<xref target='Part1' x:rel='#acks' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY whitespace                  "<xref target='Part1' x:rel='#whitespace' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY field-components            "<xref target='Part1' x:rel='#field.components' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -673,7 +673,7 @@
 </t>
 <t>
    When a heuristic is used to calculate freshness lifetime, a cache &SHOULD;
-   attach a <x:ref>Warning</x:ref> header field with a 113 warn-code to the
+   generate a <x:ref>Warning</x:ref> header field with a 113 warn-code in the
    response if its current_age is more than 24 hours and such a warning is not
    already present.
 </t>
@@ -814,21 +814,16 @@
    directive; see <xref target="cache-request-directive" />).
 </t>
 <t>
-   A cache &SHOULD; append a <x:ref>Warning</x:ref> header field with the 110
-   warn-code (see <xref target="header.warning"/>) to stale responses.
-   Likewise, a cache &SHOULD; add the 112 warn-code to stale responses if the
-   cache is disconnected.
+   A cache &SHOULD; generate a <x:ref>Warning</x:ref> header field with the
+   110 warn-code (see <xref target="header.warning"/>) in stale responses.
+   Likewise, a cache &SHOULD; generate a 112 warn-code in stale responses
+   if the cache is disconnected.
 </t>
-<iref item="first-hand" />
 <t>
-   Note that if a cache receives a <x:dfn>first-hand</x:dfn> response (one
-   where the freshness model is not in use; i.e., its age is 0, whether it is
-   an entire response, or a <x:ref>304 (Not Modified)</x:ref> response) that
-   it would normally forward to the requesting client, and the received
-   response is no longer fresh, the cache &MAY; forward it to the requesting
-   client without adding a new <x:ref>Warning</x:ref> (but without removing
-   any existing Warning header fields). A cache ought not attempt to validate
-   a response simply because that response became stale in transit.
+   A cache &SHOULD-NOT; generate a new <x:ref>Warning</x:ref> header field
+   when forwarding a response that does not have an <x:ref>Age</x:ref> header
+   field, even if the response is already stale.  A cache need not validate
+   a response that merely became stale in transit.
 </t>
 </section>
 </section>
@@ -1163,13 +1158,15 @@
   <x:ref>Age</x:ref> = <x:ref>delta-seconds</x:ref>
 </artwork></figure>
 <t>
-  Age field-values are non-negative integers, representing time in seconds
-  (see <xref target="delta-seconds"/>).
+   The Age field-value is a non-negative integer, representing time in seconds
+   (see <xref target="delta-seconds"/>).
 </t>
 <t>
-   The presence of an Age header field in a response implies that a response
-   is not first-hand. However, the converse is not true, since HTTP/1.0 caches
-   might not implement the Age header field.
+   The presence of an Age header field implies that the response was not
+   generated or validated by the origin server for this request. However,
+   lack of an Age header field does not imply the origin was contacted, since
+   the response might have been received from an HTTP/1.0 cache that does not
+   implement Age.
 </t>
 </section>
 
@@ -1735,7 +1732,7 @@ Pragma: no-cache
 <t>
    The "Warning" header field is used to carry additional information
    about the status or transformation of a message that might not be reflected
-   in the message. This information is typically used to warn about possible
+   in the status code. This information is typically used to warn about possible
    incorrectness introduced by caching operations or transformations applied
    to the payload of the message.
 </t>
@@ -1763,63 +1760,67 @@ Pragma: no-cache
   <x:ref>warn-date</x:ref>  = <x:ref>DQUOTE</x:ref> <x:ref>HTTP-date</x:ref> <x:ref>DQUOTE</x:ref>
 </artwork></figure>
 <t>
-   Multiple warnings can be attached to a response (either by the origin
-   server or by a cache), including multiple warnings with the same code
-   number, only differing in warn-text.
+   Multiple warnings can be generated in a response (either by the origin
+   server or by a cache), including multiple warnings with the same warn-code
+   number that only differ in warn-text.
 </t>
 <t>
-   When this occurs, the user agent &SHOULD; inform the user of as many of
-   them as possible, in the order that they appear in the response.
-</t>
-<t>
-   Systems that generate multiple Warning header fields are encouraged to
-   order them with this user agent behavior in mind. New Warning header fields
-   are added after any existing Warning header fields.
+   A user agent that receives one or more Warning header fields &SHOULD;
+   inform the user of as many of them as possible, in the order that they
+   appear in the response. Senders that generate multiple Warning header
+   fields are encouraged to order them with this user agent behavior in mind.
+   A sender that generates new Warning header fields &MUST; append them after
+   any existing Warning header fields.
 </t>
 <t>
    Warnings are assigned three digit warn-codes. The first digit indicates
    whether the Warning is required to be deleted from a stored response after
    validation:
    <list style="symbols">
-      <t>1xx Warnings describe the freshness or validation status of the
+      <t>1xx warn-codes describe the freshness or validation status of the
       response, and so &MUST; be deleted by a cache after validation. They can
       only be generated by a cache when validating a cached entry, and
       &MUST-NOT; be generated in any other situation.</t>
-      <t>2xx Warnings describe some aspect of the representation that is not
+      <t>2xx warn-codes describe some aspect of the representation that is not
       rectified by a validation (for example, a lossy compression of the
       representation) and &MUST-NOT; be deleted by a cache after validation,
       unless a full response is sent, in which case they &MUST; be.</t>
    </list>
 </t>
 <t>
-   If an implementation sends a message with one or more Warning header fields
-   to a receiver whose version is HTTP/1.0 or lower, then the sender &MUST;
-   include in each warning-value a warn-date that matches the
+   If a sender generates one or more Warning header fields in a message to be
+   sent to a recipient known to implement only HTTP/1.0, the sender &MUST;
+   include in each generated warning-value a warn-date that matches the
    <x:ref>Date</x:ref> header field in the message.
 </t>
 <t>
-   If a system receives a message with a warning-value that includes a
-   warn-date, and that warn-date is different from the <x:ref>Date</x:ref>
-   value in the response, then that warning-value &MUST; be deleted from the
-   message before storing, forwarding, or using it (preventing the
-   consequences of naive caching of Warning header fields). If all of the
-   warning-values are deleted for this reason, the Warning header field &MUST;
-   be deleted as well.
+   If a recipient that uses, evaluates, or displays Warning header fields
+   receives a warn-date that is different from the <x:ref>Date</x:ref> value
+   in the same message, the recipient &MUST; exclude the warning-value
+   containing that warn-date before storing, forwarding, or using the message.
+   This allows recipients to exclude warning-values that were improperly
+   retained after a cache validation.
+   If all of the warning-values are excluded, the recipient &MUST; exclude
+   the Warning header field as well.
 </t>
 <t>
    The following warn-codes are defined by this specification, each with a
    recommended warn-text in English, and a description of its meaning.
+   The procedure for defining additional warn codes is described in
+   <xref target="warn.code.registry.procedure"/>.
 </t>
 
-<section title="110 Response is Stale" anchor="warn.110">
-  <iref primary="true" item="110 Response is Stale (warn code)" x:for-anchor=""/>
+<section title='Warning: 110 means "Response is Stale"' anchor="warn.110">
+  <iref primary="true" item="110 (warn-code)" x:for-anchor=""/>
+  <iref primary="true" item="Response is Stale (warn-text)" x:for-anchor=""/>
 <t>
    A cache &SHOULD; generate this whenever the sent response is stale.
 </t>
 </section>
 
-<section title="111 Revalidation Failed" anchor="warn.111">
-  <iref primary="true" item="111 Revalidation Failed (warn code)" x:for-anchor=""/>
+<section title='Warning: 111 means "Revalidation Failed"' anchor="warn.111">
+  <iref primary="true" item="111 (warn-code)" x:for-anchor=""/>
+  <iref primary="true" item="Revalidation Failed (warn-text)" x:for-anchor=""/>
 <t>
    A cache &SHOULD; generate this when sending a stale response because an
    attempt to validate the response failed, due to an inability to reach
@@ -1827,16 +1828,18 @@ Pragma: no-cache
 </t>
 </section>
 
-<section title="112 Disconnected Operation" anchor="warn.112">
-  <iref primary="true" item="112 Disconnected Operation (warn code)" x:for-anchor=""/>
+<section title='Warning: 112 means "Disconnected Operation"' anchor="warn.112">
+  <iref primary="true" item="112 (warn-code)" x:for-anchor=""/>
+  <iref primary="true" item="Disconnected Operation (warn-text)" x:for-anchor=""/>
 <t>
    A cache &SHOULD; generate this if it is intentionally disconnected from
    the rest of the network for a period of time.
 </t>
 </section>
 
-<section title="113 Heuristic Expiration" anchor="warn.113">
-  <iref primary="true" item="113 Heuristic Expiration (warn code)" x:for-anchor=""/>
+<section title='Warning: 113 means "Heuristic Expiration"' anchor="warn.113">
+  <iref primary="true" item="113 (warn-code)" x:for-anchor=""/>
+  <iref primary="true" item="Heuristic Expiration (warn-text)" x:for-anchor=""/>
 <t>
    A cache &SHOULD; generate this if it heuristically chose a freshness
    lifetime greater than 24 hours and the response's age is greater than 24
@@ -1844,8 +1847,9 @@ Pragma: no-cache
 </t>
 </section>
 
-<section title="199 Miscellaneous Warning" anchor="warn.199">
-  <iref primary="true" item="199 Miscellaneous Warning (warn code)" x:for-anchor=""/>
+<section title='Warning: 199 means "Miscellaneous Warning"' anchor="warn.199">
+  <iref primary="true" item="199 (warn-code)" x:for-anchor=""/>
+  <iref primary="true" item="Miscellaneous Warning (warn-text)" x:for-anchor=""/>
 <t>
    The warning text can include arbitrary information to be presented to
    a human user, or logged. A system receiving this warning &MUST-NOT; take
@@ -1853,8 +1857,9 @@ Pragma: no-cache
 </t>
 </section>
 
-<section title="214 Transformation Applied" anchor="warn.214">
-  <iref primary="true" item="214 Transformation Applied (warn code)" x:for-anchor=""/>
+<section title='Warning: 214 means "Transformation Applied"' anchor="warn.214">
+  <iref primary="true" item="214 (warn-code)" x:for-anchor=""/>
+  <iref primary="true" item="Transformation Applied (warn-text)" x:for-anchor=""/>
 <t>
    &MUST; be added by a proxy if it applies any transformation to the
    representation, such as changing the content-coding, media-type, or
@@ -1863,19 +1868,13 @@ Pragma: no-cache
 </t>
 </section>
 
-<section title="299 Miscellaneous Persistent Warning" anchor="warn.299">
-  <iref primary="true" item="299 Miscellaneous Persistent Warning (warn code)" x:for-anchor=""/>
+<section title='Warning: 299 means "Miscellaneous Persistent Warning"' anchor="warn.299">
+  <iref primary="true" item="299 (warn-code)" x:for-anchor=""/>
+  <iref primary="true" item="Miscellaneous Persistent Warning (warn-text)" x:for-anchor=""/>
 <t>
    The warning text can include arbitrary information to be presented to
    a human user, or logged. A system receiving this warning &MUST-NOT; take
    any automated action.
-</t>
-</section>
-
-<section title="Warn Code Extensions" anchor="warn.code.extensions">
-<t>
-   Extension warn codes can be defined; see <xref target="warn.code.registry.procedure"/>
-   for details.
 </t>
 </section>
 </section>
@@ -2659,7 +2658,7 @@ Pragma: no-cache
 <x:ref>warn-code</x:ref> = 3DIGIT
 <x:ref>warn-date</x:ref> = DQUOTE HTTP-date DQUOTE
 <x:ref>warn-text</x:ref> = quoted-string
-<x:ref>warning-value</x:ref> = warn-code SP warn-agent SP warn-text SP warn-date
+<x:ref>warning-value</x:ref> = warn-code SP warn-agent SP warn-text [ SP warn-date ]
 </artwork>
 </figure>
 </section>
