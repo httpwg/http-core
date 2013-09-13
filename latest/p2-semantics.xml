@@ -1816,92 +1816,76 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 
 <section title="Expect" anchor="header.expect">
   <iref primary="true" item="Expect header field" x:for-anchor=""/>
+  <iref primary="true" item="100-continue (expect value)"/>
   <x:anchor-alias value="Expect"/>
   <x:anchor-alias value="expectation"/>
-  <x:anchor-alias value="expect-param"/>
-  <x:anchor-alias value="expect-name"/>
-  <x:anchor-alias value="expect-value"/>
-<t>
-   The "Expect" header field in a request indicates that a certain set of
-   behaviors (expectations) need to be supported by all inbound servers in
-   order to properly handle this request.
-   A server that does not understand, or cannot comply with, one or more of
-   the received expectations &MUST; respond with an appropriate
-   <x:ref>4xx</x:ref> status code, indicating either
-   <x:ref>417 (Expectation Failed)</x:ref> or some other error status that was
-   determined prior to evaluating Expect.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Expect"/><iref primary="true" item="Grammar" subitem="expectation"/><iref primary="true" item="Grammar" subitem="expect-param"/><iref primary="true" item="Grammar" subitem="expect-value"/><iref primary="true" item="Grammar" subitem="expect-name"/>
-  <x:ref>Expect</x:ref>       = 1#<x:ref>expectation</x:ref>
-  
-  <x:ref>expectation</x:ref>  = <x:ref>expect-name</x:ref> [ <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> <x:ref>expect-value</x:ref> ]
-                             *( <x:ref>OWS</x:ref> ";" [ <x:ref>OWS</x:ref> <x:ref>expect-param</x:ref> ] )
-  <x:ref>expect-param</x:ref> = <x:ref>expect-name</x:ref> [ <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> <x:ref>expect-value</x:ref> ]
-  
-  <x:ref>expect-name</x:ref>  = <x:ref>token</x:ref>
-  <x:ref>expect-value</x:ref> = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
-</artwork></figure>
-<t>
-   Comparison is case-insensitive for names (expect-name) and case-sensitive
-   for values (expect-value).
-</t>
-<t>
-   An intermediary forwarding a request &MUST; forward a received Expect
-   header field unless one of the expectations requires otherwise.
-</t>
-<t>
-   The Expect header field was added after the original publication of
-   HTTP/1.1 <xref target="RFC2068"/> and was not implemented by many of the
-   initial implementations. We are hoping that those implementations have long
-   since been replaced. However, it remains unlikely that any implementation
-   sending HTTP/1.0 messages will have implemented this field.
-   A server that receives an Expect header field in an HTTP/1.0 request &MUST;
-   respond with <x:ref>417 (Expectation Failed)</x:ref>, since this would
-   indicate that the message has been forwarded through an HTTP/1.0
-   intermediary that does not support Expect and won't be able to support
-   any expectation.
-</t>
-
-<section title="100-continue Expectation" anchor="expect-100-continue">
-  <iref primary="true" item="100-continue (expect value)"/>
-  <iref primary="true" item="Expect Values" subitem="100-continue"/>
   <x:anchor-alias value="100-continue"/>
 <t>
-   The <x:dfn>100-continue</x:dfn> expectation informs recipients that the
-   client is about to send a (presumably large) payload in this request and
-   wishes to receive a <x:ref>100 (Continue)</x:ref> interim response if the
-   request-line and header fields are not sufficient to cause an immediate
+   The "Expect" header field in a request indicates a certain set of
+   behaviors (expectations) that need to be supported by the server in
+   order to properly handle this request. The only such expectation defined
+   by this specification is <x:ref>100-continue</x:ref>.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Expect"/>
+  <x:ref>Expect</x:ref>  = "100-continue"
+</artwork></figure>
+<t>
+   The Expect field-value is case-insensitive.
+</t>
+<t>
+   A server that receives an Expect field-value other than
+   <x:ref>100-continue</x:ref> &MAY; respond with a
+   <x:ref>417 (Expectation Failed)</x:ref> status code to indicate that the
+   unexpected expectation cannot be met.
+</t>
+<t>
+   A <x:dfn>100-continue</x:dfn> expectation informs recipients that the
+   client is about to send a (presumably large) message body in this request
+   and wishes to receive a <x:ref>100 (Continue)</x:ref> interim response if
+   the request-line and header fields are not sufficient to cause an immediate
    success, redirect, or error response. This allows the client to wait for an
-   indication that it is worthwhile to send the payload body before actually
-   doing so, which can improve efficiency when the payload body is huge or
+   indication that it is worthwhile to send the message body before actually
+   doing so, which can improve efficiency when the message body is huge or
    when the client anticipates that an error is likely (e.g., when sending a
    state-changing method, for the first time, without previously verified
    authentication credentials).
+</t>
+<t>
+   For example, a request that begins with
+</t>
+<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+PUT /somewhere/fun HTTP/1.1
+Host: origin.example.com
+Content-Type: video/h264
+Content-Length: 1234567890987
+Expect: 100-continue
+
+</artwork></figure>
+<t>
+   allows the origin server to immediately respond with an error message, such
+   as <x:ref>401 (Unauthorized)</x:ref> or <x:ref>405 (Method Not Allowed)</x:ref>,
+   before the client starts filling the pipes with an unnecessary data
+   transfer.
 </t>
 <t>
    Requirements for clients:
   <list style="symbols">
     <t>
      A client &MUST-NOT; generate a 100-continue expectation in a request that
-     does not include a payload body.
+     does not include a message body.
     </t>
     <t>
      A client that will wait for a <x:ref>100 (Continue)</x:ref> response
-     before sending the request payload body &MUST; send an
+     before sending the request message body &MUST; send an
      <x:ref>Expect</x:ref> header field containing a 100-continue expectation.
     </t>
     <t>
      A client that sends a 100-continue expectation is not required to wait
      for any specific length of time; such a client &MAY; proceed to send the
-     payload body even if it has not yet received a response. Furthermore,
-     since <x:ref>100 (Continue)</x:ref> responses cannot be sent to an
-     HTTP/1.0 intermediary, and since some servers have failed to implement
-     Expect, such a client &SHOULD-NOT; wait for an indefinite period before
-     sending the payload body.
-    </t>
-    <t>
-     A client that sends a 100-continue expectation &MUST-NOT; send an
-     expect-value or expect-param within that expectation.
+     message body even if it has not yet received a response. Furthermore,
+     since <x:ref>100 (Continue)</x:ref> responses cannot be sent through an
+     HTTP/1.0 intermediary, such a client &SHOULD-NOT; wait for an indefinite
+     period before sending the message body.
     </t>
     <t>
      A client that receives a <x:ref>417 (Expectation Failed)</x:ref> status
@@ -1913,57 +1897,66 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   </list>
 </t>
 <t>
-   Requirements for origin servers:
+   Requirements for servers:
   <list style="symbols">
     <t>
-     Upon receiving a request that includes a 100-continue expectation, an
-     origin server &MUST; either respond with <x:ref>100 (Continue)</x:ref>
-     status code and continue to read from the input stream, or respond with a
-     final status code. The origin server &MUST-NOT; wait for the payload body
-     before sending the <x:ref>100 (Continue)</x:ref> response.
+     A server that receives a 100-continue expectation in an HTTP/1.0 request
+     &MUST; ignore that expectation.
     </t>
     <t>
-     An origin server &MUST-NOT; send a <x:ref>100 (Continue)</x:ref> response
-     if such a request comes from an HTTP/1.0 client.
+     A server &MAY; omit sending a <x:ref>100 (Continue)</x:ref> response if
+     it has already received some or all of the message body for the
+     corresponding request, or if the framing indicates that there is no
+     message body.
     </t>
     <t>
-     An origin server &MAY; omit a <x:ref>100 (Continue)</x:ref> response if
-     it has already received some or all of the payload body for the
-     corresponding request.
+     A server that sends a <x:ref>100 (Continue)</x:ref> response &MUST;
+     ultimately send a final status code, once the message body is received
+     and processed, unless the connection is closed prematurely.
     </t>
     <t>
-     An origin server that sends a <x:ref>100 (Continue)</x:ref> response
-     &MUST; ultimately send a final status code, once the payload body is
-     received and processed, unless the connection is closed prematurely.
-    </t>
-    <t>
-     An origin server that responds with a final status code before reading
-     the entire payload body &SHOULD; indicate in that response whether it
+     A server that responds with a final status code before reading
+     the entire message body &SHOULD; indicate in that response whether it
      intends to close the connection or continue reading and discarding the
-     request payload body (see &persistent-tear-down;).
+     request message (see &persistent-tear-down;).
     </t>
   </list>
 </t>
 <t>
-   Requirements for proxies:
-  <list style="symbols">
-    <t>
-     A proxy that forwards a request received with a 100-continue expectation
-     &MUST; send a 100-continue expectation in the forwarded request.
-    </t>
-    <t>
-     A proxy &MUST-NOT; forward a request received with a 100-continue
-     expectation if it knows the advertised HTTP version of the next-hop
-     server is HTTP/1.0; instead, such a proxy &MUST; respond with a
-     <x:ref>417 (Expectation Failed)</x:ref> status code.
-    </t>
-    <t>
-     Proxies &SHOULD; maintain a record of the HTTP version numbers received
-     from recently-referenced next-hop servers.
-    </t>
-  </list>
+   An origin server &MUST;, upon receiving an HTTP/1.1 (or later) request-line
+   and a complete header section that contains a 100-continue expectation and
+   indicates a request message body will follow, either send an immediate
+   response with a final status code, if that status can be determined by
+   examining just the request-line and header fields, or send an immediate
+   <x:ref>100 (Continue)</x:ref> response to encourage the client to send the
+   request's message body. The origin server &MUST-NOT; wait for the message
+   body before sending the <x:ref>100 (Continue)</x:ref> response.
 </t>
-</section>
+<t>
+   A proxy &MUST;, upon receiving an HTTP/1.1 (or later) request-line
+   and a complete header section that contains a 100-continue expectation and
+   indicates a request message body will follow, either send an immediate
+   response with a final status code, if that status can be determined by
+   examining just the request-line and header fields, or begin forwarding the
+   request toward the origin server by sending a corresponding request-line
+   and header section to the next inbound server. If the proxy believes (from
+   configuration or past interaction) that the next inbound server only
+   supports HTTP/1.0, the proxy &MAY; generate an immediate
+   <x:ref>100 (Continue)</x:ref> response to encourage the client to begin
+   sending the message body.
+</t>
+<x:note>
+  <t>
+    &Note; The Expect header field was added after the original publication of
+    HTTP/1.1 <xref target="RFC2068"/> as both the means to request an interim
+    100 response and the general mechanism for indicating must-understand
+    extensions. However, the extension mechanism has not been used by clients
+    and the must-understand requirements have not been implemented by many
+    servers, rendering the extension mechanism useless. This specification has
+    removed the extension mechanism in order to simplify the definition and
+    processing of 100-continue.
+  </t>
+</x:note>
 </section>
 
 <section title="Max-Forwards" anchor="header.max-forwards">
@@ -2758,7 +2751,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    When the request contains an <x:ref>Expect</x:ref> header field that
    includes a <x:ref>100-continue</x:ref> expectation, the 100 response
    indicates that the server wishes to receive the request payload body,
-   as described in <xref target="expect-100-continue"/>.  The client
+   as described in <xref target="header.expect"/>.  The client
    ought to continue sending the request and discard the 100 response.
 </t>
 <t>
@@ -5206,7 +5199,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
     <date month="&ID-MONTH;" year="&ID-YEAR;"/>
   </front>
   <seriesInfo name="Internet-Draft" value="draft-ietf-httpbis-p7-auth-&ID-VERSION;"/>
-  <x:source href="p7-auth.xml" basename="p7-auth"/>
+  <x:source href="p7-auth.xml" basename="p7-auth">
+     <x:defines>401 (Unauthorized)</x:defines>
+  </x:source>
 </reference>
 
 <reference anchor="RFC1950">
@@ -6185,7 +6180,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <x:ref>Date</x:ref> = HTTP-date
 
-<x:ref>Expect</x:ref> = *( "," OWS ) expectation *( OWS "," [ OWS expectation ] )
+<x:ref>Expect</x:ref> = "100-continue"
 
 <x:ref>From</x:ref> = mailbox
 
@@ -6243,12 +6238,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
  / %x53.61.74.75.72.64.61.79 ; Saturday
  / %x53.75.6E.64.61.79 ; Sunday
 <x:ref>delta-seconds</x:ref> = 1*DIGIT
-
-<x:ref>expect-name</x:ref> = token
-<x:ref>expect-param</x:ref> = expect-name [ BWS "=" BWS expect-value ]
-<x:ref>expect-value</x:ref> = token / quoted-string
-<x:ref>expectation</x:ref> = expect-name [ BWS "=" BWS expect-value ] *( OWS ";" [
- OWS expect-param ] )
 
 <x:ref>field-name</x:ref> = &lt;comment, defined in [Part1], Section 3.2&gt;
 
