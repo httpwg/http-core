@@ -870,112 +870,79 @@
 <section anchor="validation.received" title="Handling a Received Validation Request">
 <t>
    Each client in the request chain may have its own cache, so it is common
-   for a cache at an intermediary or origin server to receive conditional
-   requests from other (outbound) caches. Likewise, some user agents make use
-   of conditional requests to limit data transfers to recently modified
-   representations or to complete the transfer of partially retrieved
-   representations.
+   for a cache at an intermediary to receive conditional requests from other
+   (outbound) caches. Likewise, some user agents make use of conditional
+   requests to limit data transfers to recently modified representations or to
+   complete the transfer of a partially retrieved representation.
 </t>
 <t>
-   If the request semantics can be satisfied with a cached response and a
-   recipient cache has at least one response stored for this primary cache
-   key, the cache &MUST; evaluate received precondition header fields as part
-   of its selection process for determining a suitable response.
-   A cache &MUST-NOT; evaluate received precondition header fields in a
-   request with semantics that cannot be satisfied with a cached response, or
-   for which the cache has no prior stored responses, since such preconditions
-   are intended for some other (inbound) server.
+   If a cache receives a request that can be satisfied by reusing one of
+   its stored <x:ref>200 (OK)</x:ref> or <x:ref>206 (Partial Content)</x:ref>
+   responses, the cache &SHOULD; evaluate any applicable conditional header
+   field preconditions received in that request with respect to the
+   corresponding validators contained within the selected response.
+   A cache &MUST-NOT; evaluate conditional header fields that are only
+   applicable to an origin server, found in a request with semantics that
+   cannot be satisfied with a cached response, or applied to a target resource
+   for which it has no stored responses; such preconditions are likely
+   intended for some other (inbound) server.
 </t>
 <t>
    The proper evaluation of conditional requests by a cache depends on the
    received precondition header fields and their precedence, as defined in
-   &conditional-precedence;.
-</t>
-<t>
-   A request containing an <x:ref>If-Match</x:ref> header field
-   (&header-if-match;) indicates that the client wants to receive an error
-   response if the cache has a stored response that cannot be used to answer
-   this request.
-   The cache &MUST; generate a <x:ref>412 (Precondition Failed)</x:ref>
-   response if the field-value is "*" and no suitable response is stored, or
-   if the field-value is a list of entity-tags and none of them match the
-   entity-tag of a suitable stored response.
-   Otherwise, the cache &MUST; generate a <x:ref>2xx (Successful)</x:ref>
-   response that reuses the most recent of its matching stored responses to
-   satisfy the request.
-</t>
-<t>
-   A request containing an <x:ref>If-Unmodified-Since</x:ref> header field
-   (&header-if-unmodified-since;) indicates that the client wants to receive
-   an error response if the cache has a stored response that cannot be used
-   to answer this request.
-   The cache &MUST; generate a <x:ref>412 (Precondition Failed)</x:ref>
-   response if one of the following is true:
-   1) a stored response has a <x:ref>Last-Modified</x:ref> field-value that
-   is more recent than the conditional timestamp;
-   2) no <x:ref>Last-Modified</x:ref> field is present, but a stored
-   response has a <x:ref>Date</x:ref> field-value that is more recent than the
-   conditional timestamp; or,
-   3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present,
-   but the cache recorded a stored response as having been received at a
-   time more recent than the conditional timestamp.
-   Otherwise, the cache &MUST; generate a <x:ref>2xx (Successful)</x:ref>
-   response that reuses the most recent of its matching stored responses to
-   satisfy the request.
+   &conditional-precedence;. The <x:ref>If-Match</x:ref> and
+   <x:ref>If-Unmodified-Since</x:ref> conditional header fields are not
+   applicable to a cache.
 </t>
 <t>
    A request containing an <x:ref>If-None-Match</x:ref> header field
    (&header-if-none-match;) indicates that the client wants to validate one
-   or more of its stored responses.
-   If the field-value is "*" and any suitable response is
-   stored, or the field-value is a list of entity-tags and at least one of
-   them match the entity-tag of a suitable stored response, the cache &MUST;
-   generate a <x:ref>304 (Not Modified)</x:ref> response using the most
-   suitable of those matching responses as the selected representation.
-   Otherwise, if the cache has one or more suitable stored responses that
-   do not match the condition, the cache &MUST; generate a
-   <x:ref>2xx (Successful)</x:ref> response that reuses the most suitable of
-   those stored responses to satisfy the request.
-   Finally, if the cache has no suitable stored responses, the cache &SHOULD;
-   forward the conditional request toward the origin server; if the received
-   condition contains a list of entity-tags and the cache has its own set of
-   stored responses for that primary cache key, the cache &SHOULD; take the
-   union of the received set with the set of entity-tags for its own stored
-   set of responses (fresh or stale) and generate an
-   <x:ref>If-None-Match</x:ref> header field containing that union when it
-   forwards the request toward the origin server.
-   However, if a stored response contains only partial content, the cache
-   &MUST-NOT; include its entity-tag in the union unless the request is for
-   a range that would be fully satisfied by that stored response.
+   or more of its own stored responses in comparison to whichever stored
+   response is selected by the cache.
+   If the field-value is "*", or if the field-value is a list of entity-tags
+   and at least one of them match the entity-tag of the selected stored
+   response, a cache recipient &SHOULD; generate a
+   <x:ref>304 (Not Modified)</x:ref> response (using the metadata of the
+   selected stored response) instead of sending that stored response.
 </t>
 <t>
-   A request containing an <x:ref>If-Modified-Since</x:ref> header field
+   When a cache decides to revalidate its own stored responses for a
+   request that contains an <x:ref>If-None-Match</x:ref> list of entity-tags,
+   the cache &MAY; combine the received list with a list of entity-tags
+   from its own stored set of responses (fresh or stale) and send the union of
+   the two lists as a replacement <x:ref>If-None-Match</x:ref> header
+   field value in the forwarded request.
+   If a stored response contains only partial content, the
+   cache &MUST-NOT; include its entity-tag in the union unless the request is
+   for a range that would be fully satisfied by that partial stored response.
+   If the response to the forwarded request is
+   <x:ref>304 (Not Modified)</x:ref> and has an ETag header field value with
+   an entity-tag that is not in the client's list, the cache &MUST;
+   generate a <x:ref>200 (OK)</x:ref> response for the client by reusing its
+   corresponding stored response, as updated by the 304 response metadata
+   (<xref target="freshening.responses"/>).
+</t>
+<t>
+   If an <x:ref>If-None-Match</x:ref> header field is not present, a request
+   containing an <x:ref>If-Modified-Since</x:ref> header field
    (&header-if-modified-since;) indicates that the client wants to validate
-   one or more of its stored responses by modification date if the stored
-   responses have no entity-tag or the recipient does not implement
-   <x:ref>If-None-Match</x:ref>.
-   The cache &MUST; generate a <x:ref>2xx (Successful)</x:ref> response,
-   reusing the most recent of its stored responses to satisfy the request,
-   if one of the following is true:
-   1) a stored response has a <x:ref>Last-Modified</x:ref> field-value that
-   is more recent than the conditional timestamp;
-   2) no <x:ref>Last-Modified</x:ref> field is present, but a stored
-   response has a <x:ref>Date</x:ref> field-value that is more recent than the
-   conditional timestamp; or,
-   3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present,
-   but the cache recorded a stored response as having been received at a
-   time more recent than the conditional timestamp.
-   Otherwise, if the cache has one or more suitable stored responses, the
-   cache &MUST; generate a <x:ref>304 (Not Modified)</x:ref> response using
-   the most recent of its suitable stored responses as the selected
-   representation.
-   Finally, if the cache has no suitable stored responses, the cache &SHOULD;
-   forward the conditional request toward the origin server.
+   one or more of its own stored responses by modification date.
+   A cache recipient &SHOULD; generate a <x:ref>304 (Not Modified)</x:ref>
+   response (using the metadata of the selected stored response) if one of the
+   following cases is true:
+   1) the selected stored response has a <x:ref>Last-Modified</x:ref>
+   field-value that is earlier than or equal to the conditional timestamp;
+   2) no <x:ref>Last-Modified</x:ref> field is present in the selected stored
+   response, but it has a <x:ref>Date</x:ref> field-value that is earlier than
+   or equal to the conditional timestamp; or,
+   3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present
+   in the selected stored response, but the cache recorded it as having been
+   received at a time earlier than or equal to the conditional timestamp.
 </t>
 <t>
    A cache that implements partial responses to range requests, as defined in
    &partial;, also needs to evaluate a received <x:ref>If-Range</x:ref> header
-   field (&header-if-range;) in respect to its selected stored response.
+   field (&header-if-range;) with respect to its selected stored response.
 </t>
 </section>
 
