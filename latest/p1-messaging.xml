@@ -1440,32 +1440,22 @@ Content-Type: text/plain
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
-  <x:anchor-alias value="special"/>
-  <x:anchor-alias value="word"/>
-   Many HTTP header field values consist of words (token or quoted-string)
-   separated by whitespace or special characters.
+   Most HTTP header field values are defined using common syntax components
+   (token, quoted-string, and comment) separated by whitespace or specific
+   delimiting characters. Delimiters are chosen from the set of US-ASCII
+   visual characters not allowed in a token ({VCHAR - tchar}).
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="word"/><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/><iref primary="true" item="Grammar" subitem="special"><!--unused production--></iref>
-  <x:ref>word</x:ref>           = <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref>
-
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
   <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
-<!--
-  IMPORTANT: when editing "tchar" make sure that "special" is updated accordingly!!!
- -->
   <x:ref>tchar</x:ref>          = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*"
                  / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~" 
                  / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
-                 ; any <x:ref>VCHAR</x:ref>, except <x:ref>special</x:ref>
-
-  <x:ref>special</x:ref>        = "(" / ")" / "&lt;" / ">" / "@" / ","
-                 / ";" / ":" / "\" / DQUOTE / "/" / "[" 
-                 / "]" / "?" / "=" / "{" / "}"
 </artwork></figure>
 <t anchor="rule.quoted-string">
   <x:anchor-alias value="quoted-string"/>
   <x:anchor-alias value="qdtext"/>
   <x:anchor-alias value="obs-text"/>
-   A string of text is parsed as a single word if it is quoted using
+   A string of text is parsed as a single value if it is quoted using
    double-quote marks.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
@@ -1473,22 +1463,6 @@ Content-Type: text/plain
   <x:ref>qdtext</x:ref>         = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> /%x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
   <x:ref>obs-text</x:ref>       = %x80-FF
 </artwork></figure>
-<t anchor="rule.quoted-pair">
-  <x:anchor-alias value="quoted-pair"/>
-   The backslash octet ("\") can be used as a single-octet
-   quoting mechanism within quoted-string constructs:
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
-  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
-</artwork></figure>
-<t>
-   Recipients that process the value of a quoted-string &MUST; handle a
-   quoted-pair as if it were replaced by the octet following the backslash. 
-</t>
-<t>
-   A sender &SHOULD-NOT; generate a quoted-pair in a quoted-string except where
-   necessary to quote DQUOTE and backslash octets occurring within that string.
-</t>
 <t anchor="rule.comment">
   <x:anchor-alias value="comment"/>
   <x:anchor-alias value="ctext"/>
@@ -1497,20 +1471,26 @@ Content-Type: text/plain
    fields containing "comment" as part of their field value definition.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
-  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-cpair</x:ref> / <x:ref>comment</x:ref> ) ")"
+  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
   <x:ref>ctext</x:ref>          = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
 </artwork></figure>
-<t anchor="rule.quoted-cpair">
-  <x:anchor-alias value="quoted-cpair"/>
+<t anchor="rule.quoted-pair">
+  <x:anchor-alias value="quoted-pair"/>
    The backslash octet ("\") can be used as a single-octet
-   quoting mechanism within comment constructs:
+   quoting mechanism within quoted-string and comment constructs.
+   Recipients that process the value of a quoted-string &MUST; handle a
+   quoted-pair as if it were replaced by the octet following the backslash. 
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-cpair"/>
-  <x:ref>quoted-cpair</x:ref>   = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
+  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> ) 
 </artwork></figure>
 <t>
-   A sender &SHOULD-NOT; escape octets in comments that do not require escaping
-   (i.e., other than the backslash octet "\" and the parentheses "(" and ")").
+   A sender &SHOULD-NOT; generate a quoted-pair in a quoted-string except
+   where necessary to quote DQUOTE and backslash octets occurring within that
+   string.
+   A sender &SHOULD-NOT; generate a quoted-pair in a comment except
+   where necessary to quote parentheses ["(" and ")"] and backslash octets
+   occurring within that comment.
 </t>
 </section>
 
@@ -1954,15 +1934,11 @@ Content-Type: text/plain
   <x:ref>transfer-extension</x:ref> = <x:ref>token</x:ref> *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>transfer-parameter</x:ref> )
 </artwork></figure>
 <t anchor="rule.parameter">
-  <x:anchor-alias value="attribute"/>
   <x:anchor-alias value="transfer-parameter"/>
-  <x:anchor-alias value="value"/>
-   Parameters are in the form of attribute/value pairs.
+   Parameters are in the form of a name or name=value pair.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="transfer-parameter"/><iref primary="true" item="Grammar" subitem="attribute"/><iref primary="true" item="Grammar" subitem="value"/><iref primary="true" item="Grammar" subitem="date2"/><iref primary="true" item="Grammar" subitem="date3"/>
-  <x:ref>transfer-parameter</x:ref> = <x:ref>attribute</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> <x:ref>value</x:ref>
-  <x:ref>attribute</x:ref>          = <x:ref>token</x:ref>
-  <x:ref>value</x:ref>              = <x:ref>word</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="transfer-parameter"/>
+  <x:ref>transfer-parameter</x:ref> = <x:ref>token</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
 </artwork></figure>
 <t>
    All transfer-coding names are case-insensitive and ought to be registered
@@ -5309,7 +5285,6 @@ Zhong Yu.
 <x:ref>absolute-form</x:ref> = absolute-URI
 <x:ref>absolute-path</x:ref> = 1*( "/" segment )
 <x:ref>asterisk-form</x:ref> = "*"
-<x:ref>attribute</x:ref> = token
 <x:ref>authority</x:ref> = &lt;authority, defined in [RFC3986], Section 3.2&gt;
 <x:ref>authority-form</x:ref> = authority
 
@@ -5320,7 +5295,7 @@ Zhong Yu.
 <x:ref>chunk-ext-val</x:ref> = token / quoted-string
 <x:ref>chunk-size</x:ref> = 1*HEXDIG
 <x:ref>chunked-body</x:ref> = *chunk last-chunk trailer-part CRLF
-<x:ref>comment</x:ref> = "(" *( ctext / quoted-cpair / comment ) ")"
+<x:ref>comment</x:ref> = "(" *( ctext / quoted-pair / comment ) ")"
 <x:ref>connection-option</x:ref> = token
 <x:ref>ctext</x:ref> = HTAB / SP / %x21-27 ; '!'-'''
  / %x2A-5B ; '*'-'['
@@ -5359,7 +5334,6 @@ Zhong Yu.
  / %x5D-7E ; ']'-'~'
  / obs-text
 <x:ref>query</x:ref> = &lt;query, defined in [RFC3986], Section 3.4&gt;
-<x:ref>quoted-cpair</x:ref> = "\" ( HTAB / SP / VCHAR / obs-text )
 <x:ref>quoted-pair</x:ref> = "\" ( HTAB / SP / VCHAR / obs-text )
 <x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
 
@@ -5373,8 +5347,6 @@ Zhong Yu.
  asterisk-form
 
 <x:ref>segment</x:ref> = &lt;segment, defined in [RFC3986], Section 3.3&gt;
-<x:ref>special</x:ref> = "(" / ")" / "&lt;" / "&gt;" / "@" / "," / ";" / ":" / "\" /
- DQUOTE / "/" / "[" / "]" / "?" / "=" / "{" / "}"
 <x:ref>start-line</x:ref> = request-line / status-line
 <x:ref>status-code</x:ref> = 3DIGIT
 <x:ref>status-line</x:ref> = HTTP-version SP status-code SP reason-phrase CRLF
@@ -5388,13 +5360,9 @@ Zhong Yu.
 <x:ref>transfer-coding</x:ref> = "chunked" / "compress" / "deflate" / "gzip" /
  transfer-extension
 <x:ref>transfer-extension</x:ref> = token *( OWS ";" OWS transfer-parameter )
-<x:ref>transfer-parameter</x:ref> = attribute BWS "=" BWS value
+<x:ref>transfer-parameter</x:ref> = token BWS "=" BWS ( token / quoted-string )
 
 <x:ref>uri-host</x:ref> = &lt;host, defined in [RFC3986], Section 3.2.2&gt;
-
-<x:ref>value</x:ref> = word
-
-<x:ref>word</x:ref> = token / quoted-string
 </artwork>
 </figure>
 </section>
