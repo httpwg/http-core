@@ -174,12 +174,6 @@
    information.
 </t>
 <t>
-   Challenges and responses are transmitted in header field values, and thus
-   can easily leak information when not using a secured connection. Depending
-   on the type of the authentication scheme, it therefore can be necessary to
-   use a TLS-secured connection ("Transport Layer Security", <xref target="RFC5246"/>).
-</t>
-<t>
    Authentication parameters are name=value pairs, where the name token is
    matched case-insensitively,
    and each parameter name &MUST; only occur once per challenge.
@@ -215,8 +209,8 @@
 </artwork></figure>
 <x:note>
   <t>
-     &Note; Many clients fail to parse challenges containing unknown
-     schemes. A workaround for this problem is to list well-supported schemes
+     &Note; Many clients fail to parse a challenge that contains an unknown
+     scheme. A workaround for this problem is to list well-supported schemes
      (such as "basic") first.<!-- see http://greenbytes.de/tech/tc/httpauth/#multibasicunknown2 -->
   </t>
 </x:note>
@@ -233,13 +227,17 @@
    request.
 </t>
 <t>
-   Both the <x:ref>Authorization</x:ref> field value and the <x:ref>Proxy-Authorization</x:ref> field value
-   contain the client's credentials for the realm of the resource being
-   requested, based upon a challenge received in a response (possibly at
-   some point in the past). When creating their values, the user agent ought to
-   do so by selecting the challenge with what it considers to be the most
-   secure auth-scheme that it understands, obtaining credentials from the user
-   as appropriate.
+   Both the <x:ref>Authorization</x:ref> field value and the
+   <x:ref>Proxy-Authorization</x:ref> field value contain the client's
+   credentials for the realm of the resource being requested, based upon a
+   challenge received in a response (possibly at some point in the past).
+   When creating their values, the user agent ought to do so by selecting the
+   challenge with what it considers to be the most secure auth-scheme that it
+   understands, obtaining credentials from the user as appropriate.
+   Transmission of credentials within header field values implies significant
+   security considerations regarding the confidentiality of the underlying
+   connection, as described in
+   <xref target="confidentiality.of.credentials"/>.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="credentials"/>
   <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>token68</x:ref> / #<x:ref>auth-param</x:ref> ) ]
@@ -265,10 +263,10 @@
 </t>
 <t>
    HTTP does not restrict applications to this simple challenge-response
-   framework for access authentication. Additional mechanisms can be used, such
-   as authentication at the transport level or via message encapsulation, and
-   with additional header fields specifying authentication information. However,
-   such additional mechanisms are not defined by this specification.
+   framework for access authentication. Additional mechanisms can be used,
+   such as authentication at the transport level or via message encapsulation,
+   and with additional header fields specifying authentication information.
+   However, such additional mechanisms are not defined by this specification.
 </t>
 <t>
    A proxy &MUST; forward the <x:ref>WWW-Authenticate</x:ref> and
@@ -701,6 +699,32 @@
    including common pitfalls for implementing and using the authentication
    schemes found in practice.
 </t>
+
+<section title="Confidentiality of Credentials" anchor="confidentiality.of.credentials">
+<t>
+   The HTTP authentication framework does not define a single mechanism for
+   maintaining the confidentiality of credentials; instead, each
+   authentication scheme defines how the credentials are encoded prior to
+   transmission. While this provides flexibility for the development of future
+   authentication schemes, it is inadequate for the protection of existing
+   schemes that provide no confidentiality on their own, or that do not
+   sufficiently protect against replay attacks. Furthermore, if the server
+   expects credentials that are specific to each individual user, the exchange
+   of those credentials will have the effect of identifying that user even if
+   the content within credentials remains confidential.
+</t>
+<t>
+   HTTP depends on the security properties of the underlying transport or
+   session-level connection to provide confidential transmission of header
+   fields. In other words, if a server limits access to authenticated users
+   using this framework, the server needs to ensure that the connection is
+   properly secured in accordance with the nature of the authentication
+   scheme used. For example, services that depend on individual user
+   authentication often require a connection to be secured with TLS
+   ("Transport Layer Security", <xref target="RFC5246"/>) prior to exchanging
+   any credentials.
+</t>
+</section>
 
 <section title="Authentication Credentials and Idle Clients" anchor="auth.credentials.and.idle.clients">
 <t>
