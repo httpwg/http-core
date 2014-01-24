@@ -49,6 +49,8 @@
   <!ENTITY methods                "<xref target='Part2' x:rel='#methods' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY OPTIONS                "<xref target='Part2' x:rel='#OPTIONS' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY qvalue                 "<xref target='Part2' x:rel='#quality.values' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY request-header-fields  "<xref target='Part2' x:rel='#request.header.fields' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY response-control-data  "<xref target='Part2' x:rel='#response.control.data' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY resource               "<xref target='Part2' x:rel='#resources' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY semantics              "<xref target='Part2' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY status-codes           "<xref target='Part2' x:rel='#status.codes' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -1971,7 +1973,7 @@ Content-Type: text/plain
    buffers, which enables the sender to retain connection persistence and the
    recipient to know when it has received the entire message.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="chunked-body"><!--terminal production--></iref><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="false" item="Grammar" subitem="trailer-part"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="chunked-body"><!--terminal production--></iref><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="false" item="Grammar" subitem="trailer-part"/><iref primary="false" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-data"/>
   <x:ref>chunked-body</x:ref>   = *<x:ref>chunk</x:ref>
                    <x:ref>last-chunk</x:ref>
                    <x:ref>trailer-part</x:ref>
@@ -2004,7 +2006,7 @@ Content-Type: text/plain
    sake of supplying per-chunk metadata (such as a signature or hash),
    mid-message control information, or randomization of message body size.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="chunked-body"><!--terminal production--></iref><iref primary="true" item="Grammar" subitem="chunk"/><iref primary="true" item="Grammar" subitem="chunk-size"/><iref primary="true" item="Grammar" subitem="last-chunk"/><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/><iref primary="true" item="Grammar" subitem="chunk-data"/><iref primary="false" item="Grammar" subitem="trailer-part"/><iref primary="true" item="Grammar" subitem="quoted-str-nf"/><iref primary="true" item="Grammar" subitem="qdtext-nf"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="chunked-body"><!--terminal production--></iref><iref primary="true" item="Grammar" subitem="chunk-ext"/><iref primary="true" item="Grammar" subitem="chunk-ext-name"/><iref primary="true" item="Grammar" subitem="chunk-ext-val"/>
   <x:ref>chunk-ext</x:ref>      = *( ";" <x:ref>chunk-ext-name</x:ref> [ "=" <x:ref>chunk-ext-val</x:ref> ] )
 
   <x:ref>chunk-ext-name</x:ref> = <x:ref>token</x:ref>
@@ -2039,42 +2041,37 @@ Content-Type: text/plain
    identical to header fields, except they are sent in a chunked trailer
    instead of the message's header section.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="trailer-part"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="trailer-part"/><iref primary="false" item="Grammar" subitem="header-field"/>
   <x:ref>trailer-part</x:ref>   = *( <x:ref>header-field</x:ref> <x:ref>CRLF</x:ref> )
 </artwork></figure>
 <t>
-   A sender &MUST-NOT; generate a trailer that contains a field which needs to
-   be known by the recipient before it can begin processing the message body.
-   For example, most recipients need to know the values of
-   <x:ref>Content-Encoding</x:ref> and <x:ref>Content-Type</x:ref> in order to
-   select a content handler, so placing those fields in a trailer would force
-   the recipient to buffer the entire body before it could begin, greatly
-   increasing user-perceived latency and defeating one of the main advantages
-   of using chunked to send data streams of unknown length.
-   A sender &MUST-NOT; generate a trailer containing a
-   <x:ref>Transfer-Encoding</x:ref>,
-   <x:ref>Content-Length</x:ref>, or
-   <x:ref>Trailer</x:ref> field.
+   A sender &MUST-NOT; generate a trailer that contains a field necessary for
+   message framing (e.g., <x:ref>Transfer-Encoding</x:ref> and
+   <x:ref>Content-Length</x:ref>), routing (e.g., <x:ref>Host</x:ref>),
+   request modifiers (e.g., controls and conditionals in
+   &request-header-fields;), authentication (e.g., see <xref target="Part7"/>
+   and <xref target="RFC6265"/>), response control data (e.g., see
+   &response-control-data;), or determining how to process the payload
+   (e.g., <x:ref>Content-Encoding</x:ref>, <x:ref>Content-Type</x:ref>,
+   <x:ref>Content-Range</x:ref>, and <x:ref>Trailer</x:ref>).
 </t>
 <t>
-   A server &MUST; generate an empty trailer with the chunked transfer coding
-   unless at least one of the following is true:
-  <list style="numbers">
-    <t>the request included a <x:ref>TE</x:ref> header field that indicates
-    "trailers" is acceptable in the transfer coding of the response, as
-    described in <xref target="header.te"/>; or,</t>
-     
-    <t>the trailer fields consist entirely of optional metadata and the
-    recipient could use the message (in a manner acceptable to the generating
-    server) without receiving that metadata. In other words, the generating
-    server is willing to accept the possibility that the trailer fields might
-    be silently discarded along the path to the client.</t>
-  </list>
+   When a chunked message containing a non-empty trailer is received, the
+   recipient &MAY; process the fields (aside from those forbidden above)
+   as if they were appended to the message's header section.
+   A recipient &MUST; ignore (or consider as an error) any fields that are
+   forbidden to be sent in a trailer, since processing them as if they were
+   present in the header section might bypass external security filters.
 </t>
 <t>
-   The above requirement prevents the need for an infinite buffer when a
-   message is being received by an HTTP/1.1 (or later) proxy and forwarded to
-   an HTTP/1.0 recipient.
+   Unless the request includes a <x:ref>TE</x:ref> header field indicating
+   "trailers" is acceptable, as described in <xref target="header.te"/>, a
+   server &SHOULD-NOT; generate trailer fields that it believes are necessary
+   for the user agent to receive. Without a TE containing "trailers", the
+   server ought to assume that the trailer fields might be silently discarded
+   along the path to the user agent. This requirement allows intermediaries to
+   forward a de-chunked message to an HTTP/1.0 recipient without buffering the
+   entire response.
 </t>
 </section>
 
@@ -2092,10 +2089,11 @@ Content-Type: text/plain
      length := length + chunk-size
      read chunk-size, chunk-ext (if any), and CRLF
   }
-  read header-field
-  while (header-field not empty) {
-     append header-field to existing header fields
-     read header-field
+  read trailer field
+  while (trailer field is not empty) {
+     if trailer field is allowed to be sent in a trailer,
+         append trailer field to existing header fields
+     read trailer-field
   }
   Content-Length := length
   Remove "chunked" from Transfer-Encoding
@@ -2228,7 +2226,7 @@ Content-Type: text/plain
    which is useful if the message is being streamed and the recipient wishes
    to confirm an integrity check on the fly.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
   <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
 </artwork></figure>
 </section>
