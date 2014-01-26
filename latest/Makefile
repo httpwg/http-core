@@ -96,3 +96,30 @@ outlineALL.html:	$(TARGETS_XHTML) \
 
 httpbis.abnf:	$(TARGETS_ABNF)
 	./common-abnf.sh $^ > $@
+
+consistency.txt:	$(TARGETS_XML)
+	rm -f $@
+	echo P1 >> $@
+	echo >> $@
+	saxon p1-messaging.xml consistency-check.xslt >> $@
+	echo >> $@
+	echo P2 >> $@
+	echo >> $@
+	saxon p2-semantics.xml consistency-check.xslt >> $@
+	echo >> $@
+	echo P4 >> $@
+	echo >> $@
+	saxon p4-conditional.xml consistency-check.xslt >> $@
+	echo >> $@
+	echo P5 >> $@
+	echo >> $@
+	saxon p5-range.xml consistency-check.xslt >> $@
+	echo >> $@
+	echo P6 >> $@
+	echo >> $@
+	saxon p6-cache.xml consistency-check.xslt >> $@
+	echo >> $@
+	echo P7 >> $@
+	echo >> $@
+	saxon p7-auth.xml consistency-check.xslt >> $@
+	echo >> $@
