@@ -1944,27 +1944,33 @@ Host: www.example.org
          <div id="effective.request.uri">
             <div id="rfc.iref.e.1"></div>
             <h2 id="rfc.section.5.5"><a href="#rfc.section.5.5">5.5</a>&nbsp;<a href="#effective.request.uri">Effective Request URI</a></h2>
-            <p id="rfc.section.5.5.p.1">A server that receives an HTTP request message <em class="bcp14">MUST</em> reconstruct the user agent's original target URI, based on the pieces of information learned from the request-target, <a href="#header.host" class="smpl">Host</a> header field, and connection context, in order to identify the intended target resource and properly service the request.
-               The URI derived from this reconstruction process is referred to as the "<dfn>effective request URI</dfn>".
+            <p id="rfc.section.5.5.p.1">Since the request-target often contains only part of the user agent's target URI, a server reconstructs the intended target
+               as an "<dfn>effective request URI</dfn>" to properly service the request. This reconstruction involves both the server's local configuration and information communicated
+               in the request-target, <a href="#header.host" class="smpl">Host</a> header field, and connection context.
             </p>
             <p id="rfc.section.5.5.p.2">For a user agent, the effective request URI is the target URI.</p>
             <p id="rfc.section.5.5.p.3">If the request-target is in absolute-form, then the effective request URI is the same as the request-target. Otherwise, the
-               effective request URI is constructed as follows.
+               effective request URI is constructed as follows: 
             </p>
-            <p id="rfc.section.5.5.p.4">If the request is received over a TLS-secured TCP connection, then the effective request URI's scheme is "https"; otherwise,
-               the scheme is "http".
-            </p>
-            <p id="rfc.section.5.5.p.5">If the request-target is in authority-form, then the effective request URI's authority component is the same as the request-target.
-               Otherwise, if a <a href="#header.host" class="smpl">Host</a> header field is supplied with a non-empty field-value, then the authority component is the same as the Host field-value. Otherwise,
-               the authority component is the concatenation of the default host name configured for the server, a colon (":"), and the connection's
-               incoming TCP port number in decimal form.
-            </p>
-            <p id="rfc.section.5.5.p.6">If the request-target is in authority-form or asterisk-form, then the effective request URI's combined path and query component
-               is empty. Otherwise, the combined path and query component is the same as the request-target.
-            </p>
-            <p id="rfc.section.5.5.p.7">The components of the effective request URI, once determined as above, can be combined into absolute-URI form by concatenating
-               the scheme, "://", authority, and combined path and query component.
-            </p>
+            <ul class="empty">
+               <li>If the server's configuration (or outbound gateway) provides a fixed URI scheme, that scheme is used for the effective request
+                  URI. Otherwise, if the request is received over a TLS-secured TCP connection, the effective request URI's scheme is "https";
+                  if not, the scheme is "http".
+               </li>
+               <li>If the server's configuration (or outbound gateway) provides a fixed URI authority component, that authority is used for the
+                  effective request URI. If not, then if the request-target is in authority-form, the effective request URI's authority component
+                  is the same as the request-target. If not, then if a <a href="#header.host" class="smpl">Host</a> header field is supplied with a non-empty field-value, the authority component is the same as the Host field-value. Otherwise,
+                  the authority component is assigned the default name configured for the server and, if the connection's incoming TCP port
+                  number differs from the default port for the effective request URI's scheme, then a colon (":") and the incoming port number
+                  (in decimal form) are appended to the authority component.
+               </li>
+               <li>If the request-target is in authority-form or asterisk-form, the effective request URI's combined path and query component
+                  is empty. Otherwise, the combined path and query component is the same as the request-target.
+               </li>
+               <li>The components of the effective request URI, once determined as above, can be combined into absolute-URI form by concatenating
+                  the scheme, "://", authority, and combined path and query component.
+               </li>
+            </ul>
             <div id="rfc.figure.u.48"></div>
             <p>Example 1: the following message received over an insecure TCP connection</p><pre class="text">GET /pub/WWW/TheProject.html HTTP/1.1
 Host: www.example.org:8080
@@ -1975,10 +1981,14 @@ Host: www.example.org:8080
 Host: www.example.org
 </pre><div id="rfc.figure.u.51"></div>
             <p>has an effective request URI of</p><pre class="text">https://www.example.org
-</pre><p id="rfc.section.5.5.p.12">An origin server that does not allow resources to differ by requested host <em class="bcp14">MAY</em> ignore the <a href="#header.host" class="smpl">Host</a> field-value and instead replace it with a configured server name when constructing the effective request URI.
+</pre><p id="rfc.section.5.5.p.8">Recipients of an HTTP/1.0 request that lacks a <a href="#header.host" class="smpl">Host</a> header field might need to use heuristics (e.g., examination of the URI path for something unique to a particular host) in
+               order to guess the effective request URI's authority component.
             </p>
-            <p id="rfc.section.5.5.p.13">Recipients of an HTTP/1.0 request that lacks a <a href="#header.host" class="smpl">Host</a> header field <em class="bcp14">MAY</em> attempt to use heuristics (e.g., examination of the URI path for something unique to a particular host) in order to guess
-               the effective request URI's authority component.
+            <p id="rfc.section.5.5.p.9">Once the effective request URI has been constructed, an origin server needs to decide whether or not to provide service for
+               that URI via the connection in which the request was received. For example, the request might have been misdirected, deliberately
+               or accidentally, such that the information within a received absolute-form URI or <a href="#header.host" class="smpl">Host</a> header field differs from the host or port upon which the connection has been made. If the connection is from a trusted gateway,
+               that inconsistency might be expected; otherwise, it might indicate an attempt to bypass security filters, trick the server
+               into delivering non-public content, or poison a cache. See <a href="#security.considerations" title="Security Considerations">Section&nbsp;9</a> for security considerations regarding message routing.
             </p>
          </div>
          <div id="associating.response.to.request">

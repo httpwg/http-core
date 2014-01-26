@@ -2495,12 +2495,12 @@ Host: www.example.org
   <iref primary="true" item="effective request URI"/>
   <x:anchor-alias value="effective request URI"/>
 <t>
-   A server that receives an HTTP request message &MUST; reconstruct
-   the user agent's original target URI, based on the pieces of information
-   learned from the request-target, <x:ref>Host</x:ref> header field, and
-   connection context, in order to identify the intended target resource and
-   properly service the request. The URI derived from this reconstruction
-   process is referred to as the "<x:dfn>effective request URI</x:dfn>".
+   Since the request-target often contains only part of the user agent's
+   target URI, a server reconstructs the intended target as an
+   "<x:dfn>effective request URI</x:dfn>" to properly service the request.
+   This reconstruction involves both the server's local configuration and
+   information communicated in the request-target, <x:ref>Host</x:ref> header
+   field, and connection context.
 </t>
 <t>
    For a user agent, the effective request URI is the target URI.
@@ -2508,24 +2508,29 @@ Host: www.example.org
 <t>
    If the request-target is in absolute-form, then the effective request URI
    is the same as the request-target.  Otherwise, the effective request URI
-   is constructed as follows.
+   is constructed as follows:
+<list style="empty">
+<t>
+   If the server's configuration (or outbound gateway) provides a fixed URI
+   scheme, that scheme is used for the effective request URI.
+   Otherwise, if the request is received over a TLS-secured TCP connection,
+   the effective request URI's scheme is "https"; if not, the scheme is "http".
 </t>
 <t>
-   If the request is received over a TLS-secured TCP connection,
-   then the effective request URI's scheme is "https"; otherwise, the
-   scheme is "http".
-</t>
-<t>
-   If the request-target is in authority-form, then the effective
+   If the server's configuration (or outbound gateway) provides a fixed URI
+   authority component, that authority is used for the effective request URI.
+   If not, then if the request-target is in authority-form, the effective
    request URI's authority component is the same as the request-target.
-   Otherwise, if a <x:ref>Host</x:ref> header field is supplied with a
-   non-empty field-value, then the authority component is the same as the
-   Host field-value. Otherwise, the authority component is the concatenation of
-   the default host name configured for the server, a colon (":"), and the
-   connection's incoming TCP port number in decimal form.
+   If not, then if a <x:ref>Host</x:ref> header field is supplied with a
+   non-empty field-value, the authority component is the same as the
+   Host field-value. Otherwise, the authority component is assigned
+   the default name configured for the server and, if the connection's
+   incoming TCP port number differs from the default port for the effective
+   request URI's scheme, then a colon (":") and the incoming port number (in
+   decimal form) are appended to the authority component.
 </t>
 <t>
-   If the request-target is in authority-form or asterisk-form, then the
+   If the request-target is in authority-form or asterisk-form, the
    effective request URI's combined path and query component is empty.
    Otherwise, the combined path and query component is the same as the
    request-target.
@@ -2534,6 +2539,8 @@ Host: www.example.org
    The components of the effective request URI, once determined as above,
    can be combined into absolute-URI form by concatenating the scheme,
    "://", authority, and combined path and query component.
+</t>
+</list>
 </t>
 <figure>
 <preamble>
@@ -2570,15 +2577,23 @@ https://www.example.org
 </artwork>
 </figure>
 <t>
-   An origin server that does not allow resources to differ by requested
-   host &MAY; ignore the <x:ref>Host</x:ref> field-value and instead replace it
-   with a configured server name when constructing the effective request URI.
-</t>
-<t>
    Recipients of an HTTP/1.0 request that lacks a <x:ref>Host</x:ref> header
-   field &MAY; attempt to use heuristics (e.g., examination of the URI path for
+   field might need to use heuristics (e.g., examination of the URI path for
    something unique to a particular host) in order to guess the
    effective request URI's authority component.
+</t>
+<t>
+   Once the effective request URI has been constructed, an origin server needs
+   to decide whether or not to provide service for that URI via the connection
+   in which the request was received. For example, the request might have
+   been misdirected, deliberately or accidentally, such that the information
+   within a received absolute-form URI or <x:ref>Host</x:ref> header field
+   differs from the host or port upon which the connection has been made.
+   If the connection is from a trusted gateway, that inconsistency might be
+   expected; otherwise, it might indicate an attempt to bypass security
+   filters, trick the server into delivering non-public content, or poison
+   a cache. See <xref target="security.considerations"/> for security
+   considerations regarding message routing.
 </t>
 </section>
 
