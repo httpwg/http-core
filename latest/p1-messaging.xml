@@ -1202,18 +1202,22 @@ Content-Type: text/plain
   <x:anchor-alias value="field-content"/>
   <x:anchor-alias value="field-name"/>
   <x:anchor-alias value="field-value"/>
+  <x:anchor-alias value="field-vchar"/>
   <x:anchor-alias value="obs-fold"/>
 <t>
    Each header field consists of a case-insensitive field name
    followed by a colon (":"), optional leading whitespace, the field value,
    and optional trailing whitespace.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="header-field"/><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-content"/><iref primary="true" item="Grammar" subitem="obs-fold"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="header-field"/><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/><iref primary="true" item="Grammar" subitem="obs-fold"/>
   <x:ref>header-field</x:ref>   = <x:ref>field-name</x:ref> ":" <x:ref>OWS</x:ref> <x:ref>field-value</x:ref> <x:ref>OWS</x:ref>
+
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
   <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
-  <x:ref>field-content</x:ref>  = *( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
-  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref> ( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
+  <x:ref>field-content</x:ref>  = <x:ref>field-vchar</x:ref> [ *( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> ) <x:ref>field-vchar</x:ref> ]
+  <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
+
+  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref> 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
                  ; obsolete line folding
                  ; see <xref target="field.parsing"/>
 </artwork></figure>
@@ -1362,13 +1366,6 @@ Content-Type: text/plain
    occurring before the first non-whitespace octet of the field value or after
    the last non-whitespace octet of the field value ought to be excluded by
    parsers when extracting the field value from a header field.
-</t>
-<t>
-   A recipient of field-content containing multiple sequential octets of
-   optional (OWS) or required (RWS) whitespace &SHOULD; either replace the
-   sequence with a single SP or transform any non-SP octets in the sequence to
-   SP octets before interpreting the field value or forwarding the message
-   downstream.
 </t>
 <t>
    Historically, HTTP header field values could be extended over multiple
@@ -5336,9 +5333,10 @@ Zhong Yu.
  / %x5D-7E ; ']'-'~'
  / obs-text
 
-<x:ref>field-content</x:ref> = *( HTAB / SP / VCHAR / obs-text )
+<x:ref>field-content</x:ref> = field-vchar [ *( SP / HTAB ) field-vchar ]
 <x:ref>field-name</x:ref> = token
 <x:ref>field-value</x:ref> = *( field-content / obs-fold )
+<x:ref>field-vchar</x:ref> = VCHAR / obs-text
 <x:ref>fragment</x:ref> = &lt;fragment, defined in [RFC3986], Section 3.5&gt;
 
 <x:ref>header-field</x:ref> = field-name ":" OWS field-value OWS
@@ -5352,7 +5350,7 @@ Zhong Yu.
 <x:ref>message-body</x:ref> = *OCTET
 <x:ref>method</x:ref> = token
 
-<x:ref>obs-fold</x:ref> = CRLF ( SP / HTAB )
+<x:ref>obs-fold</x:ref> = CRLF 1*( SP / HTAB )
 <x:ref>obs-text</x:ref> = %x80-FF
 <x:ref>origin-form</x:ref> = absolute-path [ "?" query ]
 
