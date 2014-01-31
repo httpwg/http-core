@@ -18,8 +18,9 @@
   <!ENTITY Note "<x:h xmlns:x='http://purl.org/net/xml2rfc/ext'>Note:</x:h>">
   <!ENTITY caching-overview       "<xref target='Part6' x:rel='#caching.overview' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY cache-incomplete       "<xref target='Part6' x:rel='#response.cacheability' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY cache-poisoning        "<xref target='Part6' x:rel='#security.considerations' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY payload                "<xref target='Part2' x:rel='#payload' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY media-type            "<xref target='Part2' x:rel='#media.type' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY media-type             "<xref target='Part2' x:rel='#media.type' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY content-codings        "<xref target='Part2' x:rel='#content.codings' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY CONNECT                "<xref target='Part2' x:rel='#CONNECT' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY content.negotiation    "<xref target='Part2' x:rel='#content.negotiation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -901,6 +902,8 @@ Content-Type: text/plain
    target the identified resource. The delegated nature of registered names
    and IP addresses creates a federated namespace, based on control over the
    indicated host and port, whether or not an HTTP server is present.
+   See <xref target="establishing.authority"/> for security considerations
+   related to establishing authority.
 </t>
 <t>
    When an "http" URI is used within a context that calls for access to the
@@ -1433,7 +1436,8 @@ Content-Type: text/plain
    A server that receives a request header field, or set of fields, larger
    than it wishes to process &MUST; respond with an appropriate
    <x:ref>4xx (Client Error)</x:ref> status code. Ignoring such header fields
-   would increase the server's vulnerability to request smuggling attacks.
+   would increase the server's vulnerability to request smuggling attacks
+   (<xref target="request.smuggling"/>).
 </t>
 <t>
    A client &MAY; discard or truncate received header fields that are larger
@@ -1705,7 +1709,7 @@ Content-Type: text/plain
    Since there is no predefined limit to the length of a payload, a
    recipient &MUST; anticipate potentially large decimal numerals and
    prevent parsing errors due to integer conversion overflows
-   (<xref target="attack.protocol.element.size.overflows"/>).
+   (<xref target="attack.protocol.element.length"/>).
 </t>
 <t>
    If a message is received that has multiple Content-Length header fields
@@ -1770,19 +1774,18 @@ Content-Type: text/plain
     <t>
      If a message is received with both a <x:ref>Transfer-Encoding</x:ref>
      and a <x:ref>Content-Length</x:ref> header field, the Transfer-Encoding
-     overrides the Content-Length. Such a message might indicate an attempt
-     to perform request or response smuggling (bypass of security-related
-     checks on message routing or content) and thus ought to be handled as
-     an error.  A sender &MUST; remove the received Content-Length field
-     prior to forwarding such a message downstream.
+     overrides the Content-Length. Such a message might indicate an attempt to
+     perform request smuggling (<xref target="request.smuggling"/>) or
+     response splitting (<xref target="response.splitting"/>) and ought to be
+     handled as an error. A sender &MUST; remove the received Content-Length
+     field prior to forwarding such a message downstream.
     </t></x:lt>
     <x:lt><t>
      If a message is received without <x:ref>Transfer-Encoding</x:ref> and with
      either multiple <x:ref>Content-Length</x:ref> header fields having
      differing field-values or a single Content-Length header field having an
      invalid value, then the message framing is invalid and
-     the recipient &MUST; treat it as an unrecoverable error to prevent
-     request or response smuggling.
+     the recipient &MUST; treat it as an unrecoverable error.
      If this is a request message, the server &MUST; respond with
      a <x:ref>400 (Bad Request)</x:ref> status code and then close the connection.
      If this is a response message received by a proxy,
@@ -1915,7 +1918,10 @@ Content-Type: text/plain
    from the CRLF terminator, treat any form of whitespace as the SP separator
    while ignoring preceding or trailing whitespace;
    such whitespace includes one or more of the following octets:
-   SP, HTAB, VT (%x0B), FF (%x0C), or bare CR. 
+   SP, HTAB, VT (%x0B), FF (%x0C), or bare CR.
+   However, lenient parsing can result in security vulnerabilities if there
+   are multiple recipients of the message and each has its own unique
+   interpretation of robustness (see <xref target="request.smuggling"/>).
 </t>
 <t>
    When a server listening only for HTTP request messages, or processing
@@ -3890,22 +3896,64 @@ Upgrade: HTTP/2.0
    payloads are addressed in &semantics;.
 </t>
 
-<section title="DNS-related Attacks" anchor="dns.related.attacks">
+<section title="Establishing Authority" anchor="establishing.authority">
+  <iref item="authoritative response" primary="true"/>
+  <iref item="phishing" primary="true"/>
 <t>
-   HTTP clients rely heavily on the Domain Name Service (DNS), and are thus
-   generally prone to security attacks based on the deliberate misassociation
-   of IP addresses and DNS names not protected by DNSSEC. Clients need to be
-   cautious in assuming the validity of an IP number/DNS name association unless
-   the response is protected by DNSSEC (<xref target="RFC4033"/>).
+   HTTP relies on the notion of an <x:dfn>authoritative response</x:dfn>: a
+   response that has been determined by (or at the direction of) the authority
+   identified within the target URI to be the most appropriate response for
+   that request given the state of the target resource at the time of
+   response message origination. That is the essence of what a user is looking
+   for when they make any HTTP request, especially when it is a request to an
+   authority trusted by that user to provide a specific service. Providing a
+   response from a non-authoritative source, such as a shared cache, is often
+   useful to improve performance and availability, but only to the extent that
+   the source can be trusted or that a distrusted response can be safely used.
+</t>
+<t>
+   Unfortunately, establishing authority can be difficult.
+   For example, <x:dfn>phishing</x:dfn> is an attack on the user's perception
+   of authority, where that perception can be misled by presenting similar
+   branding in hypertext, possibly aided by userinfo obfuscating the authority
+   component (see <xref target="http.uri"/>).
+   User agents can reduce the impact of phishing attacks by enabling users to
+   easily inspect a target URI prior to making an action, by prominently
+   distinguishing (or rejecting) userinfo when present, and by not sending
+   stored credentials and cookies when the referring document is from an
+   unknown or untrusted source.
+</t>
+<t>
+   When a registered name is used in the authority component, the "http" URI
+   scheme (<xref target="http.uri"/>) relies on the user's local name
+   resolution service to determine where it can find authoritative responses.
+   This means that any attack on a user's network host table, cached names, or
+   name resolution libraries becomes an avenue for attack on establishing
+   authority. Likewise, the user's choice of server for Domain Name Service
+   (DNS), and the hierarchy of servers from which it obtains resolution
+   results, could impact the authenticity of address mappings;
+   DNSSEC (<xref target="RFC4033"/>) is one way to improve authenticity.
+</t>
+<t>
+   Furthermore, after an IP address is obtained, establishing authority is
+   vulnerable to attacks on Internet Protocol routing.
+</t>
+<t>
+   The "https" scheme (<xref target="https.uri"/>) is intended to prevent
+   (or at least reveal) many of these potential attacks on establishing
+   authority, assuming the negotiated TLS connection is secured in a way that
+   verifies the communicating server's identity matches the target URI's
+   authority component (see <xref target="RFC2818"/> and
+   <xref target="Georgiev"/>).
 </t>
 </section>
 
-<section title="Intermediaries and Caching" anchor="attack.intermediaries">
+<section title="Risks of Intermediaries" anchor="risks.intermediaries">
 <t>
-   By their very nature, HTTP intermediaries are men-in-the-middle, and
+   By their very nature, HTTP intermediaries are men-in-the-middle, and thus
    represent an opportunity for man-in-the-middle attacks. Compromise of
    the systems on which the intermediaries run can result in serious security
-   and privacy problems. Intermediaries have access to security-related
+   and privacy problems. Intermediaries might have access to security-related
    information, personal information about individual users and
    organizations, and proprietary information belonging to users and
    content providers. A compromised intermediary, or an intermediary
@@ -3915,7 +3963,7 @@ Upgrade: HTTP/2.0
 </t>
 <t>
    Intermediaries that contain a shared cache are especially vulnerable
-   to cache poisoning attacks.
+   to cache poisoning attacks, as described in &cache-poisoning;.
 </t>
 <t>
    Implementers need to consider the privacy and security
@@ -3929,33 +3977,93 @@ Upgrade: HTTP/2.0
 </t>
 </section>
 
-<section title="Buffer Overflows" anchor="attack.protocol.element.size.overflows">
+<section title="Attacks via Protocol Element Length" anchor="attack.protocol.element.length">
 <t>
-   Because HTTP uses mostly textual, character-delimited fields, attackers can
-   overflow buffers in implementations, and/or perform a Denial of Service
-   against implementations that accept fields with unlimited lengths.
+   Because HTTP uses mostly textual, character-delimited fields, parsers are
+   often vulnerable to attacks based on sending very long (or very slow)
+   streams of data, particularly where an implementation is expecting a
+   protocol element with no predefined length.
 </t>
 <t>
-   To promote interoperability, this specification makes specific
-   recommendations for minimum size limits on request-line
-   (<xref target="request.line"/>)
+   To promote interoperability, specific recommendations are made for minimum
+   size limits on request-line (<xref target="request.line"/>)
    and header fields (<xref target="header.fields"/>). These are
    minimum recommendations, chosen to be supportable even by implementations
    with limited resources; it is expected that most implementations will
    choose substantially higher limits.
 </t>
 <t>
-   This specification also provides a way for servers to reject messages that
+   A server can reject messages that
    have request-targets that are too long (&status-414;) or request entities
    that are too large (&status-4xx;). Additional status codes related to
    capacity limits have been defined by extensions to HTTP
    <xref target="RFC6585"/>.
 </t>
 <t>
-   Recipients ought to carefully limit the extent to which they read other
-   fields, including (but not limited to) request methods, response status
-   phrases, header field-names, and body chunks, so as to avoid denial of
-   service attacks without impeding interoperability.
+   Recipients ought to carefully limit the extent to which they process other
+   protocol elements, including (but not limited to) request methods, response
+   status phrases, header field-names, numeric values, and body chunks.
+   Failure to limit such processing can result in buffer overflows, arithmetic
+   overflows, or increased vulnerability to denial of service attacks.
+</t>
+</section>
+
+<section title="Response Splitting" anchor="response.splitting">
+<t>
+   Response splitting (a.k.a, CRLF injection) is a common technique, used in
+   various attacks on Web usage, that exploits the line-based nature of HTTP
+   message framing and the ordered association of requests to responses on
+   persistent connections <xref target="Klein"/>. This technique can be
+   particularly damaging when the requests pass through a shared cache.
+</t>
+<t>
+   Response splitting exploits a vulnerability in servers (usually within an
+   application server) where an attacker can send encoded data within some
+   parameter of the request that is later decoded and echoed within any of the
+   response header fields of the response. If the decoded data is crafted to
+   look like the response has ended and a subsequent response has begun, the
+   response has been split and the content within the apparent second response
+   is controlled by the attacker. The attacker can then make any other request
+   on the same persistent connection and trick the recipients (including
+   intermediaries) into believing that the second half of the split is an
+   authoritative answer to the second request.
+</t>
+<t>
+   For example, a parameter within the request-target might be read by an
+   application server and reused within a redirect, resulting in the same
+   parameter being echoed in the <x:ref>Location</x:ref> header field of the
+   response. If the parameter is decoded by the application and not properly
+   encoded when placed in the response field, the attacker can send encoded
+   CRLF octets and other content that will make the application's single
+   response look like two or more responses. 
+</t>
+<t>
+   A common defense against response splitting is to filter requests for data
+   that looks like encoded CR and LF (e.g., "%0D" and "%0A"). However, that
+   assumes the application server is only performing URI decoding, rather
+   than more obscure data transformations like charset transcoding, XML entity
+   translation, base64 decoding, sprintf reformatting, etc.  A more effective
+   mitigation is to prevent anything other than the server's core protocol
+   libraries from sending a CR or LF within the header section, which means
+   restricting the output of header fields to APIs that filter for bad octets
+   and not allowing application servers to write directly to the protocol
+   stream.
+</t>
+</section>
+
+<section title="Request Smuggling" anchor="request.smuggling">
+<t>
+   Request smuggling (<xref target="Linhart"/>) is a technique that exploits
+   differences in protocol parsing among various recipients to hide additional
+   requests (which might otherwise be blocked or disabled by policy) within an
+   apparently harmless request.  Like response splitting, request smuggling
+   can lead to a variety of attacks on HTTP usage.
+</t>
+<t>
+   This specification has introduced new requirements on request parsing,
+   particularly with regard to message framing in
+   <xref target="message.body.length"/>, to reduce the effectiveness of
+   request smuggling.
 </t>
 </section>
 
@@ -3987,7 +4095,22 @@ Upgrade: HTTP/2.0
 </t>
 </section>
 
-<section title="Server Log Information" anchor="abuse.of.server.log.information">
+<section title="Message Confidentiality" anchor="message.confidentiality">
+<t>
+   HTTP relies on underlying transport protocols to provide message
+   confidentiality when that is desired. HTTP has been specifically designed
+   to be independent of the transport protocol, such that it can be used
+   over many different forms of encrypted connection, with the selection of
+   such transports being identified by the choice of URI scheme or within
+   user agent configuration.
+</t>
+<t>
+   The "https" scheme can be used to identify resources that require a
+   confidential connection, as described in <xref target="https.uri"/>.
+</t>
+</section>
+
+<section title="Privacy of Server Log Information" anchor="privacy.of.server.log.information">
 <t>
    A server is in the position to save personal data about a user's requests
    over time, which might identify their reading patterns or subjects of
@@ -5052,6 +5175,41 @@ Zhong Yu.
     <date year="2001" month="November"/>
   </front>
   <seriesInfo name="ACM Transactions on Internet Technology" value="1(2)"/>
+</reference>
+
+<reference anchor="Klein" target="http://packetstormsecurity.com/papers/general/whitepaper_httpresponse.pdf">
+  <front>
+    <title>Divide and Conquer - HTTP Response Splitting, Web Cache Poisoning Attacks, and Related Topics</title>
+    <author initials="A." surname="Klein" fullname="Amit Klein">
+      <organization>Sanctum, Inc.</organization>
+    </author>
+    <date year="2004" month="March"/>
+  </front>
+</reference>
+
+<reference anchor="Georgiev" target="http://doi.acm.org/10.1145/2382196.2382204">
+  <front>
+    <title>The Most Dangerous Code in the World: Validating SSL Certificates in Non-browser Software</title>
+    <author initials="M." surname="Georgiev" fullname="Martin Georgiev"/>
+    <author initials="S." surname="Iyengar" fullname="Subodh Iyengar"/>
+    <author initials="S." surname="Jana" fullname="Suman Jana"/>
+    <author initials="R." surname="Anubhai" fullname="Rishita Anubhai"/>
+    <author initials="D." surname="Boneh" fullname="Dan Boneh"/>
+    <author initials="V." surname="Shmatikov" fullname="Vitaly Shmatikov"/>
+    <date year="2012" month="October"/>
+  </front>
+  <x:prose>In Proceedings of the 2012 ACM Conference on Computer and Communications Security (CCS '12), pp. 38-49</x:prose>
+</reference>
+
+<reference anchor="Linhart" target="http://www.watchfire.com/news/whitepapers.aspx">
+  <front>
+    <title>HTTP Request Smuggling</title>
+    <author initials="C." surname="Linhart" fullname="Chaim Linhart"/>
+    <author initials="A." surname="Klein" fullname="Amit Klein"/>
+    <author initials="R." surname="Heled" fullname="Ronen Heled"/>
+    <author initials="S." surname="Orrin" fullname="Steve Orrin"/>
+    <date year="2005" month="June"/>
+  </front>
 </reference>
 
 </references>
