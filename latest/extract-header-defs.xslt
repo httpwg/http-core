@@ -7,6 +7,10 @@
 
 <xsl:output indent="yes" omit-xml-declaration="yes"/>
 
+<!-- character translation tables -->
+<xsl:variable name="lcase" select="'abcdefghijklmnopqrstuvwxyz'" />
+<xsl:variable name="ucase" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'" />
+
 <xsl:template match="/">
   <xsl:variable name="table">
     <texttable align="left" suppress-title="true" anchor="iana.header.registration.table">
@@ -16,7 +20,7 @@
       <ttcol>Reference</ttcol>
       <xsl:text>&#10;</xsl:text>
       <xsl:apply-templates select="//section[iref[contains(@item,' header field') and @primary='true']]">
-        <xsl:sort select="iref[contains(@item,' header field') and @primary='true']/@item"/>
+        <xsl:sort select="translate(iref[contains(@item,' header field') and @primary='true']/@item,$ucase,$lcase)"/>
       </xsl:apply-templates>
     </texttable>
     <xsl:text>&#10;</xsl:text>
