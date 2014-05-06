@@ -19,7 +19,7 @@
   <xsl:variable name="generated"><section title="Collected ABNF" anchor="collected.abnf">
     <xsl:text>&#10;</xsl:text>
       <xsl:if test="not(starts-with($abnf,'p1-'))"><t>
-  In the collected ABNF below, list rules are expanded as per <xref target='Part1' x:rel='#notation'/>.
+  In the collected ABNF below, list rules are expanded as per <xref target='RFC7230' x:rel='#notation'/>.
 </t></xsl:if>
       <figure>
       <xsl:text>&#10;</xsl:text>
