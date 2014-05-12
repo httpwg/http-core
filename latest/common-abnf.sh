@@ -16,5 +16,6 @@ do
 done | \
 	fgrep -v ", defined in [Part" | \
 	fgrep -v ", defined in [RFC723" | \
+	fgrep -v ", see [RFC723" | \
 	sort | uniq | \
 	$bap/bap -k -i $bap/core.abnf
