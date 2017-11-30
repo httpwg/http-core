@@ -1,6 +1,6 @@
 ## HTTP/1.1 drafts editing arena (work in progress)
 
-This is an editor's group working area for the
+This is an editor team working area for the
 [IETF HTTP Working Group](https://httpwg.github.io/) and is subject to
 the WG's [contribution guidelines](CONTRIBUTING.md).
 
