@@ -1,8 +1,8 @@
 xml2rfc = "../../xml2rfc/xml2rfc.tcl"
-saxpath = "$(HOME)/java/saxon-8-9-j/saxon8.jar"
-saxon = java -classpath $(saxpath) net.sf.saxon.Transform -novw -l
+saxpath = "$(HOME)/java/saxon-9-7-j/saxon97he.jar"
+saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l
 
-stylesheet = ../myxml2rfc.xslt
+stylesheet = lib/myxml2rfc.xslt
 reduction  = ../../rfc2629xslt/clean-for-DTD.xslt
 bap  = ../../abnfparser/bap
 
@@ -54,7 +54,7 @@ clean:
 	rm -f $(TARGETS)
 
 %.html: %.xml $(stylesheet)
-	$(saxon) $< $(stylesheet) > $@
+	$(saxon) $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
 
 %.redxml: %.xml $(reduction)
 	$(saxon) $< $(reduction) > $@
@@ -72,7 +72,7 @@ clean:
 	$(saxon) $(basename $<).xml abnf2xml2rfc.xslt abnf="$<" >$@
 
 %.xhtml: %.xml ../../rfc2629xslt/rfc2629toXHTML.xslt
-	$(saxon) $< ../../rfc2629xslt/rfc2629toXHTML.xslt > $@
+	$(saxon) $< ../lib/rfc2629toXHTML.xslt > $@
 
 %.iana-headers: %.xml extract-header-defs.xslt
 	$(saxon) $< extract-header-defs.xslt > $@
