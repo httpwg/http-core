@@ -1,7 +1,7 @@
 #!/bin/sh
 # combine into a single ABNF
 
-bap=../../abnfparser/bap
+bap=bap
 
 [ $# -ne 0 ] || ( echo "combine-abnf.sh file..." >&2 ; exit 2 )
 
@@ -17,5 +17,5 @@ done | \
 	fgrep -v ", defined in [Part" | \
 	fgrep -v ", defined in [RFC723" | \
 	fgrep -v ", see [RFC723" | \
-	sort | uniq | \
+	LC_COLLATE=C sort | uniq | \
 	$bap/bap -k -i $bap/core.abnf

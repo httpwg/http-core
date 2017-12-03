@@ -1,10 +1,10 @@
 xml2rfc = xml2rfc
 saxpath = "$(HOME)/java/saxon-9-7-j/saxon97he.jar"
-saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l
+saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
 
 stylesheet = lib/myxml2rfc.xslt
 reduction  = lib/clean-for-DTD.xslt
-bap  = ../../abnfparser/bap
+bap = bap
 
 TARGETS_XML= p1-messaging.xml \
           p2-semantics.xml \
@@ -54,19 +54,19 @@ clean:
 	rm -f $(TARGETS)
 
 %.html: %.xml $(stylesheet)
-	$(saxon) -versionmsg:off $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
+	$(saxon) $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
 
 %.redxml: %.xml $(reduction)
-	$(saxon) -versionmsg:off $< $(reduction) > $@
+	$(saxon) $< $(reduction) > $@
 
 %.txt: %.redxml
 	$(xml2rfc) $< $@
 
-%.abnf: %.xml ../../rfc2629xslt/extract-artwork.xslt
-	$(saxon) $< ../../rfc2629xslt/extract-artwork.xslt type="abnf2616" >$@
+%.abnf: %.xml lib/extract-artwork.xslt
+	$(saxon) $< lib/extract-artwork.xslt type="abnf2616" >$@
 
 %.parsed-abnf: %.abnf
-	$(bap)/bap -i $(bap)/core.abnf < $< | sort | $(bap)/bap -k -i $(bap)/core.abnf -l 69 >$@
+	$(bap)/bap -i $(bap)/core.abnf < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -l 69 >$@
 
 %.abnf-appendix: %.parsed-abnf
 	$(saxon) $(basename $<).xml abnf2xml2rfc.xslt abnf="$<" >$@
