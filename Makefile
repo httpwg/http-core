@@ -1,9 +1,9 @@
-xml2rfc = "../../xml2rfc/xml2rfc.tcl"
+xml2rfc = xml2rfc
 saxpath = "$(HOME)/java/saxon-9-7-j/saxon97he.jar"
 saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l
 
 stylesheet = lib/myxml2rfc.xslt
-reduction  = ../../rfc2629xslt/clean-for-DTD.xslt
+reduction  = lib/clean-for-DTD.xslt
 bap  = ../../abnfparser/bap
 
 TARGETS_XML= p1-messaging.xml \
@@ -54,10 +54,10 @@ clean:
 	rm -f $(TARGETS)
 
 %.html: %.xml $(stylesheet)
-	$(saxon) $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
+	$(saxon) -versionmsg:off $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
 
 %.redxml: %.xml $(reduction)
-	$(saxon) $< $(reduction) > $@
+	$(saxon) -versionmsg:off $< $(reduction) > $@
 
 %.txt: %.redxml
 	$(xml2rfc) $< $@
