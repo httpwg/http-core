@@ -6,19 +6,26 @@ stylesheet = lib/myxml2rfc.xslt
 reduction  = lib/clean-for-DTD.xslt
 bap = bap
 
-TARGETS_XML= p1-messaging.xml \
-          p2-semantics.xml \
-          p4-conditional.xml \
-          p5-range.xml \
-          p6-cache.xml \
-          p7-auth.xml
+AUTH=draft-fielding-httpbis-http-auth-latest
+CACHE=draft-fielding-httpbis-http-cache-latest
+CONDITIONAL=draft-fielding-httpbis-http-conditional-latest
+MESSAGING=draft-fielding-httpbis-http-messaging-latest
+RANGE=draft-fielding-httpbis-http-range-latest
+SEMANTICS=draft-fielding-httpbis-http-semantics-latest
 
-TARGETS_ABNF= p1-messaging.abnf \
-          p2-semantics.abnf \
-          p4-conditional.abnf \
-          p5-range.abnf \
-          p6-cache.abnf \
-          p7-auth.abnf
+TARGETS_XML= $(MESSAGING).xml \
+          $(SEMANTICS).xml \
+          $(CONDITIONAL).xml \
+          $(RANGE).xml \
+          $(CACHE).xml \
+          $(AUTH).xml
+
+TARGETS_ABNF= $(MESSAGING).abnf \
+          $(SEMANTICS).abnf \
+          $(CONDITIONAL).abnf \
+          $(RANGE).abnf \
+          $(CACHE).abnf \
+          $(AUTH).abnf
 
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
 TARGETS_HTML= $(TARGETS_XML:.xml=.html)
@@ -33,19 +40,19 @@ TARGETS = $(TARGETS_HTML) \
           $(TARGETS_ABNF) \
           $(TARGETS_PARSEDABNF) \
           $(TARGETS_ABNFAPPENDIX) \
-          p1-messaging.iana-headers \
-          p2-semantics.iana-headers \
-          p2-semantics.iana-methods	\
-          p2-semantics.iana-status-codes \
-          p4-conditional.iana-headers \
-          p4-conditional.iana-status-codes \
-          p5-range.iana-headers \
-          p5-range.iana-status-codes \
-          p6-cache.iana-headers \
-          p6-cache.iana-warn-codes \
-          p6-cache.cache-directives \
-          p7-auth.iana-headers \
-          p7-auth.iana-status-codes \
+          $(MESSAGING).iana-headers \
+          $(SEMANTICS).iana-headers \
+          $(SEMANTICS).iana-methods	\
+          $(SEMANTICS).iana-status-codes \
+          $(CONDITIONAL).iana-headers \
+          $(CONDITIONAL).iana-status-codes \
+          $(RANGE).iana-headers \
+          $(RANGE).iana-status-codes \
+          $(CACHE).iana-headers \
+          $(CACHE).iana-warn-codes \
+          $(CACHE).cache-directives \
+          $(AUTH).iana-headers \
+          $(AUTH).iana-status-codes \
           httpbis.abnf
 
 all: $(TARGETS)
@@ -101,25 +108,25 @@ consistency.txt:	$(TARGETS_XML)
 	rm -f $@
 	echo P1 >> $@
 	echo >> $@
-	saxon p1-messaging.xml consistency-check.xslt >> $@
+	saxon $(MESSAGING).xml consistency-check.xslt >> $@
 	echo >> $@
 	echo P2 >> $@
 	echo >> $@
-	saxon p2-semantics.xml consistency-check.xslt >> $@
+	saxon $(SEMANTICS).xml consistency-check.xslt >> $@
 	echo >> $@
 	echo P4 >> $@
 	echo >> $@
-	saxon p4-conditional.xml consistency-check.xslt >> $@
+	saxon $(CONDITIONAL).xml consistency-check.xslt >> $@
 	echo >> $@
 	echo P5 >> $@
 	echo >> $@
-	saxon p5-range.xml consistency-check.xslt >> $@
+	saxon $(RANGE).xml consistency-check.xslt >> $@
 	echo >> $@
 	echo P6 >> $@
 	echo >> $@
-	saxon p6-cache.xml consistency-check.xslt >> $@
+	saxon $(CACHE).xml consistency-check.xslt >> $@
 	echo >> $@
 	echo P7 >> $@
 	echo >> $@
-	saxon p7-auth.xml consistency-check.xslt >> $@
+	saxon $(AUTH).xml consistency-check.xslt >> $@
 	echo >> $@
