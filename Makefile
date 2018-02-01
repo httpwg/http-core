@@ -1,5 +1,5 @@
 xml2rfc = xml2rfc
-saxpath = "$(HOME)/java/saxon-9-7-j/saxon97he.jar"
+saxpath = "$(HOME)/java/saxon-9-7/saxon9he.jar"
 saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
 
 stylesheet = lib/myxml2rfc.xslt
