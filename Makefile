@@ -6,6 +6,8 @@ stylesheet = lib/myxml2rfc.xslt
 reduction  = lib/clean-for-DTD.xslt
 bap = bap
 
+rfcdiff = rfcdiff --width 78 --body --stdout
+
 AUTH=draft-fielding-httpbis-http-auth-latest
 CACHE=draft-fielding-httpbis-http-cache-latest
 CONDITIONAL=draft-fielding-httpbis-http-conditional-latest
@@ -59,6 +61,14 @@ all: $(TARGETS)
 
 clean:
 	rm -f $(TARGETS)
+
+diffs: $(TARGETS_TXT)
+	$(rfcdiff) auth48/rfc7230.txt $(MESSAGING).txt > diff_messaging.html
+	$(rfcdiff) auth48/rfc7231.txt $(SEMANTICS).txt > diff_semantics.html
+	$(rfcdiff) auth48/rfc7232.txt $(CONDITIONAL).txt > diff_conditional.html
+	$(rfcdiff) auth48/rfc7233.txt $(RANGE).txt > diff_range.html
+	$(rfcdiff) auth48/rfc7234.txt $(CACHE).txt > diff_cache.html
+	$(rfcdiff) auth48/rfc7235.txt $(AUTH).txt > diff_auth.html
 
 %.html: %.xml $(stylesheet)
 	$(saxon) $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
