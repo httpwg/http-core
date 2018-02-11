@@ -1,7 +1,7 @@
 <!--
     Strip rfc2629.xslt extensions, generating XML input for MTR's xml2rfc
 
-    Copyright (c) 2006-2017, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2018, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -570,7 +570,7 @@
   </xsl:choose>
 </xsl:template>
 
-<xsl:template match="xref[node() and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//name//@anchor)]" mode="cleanup">
+<xsl:template match="xref[node() and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//name//@anchor or @target=//references/@anchor)]" mode="cleanup">
   <!-- remove the link -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
@@ -580,9 +580,22 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[not(node()) and (@target=//preamble/@anchor or @target=//spanx/@anchor)]" mode="cleanup">
-  <!-- fatal -->
-  <xsl:message terminate="yes">Broken xref <xsl:value-of select="@target"/> due to target being filtered out.</xsl:message>
+<xsl:template match="xref[not(node()) and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//references/@anchor)]" mode="cleanup">
+  <xsl:variable name="content">
+    <xsl:apply-templates select="."/>
+  </xsl:variable>
+  <xsl:value-of select="$content"/>
+</xsl:template>
+
+<xsl:template match="xref[not(node()) and (not(@format) or @format='default') and (@target=//section[@numbered='false']/@anchor)]" mode="cleanup">
+  <!-- link to unnumbered section -->
+  <xsl:copy>
+    <xsl:copy-of select="@target"/>
+    <xsl:variable name="content">
+      <xsl:apply-templates select="."/>
+    </xsl:variable>
+    <xsl:value-of select="$content"/>
+  </xsl:copy>
 </xsl:template>
 
 <xsl:template match="xref" mode="cleanup" priority="0">
@@ -1077,11 +1090,18 @@
   </xsl:choose>
 </xsl:template>
 
+<xsl:template match="references/@anchor" mode="cleanup"/>
+
 <!-- New reference attributes -->
-<xsl:template match="reference/@quoteTitle" mode="cleanup"/>
+<xsl:template match="reference/@quoteTitle" mode="cleanup">
+  <xsl:if test="$xml2rfc-ext-xml2rfc-backend >= 201706">
+    <xsl:attribute name="quote-title"><xsl:value-of select="."/></xsl:attribute>
+  </xsl:if>
+</xsl:template>
+
 <xsl:template match="reference" mode="cleanup">
   <reference>
-    <xsl:apply-templates select="@anchor|@target" mode="cleanup"/>
+    <xsl:apply-templates select="@anchor|@target|@quoteTitle" mode="cleanup"/>
     <xsl:choose>
       <xsl:when test="not(@target) and $xml2rfc-ext-link-rfc-to-info-page='yes' and seriesInfo[@name='BCP'] and starts-with(@anchor,'BCP')">
         <xsl:variable name="uri">
@@ -1169,7 +1189,7 @@
 <!-- References titles -->
 <xsl:template match="references" mode="cleanup">
   <references>
-    <xsl:copy-of select="@anchor|@toc"/>
+    <xsl:apply-templates select="@anchor|@toc" mode="cleanup"/>
     <xsl:variable name="title">
       <xsl:choose>
         <xsl:when test="name">
