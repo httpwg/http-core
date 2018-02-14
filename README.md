@@ -11,7 +11,7 @@ from source.
 ### HTTP/1.1 Message Syntax and Routing
 
 * [RFC7230](http://httpwg.org/specs/rfc7230.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7230.txt), [tracker](https://datatracker.ietf.org/doc/rfc7230/))
-* [Editors' Draft](https://dwid-org.github.io/http11ter/draft-fielding-httpbis-http-messaging.html) ([xml](https://dwid-org.github.io/http11ter/draft-fielding-httpbis-http-messaging-latest.xml))
+* [Editors' Draft](https://dwid-org.github.io/http11ter/draft-fielding-httpbis-http-messaging-latest.html) ([xml](https://dwid-org.github.io/http11ter/draft-fielding-httpbis-http-messaging-latest.xml))
 * [Open Issues](https://github.com/httpwg/http11bis/issues)
 
 ### HTTP/1.1 Semantics and Content
