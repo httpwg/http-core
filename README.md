@@ -3,7 +3,7 @@
 This is an editors team working area for the
 [IETF HTTP Working Group](https://httpwg.github.io/) and is subject to
 the WG's [contribution guidelines](CONTRIBUTING.md).
-The [building instructions](BUILDING.md) explain how to build the drafts
+The [building instructions](BUILDING.txt) explain how to build the drafts
 from source.
 
 **Be aware that all contributions to our work fall under the "NOTE WELL" terms therein.**
