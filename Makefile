@@ -2,7 +2,7 @@ xml2rfc = xml2rfc
 saxpath = "$(HOME)/java/saxon-9-7/saxon9he.jar"
 saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
 
-rfcdiff = rfcdiff --width 78 --body --stdout
+rfcdiff = rfcdiff --width 78 --stdout
 stylesheet = lib/myxml2rfc.xslt
 reduction  = lib/clean-for-DTD.xslt
 bap = bap
