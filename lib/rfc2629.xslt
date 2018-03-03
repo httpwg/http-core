@@ -4789,7 +4789,7 @@
         </xsl:variable>
         <xsl:choose>
           <xsl:when test="$is-xref and $from/@format='none'">
-            <!-- remove brackets -->
+            <!-- nothing to do here -->
           </xsl:when>
           <xsl:when test="$is-xref and $from/@format='counter'">
             <!-- remove brackets -->
@@ -9819,11 +9819,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.995 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.995 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.996 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.996 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/02/11 11:19:36 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/02/11 11:19:36 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/03/03 14:18:46 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/03/03 14:18:46 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -10783,7 +10783,16 @@ prev: <xsl:value-of select="$prev"/>
   </xsl:element>
 </xsl:template>
 <xsl:template match="a|xhtml:a" mode="strip-links" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-	<xsl:apply-templates select="node()" mode="strip-links" />
+  <xsl:choose>
+    <xsl:when test="@id">
+      <span id="{@id}">
+      	<xsl:apply-templates select="node()" mode="strip-links" />
+      </span>
+    </xsl:when>
+    <xsl:otherwise>
+    	<xsl:apply-templates select="node()" mode="strip-links" />
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 <xsl:template match="node()|@*" mode="strip-ids">
   <xsl:copy>
