@@ -471,12 +471,28 @@
     <xsl:call-template name="get-section-xref-section"/>
   </xsl:variable>
 
-  <xsl:variable name="sec">
+  <xsl:variable name="tsec">
     <xsl:choose>
       <xsl:when test="starts-with(@x:rel,'#') and $ssec='' and $node/x:source/@href">
         <xsl:variable name="extdoc" select="document($node/x:source/@href)"/>
         <xsl:for-each select="$extdoc//*[@anchor=substring-after(current()/@x:rel,'#')]">
-          <xsl:call-template name="get-section-number"/>
+          <xsl:variable name="t">
+            <xsl:call-template name="get-section-number"/>
+          </xsl:variable>
+          <xsl:choose>
+            <xsl:when test="starts-with($t,$unnumbered)">
+              <xsl:choose>
+                <xsl:when test="ancestor::back">A@</xsl:when>
+                <xsl:otherwise>S@</xsl:otherwise>
+              </xsl:choose>
+              <xsl:call-template name="get-title-as-string">
+                <xsl:with-param name="node" select="."/>
+              </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:value-of select="$t"/>
+            </xsl:otherwise>
+          </xsl:choose>
         </xsl:for-each>
       </xsl:when>
       <xsl:otherwise>
@@ -485,10 +501,17 @@
     </xsl:choose>
   </xsl:variable>
 
+  <xsl:variable name="sec">
+    <xsl:choose>
+      <xsl:when test="contains($tsec,'@')">"<xsl:value-of select="substring-after($tsec,'@')"/>"</xsl:when>
+      <xsl:otherwise><xsl:value-of select="$tsec"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+
   <xsl:variable name="secterm">
     <xsl:choose>
-      <!-- starts with letter? -->
-      <xsl:when test="translate(substring($sec,1,1),$ucase,'')=''">Appendix</xsl:when>
+      <!-- starts with letter or unnumbered? -->
+      <xsl:when test="translate(substring($sec,1,1),$ucase,'')='' or starts-with($tsec,'A@')">Appendix</xsl:when>
       <xsl:otherwise>Section</xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
