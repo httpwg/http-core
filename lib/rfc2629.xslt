@@ -3037,6 +3037,18 @@
     <xsl:call-template name="link-ref-title-to"/>
   </xsl:variable>
 
+  <xsl:variable name="front" select="front[1]|document(x:source/@href)/rfc/front[1]"/>
+  <xsl:if test="count($front)=0">
+    <xsl:call-template name="error">
+      <xsl:with-param name="msg">&lt;front> element missing for '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+  <xsl:if test="count($front)>1">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">&lt;front> can be omitted when &lt;x:source> is specified (for '<xsl:value-of select="@anchor"/>')</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+  
   <dt id="{@anchor}">
     <xsl:call-template name="insertInsDelClass"/>
     <xsl:variable name="del-node" select="ancestor::ed:del"/>
@@ -3052,7 +3064,7 @@
 
   <dd>
     <xsl:call-template name="insertInsDelClass"/>
-    <xsl:for-each select="front/author">
+    <xsl:for-each select="$front[1]/author">
       <xsl:choose>
         <xsl:when test="@surname and @surname!=''">
           <xsl:variable name="displayname">
@@ -3105,28 +3117,28 @@
       </xsl:choose>
     </xsl:for-each>
 
-    <xsl:variable name="quoted" select="not(front/title/@x:quotes='false') and not(@quoteTitle='false')"/>
+    <xsl:variable name="quoted" select="not($front[1]/title/@x:quotes='false') and not(@quoteTitle='false')"/>
     <xsl:if test="$quoted">&#8220;</xsl:if>
     <xsl:choose>
       <xsl:when test="string-length($target) &gt; 0">
-        <a href="{$target}"><xsl:value-of select="normalize-space(front/title)" /></a>
+        <a href="{$target}"><xsl:value-of select="normalize-space($front[1]/title)" /></a>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:value-of select="normalize-space(front/title)" />
+        <xsl:value-of select="normalize-space($front[1]/title)" />
       </xsl:otherwise>
     </xsl:choose>
     <xsl:if test="$quoted">&#8221;</xsl:if>
 
-    <xsl:if test="front/title/@ascii!=''">
+    <xsl:if test="$front[1]/title/@ascii!=''">
       <xsl:text> (</xsl:text>
       <xsl:if test="$quoted">&#8220;</xsl:if>
-      <xsl:value-of select="normalize-space(front/title/@ascii)" />
+      <xsl:value-of select="normalize-space($front[1]/title/@ascii)" />
       <xsl:if test="$quoted">&#8221;</xsl:if>
       <xsl:text>)</xsl:text>
     </xsl:if> 
 
-    <xsl:variable name="si" select="seriesInfo|front/seriesInfo"/>
-    <xsl:if test="seriesInfo and front/seriesInfo">
+    <xsl:variable name="si" select="seriesInfo|$front[1]/seriesInfo"/>
+    <xsl:if test="seriesInfo and $front[1]/seriesInfo">
       <xsl:call-template name="warning">
         <xsl:with-param name="msg">seriesInfo present both on reference and reference/front</xsl:with-param>
       </xsl:call-template>
@@ -3218,21 +3230,21 @@
       <xsl:apply-templates/>
     </xsl:for-each>
 
-    <xsl:if test="not(front/date)">
+    <xsl:if test="not($front[1]/date)">
       <xsl:call-template name="warning">
         <xsl:with-param name="msg">&lt;date&gt; missing in reference '<xsl:value-of select="@anchor"/>' (note that it can be empty)</xsl:with-param>
       </xsl:call-template>
     </xsl:if>
 
-    <xsl:if test="front/date/@year != ''">
-      <xsl:if test="string(number(front/date/@year)) = 'NaN'">
+    <xsl:if test="$front[1]/date/@year != ''">
+      <xsl:if test="string(number($front[1]/date/@year)) = 'NaN'">
         <xsl:call-template name="warning">
-          <xsl:with-param name="msg">date/@year should be a number: '<xsl:value-of select="front/date/@year"/>' in reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+          <xsl:with-param name="msg">date/@year should be a number: '<xsl:value-of select="$front[1]/date/@year"/>' in reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
         </xsl:call-template>
       </xsl:if>
       <xsl:text>, </xsl:text>
-      <xsl:if test="front/date/@month!=''"><xsl:value-of select="front/date/@month" />&#0160;</xsl:if>
-      <xsl:value-of select="front/date/@year" />
+      <xsl:if test="$front[1]/date/@month!=''"><xsl:value-of select="$front[1]/date/@month" />&#0160;</xsl:if>
+      <xsl:value-of select="$front[1]/date/@year" />
     </xsl:if>
 
     <xsl:choose>
@@ -4629,6 +4641,8 @@
   <xsl:param name="to"/>
   <xsl:param name="id"/>
 
+  <xsl:variable name="front" select="$to/front[1]|document($to/x:source/@href)/rfc/front[1]"/>
+
   <xsl:variable name="is-xref" select="$from/self::xref"/>
 
   <xsl:variable name="sfmt">
@@ -4796,7 +4810,7 @@
             <xsl:value-of select="substring($val,2,string-length($val)-2)"/>
           </xsl:when>
           <xsl:when test="$is-xref and $from/@format='title'">
-            <xsl:value-of select="$to/front/title"/>
+            <xsl:value-of select="$front[1]/title"/>
           </xsl:when>
           <xsl:otherwise>
             <xsl:if test="not($is-xref) and $from/@format">
@@ -4811,7 +4825,7 @@
       <xsl:with-param name="id" select="$id"/>
       <xsl:with-param name="index-item" select="$from/@target"/>
       <xsl:with-param name="index-subitem" select="$sec"/>
-      <xsl:with-param name="citation-title" select="normalize-space($to/front/title)"/>
+      <xsl:with-param name="citation-title" select="normalize-space($front[1]/title)"/>
     </xsl:call-template>
   </xsl:if>
 
@@ -9819,11 +9833,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.999 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.999 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1000 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1000 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/03/05 13:17:34 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/03/05 13:17:34 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/03/16 17:20:44 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/03/16 17:20:44 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>

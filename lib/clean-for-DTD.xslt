@@ -1122,6 +1122,8 @@
   </xsl:if>
 </xsl:template>
 
+<xsl:template match="reference/front/abstract" mode="cleanup"/>
+
 <xsl:template match="reference" mode="cleanup">
   <reference>
     <xsl:apply-templates select="@anchor|@target|@quoteTitle" mode="cleanup"/>
@@ -1146,7 +1148,15 @@
       </xsl:when>
       <xsl:otherwise/>
     </xsl:choose>
-    <xsl:apply-templates select="front" mode="cleanup"/>
+    <xsl:choose>
+      <xsl:when test="front">
+        <xsl:apply-templates select="front" mode="cleanup"/>
+      </xsl:when>
+      <xsl:when test="x:source">
+        <xsl:apply-templates select="document(x:source/@href)/rfc/front" mode="cleanup"/>
+      </xsl:when>
+      <xsl:otherwise/>
+    </xsl:choose>
     <xsl:apply-templates select="seriesInfo|front/seriesInfo" mode="cleanup"/>
 
     <!-- Insert DOI for RFCs -->
