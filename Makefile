@@ -29,9 +29,9 @@ TARGETS_XML = $(MESSAGING).xml \
 
 TARGETS_TXT= $(TARGETS_XML:.xml=.txt)
 TARGETS_HTML= $(TARGETS_XML:.xml=.html)
-TARGETS_XHTML= $(addprefix $(bd)/, $(TARGETS_XML:.xml=.xhtml))
-TARGETS_REDXML= $(addprefix $(bd)/, $(TARGETS_XML:.xml=.redxml))
-TARGETS_ABNF= $(addprefix $(bd)/, $(TARGETS_XML:.xml=.abnf))
+TARGETS_XHTML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.xhtml))
+TARGETS_REDXML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.redxml))
+TARGETS_ABNF= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.abnf))
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
 TARGETS_PARSEDABNF= $(TARGETS_ABNF:.abnf=.parsed-abnf)
 
@@ -69,6 +69,14 @@ diffs: $(TARGETS_TXT)
 	$(rfcdiff) auth48/rfc7234.txt $(CACHE).txt > diff_cache.html
 	$(rfcdiff) auth48/rfc7235.txt $(AUTH).txt > diff_auth.html
 
+diff00: $(TARGETS_TXT)
+	$(rfcdiff) 00/draft-fielding-httpbis-http-messaging-00.txt $(MESSAGING).txt > diff_messaging_since_00.html
+	$(rfcdiff) 00/draft-fielding-httpbis-http-semantics-00.txt $(SEMANTICS).txt > diff_semantics_since_00.html
+	$(rfcdiff) 00/draft-fielding-httpbis-http-conditional-00.txt $(CONDITIONAL).txt > diff_conditional_since_00.html
+	$(rfcdiff) 00/draft-fielding-httpbis-http-range-00.txt $(RANGE).txt > diff_range_since_00.html
+	$(rfcdiff) 00/draft-fielding-httpbis-http-cache-00.txt $(CACHE).txt > diff_cache_since_00.html
+	$(rfcdiff) 00/draft-fielding-httpbis-http-auth-00.txt $(AUTH).txt > diff_auth_since_00.html
+
 %.html: %.xml $(stylesheet)
 	$(saxon) $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
 
@@ -87,7 +95,7 @@ $(bd)/%.parsed-abnf: $(bd)/%.abnf
 $(bd)/%.abnf-appendix: $(bd)/%.parsed-abnf
 	$(saxon) $*.xml $(bd)/abnf2xml2rfc.xslt abnf="$*.parsed-abnf" >$@
 
-$(bd)/%.xhtml: %.xml lib/rfc2629xslt/rfc2629toXHTML.xslt
+$(bd)/%.xhtml: %.xml lib/rfc2629toXHTML.xslt
 	$(saxon) $< lib/rfc2629toXHTML.xslt > $@
 
 $(bd)/%.iana-headers: %.xml lib/extract-header-defs.xslt

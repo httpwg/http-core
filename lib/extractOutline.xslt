@@ -9,13 +9,12 @@
             doctype-public="-//W3C//DTD HTML 4.01//EN" indent="yes"/>
             
 <data:specs>
-  <data:name>p1-messaging</data:name>
-  <data:name>p2-semantics</data:name>
-  <data:name>p3-payload</data:name>
-  <data:name>p4-conditional</data:name>
-  <data:name>p5-range</data:name>
-  <data:name>p6-cache</data:name>
-  <data:name>p7-auth</data:name>
+  <data:name>draft-fielding-httpbis-http-messaging-latest</data:name>
+  <data:name>draft-fielding-httpbis-http-semantics-latest</data:name>
+  <data:name>draft-fielding-httpbis-http-conditional-latest</data:name>
+  <data:name>draft-fielding-httpbis-http-range-latest</data:name>
+  <data:name>draft-fielding-httpbis-http-cache-latest</data:name>
+  <data:name>draft-fielding-httpbis-http-auth-latest</data:name>
 </data:specs>
 
 <xsl:template match="/">
@@ -56,28 +55,16 @@ li.tocline2 {
     </head>
     <body>
       <div id="page">
-        <div id="banner">
-          <div id="mainnav" class="nav">
-            <ul><li class="first"><a accesskey="1" href="http://www3.tools.ietf.org/wg/httpbis/trac/wiki">Wiki</a></li>
-            <li><a accesskey="2" href="http://www3.tools.ietf.org/wg/httpbis/trac/timeline">Timeline</a></li>
-            <li><a href="http://www3.tools.ietf.org/wg/httpbis/trac/browser">Browse Source</a></li>
-            <li><a href="http://www3.tools.ietf.org/wg/httpbis/trac/report">View Tickets</a></li>
-            <li class="active"><a href="outlineALL.html">Outline Parts</a></li>
-            <li><a href="outline2616.html">Outline 2616</a></li>
-            <li class="last"><a href="http://lists.w3.org/Archives/Public/ietf-http-wg/">Mail Archive</a></li>
-            </ul>
-          </div>
-        </div>
         <div id="content">
           <h1>HTTP/1.1 Drafts: Combined Table of Contents</h1>
           <xsl:for-each select="document('')//data:specs/data:name">
-            <xsl:variable name="doc" select="document(concat(.,'.xhtml'))"/>
+            <xsl:variable name="doc" select="document(concat('../build/',.,'.xhtml'))"/>
             <h2>
               <a href="{concat(.,'.html')}">
                 <xsl:value-of select="$doc//xhtml:title"/>
               </a>
             </h2>
-            <xsl:apply-templates select="$doc//xhtml:body/xhtml:ul[@class='toc']" mode="tocgen"/>
+            <xsl:apply-templates select="$doc//xhtml:nav/xhtml:ul[@class='toc']" mode="tocgen"/>
           </xsl:for-each>
         </div>
       </div>
@@ -98,8 +85,8 @@ li.tocline2 {
 </xsl:template> 
 
 <xsl:template match="xhtml:a" mode="tocgen">
-  <xsl:variable name="basename" select="substring-after(//xhtml:meta[@name='DC.Identifier']/@content,'urn:ietf:id:')"/>
-  <a href="{concat(substring-before(substring-after($basename,'draft-ietf-httpbis-'),'-latest'),'.html')}{@href}">
+  <xsl:variable name="basename" select="substring-after(//xhtml:meta[@name='dcterms.identifier']/@content,'urn:ietf:id:')"/>
+  <a href="{$basename}.html{@href}">
     <xsl:apply-templates mode="tocgen"/>
   </a>
 </xsl:template> 
