@@ -11,7 +11,7 @@ expand() {
   # start include
   /^<\?BEGININC .* \?>$/ {
     print
-    includefile = $2
+    includefile = "build/"$2
     while (getline <includefile > 0) {
       print
     }
