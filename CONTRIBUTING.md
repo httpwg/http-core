@@ -32,7 +32,7 @@ The Working Group has a few venues for discussion:
 
 * Our [mailing list](https://lists.w3.org/Archives/Public/ietf-http-wg/) is used for most communication, including notifications of meetings, new drafts, consensus calls and other business, as well as issue discussion.
 
-* We also discuss specific issues on the [issues list](https://github.com/httpwg/http-extensions/issues) itself. If you don't want to use Github to follow these discussions, you can subscribe to the [issue announce list](https://www.ietf.org/mailman/listinfo/http-issues).
+* We also discuss specific issues on the [issues list](https://github.com/httpwg/http-core/issues) itself.
 
 To be active in the Working Group, you can participate in any of these places. Most activity takes
 place on the mailing list, but if you just want to comment on and raise issues, that's fine too.
@@ -40,7 +40,7 @@ place on the mailing list, but if you just want to comment on and raise issues, 
 
 ## Raising Issues
 
-We use our [issues list](https://github.com/httpwg/http-extensions/issues) to track items for
+We use our [issues list](https://github.com/httpwg/http-core/issues) to track items for
 discussion and their resolution.
 
 Before filing a new issue, please consider a few things:
