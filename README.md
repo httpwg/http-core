@@ -1,4 +1,4 @@
-## HTTP/1.1 drafts editing arena (work in progress)
+## Draft HTTP Core Documents
 
 This is the working area for the [IETF HTTP Working Group](https://httpwg.github.io/)'s documents that define the HTTP protocol; see also our [extensions repository](https://github.com/httpwg/http-extensions/). See [our contribution guidelines](CONTRIBUTING.md) for information about how to participate.
 
