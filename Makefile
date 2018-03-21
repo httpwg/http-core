@@ -11,14 +11,14 @@ bd  = build
 VPATH = build
 GPATH = build
 
-draftname = draft-fielding-httpbis
+draftname = draft-ietf-httpbis
 
-AUTH        = $(draftname)-http-auth-latest
-CACHE       = $(draftname)-http-cache-latest
-CONDITIONAL = $(draftname)-http-conditional-latest
-MESSAGING   = $(draftname)-http-messaging-latest
-RANGE       = $(draftname)-http-range-latest
-SEMANTICS   = $(draftname)-http-semantics-latest
+AUTH        = $(draftname)-auth-latest
+CACHE       = $(draftname)-cache-latest
+CONDITIONAL = $(draftname)-conditional-latest
+MESSAGING   = $(draftname)-messaging-latest
+RANGE       = $(draftname)-range-latest
+SEMANTICS   = $(draftname)-semantics-latest
 
 TARGETS_XML = $(MESSAGING).xml \
               $(SEMANTICS).xml \
@@ -70,12 +70,12 @@ diffs: $(TARGETS_TXT)
 	$(rfcdiff) auth48/rfc7235.txt $(AUTH).txt > diff_auth.html
 
 diff00: $(TARGETS_TXT)
-	$(rfcdiff) 00/draft-fielding-httpbis-http-messaging-00.txt $(MESSAGING).txt > diff_messaging_since_00.html
-	$(rfcdiff) 00/draft-fielding-httpbis-http-semantics-00.txt $(SEMANTICS).txt > diff_semantics_since_00.html
-	$(rfcdiff) 00/draft-fielding-httpbis-http-conditional-00.txt $(CONDITIONAL).txt > diff_conditional_since_00.html
-	$(rfcdiff) 00/draft-fielding-httpbis-http-range-00.txt $(RANGE).txt > diff_range_since_00.html
-	$(rfcdiff) 00/draft-fielding-httpbis-http-cache-00.txt $(CACHE).txt > diff_cache_since_00.html
-	$(rfcdiff) 00/draft-fielding-httpbis-http-auth-00.txt $(AUTH).txt > diff_auth_since_00.html
+	$(rfcdiff) 00/$(draftname)-messaging-00.txt $(MESSAGING).txt > diff_messaging_since_00.html
+	$(rfcdiff) 00/$(draftname)-semantics-00.txt $(SEMANTICS).txt > diff_semantics_since_00.html
+	$(rfcdiff) 00/$(draftname)-conditional-00.txt $(CONDITIONAL).txt > diff_conditional_since_00.html
+	$(rfcdiff) 00/$(draftname)-range-00.txt $(RANGE).txt > diff_range_since_00.html
+	$(rfcdiff) 00/$(draftname)-cache-00.txt $(CACHE).txt > diff_cache_since_00.html
+	$(rfcdiff) 00/$(draftname)-auth-00.txt $(AUTH).txt > diff_auth_since_00.html
 
 %.html: %.xml $(stylesheet)
 	$(saxon) $< $(stylesheet) | awk -f lib/html5doctype.awk > $@

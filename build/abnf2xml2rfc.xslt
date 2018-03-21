@@ -18,7 +18,7 @@
   
   <xsl:variable name="generated"><section title="Collected ABNF" anchor="collected.abnf">
     <xsl:text>&#10;</xsl:text>
-      <xsl:if test="not(starts-with($abnf,'draft-fielding-httpbis-http-messaging'))"><t>
+      <xsl:if test="not(starts-with($abnf,'draft-ietf-httpbis-messaging'))"><t>
   In the collected ABNF below, list rules are expanded as per <xref target='MESSGNG' x:rel='#notation'/>.
 </t></xsl:if>
       <figure>

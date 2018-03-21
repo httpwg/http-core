@@ -9,12 +9,12 @@
             doctype-public="-//W3C//DTD HTML 4.01//EN" indent="yes"/>
             
 <data:specs>
-  <data:name>draft-fielding-httpbis-http-messaging-latest</data:name>
-  <data:name>draft-fielding-httpbis-http-semantics-latest</data:name>
-  <data:name>draft-fielding-httpbis-http-conditional-latest</data:name>
-  <data:name>draft-fielding-httpbis-http-range-latest</data:name>
-  <data:name>draft-fielding-httpbis-http-cache-latest</data:name>
-  <data:name>draft-fielding-httpbis-http-auth-latest</data:name>
+  <data:name>draft-ietf-httpbis-messaging-latest</data:name>
+  <data:name>draft-ietf-httpbis-semantics-latest</data:name>
+  <data:name>draft-ietf-httpbis-conditional-latest</data:name>
+  <data:name>draft-ietf-httpbis-range-latest</data:name>
+  <data:name>draft-ietf-httpbis-cache-latest</data:name>
+  <data:name>draft-ietf-httpbis-auth-latest</data:name>
 </data:specs>
 
 <xsl:template match="/">
