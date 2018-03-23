@@ -965,7 +965,7 @@
 <!-- build help keys for indices -->
 <xsl:key name="index-first-letter"
   match="iref|reference"
-    use="translate(substring(concat(@anchor,@item),1,1),'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ')" />
+    use="translate(substring(concat(/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor,@item),1,1),'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ')" />
 
 <xsl:key name="index-item"
   match="iref"
@@ -6317,10 +6317,10 @@ pre.drawing {
 q {
   font-style: italic;
 }</xsl:if>
-<xsl:if test="//x:sup|sup">
+<xsl:if test="//x:sup|//sup">
 sup {
   font-size: 60%;
-}</xsl:if><xsl:if test="sub">
+}</xsl:if><xsl:if test="//x:sub|//sub">
 sub {
   font-size: 60%;
 }</xsl:if>
@@ -6910,19 +6910,16 @@ dd, li, p {
 <!-- generate navigation links to index subsections -->
 <xsl:template name="insert-index-navigation">
   <p class="{$css-noprint}">
-    <xsl:variable name="irefs" select="//iref[generate-id(.) = generate-id(key('index-first-letter',translate(substring(@item,1,1),$lcase,$ucase))[1])]"/>
-    <xsl:variable name="xrefs" select="//reference[not(starts-with(@anchor,'deleted-'))][generate-id(.) = generate-id(key('index-first-letter',translate(substring(concat(/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor),1,1),$lcase,$ucase))[1])]"/>
 
-    <xsl:for-each select="$irefs | $xrefs">
+    <xsl:for-each select="//iref | //reference[not(starts-with(@anchor,'deleted-'))]">
     
       <xsl:sort select="translate(concat(@item,/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor),$lcase,$ucase)" />
 
       <xsl:variable name="letter" select="translate(substring(concat(@item,/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor),1,1),$lcase,$ucase)"/>
-
-      <!-- character? -->
-      <xsl:if test="translate($letter,$alnum,'')=''">
-
-        <xsl:variable name="showit" select="$xml2rfc-ext-include-references-in-index='yes' or $irefs[starts-with(translate(@item,$lcase,$ucase),$letter)]"/>
+      
+      <!-- first of character and character? -->
+      <xsl:if test="generate-id(.) = generate-id(key('index-first-letter',$letter)[1]) and translate($letter,$alnum,'')=''">
+        <xsl:variable name="showit" select="$xml2rfc-ext-include-references-in-index='yes' or self::iref"/>
 
         <xsl:if test="$showit">
           <a href="#{$anchor-pref}index.{$letter}">
@@ -7055,19 +7052,15 @@ dd, li, p {
 
     <xsl:call-template name="insert-index-navigation"/>
     
-    <xsl:variable name="irefs" select="//iref[generate-id(.) = generate-id(key('index-first-letter',translate(substring(@item,1,1),$lcase,$ucase))[1])]"/>
-    <xsl:variable name="xrefs" select="//reference[not(starts-with(@anchor,'deleted-'))][generate-id(.) = generate-id(key('index-first-letter',translate(substring(concat(/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor),1,1),$lcase,$ucase))[1])]"/>
-    
     <!-- for each index subsection -->
     <div class="print2col">
       <ul class="ind">
-        <xsl:for-each select="$irefs | $xrefs">
+        <xsl:for-each select="//iref | //reference[not(starts-with(@anchor,'deleted-'))]">
           <xsl:sort select="translate(concat(@item,/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor),$lcase,$ucase)" />
           <xsl:variable name="letter" select="translate(substring(concat(@item,/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor),1,1),$lcase,$ucase)"/>
     
-          <xsl:variable name="showit" select="$xml2rfc-ext-include-references-in-index='yes' or $irefs[starts-with(translate(@item,$lcase,$ucase),$letter)]"/>
-    
-          <xsl:if test="$showit">
+          <xsl:variable name="showit" select="$xml2rfc-ext-include-references-in-index='yes' or self::iref"/>
+          <xsl:if test="$showit and generate-id(.) = generate-id(key('index-first-letter',$letter)[1])">
             <li>
     
               <!-- make letters and digits stand out -->
@@ -7083,7 +7076,7 @@ dd, li, p {
               </xsl:choose>
     
               <ul>
-                <xsl:for-each select="key('index-first-letter',translate(substring(concat(@item,@anchor),1,1),$lcase,$ucase))">
+                <xsl:for-each select="key('index-first-letter',$letter)">
     
                   <xsl:sort select="translate(concat(@item,@anchor),$lcase,$ucase)" />
     
@@ -9849,11 +9842,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1001 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1001 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1003 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1003 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/03/17 14:52:57 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/03/17 14:52:57 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/03/23 12:05:03 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/03/23 12:05:03 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
