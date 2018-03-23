@@ -17,7 +17,6 @@
   <!ENTITY mdash "&#8212;">
   <!ENTITY Note "<x:h xmlns:x='http://purl.org/net/xml2rfc/ext'>Note:</x:h>">
   <!ENTITY architecture               "<xref target='MESSGNG' x:rel='#architecture' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
-  <!ENTITY conformance                "<xref target='MESSGNG' x:rel='#conformance' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY notation                   "<xref target='MESSGNG' x:rel='#notation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY acks                       "<xref target='MESSGNG' x:rel='#acks' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY messaging                  "<xref target='MESSGNG' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -25,6 +24,7 @@
   <!ENTITY range                      "<xref target='RANGERQ' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY caching                    "<xref target='CACHING' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY auth                       "<xref target='AUTHFRM' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
+  <!ENTITY caching-overview           "<xref target='CACHING' x:rel='#caching.overview' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY content-negotiation        "<xref target='content.negotiation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY reactive-negotiation       "<xref target='reactive.negotiation' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
   <!ENTITY abnf-extension             "<xref target='MESSGNG' x:rel='#abnf.extension' xmlns:x='http://purl.org/net/xml2rfc/ext'/>">
@@ -184,15 +184,16 @@
 
 <abstract>
 <t>
-   The Hypertext Transfer Protocol (HTTP) is a stateless application-level protocol for
-   distributed, collaborative, hypertext information systems. This document
-   defines the semantics of HTTP/1.1 messages, as expressed by request
-   methods, request header fields, response status codes, and response header
-   fields, along with the payload of messages (metadata and body content) and
-   mechanisms for content negotiation.
+   The Hypertext Transfer Protocol (HTTP) is a stateless application-level
+   protocol for distributed, collaborative, hypertext information systems.
+   This document defines the semantics of HTTP: its architecture,
+   terminology, the "http" and "https" Uniform Resource Identifier (URI)
+   schemes, core request methods, request header fields, response status
+   codes, response header fields, and content negotiation.
 </t>
 <t>
-   This document obsoletes RFC 7231.
+   This document obsoletes RFC 7231, RFC 7232, RFC 7234,
+   RFC 7236, and portions of RFC 7230.
 </t>
 </abstract>
 
@@ -216,15 +217,53 @@
 <middle>
 <section title="Introduction" anchor="introduction">
 <t>
-   Each Hypertext Transfer Protocol (HTTP) message is either a request or a
+   The Hypertext Transfer Protocol (HTTP) is a stateless application-level
+   request/response protocol that uses extensible semantics and
+   self-descriptive messages for flexible interaction with network-based
+   hypertext information systems. This document defines semantics that are
+   common to all versions of HTTP, whereas a companion document defines the
+   specific syntax and messaging requirements of HTTP/1.1
+   <xref target="MESSGNG"/>.
+</t>
+<t>
+   HTTP is a generic interface protocol for information systems. It is
+   designed to hide the details of how a service is implemented by presenting
+   a uniform interface to clients that is independent of the types of
+   resources provided. Likewise, servers do not need to be aware of each
+   client's purpose: an HTTP request can be considered in isolation rather
+   than being associated with a specific type of client or a predetermined
+   sequence of application steps. The result is a protocol that can be used
+   effectively in many different contexts and for which implementations can
+   evolve independently over time.
+</t>
+<t>
+   HTTP is also designed for use as an intermediation protocol for translating
+   communication to and from non-HTTP information systems.
+   HTTP proxies and gateways can provide access to alternative information
+   services by translating their diverse protocols into a hypertext
+   format that can be viewed and manipulated by clients in the same way
+   as HTTP services.
+</t>
+<t>
+   One consequence of this flexibility is that the protocol cannot be
+   defined in terms of what occurs behind the interface. Instead, we
+   are limited to defining the syntax of communication, the intent
+   of received communication, and the expected behavior of recipients.
+   If the communication is considered in isolation, then successful
+   actions ought to be reflected in corresponding changes to the
+   observable interface provided by servers. However, since multiple
+   clients might act in parallel and perhaps at cross-purposes, we
+   cannot require that such changes be observable beyond the scope
+   of a single response.
+</t>
+<t>
+   Each HTTP message is either a request or a
    response. A server listens on a connection for a request, parses each
    message received, interprets the message semantics in relation to the
    identified request target, and responds to that request with one or more
    response messages. A client constructs request messages to communicate
    specific intentions, examines received responses to see if the
    intentions were carried out, and determines how to interpret the results.
-   This document defines HTTP/1.1 request and response semantics in terms of
-   the architecture defined in <xref target="MESSGNG"/>.
 </t>
 <t>
    HTTP provides a uniform interface for interacting with a resource
@@ -252,15 +291,89 @@
    This specification obsoletes <xref target="RFC7231" x:fmt="none">RFC 7231</xref>,
    with the changes being summarized in <xref target="changes.from.rfc.7231"/>.
 </t>
+
 <section title="Conformance and Error Handling" anchor="conformance">
+<t>
+   This specification targets conformance criteria according to the role of
+   a participant in HTTP communication.  Hence, HTTP requirements are placed
+   on senders, recipients, clients, servers, user agents, intermediaries,
+   origin servers, proxies, gateways, or caches, depending on what behavior
+   is being constrained by the requirement. Additional (social) requirements
+   are placed on implementations, resource owners, and protocol element
+   registrations when they apply beyond the scope of a single communication.
+</t>
+<t>
+   The verb "generate" is used instead of "send" where a requirement
+   differentiates between creating a protocol element and merely forwarding a
+   received element downstream.
+</t>
 <t>
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
    document are to be interpreted as described in <xref target="RFC2119"/>.
 </t>
 <t>
-   Conformance criteria and considerations regarding error handling
-   are defined in &conformance;.
+   An implementation is considered conformant if it complies with all of the
+   requirements associated with the roles it partakes in HTTP.
+</t>
+<t>
+   Conformance includes both the syntax and semantics of protocol
+   elements. A sender &MUST-NOT; generate protocol elements that convey a
+   meaning that is known by that sender to be false. A sender &MUST-NOT;
+   generate protocol elements that do not match the grammar defined by the
+   corresponding ABNF rules. Within a given message, a sender &MUST-NOT;
+   generate protocol elements or syntax alternatives that are only allowed to
+   be generated by participants in other roles (i.e., a role that the sender
+   does not have for that message).
+</t>
+<t>
+   When a received protocol element is parsed, the recipient &MUST; be able to
+   parse any value of reasonable length that is applicable to the recipient's
+   role and that matches the grammar defined by the corresponding ABNF rules.
+   Note, however, that some received protocol elements might not be parsed.
+   For example, an intermediary forwarding a message might parse a
+   header-field into generic field-name and field-value components, but then
+   forward the header field without further parsing inside the field-value.
+</t>
+<t>
+   HTTP does not have specific length limitations for many of its protocol
+   elements because the lengths that might be appropriate will vary widely,
+   depending on the deployment context and purpose of the implementation.
+   Hence, interoperability between senders and recipients depends on shared
+   expectations regarding what is a reasonable length for each protocol
+   element. Furthermore, what is commonly understood to be a reasonable length
+   for some protocol elements has changed over the course of the past two
+   decades of HTTP use and is expected to continue changing in the future.
+</t>
+<t>
+   At a minimum, a recipient &MUST; be able to parse and process protocol
+   element lengths that are at least as long as the values that it generates
+   for those same protocol elements in other messages. For example, an origin
+   server that publishes very long URI references to its own resources needs
+   to be able to parse and process those same references when received as a
+   request target.
+</t>
+<t>
+   A recipient &MUST; interpret a received protocol element according to the
+   semantics defined for it by this specification, including extensions to
+   this specification, unless the recipient has determined (through experience
+   or configuration) that the sender incorrectly implements what is implied by
+   those semantics.
+   For example, an origin server might disregard the contents of a received
+   <x:ref>Accept-Encoding</x:ref> header field if inspection of the
+   <x:ref>User-Agent</x:ref> header field indicates a specific implementation
+   version that is known to fail on receipt of certain content codings.
+</t>
+<t>
+   Unless noted otherwise, a recipient &MAY; attempt to recover a usable
+   protocol element from an invalid construct.  HTTP does not define
+   specific error handling mechanisms except when they have a direct impact
+   on security, since different applications of the protocol require
+   different error handling strategies.  For example, a Web browser might
+   wish to transparently recover from a response where the
+   <x:ref>Location</x:ref> header field doesn't parse according to the ABNF,
+   whereas a systems control client might consider any form of error recovery
+   to be dangerous.
 </t>
 </section>
 
@@ -287,14 +400,673 @@
 </section>
 </section>
 
+<section title="Architecture" anchor="architecture">
+<t>
+   HTTP was created for the World Wide Web (WWW) architecture
+   and has evolved over time to support the scalability needs of a worldwide
+   hypertext system. Much of that architecture is reflected in the terminology
+   and syntax productions used to define HTTP.
+</t>
+
+<section title="Client/Server Messaging" anchor="operation">
+<iref primary="true" item="client"/>
+<iref primary="true" item="server"/>
+<iref primary="true" item="connection"/>
+<t>
+   HTTP is a stateless request/response protocol that operates by exchanging
+   <x:dfn>messages</x:dfn> (<xref target="http.message"/>) across a reliable
+   transport- or session-layer
+   "<x:dfn>connection</x:dfn>" (<xref target="connection.management"/>).
+   An HTTP "<x:dfn>client</x:dfn>" is a program that establishes a connection
+   to a server for the purpose of sending one or more HTTP requests.
+   An HTTP "<x:dfn>server</x:dfn>" is a program that accepts connections
+   in order to service HTTP requests by sending HTTP responses.
+</t>
+<iref primary="true" item="user agent"/>
+<iref primary="true" item="origin server"/>
+<iref primary="true" item="browser"/>
+<iref primary="true" item="spider"/>
+<iref primary="true" item="sender"/>
+<iref primary="true" item="recipient"/>
+<t>
+   The terms "client" and "server" refer only to the roles that
+   these programs perform for a particular connection.  The same program
+   might act as a client on some connections and a server on others.
+   The term "<x:dfn>user agent</x:dfn>" refers to any of the various
+   client programs that initiate a request, including (but not limited to)
+   browsers, spiders (web-based robots), command-line tools, custom
+   applications, and mobile apps.
+   The term "<x:dfn>origin server</x:dfn>" refers to the program that can
+   originate authoritative responses for a given target resource.
+   The terms "<x:dfn>sender</x:dfn>" and "<x:dfn>recipient</x:dfn>" refer to
+   any implementation that sends or receives a given message, respectively.
+</t>
+<t>
+   HTTP relies upon the Uniform Resource Identifier (URI)
+   standard <xref target="RFC3986"/> to indicate the target resource
+   (<xref target="target-resource"/>) and relationships between resources.
+</t>
+<t>
+   Most HTTP communication consists of a retrieval request (GET) for
+   a representation of some resource identified by a URI.  In the
+   simplest case, this might be accomplished via a single bidirectional
+   connection (===) between the user agent (UA) and the origin server (O).
+</t>
+<figure><artwork type="drawing">
+         request   &gt;
+    <x:highlight>UA</x:highlight> ======================================= <x:highlight>O</x:highlight>
+                                &lt;   response
+</artwork></figure>
+<iref primary="true" item="message"/>
+<iref primary="true" item="request"/>
+<iref primary="true" item="response"/>
+<t>
+   A client sends an HTTP request to a server in the form of a <x:dfn>request</x:dfn>
+   message, beginning with a request-line that includes a method, URI, and
+   protocol version (<xref target="request.line"/>),
+   followed by header fields containing
+   request modifiers, client information, and representation metadata
+   (<xref target="header.fields"/>),
+   an empty line to indicate the end of the header section, and finally
+   a message body containing the payload body (if any,
+   <xref target="message.body"/>).
+</t>
+<t>
+   A server responds to a client's request by sending one or more HTTP
+   <x:dfn>response</x:dfn>
+   messages, each beginning with a status line that
+   includes the protocol version, a success or error code, and textual
+   reason phrase (<xref target="status.line"/>),
+   possibly followed by header fields containing server
+   information, resource metadata, and representation metadata
+   (<xref target="header.fields"/>),
+   an empty line to indicate the end of the header section, and finally
+   a message body containing the payload body (if any,
+   <xref target="message.body"/>).
+</t>
+<t>
+   A connection might be used for multiple request/response exchanges,
+   as defined in <xref target="persistent.connections"/>.
+</t>
+<t>
+   The following example illustrates a typical message exchange for a
+   GET request (<xref target="GET"/>) on the URI "http://www.example.com/hello.txt":
+</t>
+<figure><preamble>
+Client request:
+</preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /hello.txt HTTP/1.1
+User-Agent: curl/7.16.3 libcurl/7.16.3 OpenSSL/0.9.7l zlib/1.2.3
+Host: www.example.com
+Accept-Language: en, mi
+
+</artwork></figure>
+<figure><preamble>
+Server response:
+</preamble><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 200 OK
+Date: Mon, 27 Jul 2009 12:28:53 GMT
+Server: Apache
+Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
+ETag: "34aa387-d-1568eb00"
+Accept-Ranges: bytes
+Content-Length: <x:length-of target="exbody"/>
+Vary: Accept-Encoding
+Content-Type: text/plain
+
+<x:span anchor="exbody">Hello World! My payload includes a trailing CRLF.
+</x:span></artwork>
+</figure>
+</section>
+
+<section title="Implementation Diversity" anchor="implementation-diversity">
+<t>
+   When considering the design of HTTP, it is easy to fall into a trap of
+   thinking that all user agents are general-purpose browsers and all origin
+   servers are large public websites. That is not the case in practice.
+   Common HTTP user agents include household appliances, stereos, scales,
+   firmware update scripts, command-line programs, mobile apps,
+   and communication devices in a multitude of shapes and sizes.  Likewise,
+   common HTTP origin servers include home automation units, configurable
+   networking components, office machines, autonomous robots, news feeds,
+   traffic cameras, ad selectors, and video-delivery platforms.
+</t>
+<t>
+   The term "user agent" does not imply that there is a human user directly
+   interacting with the software agent at the time of a request. In many
+   cases, a user agent is installed or configured to run in the background
+   and save its results for later inspection (or save only a subset of those
+   results that might be interesting or erroneous). Spiders, for example, are
+   typically given a start URI and configured to follow certain behavior while
+   crawling the Web as a hypertext graph.
+</t>
+<t>
+   The implementation diversity of HTTP means that not all user agents can
+   make interactive suggestions to their user or provide adequate warning for
+   security or privacy concerns. In the few cases where this
+   specification requires reporting of errors to the user, it is acceptable
+   for such reporting to only be observable in an error console or log file.
+   Likewise, requirements that an automated action be confirmed by the user
+   before proceeding might be met via advance configuration choices,
+   run-time options, or simple avoidance of the unsafe action; confirmation
+   does not imply any specific user interface or interruption of normal
+   processing if the user has already made that choice.
+</t>
+</section>
+
+<section title="Intermediaries" anchor="intermediaries">
+<iref primary="true" item="intermediary"/>
+<t>
+   HTTP enables the use of intermediaries to satisfy requests through
+   a chain of connections.  There are three common forms of HTTP
+   <x:dfn>intermediary</x:dfn>: proxy, gateway, and tunnel.  In some cases,
+   a single intermediary might act as an origin server, proxy, gateway,
+   or tunnel, switching behavior based on the nature of each request.
+</t>
+<figure><artwork type="drawing">
+         &gt;             &gt;             &gt;             &gt;
+    <x:highlight>UA</x:highlight> =========== <x:highlight>A</x:highlight> =========== <x:highlight>B</x:highlight> =========== <x:highlight>C</x:highlight> =========== <x:highlight>O</x:highlight>
+               &lt;             &lt;             &lt;             &lt;
+</artwork></figure>
+<t>
+   The figure above shows three intermediaries (A, B, and C) between the
+   user agent and origin server. A request or response message that
+   travels the whole chain will pass through four separate connections.
+   Some HTTP communication options
+   might apply only to the connection with the nearest, non-tunnel
+   neighbor, only to the endpoints of the chain, or to all connections
+   along the chain. Although the diagram is linear, each participant might
+   be engaged in multiple, simultaneous communications. For example, B
+   might be receiving requests from many clients other than A, and/or
+   forwarding requests to servers other than C, at the same time that it
+   is handling A's request. Likewise, later requests might be sent through a
+   different path of connections, often based on dynamic configuration for
+   load balancing.   
+</t>
+<t>
+<iref primary="true" item="upstream"/><iref primary="true" item="downstream"/>
+<iref primary="true" item="inbound"/><iref primary="true" item="outbound"/>
+   The terms "<x:dfn>upstream</x:dfn>" and "<x:dfn>downstream</x:dfn>" are
+   used to describe directional requirements in relation to the message flow:
+   all messages flow from upstream to downstream.
+   The terms "inbound" and "outbound" are used to describe directional
+   requirements in relation to the request route:
+   "<x:dfn>inbound</x:dfn>" means toward the origin server and
+   "<x:dfn>outbound</x:dfn>" means toward the user agent.
+</t>
+<t><iref primary="true" item="proxy"/>
+   A "<x:dfn>proxy</x:dfn>" is a message-forwarding agent that is selected by the
+   client, usually via local configuration rules, to receive requests
+   for some type(s) of absolute URI and attempt to satisfy those
+   requests via translation through the HTTP interface.  Some translations
+   are minimal, such as for proxy requests for "http" URIs, whereas
+   other requests might require translation to and from entirely different
+   application-level protocols. Proxies are often used to group an
+   organization's HTTP requests through a common intermediary for the
+   sake of security, annotation services, or shared caching. Some proxies
+   are designed to apply transformations to selected messages or payloads
+   while they are being forwarded, as described in
+   <xref target="message.transformations"/>.
+</t>
+<t><iref primary="true" item="gateway"/><iref primary="true" item="reverse proxy"/>
+<iref primary="true" item="accelerator"/>
+   A "<x:dfn>gateway</x:dfn>" (a.k.a. "<x:dfn>reverse proxy</x:dfn>") is an
+   intermediary that acts as an origin server for the outbound connection but
+   translates received requests and forwards them inbound to another server or
+   servers. Gateways are often used to encapsulate legacy or untrusted
+   information services, to improve server performance through
+   "<x:dfn>accelerator</x:dfn>" caching, and to enable partitioning or load
+   balancing of HTTP services across multiple machines.
+</t>
+<t>
+   All HTTP requirements applicable to an origin server
+   also apply to the outbound communication of a gateway.
+   A gateway communicates with inbound servers using any protocol that
+   it desires, including private extensions to HTTP that are outside
+   the scope of this specification.  However, an HTTP-to-HTTP gateway
+   that wishes to interoperate with third-party HTTP servers ought to conform
+   to user agent requirements on the gateway's inbound connection.
+</t>
+<t><iref primary="true" item="tunnel"/>
+   A "<x:dfn>tunnel</x:dfn>" acts as a blind relay between two connections
+   without changing the messages. Once active, a tunnel is not
+   considered a party to the HTTP communication, though the tunnel might
+   have been initiated by an HTTP request. A tunnel ceases to exist when
+   both ends of the relayed connection are closed. Tunnels are used to
+   extend a virtual connection through an intermediary, such as when
+   Transport Layer Security (TLS, <xref target="RFC5246"/>) is used to
+   establish confidential communication through a shared firewall proxy.
+</t>
+<t>
+   The above categories for intermediary only consider those acting as
+   participants in the HTTP communication.  There are also intermediaries
+   that can act on lower layers of the network protocol stack, filtering or
+   redirecting HTTP traffic without the knowledge or permission of message
+   senders. Network intermediaries are indistinguishable (at a protocol level)
+   from a man-in-the-middle attack, often introducing security flaws or
+   interoperability problems due to mistakenly violating HTTP semantics.
+</t>
+<t><iref primary="true" item="interception proxy"/>
+<iref primary="true" item="transparent proxy"/>
+<iref primary="true" item="captive portal"/>
+   For example, an
+   "<x:dfn>interception proxy</x:dfn>" <xref target="RFC3040"/> (also commonly
+   known as a "<x:dfn>transparent proxy</x:dfn>" <xref target="RFC1919"/> or
+   "<x:dfn>captive portal</x:dfn>")
+   differs from an HTTP proxy because it is not selected by the client.
+   Instead, an interception proxy filters or redirects outgoing TCP port 80
+   packets (and occasionally other common port traffic).
+   Interception proxies are commonly found on public network access points,
+   as a means of enforcing account subscription prior to allowing use of
+   non-local Internet services, and within corporate firewalls to enforce
+   network usage policies.
+</t>
+<t>
+   HTTP is defined as a stateless protocol, meaning that each request message
+   can be understood in isolation.  Many implementations depend on HTTP's
+   stateless design in order to reuse proxied connections or dynamically
+   load balance requests across multiple servers.  Hence, a server &MUST-NOT;
+   assume that two requests on the same connection are from the same user
+   agent unless the connection is secured and specific to that agent.
+   Some non-standard HTTP extensions (e.g., <xref target="RFC4559"/>) have
+   been known to violate this requirement, resulting in security and
+   interoperability problems.
+</t>
+</section>
+
+<section title="Caches" anchor="caches">
+<iref primary="true" item="cache"/>
+<t>
+   A "<x:dfn>cache</x:dfn>" is a local store of previous response messages and the
+   subsystem that controls its message storage, retrieval, and deletion.
+   A cache stores cacheable responses in order to reduce the response
+   time and network bandwidth consumption on future, equivalent
+   requests. Any client or server &MAY; employ a cache, though a cache
+   cannot be used by a server while it is acting as a tunnel.
+</t>
+<t>
+   The effect of a cache is that the request/response chain is shortened
+   if one of the participants along the chain has a cached response
+   applicable to that request. The following illustrates the resulting
+   chain if B has a cached copy of an earlier response from O (via C)
+   for a request that has not been cached by UA or A.
+</t>
+<figure><artwork type="drawing">
+            &gt;             &gt;
+       <x:highlight>UA</x:highlight> =========== <x:highlight>A</x:highlight> =========== <x:highlight>B</x:highlight> - - - - - - <x:highlight>C</x:highlight> - - - - - - <x:highlight>O</x:highlight>
+                  &lt;             &lt;
+</artwork></figure>
+<t><iref primary="true" item="cacheable"/>
+   A response is "<x:dfn>cacheable</x:dfn>" if a cache is allowed to store a copy of
+   the response message for use in answering subsequent requests.
+   Even when a response is cacheable, there might be additional
+   constraints placed by the client or by the origin server on when
+   that cached response can be used for a particular request. HTTP
+   requirements for cache behavior and cacheable responses are
+   defined in &caching-overview;.  
+</t>
+<t>
+   There is a wide variety of architectures and configurations
+   of caches deployed across the World Wide Web and
+   inside large organizations. These include national hierarchies
+   of proxy caches to save transoceanic bandwidth, collaborative systems that
+   broadcast or multicast cache entries, archives of pre-fetched cache
+   entries for use in off-line or high-latency environments, and so on.
+</t>
+</section>
+
+<section title="Protocol Versioning" anchor="http.version">
+  <x:anchor-alias value="HTTP-version"/>
+  <x:anchor-alias value="HTTP-name"/>
+<t>
+   HTTP uses a "&lt;major&gt;.&lt;minor&gt;" numbering scheme to indicate
+   versions of the protocol. This specification defines version "1.1".
+   The protocol version as a whole indicates the sender's conformance
+   with the set of requirements laid out in that version's corresponding
+   specification of HTTP.
+</t>
+<t>
+   The version of an HTTP message is indicated by an HTTP-version field
+   in the first line of the message. HTTP-version is case-sensitive.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-version"/><iref primary="true" item="Grammar" subitem="HTTP-name"/>
+  <x:ref>HTTP-version</x:ref>  = <x:ref>HTTP-name</x:ref> "/" <x:ref>DIGIT</x:ref> "." <x:ref>DIGIT</x:ref>
+  <x:ref>HTTP-name</x:ref>     = <x:abnf-char-sequence>"HTTP"</x:abnf-char-sequence> ; "HTTP", case-sensitive 
+</artwork></figure>
+<t>
+   The HTTP version number consists of two decimal digits separated by a "."
+   (period or decimal point).  The first digit ("major version") indicates the
+   HTTP messaging syntax, whereas the second digit ("minor version") indicates
+   the highest minor version within that major version to which the sender is
+   conformant and able to understand for future communication.  The minor
+   version advertises the sender's communication capabilities even when the
+   sender is only using a backwards-compatible subset of the protocol,
+   thereby letting the recipient know that more advanced features can
+   be used in response (by servers) or in future requests (by clients).
+</t>
+<t>
+   When an HTTP/1.1 message is sent to an HTTP/1.0 recipient
+   <xref target="RFC1945"/> or a recipient whose version is unknown,
+   the HTTP/1.1 message is constructed such that it can be interpreted
+   as a valid HTTP/1.0 message if all of the newer features are ignored.
+   This specification places recipient-version requirements on some
+   new features so that a conformant sender will only use compatible
+   features until it has determined, through configuration or the
+   receipt of a message, that the recipient supports HTTP/1.1.
+</t>
+<t>
+   The interpretation of a header field does not change between minor
+   versions of the same major HTTP version, though the default
+   behavior of a recipient in the absence of such a field can change.
+   Unless specified otherwise, header fields defined in HTTP/1.1 are
+   defined for all versions of HTTP/1.x.  In particular, the <x:ref>Host</x:ref>
+   and <x:ref>Connection</x:ref> header fields ought to be implemented by all
+   HTTP/1.x implementations whether or not they advertise conformance with
+   HTTP/1.1.
+</t>
+<t>
+   New header fields can be introduced without changing the protocol version
+   if their defined semantics allow them to be safely ignored by recipients
+   that do not recognize them. Header field extensibility is discussed in
+   <xref target="field.extensibility"/>.
+</t>
+<t>
+   Intermediaries that process HTTP messages (i.e., all intermediaries
+   other than those acting as tunnels) &MUST; send their own HTTP-version
+   in forwarded messages.  In other words, they are not allowed to blindly
+   forward the first line of an HTTP message without ensuring that the
+   protocol version in that message matches a version to which that
+   intermediary is conformant for both the receiving and
+   sending of messages.  Forwarding an HTTP message without rewriting
+   the HTTP-version might result in communication errors when downstream
+   recipients use the message sender's version to determine what features
+   are safe to use for later communication with that sender.
+</t>
+<t>
+   A client &SHOULD; send a request version equal to the highest
+   version to which the client is conformant and
+   whose major version is no higher than the highest version supported
+   by the server, if this is known.  A client &MUST-NOT; send a
+   version to which it is not conformant.
+</t>
+<t>
+   A client &MAY; send a lower request version if it is known that
+   the server incorrectly implements the HTTP specification, but only
+   after the client has attempted at least one normal request and determined
+   from the response status code or header fields (e.g., <x:ref>Server</x:ref>) that
+   the server improperly handles higher request versions.
+</t>
+<t>
+   A server &SHOULD; send a response version equal to the highest version to
+   which the server is conformant that has a major version less than or equal
+   to the one received in the request.
+   A server &MUST-NOT; send a version to which it is not conformant.
+   A server can send a <x:ref>505 (HTTP Version Not Supported)</x:ref>
+   response if it wishes, for any reason, to refuse service of the client's
+   major protocol version.
+</t>
+<t>
+   A server &MAY; send an HTTP/1.0 response to a request
+   if it is known or suspected that the client incorrectly implements the
+   HTTP specification and is incapable of correctly processing later
+   version responses, such as when a client fails to parse the version
+   number correctly or when an intermediary is known to blindly forward
+   the HTTP-version even when it doesn't conform to the given minor
+   version of the protocol. Such protocol downgrades &SHOULD-NOT; be
+   performed unless triggered by specific client attributes, such as when
+   one or more of the request header fields (e.g., <x:ref>User-Agent</x:ref>)
+   uniquely match the values sent by a client known to be in error.
+</t>
+<t>
+   The intention of HTTP's versioning design is that the major number
+   will only be incremented if an incompatible message syntax is
+   introduced, and that the minor number will only be incremented when
+   changes made to the protocol have the effect of adding to the message
+   semantics or implying additional capabilities of the sender.  However,
+   the minor version was not incremented for the changes introduced between
+   <xref target="RFC2068"/> and <xref target="RFC2616"/>, and this revision
+   has specifically avoided any such changes to the protocol.
+</t>
+<t>
+   When an HTTP message is received with a major version number that the
+   recipient implements, but a higher minor version number than what the
+   recipient implements, the recipient &SHOULD; process the message as if it
+   were in the highest minor version within that major version to which the
+   recipient is conformant. A recipient can assume that a message with a
+   higher minor version, when sent to a recipient that has not yet indicated
+   support for that higher version, is sufficiently backwards-compatible to be
+   safely processed by any implementation of the same major version.
+</t>
+</section>
+
+<section title="Uniform Resource Identifiers" anchor="uri">
+<iref primary="true" item="resource"/>
+<t>
+   Uniform Resource Identifiers (URIs) <xref target="RFC3986"/> are used
+   throughout HTTP as the means for identifying resources (<xref target="resources"/>).
+   URI references are used to target requests, indicate redirects, and define
+   relationships.
+</t>
+  <x:anchor-alias value="URI-reference"/>
+  <x:anchor-alias value="absolute-URI"/>
+  <x:anchor-alias value="relative-part"/>
+  <x:anchor-alias value="scheme"/>
+  <x:anchor-alias value="authority"/>
+  <x:anchor-alias value="uri-host"/>
+  <x:anchor-alias value="port"/>
+  <x:anchor-alias value="path"/>
+  <x:anchor-alias value="path-abempty"/>
+  <x:anchor-alias value="segment"/>
+  <x:anchor-alias value="query"/>
+  <x:anchor-alias value="fragment"/>
+  <x:anchor-alias value="absolute-path"/>
+  <x:anchor-alias value="partial-URI"/>
+<t>
+   The definitions of "URI-reference",
+   "absolute-URI", "relative-part", "scheme", "authority", "port", "host",
+   "path-abempty", "segment", "query", and "fragment" are adopted from the
+   URI generic syntax.
+   An "absolute-path" rule is defined for protocol elements that can contain a
+   non-empty path component. (This rule differs slightly from the path-abempty
+   rule of RFC 3986, which allows for an empty path to be used in references,
+   and path-absolute rule, which does not allow paths that begin with "//".)
+   A "partial-URI" rule is defined for protocol elements
+   that can contain a relative URI but not a fragment component.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="URI-reference"><!--exported production--></iref><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="scheme"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="absolute-path"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="fragment"/><iref primary="true" item="Grammar" subitem="segment"/><iref primary="true" item="Grammar" subitem="uri-host"/><iref primary="true" item="Grammar" subitem="partial-URI"><!--exported production--></iref>
+  <x:ref>URI-reference</x:ref> = &lt;URI-reference, see <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
+  <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, see <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
+  <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
+  <x:ref>scheme</x:ref>        = &lt;scheme, see <xref target="RFC3986" x:fmt="," x:sec="3.1"/>&gt;
+  <x:ref>authority</x:ref>     = &lt;authority, see <xref target="RFC3986" x:fmt="," x:sec="3.2"/>&gt;
+  <x:ref>uri-host</x:ref>      = &lt;host, see <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>&gt;
+  <x:ref>port</x:ref>          = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
+  <x:ref>path-abempty</x:ref>  = &lt;path-abempty, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
+  <x:ref>segment</x:ref>       = &lt;segment, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
+  <x:ref>query</x:ref>         = &lt;query, see <xref target="RFC3986" x:fmt="," x:sec="3.4"/>&gt;
+  <x:ref>fragment</x:ref>      = &lt;fragment, see <xref target="RFC3986" x:fmt="," x:sec="3.5"/>&gt;
+  
+  <x:ref>absolute-path</x:ref> = 1*( "/" segment )
+  <x:ref>partial-URI</x:ref>   = relative-part [ "?" query ]
+</artwork></figure>
+<t>
+   Each protocol element in HTTP that allows a URI reference will indicate
+   in its ABNF production whether the element allows any form of reference
+   (URI-reference), only a URI in absolute form (absolute-URI), only the
+   path and optional query components, or some combination of the above.
+   Unless otherwise indicated, URI references are parsed
+   relative to the effective request URI
+   (<xref target="effective.request.uri"/>).
+</t>
+
+<section title="http URI Scheme" anchor="http.uri">
+  <x:anchor-alias value="http-URI"/>
+  <iref item="http URI scheme" primary="true"/>
+  <iref item="URI scheme" subitem="http" primary="true"/>
+<t>
+   The "http" URI scheme is hereby defined for the purpose of minting
+   identifiers according to their association with the hierarchical
+   namespace governed by a potential HTTP origin server listening for
+   TCP (<xref target="RFC0793"/>) connections on a given port.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URI"><!--terminal production--></iref>
+  <x:ref>http-URI</x:ref> = "http:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
+             [ "#" <x:ref>fragment</x:ref> ]
+</artwork></figure>
+<t>
+   The origin server for an "http" URI is identified by the 
+   <x:ref>authority</x:ref> component, which includes a host identifier
+   and optional TCP port (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
+   The hierarchical path component and optional query component serve as an
+   identifier for a potential target resource within that origin server's name
+   space. The optional fragment component allows for indirect identification
+   of a secondary resource, independent of the URI scheme, as defined in
+   <xref target="RFC3986" x:fmt="of" x:sec="3.5"/>.
+</t>
+<t>
+   A sender &MUST-NOT; generate an "http" URI with an empty host identifier.
+   A recipient that processes such a URI reference &MUST; reject it as invalid. 
+</t>
+<t>
+   If the host identifier is provided as an IP address, the origin server is
+   the listener (if any) on the indicated TCP port at that IP address.
+   If host is a registered name, the registered name is an indirect identifier
+   for use with a name resolution service, such as DNS, to find an address for
+   that origin server.
+   If the port subcomponent is empty or not given, TCP port 80 (the
+   reserved port for WWW services) is the default.
+</t>
+<t>
+   Note that the presence of a URI with a given authority component does not
+   imply that there is always an HTTP server listening for connections on
+   that host and port. Anyone can mint a URI. What the authority component
+   determines is who has the right to respond authoritatively to requests that
+   target the identified resource. The delegated nature of registered names
+   and IP addresses creates a federated namespace, based on control over the
+   indicated host and port, whether or not an HTTP server is present.
+   See <xref target="establishing.authority"/> for security considerations
+   related to establishing authority.
+</t>
+<t>
+   When an "http" URI is used within a context that calls for access to the
+   indicated resource, a client &MAY; attempt access by resolving
+   the host to an IP address, establishing a TCP connection to that address
+   on the indicated port, and sending an HTTP request message
+   (<xref target="http.message"/>) containing the URI's identifying data
+   (<xref target="message.routing"/>) to the server.
+   If the server responds to that request with a non-interim HTTP response
+   message, as described in <xref target="status.codes"/>, then that response
+   is considered an authoritative answer to the client's request.
+</t>
+<t>
+   Although HTTP is independent of the transport protocol, the "http"
+   scheme is specific to TCP-based services because the name delegation
+   process depends on TCP for establishing authority.
+   An HTTP service based on some other underlying connection protocol
+   would presumably be identified using a different URI scheme, just as
+   the "https" scheme (below) is used for resources that require an
+   end-to-end secured connection. Other protocols might also be used to
+   provide access to "http" identified resources &mdash; it is only the
+   authoritative interface that is specific to TCP.
+</t>
+<t>
+   The URI generic syntax for authority also includes a deprecated
+   userinfo subcomponent (<xref target="RFC3986" x:fmt="," x:sec="3.2.1"/>)
+   for including user authentication information in the URI.  Some
+   implementations make use of the userinfo component for internal
+   configuration of authentication information, such as within command
+   invocation options, configuration files, or bookmark lists, even
+   though such usage might expose a user identifier or password.
+   A sender &MUST-NOT; generate the userinfo subcomponent (and its "@"
+   delimiter) when an "http" URI reference is generated within a message as a
+   request target or header field value.
+   Before making use of an "http" URI reference received from an untrusted
+   source, a recipient &SHOULD; parse for userinfo and treat its presence as
+   an error; it is likely being used to obscure the authority for the sake of
+   phishing attacks.
+</t>
+</section>
+
+<section title="https URI Scheme" anchor="https.uri">
+   <x:anchor-alias value="https-URI"/>
+   <iref item="https URI scheme"/>
+   <iref item="URI scheme" subitem="https"/>
+<t>
+   The "https" URI scheme is hereby defined for the purpose of minting
+   identifiers according to their association with the hierarchical
+   namespace governed by a potential HTTP origin server listening to a
+   given TCP port for TLS-secured connections (<xref target="RFC5246"/>).
+</t>
+<t>
+   All of the requirements listed above for the "http" scheme are also
+   requirements for the "https" scheme, except that TCP port 443 is the
+   default if the port subcomponent is empty or not given,
+   and the user agent &MUST; ensure that its connection to the origin
+   server is secured through the use of strong encryption, end-to-end,
+   prior to sending the first HTTP request.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
+  <x:ref>https-URI</x:ref> = "https:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
+              [ "#" <x:ref>fragment</x:ref> ]
+</artwork></figure>
+<t>
+   Note that the "https" URI scheme depends on both TLS and TCP for
+   establishing authority.
+   Resources made available via the "https" scheme have no shared
+   identity with the "http" scheme even if their resource identifiers
+   indicate the same authority (the same host listening to the same
+   TCP port).  They are distinct namespaces and are considered to be
+   distinct origin servers.  However, an extension to HTTP that is
+   defined to apply to entire host domains, such as the Cookie protocol 
+   <xref target="RFC6265"/>, can allow information
+   set by one service to impact communication with other services
+   within a matching group of host domains.
+</t>
+<t>
+   The process for authoritative access to an "https" identified
+   resource is defined in <xref target="RFC2818"/>.
+</t>
+</section>
+
+<section title="http and https URI Normalization and Comparison" anchor="uri.comparison">
+<t>
+   Since the "http" and "https" schemes conform to the URI generic syntax,
+   such URIs are normalized and compared according to the algorithm defined
+   in <xref target="RFC3986" x:fmt="of" x:sec="6"/>, using the defaults
+   described above for each scheme.
+</t>
+<t>
+   If the port is equal to the default port for a scheme, the normal form is
+   to omit the port subcomponent. When not being used in absolute form as the
+   request target of an OPTIONS request, an empty path component is equivalent
+   to an absolute path of "/", so the normal form is to provide a path of "/"
+   instead. The scheme and host are case-insensitive and normally provided in
+   lowercase; all other components are compared in a case-sensitive manner.
+   Characters other than those in the "reserved" set are equivalent to their
+   percent-encoded octets: the normal form is to not encode them
+   (see Sections <xref target="RFC3986" x:fmt="number" x:sec="2.1"/> and
+   <xref target="RFC3986" x:fmt="number" x:sec="2.2"/> of 
+   <xref target="RFC3986"/>).
+</t>
+<t>
+   For example, the following three URIs are equivalent:
+</t>
+<figure><artwork type="example">
+   http://example.com:80/~smith/home.html
+   http://EXAMPLE.com/%7Esmith/home.html
+   http://EXAMPLE.com:/%7esmith/home.html
+</artwork></figure>
+</section>
+</section>
+</section>
+
 <section title="Resources" anchor="resources">
   <x:anchor-alias value="target resource"/>
 <t>
    The target of an HTTP request is called a "<x:dfn>resource</x:dfn>". 
    HTTP does not limit the nature of a resource; it merely
    defines an interface that might be used to interact with resources.
-   Each resource is identified by a Uniform Resource Identifier (URI), as
-   described in &uri;.
+   Each resource is identified by a Uniform Resource Identifier (URI).
 </t>
 <t>
    When a client constructs an HTTP/1.1 request message, it sends the
