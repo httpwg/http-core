@@ -5,6 +5,7 @@ saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
 rfcdiff = rfcdiff --width 78 --stdout
 stylesheet = lib/myxml2rfc.xslt
 reduction  = lib/clean-for-DTD.xslt
+xreffer    = lib/xreffer.xslt
 bap = bap
 bd  = build
 
@@ -78,10 +79,10 @@ diff00: $(TARGETS_TXT)
 	$(rfcdiff) 00/$(draftname)-auth-00.txt $(AUTH).txt > diff_auth_since_00.html
 
 %.html: %.xml $(stylesheet)
-	$(saxon) $< $(stylesheet) | awk -f lib/html5doctype.awk > $@
+	$(saxon) $< $(xreffer) | $(saxon) - $(stylesheet) | awk -f lib/html5doctype.awk > $@
 
 $(bd)/%.redxml: %.xml $(reduction)
-	$(saxon) $< $(reduction) > $@
+	$(saxon) $< $(xreffer) | $(saxon) - $(reduction) > $@
 
 %.txt: $(bd)/%.redxml
 	$(xml2rfc) $< -o $@
