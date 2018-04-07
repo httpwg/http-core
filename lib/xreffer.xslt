@@ -17,6 +17,9 @@
   <xsl:variable name="t" select="@target"/>
   <xsl:variable name="n" select="//*[@anchor=$t]"/>
   <xsl:choose>
+    <xsl:when test="$n/self::x:has and $n/@target">
+      <xref target="{$n/../../@anchor}" x:rel="#{$n/@target}"/>
+    </xsl:when>
     <xsl:when test="$n/self::x:has">
       <xref target="{$n/../../@anchor}" x:rel="#{$t}"/>
     </xsl:when>
