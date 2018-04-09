@@ -276,7 +276,7 @@
             <xsl:call-template name="info">
               <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
             </xsl:call-template>
-            <xsl:value-of select="."/>
+            <xsl:value-of select="$ref"/>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:for-each>
