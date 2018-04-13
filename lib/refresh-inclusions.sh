@@ -20,7 +20,7 @@ expand() {
   # end include
   /^<\?ENDINC .* \?>$/ {
     if ($2 != includefile) {
-      printf ("unexpected ENDINC, got %s but expected %s\n", $2, includefile) >> /dev/stderr
+      printf ("unexpected ENDINC, got %s but expected %s\n", $2, includefile) >> "/dev/stderr"
     }
     includefile = "";
   }
