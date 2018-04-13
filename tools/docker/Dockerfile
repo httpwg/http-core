@@ -4,7 +4,7 @@ LABEL maintainer="Martin Thomson <martin.thomson@gmail.com>"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates coreutils curl git make ssh libxml2-utils xsltproc \
     python3-minimal python3-lxml python3-pip python3-setuptools python3-wheel \
-    mmark ruby default-jre libsaxonb-java \
+    mmark ruby default-jre libsaxonb-java gcc autoconf automake \
  && rm -rf /var/lib/apt/lists/* \
  && apt-get autoremove -y && apt-get clean -y
 
