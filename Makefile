@@ -1,6 +1,8 @@
-USE_XSLT := true
 LIBDIR := lib
+USE_XSLT := true
+include tools/redefinitions.mk
 include $(LIBDIR)/main.mk
+include tools/core.mk
 
 $(LIBDIR)/main.mk:
 ifneq (,$(shell grep "path *= *$(LIBDIR)" .gitmodules 2>/dev/null))
