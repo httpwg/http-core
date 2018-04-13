@@ -1,45 +1,56 @@
-## Draft HTTP Core Documents
+# HTTPBIS Drafts
 
-This is the working area for the [IETF HTTP Working Group](https://httpwg.github.io/)'s documents that define the HTTP protocol; see also our [extensions repository](https://github.com/httpwg/http-extensions/). See [our contribution guidelines](CONTRIBUTING.md) for information about how to participate.
+This is the working area for IETF [HTTPBIS Working Group](https://datatracker.ietf.org/wg/httpbis/documents/) Internet-Drafts.
 
-**Be aware that all contributions to our work fall under the "NOTE WELL" terms therein.**
+## 
 
-The [building instructions](BUILDING.txt) explain how to build the drafts from source.
+* [Editor's Copy](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-auth-latest.html)
+* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-httpbis-auth-latest)
+* [Compare Editor's Copy to Working Group Draft](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-auth-latest.diff)
+
+## 
+
+* [Editor's Copy](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-cache-latest.html)
+* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-httpbis-cache-latest)
+* [Compare Editor's Copy to Working Group Draft](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-cache-latest.diff)
+
+## 
+
+* [Editor's Copy](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-conditional-latest.html)
+* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-httpbis-conditional-latest)
+* [Compare Editor's Copy to Working Group Draft](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-conditional-latest.diff)
+
+## 
+
+* [Editor's Copy](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-messaging-latest.html)
+* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-httpbis-messaging-latest)
+* [Compare Editor's Copy to Working Group Draft](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-messaging-latest.diff)
+
+## 
+
+* [Editor's Copy](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-range-latest.html)
+* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-httpbis-range-latest)
+* [Compare Editor's Copy to Working Group Draft](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-range-latest.diff)
+
+## 
+
+* [Editor's Copy](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-semantics-latest.html)
+* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-httpbis-semantics-latest)
+* [Compare Editor's Copy to Working Group Draft](https://httpwg.github.io/http-core/#go.draft-ietf-httpbis-semantics-latest.diff)
+
+## Building the Draft
+
+Formatted text and HTML versions of the draft can be built using `make`.
+
+```sh
+$ make
+```
+
+This requires that you have the necessary software installed.  See
+[the instructions](https://github.com/martinthomson/i-d-template/blob/master/doc/SETUP.md).
 
 
-### HTTP/1.1 Message Syntax and Routing
+## Contributing
 
-* [RFC7230](http://httpwg.org/specs/rfc7230.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7230.txt), [tracker](https://datatracker.ietf.org/doc/rfc7230/))
-* [Editors' Draft](https://httpwg.github.io/http-core/draft-ietf-httpbis-messaging-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-messaging-latest.xml))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
-
-### HTTP Semantics
-
-* [RFC7231](http://httpwg.org/specs/rfc7231.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7231.txt), [tracker](https://datatracker.ietf.org/doc/rfc7231/))
-* [Editors' Draft](https://httpwg.github.io/http-core/draft-ietf-httpbis-semantics-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-semantics-latest.xml))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
-
-### HTTP Conditional Requests
-
-* [RFC7232](http://httpwg.org/specs/rfc7232.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7232.txt), [tracker](https://datatracker.ietf.org/doc/rfc7232/))
-* [Editors' Draft](https://httpwg.github.io/http-core/draft-ietf-httpbis-conditional-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-conditional-latest.xml))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
-
-### HTTP Range Requests
-
-* [RFC7233](http://httpwg.org/specs/rfc7233.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7233.txt), [tracker](https://datatracker.ietf.org/doc/rfc7233/))
-* [Editors' Draft](https://httpwg.github.io/http-core/draft-ietf-httpbis-range-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-range-latest.xml))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
-
-### HTTP Caching
-
-* [RFC7234](http://httpwg.org/specs/rfc7234.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7234.txt), [tracker](https://datatracker.ietf.org/doc/rfc7234/))
-* [Editors' Draft](https://httpwg.github.io/http-core/draft-ietf-httpbis-cache-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-cache-latest.xml))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
-
-### HTTP Authentication
-
-* [RFC7235](http://httpwg.org/specs/rfc7235.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7235.txt), [tracker](https://datatracker.ietf.org/doc/rfc7235/))
-* [Editors' Draft](https://httpwg.github.io/http-core/draft-ietf-httpbis-auth-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-auth-latest.xml))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
-
+See the
+[guidelines for contributions](https://github.com/httpwg/http-core/blob/master/CONTRIBUTING.md).
