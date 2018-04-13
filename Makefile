@@ -97,7 +97,7 @@ $(bd)/%.abnf-appendix: $(bd)/%.parsed-abnf
 	$(saxon) $*.xml $(bd)/abnf2xml2rfc.xslt abnf="$*.parsed-abnf" >$@
 
 $(bd)/%.xhtml: %.xml lib/rfc2629toXHTML.xslt
-	$(saxon) $< lib/rfc2629toXHTML.xslt > $@
+	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/rfc2629toXHTML.xslt > $@
 
 $(bd)/%.iana-headers: %.xml lib/extract-header-defs.xslt
 	$(saxon) $< lib/extract-header-defs.xslt > $@
