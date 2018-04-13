@@ -1,5 +1,5 @@
 saxpath = "$(HOME)/java/saxon-9-7/saxon9he.jar"
-saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
+saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off -ext:on
 tools = tools
 
 xreffer    = $(tools)/xreffer.xslt
