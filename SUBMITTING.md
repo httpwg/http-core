@@ -1,42 +1,36 @@
-Steps for submitting a new set of internet drafts
+# Working with the Drafts
 
-draft number: NN
+A few things to know if you're an editor:
 
-1) cd draft-ietf-httpbis/latest
+* Pushing to the master branch will automatically generate the HTML on the gh-pages branch.
+* Tagging master with a draft name (see below) will automatically submit it for publication.
+* Creating other branches for temporary work is fine, but please prefix their names with your username, and clean them up when you're done.
+* You can build drafts locally with `make`; see the [required software](https://github.com/martinthomson/i-d-template/blob/master/doc/SETUP.md). We use `kramdown-rfc2669`.
 
-2) Check for "No (changes) yet" in the "Changes" section and change it to "None".
 
-3) cd .. ; svn cp latest NN
+## Starting a New Draft
 
-4) cd NN
+If you have been asked to start work on a new draft, you'll be given access to the repo. Once that happens, you'll need to:
 
-5) change docName attributes from -latest to -NN by updating the ID-VERSION definition.
+1. Check in your draft using the `draft-ietf-httpbis-NAME.md` convention. We strongly recommend using Markdown; see the [template](https://github.com/martinthomson/i-d-template/blob/master/doc/example.md).
 
-6) Set @day on the date attributes to reflect the submission day.
+2. Assure that the document metadata is correct; if not sure, ask the Chairs.
 
-7) refresh-inclusions p*.xml ; make
+3. Submit the draft, as per below. The `-00` version will need to be approved by the Chairs.
 
-8) ./dodraft NN # this generates ready to submit TXT and XML files
 
-9) svn add draft*xml draft*txt ; svn propset svn:eol-style native draft*txt draft*xml ; svn propset svn:mime-type "text/xml" draft*xml
+## Submitting A Draft Revision
 
-10) cd ../latest
+When you're ready to submit a new version of a draft:
 
-11) add "Since draft-ietf-httpbis-...-NN" subsections, and update the link from the boilerplate.
+0. `git status`  <-- all changes should be committed and pushed.
 
-12) cd ../diffs
+1. Double-check the year on the date element to make sure it's current.
 
-13) ./dodiff NN-1 NN
+2. Check the "Changes" section for this draft to make sure it's appropriate
+   (e.g., replace "None yet" with "None").
 
-14) svn add *.html
+3. `git tag -a draft-ietf-httpbis-<name>-NN;`
+   `git push --tags`
 
-15) svn propset svn:eol-style native *.html
-
-16) svn propset svn:mime-type "text/html; charset=iso-8859-1" *.html
-
-17) cd ..
-
-18) # review the diffs, then commit
-
-19) # don't forget to submit the drafts
-
+4. Add "Since draft-ietf-httpbis-<name>-...-NN" subsection to "Changes" (if tracking them).
