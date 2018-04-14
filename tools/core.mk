@@ -6,12 +6,12 @@ bd  = build
 
 draftname = draft-ietf-httpbis
 
-AUTH        = $(draftname)-auth-latest
-CACHE       = $(draftname)-cache-latest
-CONDITIONAL = $(draftname)-conditional-latest
-MESSAGING   = $(draftname)-messaging-latest
-RANGE       = $(draftname)-range-latest
-SEMANTICS   = $(draftname)-semantics-latest
+AUTH        = $(draftname)-auth
+CACHE       = $(draftname)-cache
+CONDITIONAL = $(draftname)-conditional
+MESSAGING   = $(draftname)-messaging
+RANGE       = $(draftname)-range
+SEMANTICS   = $(draftname)-semantics
 
 TARGETS_ABNF= $(addprefix $(bd)/,$(drafts_xml:.xml=.abnf))
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
