@@ -1,5 +1,9 @@
 LIBDIR := lib
 USE_XSLT := true
+
+.PHONY: latest
+latest:: txt html
+
 include tools/redefinitions.mk
 include $(LIBDIR)/main.mk
 include tools/core.mk
