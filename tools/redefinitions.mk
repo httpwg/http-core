@@ -5,6 +5,9 @@ tools = tools
 xreffer    = $(tools)/xreffer.xslt
 stylesheet = $(tools)/myxml2rfc.xslt
 
+clean::
+	rm -f diff*.html
+
 %.cleanxml: %.xml $(tools)/clean-for-DTD.xslt abnf
 	$(saxon) $< $(xreffer) | $(saxon) - $(tools)/clean-for-DTD.xslt > $@
 
