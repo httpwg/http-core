@@ -35,9 +35,6 @@ ABNF =    $(TARGETS_ABNF) \
           $(bd)/$(AUTH).iana-status-codes \
           httpbis.abnf
 
-clean::
-	rm -f $(ABNF)
-
 $(bap)/bap:
 	cd $(bap); sh configure
 	cd $(bap); make
