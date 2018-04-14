@@ -1,7 +1,7 @@
 #!/bin/sh
 # combine into a single ABNF
 
-bap=bap
+bap=tools/bap
 
 [ $# -ne 0 ] || ( echo "combine-abnf.sh file..." >&2 ; exit 2 )
 
