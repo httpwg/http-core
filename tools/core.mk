@@ -76,7 +76,7 @@ httpbis.abnf: $(TARGETS_ABNF)
 	$(tools)/common-abnf.sh $^ > $@
 
 
-diffs: txt
+diff_auth48: txt
 	$(rfcdiff) auth48/rfc7230.txt $(MESSAGING).txt > diff_messaging.html
 	$(rfcdiff) auth48/rfc7231.txt $(SEMANTICS).txt > diff_semantics.html
 	$(rfcdiff) auth48/rfc7232.txt $(CONDITIONAL).txt > diff_conditional.html
