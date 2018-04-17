@@ -94,7 +94,7 @@ $(bd)/%.parsed-abnf: $(bd)/%.abnf
 	$(bap)/bap -i $(bap)/core.abnf < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -l 69 >$@
 
 $(bd)/%.abnf-appendix: $(bd)/%.parsed-abnf
-	$(saxon) $*.xml $(bd)/abnf2xml2rfc.xslt abnf="$*.parsed-abnf" >$@
+	$(saxon) $*.xml lib/abnf2xml2rfc.xslt abnf="../$<" >$@
 
 $(bd)/%.xhtml: %.xml lib/rfc2629toXHTML.xslt
 	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/rfc2629toXHTML.xslt > $@
