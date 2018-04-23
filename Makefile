@@ -32,7 +32,12 @@ TARGETS_TXT= $(TARGETS_XML:.xml=.txt)
 TARGETS_HTML= $(TARGETS_XML:.xml=.html)
 TARGETS_XHTML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.xhtml))
 TARGETS_REDXML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.redxml))
-TARGETS_ABNF= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.abnf))
+
+TARGETS_ABNF = $(bd)/$(MESSAGING).abnf \
+               $(bd)/$(SEMANTICS).abnf \
+               $(bd)/$(CONDITIONAL).abnf \
+               $(bd)/$(RANGE).abnf \
+               $(bd)/$(CACHE).abnf
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
 TARGETS_PARSEDABNF= $(TARGETS_ABNF:.abnf=.parsed-abnf)
 
@@ -53,8 +58,6 @@ TARGETS = $(TARGETS_HTML) \
           $(bd)/$(CACHE).iana-headers \
           $(bd)/$(CACHE).iana-warn-codes \
           $(bd)/$(CACHE).cache-directives \
-          $(bd)/$(AUTH).iana-headers \
-          $(bd)/$(AUTH).iana-status-codes \
           httpbis.abnf
 
 all: $(TARGETS)
