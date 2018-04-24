@@ -35,7 +35,6 @@ TARGETS_REDXML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.redxml))
 
 TARGETS_ABNF = $(bd)/$(MESSAGING).abnf \
                $(bd)/$(SEMANTICS).abnf \
-               $(bd)/$(CONDITIONAL).abnf \
                $(bd)/$(RANGE).abnf \
                $(bd)/$(CACHE).abnf
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
@@ -51,8 +50,6 @@ TARGETS = $(TARGETS_HTML) \
           $(bd)/$(SEMANTICS).iana-headers \
           $(bd)/$(SEMANTICS).iana-methods	\
           $(bd)/$(SEMANTICS).iana-status-codes \
-          $(bd)/$(CONDITIONAL).iana-headers \
-          $(bd)/$(CONDITIONAL).iana-status-codes \
           $(bd)/$(RANGE).iana-headers \
           $(bd)/$(RANGE).iana-status-codes \
           $(bd)/$(CACHE).iana-headers \
