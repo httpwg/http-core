@@ -34,8 +34,7 @@ TARGETS_XHTML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.xhtml))
 TARGETS_REDXML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.redxml))
 
 TARGETS_ABNF = $(bd)/$(MESSAGING).abnf \
-               $(bd)/$(SEMANTICS).abnf \
-               $(bd)/$(CACHE).abnf
+               $(bd)/$(SEMANTICS).abnf
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
 TARGETS_PARSEDABNF= $(TARGETS_ABNF:.abnf=.parsed-abnf)
 
@@ -49,9 +48,7 @@ TARGETS = $(TARGETS_HTML) \
           $(bd)/$(SEMANTICS).iana-headers \
           $(bd)/$(SEMANTICS).iana-methods	\
           $(bd)/$(SEMANTICS).iana-status-codes \
-          $(bd)/$(CACHE).iana-headers \
-          $(bd)/$(CACHE).iana-warn-codes \
-          $(bd)/$(CACHE).cache-directives \
+          $(bd)/$(SEMANTICS).cache-directives \
           httpbis.abnf
 
 all: $(TARGETS)
@@ -88,7 +85,7 @@ $(bd)/%.abnf: %.xml lib/extract-artwork.xslt
 	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf2616" >$@
 
 $(bd)/%.parsed-abnf: $(bd)/%.abnf
-	$(bap)/bap -i $(bap)/core.abnf < $< | env LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -l 69 >$@
+	$(bap)/bap -i $(bap)/core.abnf < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -l 69 >$@
 
 $(bd)/%.abnf-appendix: $(bd)/%.parsed-abnf
 	$(saxon) $*.xml lib/abnf2xml2rfc.xslt abnf="../$<" >$@
