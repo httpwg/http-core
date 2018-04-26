@@ -4907,6 +4907,29 @@ Expect: 100-continue
    <x:ref>Range</x:ref> header field (<xref target="header.range"/>).
 </t>
 <t>
+   When a 206 response is generated, the server &MUST; generate the following
+   header fields, in addition to those required in the subsections below, if the field would
+   have been sent in a <x:ref>200 (OK)</x:ref> response to the same request:
+   <x:ref>Date</x:ref>, <x:ref>Cache-Control</x:ref>, <x:ref>ETag</x:ref>,
+   <x:ref>Expires</x:ref>, <x:ref>Content-Location</x:ref>, and
+   <x:ref>Vary</x:ref>.
+</t>
+<t>
+   If a 206 is generated in response to a request with an <x:ref>If-Range</x:ref>
+   header field, the sender &SHOULD-NOT; generate other representation header
+   fields beyond those required, because the client is understood to
+   already have a prior response containing those header fields.
+   Otherwise, the sender &MUST; generate all of the representation header
+   fields that would have been sent in a <x:ref>200 (OK)</x:ref> response
+   to the same request.
+</t>
+<t>
+   A 206 response is cacheable by default; i.e., unless otherwise indicated by
+   explicit cache controls (see <xref target="heuristic.freshness"/>).
+</t>
+
+<section title="Single Part" anchor="partial.single">
+<t>
    If a single part is being transferred, the server generating the 206
    response &MUST; generate a <x:ref>Content-Range</x:ref> header field,
    describing what range of the selected representation is enclosed, and a
@@ -4922,10 +4945,13 @@ Content-Type: image/gif
 
 ... 26012 bytes of partial image data ...
 </artwork></figure>
+</section>
+
+<section title="Multiple Parts" anchor="partial.multipart">
 <t>
    If multiple parts are being transferred, the server generating the 206
    response &MUST; generate a "multipart/byteranges" payload, as defined
-   in <xref target="internet.media.type.multipart.byteranges"/>, and a
+   in <xref target="multipart.byteranges"/>, and a
    <x:ref>Content-Type</x:ref> header field containing the
    multipart/byteranges media type and its required boundary parameter.
    To avoid confusion with single-part responses, a server &MUST-NOT; generate
@@ -4992,27 +5018,63 @@ Content-Range: bytes 7000-7999/8000
    cannot rely on receiving the same ranges that it requested, nor the same
    order that it requested.
 </t>
+</section>
+
+<section title="multipart/byteranges" anchor="multipart.byteranges">
+<iref item="Media Type" subitem="multipart/byteranges" primary="true"/>
+<iref item="multipart/byteranges Media Type" primary="true"/>
 <t>
-   When a 206 response is generated, the server &MUST; generate the following
-   header fields, in addition to those required above, if the field would
-   have been sent in a <x:ref>200 (OK)</x:ref> response to the same request:
-   <x:ref>Date</x:ref>, <x:ref>Cache-Control</x:ref>, <x:ref>ETag</x:ref>,
-   <x:ref>Expires</x:ref>, <x:ref>Content-Location</x:ref>, and
-   <x:ref>Vary</x:ref>.
+   When a <x:ref>206 (Partial Content)</x:ref> response message includes the
+   content of multiple ranges, they are transmitted as body parts in a
+   multipart message body (<xref target="RFC2046" x:fmt="," x:sec="5.1"/>)
+   with the media type of "multipart/byteranges".
 </t>
 <t>
-   If a 206 is generated in response to a request with an <x:ref>If-Range</x:ref>
-   header field, the sender &SHOULD-NOT; generate other representation header
-   fields beyond those required above, because the client is understood to
-   already have a prior response containing those header fields.
-   Otherwise, the sender &MUST; generate all of the representation header
-   fields that would have been sent in a <x:ref>200 (OK)</x:ref> response
-   to the same request.
+   The multipart/byteranges media type includes one or more body parts, each
+   with its own <x:ref>Content-Type</x:ref> and <x:ref>Content-Range</x:ref>
+   fields. The required boundary parameter specifies the boundary string used
+   to separate each body part.
 </t>
 <t>
-   A 206 response is cacheable by default; i.e., unless otherwise indicated by
-   explicit cache controls (see <xref target="heuristic.freshness"/>).
+  Implementation Notes:
+  <list style="numbers">
+      <t>Additional CRLFs might precede the first boundary string in the body.</t>
+
+      <t>Although <xref target="RFC2046"/> permits the boundary string to be
+         quoted, some existing implementations handle a quoted boundary
+         string incorrectly.</t>
+
+      <t>A number of clients and servers were coded to an early draft
+         of the byteranges specification that used a media type of
+         multipart/x-byteranges<iref item="multipart/x-byteranges Media Type"/><iref item="Media Type" subitem="multipart/x-byteranges"/>,
+         which is almost (but not quite) compatible with this type.</t>
+  </list>
 </t>
+<t>
+   Despite the name, the "multipart/byteranges" media type is not limited to
+   byte ranges. The following example uses an "exampleunit" range unit:
+</t>
+<figure><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 206 Partial Content
+Date: Tue, 14 Nov 1995 06:25:24 GMT
+Last-Modified: Tue, 14 July 04:58:08 GMT
+Content-Length: 2331785
+Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+
+--THIS_STRING_SEPARATES
+Content-Type: video/example
+Content-Range: exampleunit 1.2-4.3/25
+
+...the first range...
+--THIS_STRING_SEPARATES
+Content-Type: video/example
+Content-Range: exampleunit 11.2-14.3/25
+
+...the second range
+--THIS_STRING_SEPARATES--
+</artwork>
+</figure>
+</section>
 </section>
 </section>
 
@@ -10003,7 +10065,7 @@ Warning: 112 - "network down" "Sat, 25 Aug 2012 23:34:45 GMT"
       N/A
     </t>
     <t hangText="Published specification:">
-      This specification (see <xref target="internet.media.type.multipart.byteranges"/>).
+      This specification (see <xref target="multipart.byteranges"/>).
     </t>
     <t hangText="Applications that use this media type:">
       HTTP components supporting multiple ranges in a single request.
@@ -11374,66 +11436,10 @@ Warning: 112 - "network down" "Sat, 25 Aug 2012 23:34:45 GMT"
    MHTML messages being transported by HTTP follow all conventions of MHTML,
    including line length limitations and folding, canonicalization, etc.,
    since HTTP transfers message-bodies as payload and, aside from the
-   "multipart/byteranges" type (<xref target="internet.media.type.multipart.byteranges"/>), does not interpret
+   "multipart/byteranges" type (<xref target="multipart.byteranges"/>), does not interpret
    the content or any MIME header lines that might be contained therein.
 </t>
 </section>
-</section>
-
-<section title="Internet Media Type multipart/byteranges" anchor="internet.media.type.multipart.byteranges">
-<iref item="Media Type" subitem="multipart/byteranges" primary="true"/>
-<iref item="multipart/byteranges Media Type" primary="true"/>
-<t>
-   When a <x:ref>206 (Partial Content)</x:ref> response message includes the
-   content of multiple ranges, they are transmitted as body parts in a
-   multipart message body (<xref target="RFC2046" x:fmt="," x:sec="5.1"/>)
-   with the media type of "multipart/byteranges".
-</t>
-<t>
-   The multipart/byteranges media type includes one or more body parts, each
-   with its own <x:ref>Content-Type</x:ref> and <x:ref>Content-Range</x:ref>
-   fields. The required boundary parameter specifies the boundary string used
-   to separate each body part.
-</t>
-<t>
-  Implementation Notes:
-  <list style="numbers">
-      <t>Additional CRLFs might precede the first boundary string in the body.</t>
-
-      <t>Although <xref target="RFC2046"/> permits the boundary string to be
-         quoted, some existing implementations handle a quoted boundary
-         string incorrectly.</t>
-
-      <t>A number of clients and servers were coded to an early draft
-         of the byteranges specification that used a media type of
-         multipart/x-byteranges<iref item="multipart/x-byteranges Media Type"/><iref item="Media Type" subitem="multipart/x-byteranges"/>,
-         which is almost (but not quite) compatible with this type.</t>
-  </list>
-</t>
-<t>
-   Despite the name, the "multipart/byteranges" media type is not limited to
-   byte ranges. The following example uses an "exampleunit" range unit:
-</t>
-<figure><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
-HTTP/1.1 206 Partial Content
-Date: Tue, 14 Nov 1995 06:25:24 GMT
-Last-Modified: Tue, 14 July 04:58:08 GMT
-Content-Length: 2331785
-Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
-
---THIS_STRING_SEPARATES
-Content-Type: video/example
-Content-Range: exampleunit 1.2-4.3/25
-
-...the first range...
---THIS_STRING_SEPARATES
-Content-Type: video/example
-Content-Range: exampleunit 11.2-14.3/25
-
-...the second range
---THIS_STRING_SEPARATES--
-</artwork>
-</figure>
 </section>
 
 <section title="Changes from RFC 7231" anchor="changes.from.rfc.7231">
