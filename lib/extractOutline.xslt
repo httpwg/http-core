@@ -9,18 +9,18 @@
             doctype-public="-//W3C//DTD HTML 4.01//EN" indent="yes"/>
             
 <data:specs>
-  <data:name>draft-ietf-httpbis-messaging-latest</data:name>
   <data:name>draft-ietf-httpbis-semantics-latest</data:name>
+  <data:name>draft-ietf-httpbis-messaging-latest</data:name>
+  <data:name>draft-ietf-httpbis-cache-latest</data:name>
   <data:name>draft-ietf-httpbis-conditional-latest</data:name>
   <data:name>draft-ietf-httpbis-range-latest</data:name>
-  <data:name>draft-ietf-httpbis-cache-latest</data:name>
   <data:name>draft-ietf-httpbis-auth-latest</data:name>
 </data:specs>
 
 <xsl:template match="/">
   <html>
     <head>
-      <title>HTTP/1.1 Drafts: Combined Table of Contents</title>
+      <title>HTTP Core Drafts: Combined Table of Contents</title>
       <link type="text/css" href="http://www3.tools.ietf.org/wg/httpbis/trac/chrome/common/css/trac.css" rel="stylesheet"/>
       <link type="image/x-icon" href="http://www.tools.ietf.org/ietf.ico" rel="icon"/>
       <link type="image/x-icon" href="http://www.tools.ietf.org/ietf.ico" rel="shortcut icon"/>
@@ -56,7 +56,7 @@ li.tocline2 {
     <body>
       <div id="page">
         <div id="content">
-          <h1>HTTP/1.1 Drafts: Combined Table of Contents</h1>
+          <h1>HTTP Core Drafts: Combined Table of Contents</h1>
           <xsl:for-each select="document('')//data:specs/data:name">
             <xsl:variable name="doc" select="document(concat('../build/',.,'.xhtml'))"/>
             <h2>
