@@ -8817,6 +8817,376 @@ Warning: 112 - "network down" "Sat, 25 Aug 2012 23:34:45 GMT"
 </t>
 </section>
 
+<section title="Security Considerations" anchor="security.considerations">
+<t>
+   This section is meant to inform developers, information providers, and
+   users of known security concerns relevant to HTTP semantics and its
+   use for transferring information over the Internet. Considerations related
+   to message syntax, parsing, and routing are discussed in
+   <xref target="MESSGNG-security.considerations"/>.
+</t>
+<t>
+   The list of considerations below is not exhaustive. Most security concerns
+   related to HTTP semantics are about securing server-side applications (code
+   behind the HTTP interface), securing user agent processing of payloads
+   received via HTTP, or secure use of the Internet in general, rather than
+   security of the protocol. Various organizations maintain topical
+   information and links to current research on Web application security
+   (e.g., <xref target="OWASP"/>).
+</t>
+
+<section title="Attacks Based on File and Path Names" anchor="attack.pathname">
+<t>
+   Origin servers frequently make use of their local file system to manage the
+   mapping from effective request URI to resource representations.
+   Most file systems are not designed to protect against malicious file
+   or path names. Therefore, an origin server needs to avoid accessing
+   names that have a special significance to the system when mapping the
+   request target to files, folders, or directories.
+</t>
+<t>
+   For example, UNIX, Microsoft Windows, and other operating systems use ".."
+   as a path component to indicate a directory level above the current one,
+   and they use specially named paths or file names to send data to system devices.
+   Similar naming conventions might exist within other types of storage
+   systems. Likewise, local storage systems have an annoying tendency to
+   prefer user-friendliness over security when handling invalid or unexpected
+   characters, recomposition of decomposed characters, and case-normalization
+   of case-insensitive names.
+</t>
+<t>
+   Attacks based on such special names tend to focus on either denial-of-service
+   (e.g., telling the server to read from a COM port) or disclosure
+   of configuration and source files that are not meant to be served.
+</t>
+</section>
+
+<section title="Attacks Based on Command, Code, or Query Injection" anchor="attack.injection">
+<t>
+   Origin servers often use parameters within the URI as a
+   means of identifying system services, selecting database entries, or
+   choosing a data source. However, data received in a request cannot be
+   trusted. An attacker could construct any of the request data elements
+   (method, request-target, header fields, or body) to contain data that might
+   be misinterpreted as a command, code, or query when passed through a
+   command invocation, language interpreter, or database interface.
+</t>
+<t>
+   For example, SQL injection is a common attack wherein additional query
+   language is inserted within some part of the request-target or header
+   fields (e.g., <x:ref>Host</x:ref>, <x:ref>Referer</x:ref>, etc.).
+   If the received data is used directly within a SELECT statement, the
+   query language might be interpreted as a database command instead of a
+   simple string value. This type of implementation vulnerability is extremely
+   common, in spite of being easy to prevent.
+</t>
+<t>
+   In general, resource implementations ought to avoid use of request data
+   in contexts that are processed or interpreted as instructions.  Parameters
+   ought to be compared to fixed strings and acted upon as a result of that
+   comparison, rather than passed through an interface that is not prepared
+   for untrusted data. Received data that isn't based on fixed parameters
+   ought to be carefully filtered or encoded to avoid being misinterpreted.
+</t>
+<t>
+   Similar considerations apply to request data when it is stored and later
+   processed, such as within log files, monitoring tools, or when included
+   within a data format that allows embedded scripts.
+</t>
+</section>
+
+<section title="Disclosure of Personal Information" anchor="personal.information">
+<t>
+   Clients are often privy to large amounts of personal information,
+   including both information provided by the user to interact with resources
+   (e.g., the user's name, location, mail address, passwords, encryption
+   keys, etc.) and information about the user's browsing activity over
+   time (e.g., history, bookmarks, etc.). Implementations need to
+   prevent unintentional disclosure of personal information.
+</t>
+</section>
+
+<section title="Disclosure of Sensitive Information in URIs" anchor="sensitive.information.in.uris">
+<t>
+   URIs are intended to be shared, not secured, even when they identify secure
+   resources. URIs are often shown on displays, added to templates when a page
+   is printed, and stored in a variety of unprotected bookmark lists.
+   It is therefore unwise to include information within a URI that
+   is sensitive, personally identifiable, or a risk to disclose.
+</t>
+<t>
+   Authors of services ought to avoid GET-based forms for the submission of
+   sensitive data because that data will be placed in the request-target. Many
+   existing servers, proxies, and user agents log or display the request-target
+   in places where it might be visible to third parties. Such services ought
+   to use POST-based form submission instead.
+</t>
+<t>
+   Since the <x:ref>Referer</x:ref> header field tells a target site about the
+   context that resulted in a request, it has the potential to reveal
+   information about the user's immediate browsing history and any personal
+   information that might be found in the referring resource's URI.
+   Limitations on the Referer header field are described in <xref target="header.referer"/> to
+   address some of its security considerations.
+</t>
+</section>
+
+<section title="Disclosure of Fragment after Redirects" anchor="fragment.disclosure">
+<t>
+   Although fragment identifiers used within URI references are not sent
+   in requests, implementers ought to be aware that they will be visible to
+   the user agent and any extensions or scripts running as a result of the
+   response. In particular, when a redirect occurs and the original request's
+   fragment identifier is inherited by the new reference in
+   <x:ref>Location</x:ref> (<xref target="header.location"/>), this might
+   have the effect of disclosing one site's fragment to another site.
+   If the first site uses personal information in fragments, it ought to
+   ensure that redirects to other sites include a (possibly empty) fragment
+   component in order to block that inheritance.
+</t>
+</section>
+
+<section title="Disclosure of Product Information" anchor="disclosure.product.information">
+<t>
+   The <x:ref>User-Agent</x:ref> (<xref target="header.user-agent"/>),
+   <x:ref>Via</x:ref> (<xref target="header.via"/>), and
+   <x:ref>Server</x:ref> (<xref target="header.server"/>) header fields often
+   reveal information about the respective sender's software systems.
+   In theory, this can make it easier for an attacker to exploit known
+   security holes; in practice, attackers tend to try all potential holes
+   regardless of the apparent software versions being used.
+</t>
+<t>
+   Proxies that serve as a portal through a network firewall ought to take
+   special precautions regarding the transfer of header information that might
+   identify hosts behind the firewall. The <x:ref>Via</x:ref> header field
+   allows intermediaries to replace sensitive machine names with pseudonyms.
+</t>
+</section>
+
+<section title="Browser Fingerprinting" anchor="fingerprinting">
+<t>
+   Browser fingerprinting is a set of techniques for identifying a specific
+   user agent over time through its unique set of characteristics. These
+   characteristics might include information related to its TCP behavior,
+   feature capabilities, and scripting environment, though of particular
+   interest here is the set of unique characteristics that might be
+   communicated via HTTP. Fingerprinting is considered a privacy concern
+   because it enables tracking of a user agent's behavior over time without
+   the corresponding controls that the user might have over other forms of
+   data collection (e.g., cookies). Many general-purpose user agents
+   (i.e., Web browsers) have taken steps to reduce their fingerprints.
+</t>
+<t>
+   There are a number of request header fields that might reveal information
+   to servers that is sufficiently unique to enable fingerprinting.
+   The <x:ref>From</x:ref> header field is the most obvious, though it is
+   expected that From will only be sent when self-identification is desired by
+   the user. Likewise, Cookie header fields are deliberately designed to
+   enable re-identification, so fingerprinting concerns only apply to
+   situations where cookies are disabled or restricted by the user agent's
+   configuration.
+</t>
+<t>
+   The <x:ref>User-Agent</x:ref> header field might contain enough information
+   to uniquely identify a specific device, usually when combined with other
+   characteristics, particularly if the user agent sends excessive details
+   about the user's system or extensions. However, the source of unique
+   information that is least expected by users is
+   <x:ref>proactive negotiation</x:ref> (<xref target="request.conneg"/>),
+   including the <x:ref>Accept</x:ref>, <x:ref>Accept-Charset</x:ref>,
+   <x:ref>Accept-Encoding</x:ref>, and <x:ref>Accept-Language</x:ref>
+   header fields.
+</t>
+<t>
+   In addition to the fingerprinting concern, detailed use of the
+   <x:ref>Accept-Language</x:ref> header field can reveal information the
+   user might consider to be of a private nature. For example, understanding
+   a given language set might be strongly correlated to membership in a
+   particular ethnic group.
+   An approach that limits such loss of privacy would be for a user agent
+   to omit the sending of Accept-Language except for sites that have been
+   whitelisted, perhaps via interaction after detecting a <x:ref>Vary</x:ref>
+   header field that indicates language negotiation might be useful.
+</t>
+<t>
+   In environments where proxies are used to enhance privacy, user agents
+   ought to be conservative in sending proactive negotiation header fields.
+   General-purpose user agents that provide a high degree of header field
+   configurability ought to inform users about the loss of privacy that might
+   result if too much detail is provided. As an extreme privacy measure,
+   proxies could filter the proactive negotiation header fields in relayed
+   requests.
+</t>
+</section>
+
+<section title="Validator Retention" anchor="security.validators">
+<t>
+   The validators defined by this specification are not intended to ensure
+   the validity of a representation, guard against malicious changes, or
+   detect man-in-the-middle attacks. At best, they enable more efficient cache
+   updates and optimistic concurrent writes when all participants are behaving
+   nicely. At worst, the conditions will fail and the client will receive a
+   response that is no more harmful than an HTTP exchange without conditional
+   requests.
+</t>
+<t>
+   An entity-tag can be abused in ways that create privacy risks. For example,
+   a site might deliberately construct a semantically invalid entity-tag that
+   is unique to the user or user agent, send it in a cacheable response with a
+   long freshness time, and then read that entity-tag in later conditional
+   requests as a means of re-identifying that user or user agent. Such an
+   identifying tag would become a persistent identifier for as long as the
+   user agent retained the original cache entry. User agents that cache
+   representations ought to ensure that the cache is cleared or replaced
+   whenever the user performs privacy-maintaining actions, such as clearing
+   stored cookies or changing to a private browsing mode.
+</t>
+</section>
+
+<section title="Denial-of-Service Attacks Using Range" anchor="overlapping.ranges">
+<t>
+   Unconstrained multiple range requests are susceptible to denial-of-service
+   attacks because the effort required to request many overlapping ranges of
+   the same data is tiny compared to the time, memory, and bandwidth consumed
+   by attempting to serve the requested data in many parts.
+   Servers ought to ignore, coalesce, or reject egregious range requests, such
+   as requests for more than two overlapping ranges or for many small ranges
+   in a single set, particularly when the ranges are requested out of order
+   for no apparent reason. Multipart range requests are not designed to
+   support random access.
+</t>
+</section>
+
+<section title="Caching Considerations" anchor="security.caching">
+<t>
+   Caches expose additional potential vulnerabilities, since the contents of
+   the cache represent an attractive target for malicious exploitation.
+   Because cache contents persist after an HTTP request is complete, an attack
+   on the cache can reveal information long after a user believes that the
+   information has been removed from the network. Therefore, cache contents
+   need to be protected as sensitive information.
+</t>
+<t>
+   In particular, various attacks might be amplified by being stored in a
+   shared cache; such "cache poisoning" attacks use the cache to distribute a
+   malicious payload to many clients, and are especially effective when an
+   attacker can use implementation flaws, elevated privileges, or other
+   techniques to insert such a response into a cache. One common attack vector
+   for cache poisoning is to exploit differences in message parsing on proxies
+   and in user agents; see <xref target="message.body.length"/> for the relevant requirements.
+</t>
+<t>
+   Likewise, implementation flaws (as well as misunderstanding of cache
+   operation) might lead to caching of sensitive information (e.g.,
+   authentication credentials) that is thought to be private, exposing it to
+   unauthorized parties.
+</t>
+<t>
+   Furthermore, the very use of a cache can bring about privacy concerns. For
+   example, if two users share a cache, and the first one browses to a site,
+   the second may be able to detect that the other has been to that site, 
+   because the resources from it load more quickly, thanks to the cache.
+</t>
+<t>
+   Note that the Set-Cookie response header field <xref target="RFC6265"/> does not
+   inhibit caching; a cacheable response with a Set-Cookie header field can be (and
+   often is) used to satisfy subsequent requests to caches. Servers who wish
+   to control caching of these responses are encouraged to emit appropriate
+   Cache-Control response header fields.
+</t>
+</section>
+
+<section title="Authentication Considerations" anchor="security.auth">
+<t>
+   Everything about the topic of HTTP authentication is a security
+   consideration, so the list of considerations below is not exhaustive.
+   Furthermore, it is limited to security considerations regarding the
+   authentication framework, in general, rather than discussing all of the
+   potential considerations for specific authentication schemes (which ought
+   to be documented in the specifications that define those schemes).
+   Various organizations maintain topical information and links to current
+   research on Web application security (e.g., <xref target="OWASP"/>),
+   including common pitfalls for implementing and using the authentication
+   schemes found in practice.
+</t>
+
+<section title="Confidentiality of Credentials" anchor="confidentiality.of.credentials">
+<t>
+   The HTTP authentication framework does not define a single mechanism for
+   maintaining the confidentiality of credentials; instead, each
+   authentication scheme defines how the credentials are encoded prior to
+   transmission. While this provides flexibility for the development of future
+   authentication schemes, it is inadequate for the protection of existing
+   schemes that provide no confidentiality on their own, or that do not
+   sufficiently protect against replay attacks. Furthermore, if the server
+   expects credentials that are specific to each individual user, the exchange
+   of those credentials will have the effect of identifying that user even if
+   the content within credentials remains confidential.
+</t>
+<t>
+   HTTP depends on the security properties of the underlying transport- or
+   session-level connection to provide confidential transmission of header
+   fields. In other words, if a server limits access to authenticated users
+   using this framework, the server needs to ensure that the connection is
+   properly secured in accordance with the nature of the authentication
+   scheme used. For example, services that depend on individual user
+   authentication often require a connection to be secured with TLS
+   ("Transport Layer Security", <xref target="RFC5246"/>) prior to exchanging
+   any credentials.
+</t>
+</section>
+
+<section title="Credentials and Idle Clients" anchor="auth.credentials.and.idle.clients">
+<t>
+   Existing HTTP clients and user agents typically retain authentication
+   information indefinitely. HTTP does not provide a mechanism for the
+   origin server to direct clients to discard these cached credentials, since
+   the protocol has no awareness of how credentials are obtained or managed
+   by the user agent. The mechanisms for expiring or revoking credentials can
+   be specified as part of an authentication scheme definition.
+</t>
+<t>
+   Circumstances under which credential caching can interfere with the
+   application's security model include but are not limited to:
+  <list style="symbols">
+     <t>Clients that have been idle for an extended period, following
+        which the server might wish to cause the client to re-prompt the
+        user for credentials.</t>
+
+     <t>Applications that include a session termination indication
+        (such as a "logout" or "commit" button on a page) after which
+        the server side of the application "knows" that there is no
+        further reason for the client to retain the credentials.</t>
+  </list>
+</t>
+<t>
+   User agents that cache credentials are encouraged to provide a readily
+   accessible mechanism for discarding cached credentials under user control.
+</t>
+</section>
+
+<section title="Protection Spaces" anchor="protection.spaces">
+<t>
+  Authentication schemes that solely rely on the "realm" mechanism for
+  establishing a protection space will expose credentials to all resources on
+  an origin server. Clients that have successfully made authenticated requests
+  with a resource can use the same authentication credentials for other
+  resources on the same origin server. This makes it possible for a different
+  resource to harvest authentication credentials for other resources.
+</t>
+<t>
+  This is of particular concern when an origin server hosts resources for multiple
+  parties under the same canonical root URI (<xref target="protection.space"/>).
+  Possible mitigation strategies include restricting direct access to
+  authentication credentials (i.e., not making the content of the
+  <x:ref>Authorization</x:ref> request header field available), and separating protection
+  spaces by using a different host name (or port number) for each party.
+</t>
+</section>
+</section>
+</section>
+
 <section title="IANA Considerations" anchor="IANA.considerations">
 
 <section title="URI Scheme Registration" anchor="uri.scheme.registration">
@@ -10121,376 +10491,6 @@ Warning: 112 - "network down" "Sat, 25 Aug 2012 23:34:45 GMT"
       IESG
     </t>
   </list>
-</t>
-</section>
-</section>
-</section>
-
-<section title="Security Considerations" anchor="security.considerations">
-<t>
-   This section is meant to inform developers, information providers, and
-   users of known security concerns relevant to HTTP semantics and its
-   use for transferring information over the Internet. Considerations related
-   to message syntax, parsing, and routing are discussed in
-   <xref target="MESSGNG-security.considerations"/>.
-</t>
-<t>
-   The list of considerations below is not exhaustive. Most security concerns
-   related to HTTP semantics are about securing server-side applications (code
-   behind the HTTP interface), securing user agent processing of payloads
-   received via HTTP, or secure use of the Internet in general, rather than
-   security of the protocol. Various organizations maintain topical
-   information and links to current research on Web application security
-   (e.g., <xref target="OWASP"/>).
-</t>
-
-<section title="Attacks Based on File and Path Names" anchor="attack.pathname">
-<t>
-   Origin servers frequently make use of their local file system to manage the
-   mapping from effective request URI to resource representations.
-   Most file systems are not designed to protect against malicious file
-   or path names. Therefore, an origin server needs to avoid accessing
-   names that have a special significance to the system when mapping the
-   request target to files, folders, or directories.
-</t>
-<t>
-   For example, UNIX, Microsoft Windows, and other operating systems use ".."
-   as a path component to indicate a directory level above the current one,
-   and they use specially named paths or file names to send data to system devices.
-   Similar naming conventions might exist within other types of storage
-   systems. Likewise, local storage systems have an annoying tendency to
-   prefer user-friendliness over security when handling invalid or unexpected
-   characters, recomposition of decomposed characters, and case-normalization
-   of case-insensitive names.
-</t>
-<t>
-   Attacks based on such special names tend to focus on either denial-of-service
-   (e.g., telling the server to read from a COM port) or disclosure
-   of configuration and source files that are not meant to be served.
-</t>
-</section>
-
-<section title="Attacks Based on Command, Code, or Query Injection" anchor="attack.injection">
-<t>
-   Origin servers often use parameters within the URI as a
-   means of identifying system services, selecting database entries, or
-   choosing a data source. However, data received in a request cannot be
-   trusted. An attacker could construct any of the request data elements
-   (method, request-target, header fields, or body) to contain data that might
-   be misinterpreted as a command, code, or query when passed through a
-   command invocation, language interpreter, or database interface.
-</t>
-<t>
-   For example, SQL injection is a common attack wherein additional query
-   language is inserted within some part of the request-target or header
-   fields (e.g., <x:ref>Host</x:ref>, <x:ref>Referer</x:ref>, etc.).
-   If the received data is used directly within a SELECT statement, the
-   query language might be interpreted as a database command instead of a
-   simple string value. This type of implementation vulnerability is extremely
-   common, in spite of being easy to prevent.
-</t>
-<t>
-   In general, resource implementations ought to avoid use of request data
-   in contexts that are processed or interpreted as instructions.  Parameters
-   ought to be compared to fixed strings and acted upon as a result of that
-   comparison, rather than passed through an interface that is not prepared
-   for untrusted data. Received data that isn't based on fixed parameters
-   ought to be carefully filtered or encoded to avoid being misinterpreted.
-</t>
-<t>
-   Similar considerations apply to request data when it is stored and later
-   processed, such as within log files, monitoring tools, or when included
-   within a data format that allows embedded scripts.
-</t>
-</section>
-
-<section title="Disclosure of Personal Information" anchor="personal.information">
-<t>
-   Clients are often privy to large amounts of personal information,
-   including both information provided by the user to interact with resources
-   (e.g., the user's name, location, mail address, passwords, encryption
-   keys, etc.) and information about the user's browsing activity over
-   time (e.g., history, bookmarks, etc.). Implementations need to
-   prevent unintentional disclosure of personal information.
-</t>
-</section>
-
-<section title="Disclosure of Sensitive Information in URIs" anchor="sensitive.information.in.uris">
-<t>
-   URIs are intended to be shared, not secured, even when they identify secure
-   resources. URIs are often shown on displays, added to templates when a page
-   is printed, and stored in a variety of unprotected bookmark lists.
-   It is therefore unwise to include information within a URI that
-   is sensitive, personally identifiable, or a risk to disclose.
-</t>
-<t>
-   Authors of services ought to avoid GET-based forms for the submission of
-   sensitive data because that data will be placed in the request-target. Many
-   existing servers, proxies, and user agents log or display the request-target
-   in places where it might be visible to third parties. Such services ought
-   to use POST-based form submission instead.
-</t>
-<t>
-   Since the <x:ref>Referer</x:ref> header field tells a target site about the
-   context that resulted in a request, it has the potential to reveal
-   information about the user's immediate browsing history and any personal
-   information that might be found in the referring resource's URI.
-   Limitations on the Referer header field are described in <xref target="header.referer"/> to
-   address some of its security considerations.
-</t>
-</section>
-
-<section title="Disclosure of Fragment after Redirects" anchor="fragment.disclosure">
-<t>
-   Although fragment identifiers used within URI references are not sent
-   in requests, implementers ought to be aware that they will be visible to
-   the user agent and any extensions or scripts running as a result of the
-   response. In particular, when a redirect occurs and the original request's
-   fragment identifier is inherited by the new reference in
-   <x:ref>Location</x:ref> (<xref target="header.location"/>), this might
-   have the effect of disclosing one site's fragment to another site.
-   If the first site uses personal information in fragments, it ought to
-   ensure that redirects to other sites include a (possibly empty) fragment
-   component in order to block that inheritance.
-</t>
-</section>
-
-<section title="Disclosure of Product Information" anchor="disclosure.product.information">
-<t>
-   The <x:ref>User-Agent</x:ref> (<xref target="header.user-agent"/>),
-   <x:ref>Via</x:ref> (<xref target="header.via"/>), and
-   <x:ref>Server</x:ref> (<xref target="header.server"/>) header fields often
-   reveal information about the respective sender's software systems.
-   In theory, this can make it easier for an attacker to exploit known
-   security holes; in practice, attackers tend to try all potential holes
-   regardless of the apparent software versions being used.
-</t>
-<t>
-   Proxies that serve as a portal through a network firewall ought to take
-   special precautions regarding the transfer of header information that might
-   identify hosts behind the firewall. The <x:ref>Via</x:ref> header field
-   allows intermediaries to replace sensitive machine names with pseudonyms.
-</t>
-</section>
-
-<section title="Browser Fingerprinting" anchor="fingerprinting">
-<t>
-   Browser fingerprinting is a set of techniques for identifying a specific
-   user agent over time through its unique set of characteristics. These
-   characteristics might include information related to its TCP behavior,
-   feature capabilities, and scripting environment, though of particular
-   interest here is the set of unique characteristics that might be
-   communicated via HTTP. Fingerprinting is considered a privacy concern
-   because it enables tracking of a user agent's behavior over time without
-   the corresponding controls that the user might have over other forms of
-   data collection (e.g., cookies). Many general-purpose user agents
-   (i.e., Web browsers) have taken steps to reduce their fingerprints.
-</t>
-<t>
-   There are a number of request header fields that might reveal information
-   to servers that is sufficiently unique to enable fingerprinting.
-   The <x:ref>From</x:ref> header field is the most obvious, though it is
-   expected that From will only be sent when self-identification is desired by
-   the user. Likewise, Cookie header fields are deliberately designed to
-   enable re-identification, so fingerprinting concerns only apply to
-   situations where cookies are disabled or restricted by the user agent's
-   configuration.
-</t>
-<t>
-   The <x:ref>User-Agent</x:ref> header field might contain enough information
-   to uniquely identify a specific device, usually when combined with other
-   characteristics, particularly if the user agent sends excessive details
-   about the user's system or extensions. However, the source of unique
-   information that is least expected by users is
-   <x:ref>proactive negotiation</x:ref> (<xref target="request.conneg"/>),
-   including the <x:ref>Accept</x:ref>, <x:ref>Accept-Charset</x:ref>,
-   <x:ref>Accept-Encoding</x:ref>, and <x:ref>Accept-Language</x:ref>
-   header fields.
-</t>
-<t>
-   In addition to the fingerprinting concern, detailed use of the
-   <x:ref>Accept-Language</x:ref> header field can reveal information the
-   user might consider to be of a private nature. For example, understanding
-   a given language set might be strongly correlated to membership in a
-   particular ethnic group.
-   An approach that limits such loss of privacy would be for a user agent
-   to omit the sending of Accept-Language except for sites that have been
-   whitelisted, perhaps via interaction after detecting a <x:ref>Vary</x:ref>
-   header field that indicates language negotiation might be useful.
-</t>
-<t>
-   In environments where proxies are used to enhance privacy, user agents
-   ought to be conservative in sending proactive negotiation header fields.
-   General-purpose user agents that provide a high degree of header field
-   configurability ought to inform users about the loss of privacy that might
-   result if too much detail is provided. As an extreme privacy measure,
-   proxies could filter the proactive negotiation header fields in relayed
-   requests.
-</t>
-</section>
-
-<section title="Validator Retention" anchor="security.validators">
-<t>
-   The validators defined by this specification are not intended to ensure
-   the validity of a representation, guard against malicious changes, or
-   detect man-in-the-middle attacks. At best, they enable more efficient cache
-   updates and optimistic concurrent writes when all participants are behaving
-   nicely. At worst, the conditions will fail and the client will receive a
-   response that is no more harmful than an HTTP exchange without conditional
-   requests.
-</t>
-<t>
-   An entity-tag can be abused in ways that create privacy risks. For example,
-   a site might deliberately construct a semantically invalid entity-tag that
-   is unique to the user or user agent, send it in a cacheable response with a
-   long freshness time, and then read that entity-tag in later conditional
-   requests as a means of re-identifying that user or user agent. Such an
-   identifying tag would become a persistent identifier for as long as the
-   user agent retained the original cache entry. User agents that cache
-   representations ought to ensure that the cache is cleared or replaced
-   whenever the user performs privacy-maintaining actions, such as clearing
-   stored cookies or changing to a private browsing mode.
-</t>
-</section>
-
-<section title="Denial-of-Service Attacks Using Range" anchor="overlapping.ranges">
-<t>
-   Unconstrained multiple range requests are susceptible to denial-of-service
-   attacks because the effort required to request many overlapping ranges of
-   the same data is tiny compared to the time, memory, and bandwidth consumed
-   by attempting to serve the requested data in many parts.
-   Servers ought to ignore, coalesce, or reject egregious range requests, such
-   as requests for more than two overlapping ranges or for many small ranges
-   in a single set, particularly when the ranges are requested out of order
-   for no apparent reason. Multipart range requests are not designed to
-   support random access.
-</t>
-</section>
-
-<section title="Caching Considerations" anchor="security.caching">
-<t>
-   Caches expose additional potential vulnerabilities, since the contents of
-   the cache represent an attractive target for malicious exploitation.
-   Because cache contents persist after an HTTP request is complete, an attack
-   on the cache can reveal information long after a user believes that the
-   information has been removed from the network. Therefore, cache contents
-   need to be protected as sensitive information.
-</t>
-<t>
-   In particular, various attacks might be amplified by being stored in a
-   shared cache; such "cache poisoning" attacks use the cache to distribute a
-   malicious payload to many clients, and are especially effective when an
-   attacker can use implementation flaws, elevated privileges, or other
-   techniques to insert such a response into a cache. One common attack vector
-   for cache poisoning is to exploit differences in message parsing on proxies
-   and in user agents; see <xref target="message.body.length"/> for the relevant requirements.
-</t>
-<t>
-   Likewise, implementation flaws (as well as misunderstanding of cache
-   operation) might lead to caching of sensitive information (e.g.,
-   authentication credentials) that is thought to be private, exposing it to
-   unauthorized parties.
-</t>
-<t>
-   Furthermore, the very use of a cache can bring about privacy concerns. For
-   example, if two users share a cache, and the first one browses to a site,
-   the second may be able to detect that the other has been to that site, 
-   because the resources from it load more quickly, thanks to the cache.
-</t>
-<t>
-   Note that the Set-Cookie response header field <xref target="RFC6265"/> does not
-   inhibit caching; a cacheable response with a Set-Cookie header field can be (and
-   often is) used to satisfy subsequent requests to caches. Servers who wish
-   to control caching of these responses are encouraged to emit appropriate
-   Cache-Control response header fields.
-</t>
-</section>
-
-<section title="Authentication Considerations" anchor="security.auth">
-<t>
-   Everything about the topic of HTTP authentication is a security
-   consideration, so the list of considerations below is not exhaustive.
-   Furthermore, it is limited to security considerations regarding the
-   authentication framework, in general, rather than discussing all of the
-   potential considerations for specific authentication schemes (which ought
-   to be documented in the specifications that define those schemes).
-   Various organizations maintain topical information and links to current
-   research on Web application security (e.g., <xref target="OWASP"/>),
-   including common pitfalls for implementing and using the authentication
-   schemes found in practice.
-</t>
-
-<section title="Confidentiality of Credentials" anchor="confidentiality.of.credentials">
-<t>
-   The HTTP authentication framework does not define a single mechanism for
-   maintaining the confidentiality of credentials; instead, each
-   authentication scheme defines how the credentials are encoded prior to
-   transmission. While this provides flexibility for the development of future
-   authentication schemes, it is inadequate for the protection of existing
-   schemes that provide no confidentiality on their own, or that do not
-   sufficiently protect against replay attacks. Furthermore, if the server
-   expects credentials that are specific to each individual user, the exchange
-   of those credentials will have the effect of identifying that user even if
-   the content within credentials remains confidential.
-</t>
-<t>
-   HTTP depends on the security properties of the underlying transport- or
-   session-level connection to provide confidential transmission of header
-   fields. In other words, if a server limits access to authenticated users
-   using this framework, the server needs to ensure that the connection is
-   properly secured in accordance with the nature of the authentication
-   scheme used. For example, services that depend on individual user
-   authentication often require a connection to be secured with TLS
-   ("Transport Layer Security", <xref target="RFC5246"/>) prior to exchanging
-   any credentials.
-</t>
-</section>
-
-<section title="Credentials and Idle Clients" anchor="auth.credentials.and.idle.clients">
-<t>
-   Existing HTTP clients and user agents typically retain authentication
-   information indefinitely. HTTP does not provide a mechanism for the
-   origin server to direct clients to discard these cached credentials, since
-   the protocol has no awareness of how credentials are obtained or managed
-   by the user agent. The mechanisms for expiring or revoking credentials can
-   be specified as part of an authentication scheme definition.
-</t>
-<t>
-   Circumstances under which credential caching can interfere with the
-   application's security model include but are not limited to:
-  <list style="symbols">
-     <t>Clients that have been idle for an extended period, following
-        which the server might wish to cause the client to re-prompt the
-        user for credentials.</t>
-
-     <t>Applications that include a session termination indication
-        (such as a "logout" or "commit" button on a page) after which
-        the server side of the application "knows" that there is no
-        further reason for the client to retain the credentials.</t>
-  </list>
-</t>
-<t>
-   User agents that cache credentials are encouraged to provide a readily
-   accessible mechanism for discarding cached credentials under user control.
-</t>
-</section>
-
-<section title="Protection Spaces" anchor="protection.spaces">
-<t>
-  Authentication schemes that solely rely on the "realm" mechanism for
-  establishing a protection space will expose credentials to all resources on
-  an origin server. Clients that have successfully made authenticated requests
-  with a resource can use the same authentication credentials for other
-  resources on the same origin server. This makes it possible for a different
-  resource to harvest authentication credentials for other resources.
-</t>
-<t>
-  This is of particular concern when an origin server hosts resources for multiple
-  parties under the same canonical root URI (<xref target="protection.space"/>).
-  Possible mitigation strategies include restricting direct access to
-  authentication credentials (i.e., not making the content of the
-  <x:ref>Authorization</x:ref> request header field available), and separating protection
-  spaces by using a different host name (or port number) for each party.
 </t>
 </section>
 </section>

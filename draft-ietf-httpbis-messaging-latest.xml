@@ -2471,6 +2471,256 @@ Upgrade: HTTP/2.0
 </section>
 </section>
 
+<section title="Security Considerations" anchor="security.considerations">
+<t>
+   This section is meant to inform developers, information providers, and
+   users of known security considerations relevant to HTTP message syntax,
+   parsing, and routing. Security considerations about HTTP semantics and
+   payloads are addressed in <xref target="SEMNTCS"/>.
+</t>
+
+<section title="Establishing Authority" anchor="establishing.authority">
+  <iref item="authoritative response" primary="true"/>
+  <iref item="phishing" primary="true"/>
+<t>
+   HTTP relies on the notion of an <x:dfn>authoritative response</x:dfn>: a
+   response that has been determined by (or at the direction of) the authority
+   identified within the target URI to be the most appropriate response for
+   that request given the state of the target resource at the time of
+   response message origination. Providing a response from a non-authoritative
+   source, such as a shared cache, is often useful to improve performance and
+   availability, but only to the extent that the source can be trusted or
+   the distrusted response can be safely used.
+</t>
+<t>
+   Unfortunately, establishing authority can be difficult.
+   For example, <x:dfn>phishing</x:dfn> is an attack on the user's perception
+   of authority, where that perception can be misled by presenting similar
+   branding in hypertext, possibly aided by userinfo obfuscating the authority
+   component (see <xref target="http.uri"/>).
+   User agents can reduce the impact of phishing attacks by enabling users to
+   easily inspect a target URI prior to making an action, by prominently
+   distinguishing (or rejecting) userinfo when present, and by not sending
+   stored credentials and cookies when the referring document is from an
+   unknown or untrusted source.
+</t>
+<t>
+   When a registered name is used in the authority component, the "http" URI
+   scheme (<xref target="http.uri"/>) relies on the user's local name
+   resolution service to determine where it can find authoritative responses.
+   This means that any attack on a user's network host table, cached names, or
+   name resolution libraries becomes an avenue for attack on establishing
+   authority. Likewise, the user's choice of server for Domain Name Service
+   (DNS), and the hierarchy of servers from which it obtains resolution
+   results, could impact the authenticity of address mappings;
+   DNS Security Extensions (DNSSEC, <xref target="RFC4033"/>) are one way to
+   improve authenticity.
+</t>
+<t>
+   Furthermore, after an IP address is obtained, establishing authority for
+   an "http" URI is vulnerable to attacks on Internet Protocol routing.
+</t>
+<t>
+   The "https" scheme (<xref target="https.uri"/>) is intended to prevent
+   (or at least reveal) many of these potential attacks on establishing
+   authority, provided that the negotiated TLS connection is secured and
+   the client properly verifies that the communicating server's identity
+   matches the target URI's authority component
+   (see <xref target="RFC2818"/>). Correctly implementing such verification
+   can be difficult (see <xref target="Georgiev"/>).
+</t>
+</section>
+
+<section title="Risks of Intermediaries" anchor="risks.intermediaries">
+<t>
+   By their very nature, HTTP intermediaries are men-in-the-middle and, thus,
+   represent an opportunity for man-in-the-middle attacks. Compromise of
+   the systems on which the intermediaries run can result in serious security
+   and privacy problems. Intermediaries might have access to security-related
+   information, personal information about individual users and
+   organizations, and proprietary information belonging to users and
+   content providers. A compromised intermediary, or an intermediary
+   implemented or configured without regard to security and privacy
+   considerations, might be used in the commission of a wide range of
+   potential attacks.
+</t>
+<t>
+   Intermediaries that contain a shared cache are especially vulnerable
+   to cache poisoning attacks, as described in <xref target="security.caching"/>.
+</t>
+<t>
+   Implementers need to consider the privacy and security
+   implications of their design and coding decisions, and of the
+   configuration options they provide to operators (especially the
+   default configuration).
+</t>
+<t>
+   Users need to be aware that intermediaries are no more trustworthy than
+   the people who run them; HTTP itself cannot solve this problem.
+</t>
+</section>
+
+<section title="Attacks via Protocol Element Length" anchor="attack.protocol.element.length">
+<t>
+   Because HTTP uses mostly textual, character-delimited fields, parsers are
+   often vulnerable to attacks based on sending very long (or very slow)
+   streams of data, particularly where an implementation is expecting a
+   protocol element with no predefined length.
+</t>
+<t>
+   To promote interoperability, specific recommendations are made for minimum
+   size limits on request-line (<xref target="request.line"/>)
+   and header fields (<xref target="header.fields"/>). These are
+   minimum recommendations, chosen to be supportable even by implementations
+   with limited resources; it is expected that most implementations will
+   choose substantially higher limits.
+</t>
+<t>
+   A server can reject a message that
+   has a request-target that is too long (<xref target="status.414"/>) or a request payload
+   that is too large (<xref target="status.413"/>). Additional status codes related to
+   capacity limits have been defined by extensions to HTTP
+   <xref target="RFC6585"/>.
+</t>
+<t>
+   Recipients ought to carefully limit the extent to which they process other
+   protocol elements, including (but not limited to) request methods, response
+   status phrases, header field-names, numeric values, and body chunks.
+   Failure to limit such processing can result in buffer overflows, arithmetic
+   overflows, or increased vulnerability to denial-of-service attacks.
+</t>
+</section>
+
+<section title="Response Splitting" anchor="response.splitting">
+<t>
+   Response splitting (a.k.a, CRLF injection) is a common technique, used in
+   various attacks on Web usage, that exploits the line-based nature of HTTP
+   message framing and the ordered association of requests to responses on
+   persistent connections <xref target="Klein"/>. This technique can be
+   particularly damaging when the requests pass through a shared cache.
+</t>
+<t>
+   Response splitting exploits a vulnerability in servers (usually within an
+   application server) where an attacker can send encoded data within some
+   parameter of the request that is later decoded and echoed within any of the
+   response header fields of the response. If the decoded data is crafted to
+   look like the response has ended and a subsequent response has begun, the
+   response has been split and the content within the apparent second response
+   is controlled by the attacker. The attacker can then make any other request
+   on the same persistent connection and trick the recipients (including
+   intermediaries) into believing that the second half of the split is an
+   authoritative answer to the second request.
+</t>
+<t>
+   For example, a parameter within the request-target might be read by an
+   application server and reused within a redirect, resulting in the same
+   parameter being echoed in the <x:ref>Location</x:ref> header field of the
+   response. If the parameter is decoded by the application and not properly
+   encoded when placed in the response field, the attacker can send encoded
+   CRLF octets and other content that will make the application's single
+   response look like two or more responses.
+</t>
+<t>
+   A common defense against response splitting is to filter requests for data
+   that looks like encoded CR and LF (e.g., "%0D" and "%0A"). However, that
+   assumes the application server is only performing URI decoding, rather
+   than more obscure data transformations like charset transcoding, XML entity
+   translation, base64 decoding, sprintf reformatting, etc.  A more effective
+   mitigation is to prevent anything other than the server's core protocol
+   libraries from sending a CR or LF within the header section, which means
+   restricting the output of header fields to APIs that filter for bad octets
+   and not allowing application servers to write directly to the protocol
+   stream.
+</t>
+</section>
+
+<section title="Request Smuggling" anchor="request.smuggling">
+<t>
+   Request smuggling (<xref target="Linhart"/>) is a technique that exploits
+   differences in protocol parsing among various recipients to hide additional
+   requests (which might otherwise be blocked or disabled by policy) within an
+   apparently harmless request.  Like response splitting, request smuggling
+   can lead to a variety of attacks on HTTP usage.
+</t>
+<t>
+   This specification has introduced new requirements on request parsing,
+   particularly with regard to message framing in
+   <xref target="message.body.length"/>, to reduce the effectiveness of
+   request smuggling.
+</t>
+</section>
+
+<section title="Message Integrity" anchor="message.integrity">
+<t>
+   HTTP does not define a specific mechanism for ensuring message integrity,
+   instead relying on the error-detection ability of underlying transport
+   protocols and the use of length or chunk-delimited framing to detect
+   completeness. Additional integrity mechanisms, such as hash functions or
+   digital signatures applied to the content, can be selectively added to
+   messages via extensible metadata header fields. Historically, the lack of
+   a single integrity mechanism has been justified by the informal nature of
+   most HTTP communication.  However, the prevalence of HTTP as an information
+   access mechanism has resulted in its increasing use within environments
+   where verification of message integrity is crucial.
+</t>
+<t>
+   User agents are encouraged to implement configurable means for detecting
+   and reporting failures of message integrity such that those means can be
+   enabled within environments for which integrity is necessary. For example,
+   a browser being used to view medical history or drug interaction
+   information needs to indicate to the user when such information is detected
+   by the protocol to be incomplete, expired, or corrupted during transfer.
+   Such mechanisms might be selectively enabled via user agent extensions or
+   the presence of message integrity metadata in a response.
+   At a minimum, user agents ought to provide some indication that allows a
+   user to distinguish between a complete and incomplete response message
+   (<xref target="incomplete.messages"/>) when such verification is desired.
+</t>
+</section>
+
+<section title="Message Confidentiality" anchor="message.confidentiality">
+<t>
+   HTTP relies on underlying transport protocols to provide message
+   confidentiality when that is desired. HTTP has been specifically designed
+   to be independent of the transport protocol, such that it can be used
+   over many different forms of encrypted connection, with the selection of
+   such transports being identified by the choice of URI scheme or within
+   user agent configuration.
+</t>
+<t>
+   The "https" scheme can be used to identify resources that require a
+   confidential connection, as described in <xref target="https.uri"/>.
+</t>
+</section>
+
+<section title="Privacy of Server Log Information" anchor="privacy.of.server.log.information">
+<t>
+   A server is in the position to save personal data about a user's requests
+   over time, which might identify their reading patterns or subjects of
+   interest.  In particular, log information gathered at an intermediary
+   often contains a history of user agent interaction, across a multitude
+   of sites, that can be traced to individual users.
+</t>
+<t>
+   HTTP log information is confidential in nature; its handling is often
+   constrained by laws and regulations.  Log information needs to be securely
+   stored and appropriate guidelines followed for its analysis.
+   Anonymization of personal information within individual entries helps,
+   but it is generally not sufficient to prevent real log traces from being
+   re-identified based on correlation with other access characteristics.
+   As such, access traces that are keyed to a specific client are unsafe to
+   publish even if the key is pseudonymous.
+</t>
+<t>
+   To minimize the risk of theft or accidental publication, log information
+   ought to be purged of personally identifiable information, including
+   user identifiers, IP addresses, and user-provided query parameters,
+   as soon as that information is no longer necessary to support operational
+   needs for security, auditing, or fraud control.
+</t>
+</section>
+</section>
+
 <section title="IANA Considerations" anchor="IANA.considerations">
 
 <section title="Header Field Registration" anchor="header.field.registration">
@@ -2915,257 +3165,6 @@ Upgrade: HTTP/2.0
    The responsible party is: "IETF (iesg@ietf.org) - Internet Engineering Task Force".
 </t>
 </section>
-</section>
-
-</section>
-
-<section title="Security Considerations" anchor="security.considerations">
-<t>
-   This section is meant to inform developers, information providers, and
-   users of known security considerations relevant to HTTP message syntax,
-   parsing, and routing. Security considerations about HTTP semantics and
-   payloads are addressed in <xref target="SEMNTCS"/>.
-</t>
-
-<section title="Establishing Authority" anchor="establishing.authority">
-  <iref item="authoritative response" primary="true"/>
-  <iref item="phishing" primary="true"/>
-<t>
-   HTTP relies on the notion of an <x:dfn>authoritative response</x:dfn>: a
-   response that has been determined by (or at the direction of) the authority
-   identified within the target URI to be the most appropriate response for
-   that request given the state of the target resource at the time of
-   response message origination. Providing a response from a non-authoritative
-   source, such as a shared cache, is often useful to improve performance and
-   availability, but only to the extent that the source can be trusted or
-   the distrusted response can be safely used.
-</t>
-<t>
-   Unfortunately, establishing authority can be difficult.
-   For example, <x:dfn>phishing</x:dfn> is an attack on the user's perception
-   of authority, where that perception can be misled by presenting similar
-   branding in hypertext, possibly aided by userinfo obfuscating the authority
-   component (see <xref target="http.uri"/>).
-   User agents can reduce the impact of phishing attacks by enabling users to
-   easily inspect a target URI prior to making an action, by prominently
-   distinguishing (or rejecting) userinfo when present, and by not sending
-   stored credentials and cookies when the referring document is from an
-   unknown or untrusted source.
-</t>
-<t>
-   When a registered name is used in the authority component, the "http" URI
-   scheme (<xref target="http.uri"/>) relies on the user's local name
-   resolution service to determine where it can find authoritative responses.
-   This means that any attack on a user's network host table, cached names, or
-   name resolution libraries becomes an avenue for attack on establishing
-   authority. Likewise, the user's choice of server for Domain Name Service
-   (DNS), and the hierarchy of servers from which it obtains resolution
-   results, could impact the authenticity of address mappings;
-   DNS Security Extensions (DNSSEC, <xref target="RFC4033"/>) are one way to
-   improve authenticity.
-</t>
-<t>
-   Furthermore, after an IP address is obtained, establishing authority for
-   an "http" URI is vulnerable to attacks on Internet Protocol routing.
-</t>
-<t>
-   The "https" scheme (<xref target="https.uri"/>) is intended to prevent
-   (or at least reveal) many of these potential attacks on establishing
-   authority, provided that the negotiated TLS connection is secured and
-   the client properly verifies that the communicating server's identity
-   matches the target URI's authority component
-   (see <xref target="RFC2818"/>). Correctly implementing such verification
-   can be difficult (see <xref target="Georgiev"/>).
-</t>
-</section>
-
-<section title="Risks of Intermediaries" anchor="risks.intermediaries">
-<t>
-   By their very nature, HTTP intermediaries are men-in-the-middle and, thus,
-   represent an opportunity for man-in-the-middle attacks. Compromise of
-   the systems on which the intermediaries run can result in serious security
-   and privacy problems. Intermediaries might have access to security-related
-   information, personal information about individual users and
-   organizations, and proprietary information belonging to users and
-   content providers. A compromised intermediary, or an intermediary
-   implemented or configured without regard to security and privacy
-   considerations, might be used in the commission of a wide range of
-   potential attacks.
-</t>
-<t>
-   Intermediaries that contain a shared cache are especially vulnerable
-   to cache poisoning attacks, as described in <xref target="security.caching"/>.
-</t>
-<t>
-   Implementers need to consider the privacy and security
-   implications of their design and coding decisions, and of the
-   configuration options they provide to operators (especially the
-   default configuration).
-</t>
-<t>
-   Users need to be aware that intermediaries are no more trustworthy than
-   the people who run them; HTTP itself cannot solve this problem.
-</t>
-</section>
-
-<section title="Attacks via Protocol Element Length" anchor="attack.protocol.element.length">
-<t>
-   Because HTTP uses mostly textual, character-delimited fields, parsers are
-   often vulnerable to attacks based on sending very long (or very slow)
-   streams of data, particularly where an implementation is expecting a
-   protocol element with no predefined length.
-</t>
-<t>
-   To promote interoperability, specific recommendations are made for minimum
-   size limits on request-line (<xref target="request.line"/>)
-   and header fields (<xref target="header.fields"/>). These are
-   minimum recommendations, chosen to be supportable even by implementations
-   with limited resources; it is expected that most implementations will
-   choose substantially higher limits.
-</t>
-<t>
-   A server can reject a message that
-   has a request-target that is too long (<xref target="status.414"/>) or a request payload
-   that is too large (<xref target="status.413"/>). Additional status codes related to
-   capacity limits have been defined by extensions to HTTP
-   <xref target="RFC6585"/>.
-</t>
-<t>
-   Recipients ought to carefully limit the extent to which they process other
-   protocol elements, including (but not limited to) request methods, response
-   status phrases, header field-names, numeric values, and body chunks.
-   Failure to limit such processing can result in buffer overflows, arithmetic
-   overflows, or increased vulnerability to denial-of-service attacks.
-</t>
-</section>
-
-<section title="Response Splitting" anchor="response.splitting">
-<t>
-   Response splitting (a.k.a, CRLF injection) is a common technique, used in
-   various attacks on Web usage, that exploits the line-based nature of HTTP
-   message framing and the ordered association of requests to responses on
-   persistent connections <xref target="Klein"/>. This technique can be
-   particularly damaging when the requests pass through a shared cache.
-</t>
-<t>
-   Response splitting exploits a vulnerability in servers (usually within an
-   application server) where an attacker can send encoded data within some
-   parameter of the request that is later decoded and echoed within any of the
-   response header fields of the response. If the decoded data is crafted to
-   look like the response has ended and a subsequent response has begun, the
-   response has been split and the content within the apparent second response
-   is controlled by the attacker. The attacker can then make any other request
-   on the same persistent connection and trick the recipients (including
-   intermediaries) into believing that the second half of the split is an
-   authoritative answer to the second request.
-</t>
-<t>
-   For example, a parameter within the request-target might be read by an
-   application server and reused within a redirect, resulting in the same
-   parameter being echoed in the <x:ref>Location</x:ref> header field of the
-   response. If the parameter is decoded by the application and not properly
-   encoded when placed in the response field, the attacker can send encoded
-   CRLF octets and other content that will make the application's single
-   response look like two or more responses.
-</t>
-<t>
-   A common defense against response splitting is to filter requests for data
-   that looks like encoded CR and LF (e.g., "%0D" and "%0A"). However, that
-   assumes the application server is only performing URI decoding, rather
-   than more obscure data transformations like charset transcoding, XML entity
-   translation, base64 decoding, sprintf reformatting, etc.  A more effective
-   mitigation is to prevent anything other than the server's core protocol
-   libraries from sending a CR or LF within the header section, which means
-   restricting the output of header fields to APIs that filter for bad octets
-   and not allowing application servers to write directly to the protocol
-   stream.
-</t>
-</section>
-
-<section title="Request Smuggling" anchor="request.smuggling">
-<t>
-   Request smuggling (<xref target="Linhart"/>) is a technique that exploits
-   differences in protocol parsing among various recipients to hide additional
-   requests (which might otherwise be blocked or disabled by policy) within an
-   apparently harmless request.  Like response splitting, request smuggling
-   can lead to a variety of attacks on HTTP usage.
-</t>
-<t>
-   This specification has introduced new requirements on request parsing,
-   particularly with regard to message framing in
-   <xref target="message.body.length"/>, to reduce the effectiveness of
-   request smuggling.
-</t>
-</section>
-
-<section title="Message Integrity" anchor="message.integrity">
-<t>
-   HTTP does not define a specific mechanism for ensuring message integrity,
-   instead relying on the error-detection ability of underlying transport
-   protocols and the use of length or chunk-delimited framing to detect
-   completeness. Additional integrity mechanisms, such as hash functions or
-   digital signatures applied to the content, can be selectively added to
-   messages via extensible metadata header fields. Historically, the lack of
-   a single integrity mechanism has been justified by the informal nature of
-   most HTTP communication.  However, the prevalence of HTTP as an information
-   access mechanism has resulted in its increasing use within environments
-   where verification of message integrity is crucial.
-</t>
-<t>
-   User agents are encouraged to implement configurable means for detecting
-   and reporting failures of message integrity such that those means can be
-   enabled within environments for which integrity is necessary. For example,
-   a browser being used to view medical history or drug interaction
-   information needs to indicate to the user when such information is detected
-   by the protocol to be incomplete, expired, or corrupted during transfer.
-   Such mechanisms might be selectively enabled via user agent extensions or
-   the presence of message integrity metadata in a response.
-   At a minimum, user agents ought to provide some indication that allows a
-   user to distinguish between a complete and incomplete response message
-   (<xref target="incomplete.messages"/>) when such verification is desired.
-</t>
-</section>
-
-<section title="Message Confidentiality" anchor="message.confidentiality">
-<t>
-   HTTP relies on underlying transport protocols to provide message
-   confidentiality when that is desired. HTTP has been specifically designed
-   to be independent of the transport protocol, such that it can be used
-   over many different forms of encrypted connection, with the selection of
-   such transports being identified by the choice of URI scheme or within
-   user agent configuration.
-</t>
-<t>
-   The "https" scheme can be used to identify resources that require a
-   confidential connection, as described in <xref target="https.uri"/>.
-</t>
-</section>
-
-<section title="Privacy of Server Log Information" anchor="privacy.of.server.log.information">
-<t>
-   A server is in the position to save personal data about a user's requests
-   over time, which might identify their reading patterns or subjects of
-   interest.  In particular, log information gathered at an intermediary
-   often contains a history of user agent interaction, across a multitude
-   of sites, that can be traced to individual users.
-</t>
-<t>
-   HTTP log information is confidential in nature; its handling is often
-   constrained by laws and regulations.  Log information needs to be securely
-   stored and appropriate guidelines followed for its analysis.
-   Anonymization of personal information within individual entries helps,
-   but it is generally not sufficient to prevent real log traces from being
-   re-identified based on correlation with other access characteristics.
-   As such, access traces that are keyed to a specific client are unsafe to
-   publish even if the key is pseudonymous.
-</t>
-<t>
-   To minimize the risk of theft or accidental publication, log information
-   ought to be purged of personally identifiable information, including
-   user identifiers, IP addresses, and user-provided query parameters,
-   as soon as that information is no longer necessary to support operational
-   needs for security, auditing, or fraud control.
-</t>
 </section>
 </section>
 </middle>
