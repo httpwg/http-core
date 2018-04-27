@@ -56,21 +56,17 @@ all: $(TARGETS)
 clean:
 	rm -f $(TARGETS)
 
-diffs: $(TARGETS_TXT)
-	$(rfcdiff) auth48/rfc7230.txt $(MESSAGING).txt > diff_messaging.html
-	$(rfcdiff) auth48/rfc7231.txt $(SEMANTICS).txt > diff_semantics.html
-	$(rfcdiff) auth48/rfc7232.txt $(CONDITIONAL).txt > diff_conditional.html
-	$(rfcdiff) auth48/rfc7233.txt $(RANGE).txt > diff_range.html
-	$(rfcdiff) auth48/rfc7234.txt $(CACHE).txt > diff_cache.html
-	$(rfcdiff) auth48/rfc7235.txt $(AUTH).txt > diff_auth.html
+diff:
+	$(rfcdiff) diffs/frankenRFC723x_sem.txt $(SEMANTICS).txt > diffs/diff_semantics.html
+	$(rfcdiff) diffs/frankenRFC723x_msg.txt $(MESSAGING).txt > diffs/diff_messaging.html
 
-diff00: $(TARGETS_TXT)
-	$(rfcdiff) 00/$(draftname)-messaging-00.txt $(MESSAGING).txt > diff_messaging_since_00.html
-	$(rfcdiff) 00/$(draftname)-semantics-00.txt $(SEMANTICS).txt > diff_semantics_since_00.html
-	$(rfcdiff) 00/$(draftname)-conditional-00.txt $(CONDITIONAL).txt > diff_conditional_since_00.html
-	$(rfcdiff) 00/$(draftname)-range-00.txt $(RANGE).txt > diff_range_since_00.html
-	$(rfcdiff) 00/$(draftname)-cache-00.txt $(CACHE).txt > diff_cache_since_00.html
-	$(rfcdiff) 00/$(draftname)-auth-00.txt $(AUTH).txt > diff_auth_since_00.html
+diff00:
+	$(rfcdiff) 00/$(draftname)-messaging-00.txt $(MESSAGING).txt > diffs/diff_messaging_since_00.html
+	$(rfcdiff) 00/$(draftname)-semantics-00.txt $(SEMANTICS).txt > diffs/diff_semantics_since_00.html
+	$(rfcdiff) 00/$(draftname)-conditional-00.txt $(CONDITIONAL).txt > diffs/diff_conditional_since_00.html
+	$(rfcdiff) 00/$(draftname)-range-00.txt $(RANGE).txt > diffs/diff_range_since_00.html
+	$(rfcdiff) 00/$(draftname)-cache-00.txt $(CACHE).txt > diffs/diff_cache_since_00.html
+	$(rfcdiff) 00/$(draftname)-auth-00.txt $(AUTH).txt > diffs/diff_auth_since_00.html
 
 %.html: %.xml $(stylesheet)
 	$(saxon) $< $(xreffer) | $(saxon) - $(stylesheet) | awk -f lib/html5doctype.awk > $@
