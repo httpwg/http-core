@@ -26,7 +26,7 @@
       </t>
       <figure>
       <xsl:text>&#10;</xsl:text>
-      <artwork type="abnf" name="{$abnf}">
+      <artwork type="abnf" name="{x:basename($abnf)}">
         <xsl:for-each select="$lines[substring(.,1,2)!='; ']">
         
           <!-- Group by start character -->
@@ -160,5 +160,17 @@
   </xsl:choose>
 </xsl:function>
   
+<xsl:function name="x:basename">
+  <xsl:param name="s"/>
+
+  <xsl:choose>
+    <xsl:when test="not(contains($s,'/'))">
+      <xsl:value-of select="$s"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="x:basename(substring-after($s,'/'))"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:function>
   
 </xsl:transform>
