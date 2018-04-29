@@ -52,10 +52,19 @@
               <xsl:text> = </xsl:text>
             </xsl:matching-substring>
             <xsl:non-matching-substring>
-              <xsl:value-of select="."/>
+              <xsl:analyze-string select="." regex='(.*) see \[([A-Za-z0-9\-]+)\], Section ([A-Za-z0-9\.]+)>' flags="sm">
+                <xsl:matching-substring>
+                  <xsl:value-of select="regex-group(1)"/>
+                  <xsl:text> see </xsl:text>
+                  <xref target="{regex-group(2)}" x:fmt="," x:sec="{regex-group(3)}"/>
+                  <xsl:text>&gt;</xsl:text>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>
+                  <xsl:value-of select="."/>
+                </xsl:non-matching-substring>
+              </xsl:analyze-string>
             </xsl:non-matching-substring>
           </xsl:analyze-string>
-
           <xsl:text>&#10;</xsl:text>
         </xsl:for-each>
       </artwork>
