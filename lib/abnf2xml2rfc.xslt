@@ -42,7 +42,7 @@
             <xsl:matching-substring>
               <xsl:variable name="term" select="regex-group(1)"/>
               <xsl:choose>
-                <xsl:when test="$src//*[@anchor=$term] or $src//x:anchor-alias[@value=$term]">
+                <xsl:when test="$src//*[@anchor=$term] or $src//x:anchor-alias[@value=$term] or $src//x:defines=$term">
                   <x:ref><xsl:value-of select="$term"/></x:ref>
                 </xsl:when>
                 <xsl:otherwise>
