@@ -8462,32 +8462,41 @@ dd, li, p {
     </xsl:when>
     <xsl:when test="//x:source">
       <xsl:variable name="ref" select="."/>
-      <!-- try referenced documents one by one -->
-      <xsl:for-each select="//reference[x:source]">
-        <xsl:variable name="extdoc" select="document(x:source/@href)"/>
-        <xsl:variable name="nodes" select="$extdoc//*[@anchor and (x:anchor-alias/@value=$val)]"/>
-        <xsl:choose>
-          <xsl:when test="not($nodes)">
-            <xsl:call-template name="trace">
-              <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' not found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
-            </xsl:call-template>
-          </xsl:when>
-          <xsl:otherwise>
-            <xsl:call-template name="info">
-              <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
-            </xsl:call-template>
-            <xsl:variable name="t">
-              <xsl:call-template name="computed-auto-target">
-                <xsl:with-param name="bib" select="."/>
-                <xsl:with-param name="ref" select="$nodes[1]"/>
+      <xsl:variable name="out">
+        <!-- try referenced documents one by one -->
+        <xsl:for-each select="//reference[x:source]">
+          <xsl:variable name="extdoc" select="document(x:source/@href)"/>
+          <xsl:variable name="nodes" select="$extdoc//*[@anchor and (x:anchor-alias/@value=$val)]"/>
+          <xsl:choose>
+            <xsl:when test="not($nodes)">
+              <xsl:call-template name="trace">
+                <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' not found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
               </xsl:call-template>
-            </xsl:variable>
-            <a href="{$t}" class="smpl">
-              <xsl:value-of select="$ref"/>
-            </a>
-          </xsl:otherwise>
-        </xsl:choose>
-      </xsl:for-each>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:call-template name="info">
+                <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
+              </xsl:call-template>
+              <xsl:variable name="t">
+                <xsl:call-template name="computed-auto-target">
+                  <xsl:with-param name="bib" select="."/>
+                  <xsl:with-param name="ref" select="$nodes[1]"/>
+                </xsl:call-template>
+              </xsl:variable>
+              <a href="{$t}" class="smpl">
+                <xsl:value-of select="$ref"/>
+              </a>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:for-each>
+      </xsl:variable>
+      <xsl:copy-of select="$out"/>
+      <xsl:if test="string-length($out)=0">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' not found anywhere in references.</xsl:with-param>
+        </xsl:call-template>
+        <xsl:value-of select="$val"/>
+      </xsl:if>
     </xsl:when>
     <xsl:otherwise>
       <xsl:call-template name="warning">
@@ -9876,11 +9885,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1004 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1004 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1006 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1006 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/04/06 15:17:56 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/04/06 15:17:56 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/04/30 15:53:41 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/04/30 15:53:41 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
