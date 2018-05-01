@@ -57,16 +57,24 @@ clean:
 	rm -f $(TARGETS)
 
 diff:
-	$(rfcdiff) diffs/frankenRFC723x_sem.txt $(SEMANTICS).txt > diffs/diff_semantics.html
-	$(rfcdiff) diffs/frankenRFC723x_msg.txt $(MESSAGING).txt > diffs/diff_messaging.html
+	$(rfcdiff) diffs/frankenRFC723x_sem.txt $(SEMANTICS).txt  | \
+          egrep -v -- '^<\!-- ' > diffs/diff_semantics.html
+	$(rfcdiff) diffs/frankenRFC723x_msg.txt $(MESSAGING).txt  | \
+          egrep -v -- '^<\!-- ' > diffs/diff_messaging.html
 
 diff00:
-	$(rfcdiff) 00/$(draftname)-messaging-00.txt $(MESSAGING).txt > diffs/diff_messaging_since_00.html
-	$(rfcdiff) 00/$(draftname)-semantics-00.txt $(SEMANTICS).txt > diffs/diff_semantics_since_00.html
-	$(rfcdiff) 00/$(draftname)-conditional-00.txt $(CONDITIONAL).txt > diffs/diff_conditional_since_00.html
-	$(rfcdiff) 00/$(draftname)-range-00.txt $(RANGE).txt > diffs/diff_range_since_00.html
-	$(rfcdiff) 00/$(draftname)-cache-00.txt $(CACHE).txt > diffs/diff_cache_since_00.html
-	$(rfcdiff) 00/$(draftname)-auth-00.txt $(AUTH).txt > diffs/diff_auth_since_00.html
+	$(rfcdiff) 00/$(draftname)-messaging-00.txt $(MESSAGING).txt | \
+          egrep -v -- '^<\!-- ' > diffs/diff_messaging_since_00.html
+	$(rfcdiff) 00/$(draftname)-semantics-00.txt $(SEMANTICS).txt | \
+          egrep -v -- '^<\!-- ' > diffs/diff_semantics_since_00.html
+	$(rfcdiff) 00/$(draftname)-conditional-00.txt $(CONDITIONAL).txt | \
+          egrep -v -- '^<\!-- ' > diffs/diff_conditional_since_00.html
+	$(rfcdiff) 00/$(draftname)-range-00.txt $(RANGE).txt | \
+          egrep -v -- '^<\!-- ' > diffs/diff_range_since_00.html
+	$(rfcdiff) 00/$(draftname)-cache-00.txt $(CACHE).txt | \
+          egrep -v -- '^<\!-- ' > diffs/diff_cache_since_00.html
+	$(rfcdiff) 00/$(draftname)-auth-00.txt $(AUTH).txt | \
+          egrep -v -- '^<\!-- ' > diffs/diff_auth_since_00.html
 
 %.html: %.xml $(stylesheet)
 	$(saxon) $< $(xreffer) | $(saxon) - $(stylesheet) | awk -f lib/html5doctype.awk > $@
