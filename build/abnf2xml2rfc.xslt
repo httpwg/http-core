@@ -26,7 +26,7 @@
       </t>
       <figure>
       <xsl:text>&#10;</xsl:text>
-      <artwork type="abnf" name="{$abnf}">
+      <artwork type="abnf" name="{x:basename($abnf)}">
         <xsl:for-each select="$lines[substring(.,1,2)!='; ']">
         
           <!-- Group by start character -->
@@ -42,7 +42,7 @@
             <xsl:matching-substring>
               <xsl:variable name="term" select="regex-group(1)"/>
               <xsl:choose>
-                <xsl:when test="$src//*[@anchor=$term] or $src//x:anchor-alias[@value=$term]">
+                <xsl:when test="$src//*[@anchor=$term] or $src//x:anchor-alias[@value=$term] or $src//x:defines=$term">
                   <x:ref><xsl:value-of select="$term"/></x:ref>
                 </xsl:when>
                 <xsl:otherwise>
@@ -52,10 +52,19 @@
               <xsl:text> = </xsl:text>
             </xsl:matching-substring>
             <xsl:non-matching-substring>
-              <xsl:value-of select="."/>
+              <xsl:analyze-string select="." regex='(.*) see \[([A-Za-z0-9\-]+)\], Section ([A-Za-z0-9\.]+)>' flags="sm">
+                <xsl:matching-substring>
+                  <xsl:value-of select="regex-group(1)"/>
+                  <xsl:text> see </xsl:text>
+                  <xref target="{regex-group(2)}" x:fmt="," x:sec="{regex-group(3)}"/>
+                  <xsl:text>&gt;</xsl:text>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>
+                  <xsl:value-of select="."/>
+                </xsl:non-matching-substring>
+              </xsl:analyze-string>
             </xsl:non-matching-substring>
           </xsl:analyze-string>
-
           <xsl:text>&#10;</xsl:text>
         </xsl:for-each>
       </artwork>
@@ -160,5 +169,17 @@
   </xsl:choose>
 </xsl:function>
   
+<xsl:function name="x:basename">
+  <xsl:param name="s"/>
+
+  <xsl:choose>
+    <xsl:when test="not(contains($s,'/'))">
+      <xsl:value-of select="$s"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="x:basename(substring-after($s,'/'))"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:function>
   
 </xsl:transform>

@@ -262,24 +262,33 @@
     </xsl:when>
     <xsl:when test="//x:source">
       <xsl:variable name="ref" select="."/>
-      <!-- try referenced documents one by one -->
-      <xsl:for-each select="//reference[x:source]">
-        <xsl:variable name="extdoc" select="document(x:source/@href)"/>
-        <xsl:variable name="nodes" select="$extdoc//*[@anchor and (x:anchor-alias/@value=$val)]"/>
-        <xsl:choose>
-          <xsl:when test="not($nodes)">
-            <xsl:call-template name="trace">
-              <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' not found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
-            </xsl:call-template>
-          </xsl:when>
-          <xsl:otherwise>
-            <xsl:call-template name="info">
-              <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
-            </xsl:call-template>
-            <xsl:value-of select="$ref"/>
-          </xsl:otherwise>
-        </xsl:choose>
-      </xsl:for-each>
+      <xsl:variable name="out">
+        <!-- try referenced documents one by one -->
+        <xsl:for-each select="//reference[x:source]">
+          <xsl:variable name="extdoc" select="document(x:source/@href)"/>
+          <xsl:variable name="nodes" select="$extdoc//*[@anchor and (x:anchor-alias/@value=$val)]"/>
+          <xsl:choose>
+            <xsl:when test="not($nodes)">
+              <xsl:call-template name="trace">
+                <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' not found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
+              </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:call-template name="info">
+                <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' found in source file '<xsl:value-of select="x:source/@href"/>'.</xsl:with-param>
+              </xsl:call-template>
+              <xsl:value-of select="$ref"/>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:for-each>
+      </xsl:variable>
+      <xsl:copy-of select="$out"/>
+      <xsl:if test="string-length($out)=0">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">Anchor '<xsl:value-of select="$val"/>' not found anywhere in references.</xsl:with-param>
+        </xsl:call-template>
+        <xsl:value-of select="$val"/>
+      </xsl:if>
     </xsl:when>
     <xsl:otherwise>
       <xsl:call-template name="warning">
