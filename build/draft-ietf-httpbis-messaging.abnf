@@ -1,0 +1,128 @@
+
+  OWS           = <OWS, see [SEMNTCS], Section 3.4>
+  RWS           = <RWS, see [SEMNTCS], Section 3.4>
+  BWS           = <BWS, see [SEMNTCS], Section 3.4>
+  HTTP-version  = <HTTP-version, see [SEMNTCS], Section 3.5>
+  absolute-URI  = <absolute-URI, see [SEMNTCS], Section 2.4>
+  authority     = <authority, see [SEMNTCS], Section 2.4>
+  uri-host      = <host, see [SEMNTCS], Section 2.4>
+  port          = <port, see [SEMNTCS], Section 2.4>
+  query         = <query, see [SEMNTCS], Section 2.4>
+  absolute-path = <absolute-path, see [SEMNTCS], Section 2.4>
+
+  HTTP-message   = start-line
+                   *( header-field CRLF )
+                   CRLF
+                   [ message-body ]
+
+  start-line     = request-line / status-line
+
+  request-line   = method SP request-target SP HTTP-version CRLF
+
+  method         = token
+
+  status-line = HTTP-version SP status-code SP reason-phrase CRLF
+
+  status-code    = 3DIGIT
+
+  reason-phrase  = *( HTAB / SP / VCHAR / obs-text )
+
+  header-field   = field-name ":" OWS field-value OWS
+
+  field-name     = token
+  field-value    = *( field-content / obs-fold )
+  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+  field-vchar    = VCHAR / obs-text
+
+  obs-fold       = CRLF 1*( SP / HTAB )
+                 ; obsolete line folding
+                 ; see Section 2.2.3
+
+  token          = 1*tchar
+
+  tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                 / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                 / DIGIT / ALPHA
+                 ; any VCHAR, except delimiters
+
+  quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+  qdtext         = HTAB / SP /%x21 / %x23-5B / %x5D-7E / obs-text
+  obs-text       = %x80-FF
+
+  comment        = "(" *( ctext / quoted-pair / comment ) ")"
+  ctext          = HTAB / SP / %x21-27 / %x2A-5B / %x5D-7E / obs-text
+
+  quoted-pair    = "\" ( HTAB / SP / VCHAR / obs-text )
+
+  message-body = *OCTET
+
+  Transfer-Encoding = 1#transfer-coding
+
+  Content-Length = 1*DIGIT
+
+  transfer-coding    = "chunked" ; Section 3.1
+                     / "compress" ; Section 3.2.1
+                     / "deflate" ; Section 3.2.2
+                     / "gzip" ; Section 3.2.3
+                     / transfer-extension
+  transfer-extension = token *( OWS ";" OWS transfer-parameter )
+
+  transfer-parameter = token BWS "=" BWS ( token / quoted-string )
+
+  chunked-body   = *chunk
+                   last-chunk
+                   trailer-part
+                   CRLF
+
+  chunk          = chunk-size [ chunk-ext ] CRLF
+                   chunk-data CRLF
+  chunk-size     = 1*HEXDIG
+  last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+  chunk-data     = 1*OCTET ; a sequence of chunk-size octets
+
+  chunk-ext      = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+
+  chunk-ext-name = token
+  chunk-ext-val  = token / quoted-string
+
+  trailer-part   = *( header-field CRLF )
+
+  TE        = #t-codings
+  t-codings = "trailers" / ( transfer-coding [ t-ranking ] )
+  t-ranking = OWS ";" OWS "q=" rank
+  rank      = ( "0" [ "." 0*3DIGIT ] )
+             / ( "1" [ "." 0*3("0") ] )
+
+  Trailer = 1#field-name
+
+  request-target = origin-form
+                 / absolute-form
+                 / authority-form
+                 / asterisk-form
+
+  origin-form    = absolute-path [ "?" query ]
+
+  absolute-form  = absolute-URI
+
+  authority-form = authority
+
+  asterisk-form  = "*"
+
+  Host = uri-host [ ":" port ] ; [SEMNTCS], Section 4.1
+
+  Via = 1#( received-protocol RWS received-by [ RWS comment ] )
+
+  received-protocol = [ protocol-name "/" ] protocol-version
+                      ; see Section 5.7
+  received-by       = ( uri-host [ ":" port ] ) / pseudonym
+  pseudonym         = token
+
+  Connection        = 1#connection-option
+  connection-option = token
+
+  Upgrade          = 1#protocol
+
+  protocol         = protocol-name ["/" protocol-version]
+  protocol-name    = token
+  protocol-version = token
