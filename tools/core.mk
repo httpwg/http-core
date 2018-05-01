@@ -13,7 +13,8 @@ MESSAGING   = $(draftname)-messaging
 RANGE       = $(draftname)-range
 SEMANTICS   = $(draftname)-semantics
 
-TARGETS_ABNF= $(addprefix $(bd)/,$(drafts_xml:.xml=.abnf))
+CORE_XML = $(MESSAGING).xml $(SEMANTICS).xml
+TARGETS_ABNF= $(addprefix $(bd)/,$(CORE_XML:.xml=.abnf))
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
 TARGETS_PARSEDABNF= $(TARGETS_ABNF:.abnf=.parsed-abnf)
 
@@ -24,15 +25,6 @@ ABNF =    $(TARGETS_ABNF) \
           $(bd)/$(SEMANTICS).iana-headers \
           $(bd)/$(SEMANTICS).iana-methods	\
           $(bd)/$(SEMANTICS).iana-status-codes \
-          $(bd)/$(CONDITIONAL).iana-headers \
-          $(bd)/$(CONDITIONAL).iana-status-codes \
-          $(bd)/$(RANGE).iana-headers \
-          $(bd)/$(RANGE).iana-status-codes \
-          $(bd)/$(CACHE).iana-headers \
-          $(bd)/$(CACHE).iana-warn-codes \
-          $(bd)/$(CACHE).cache-directives \
-          $(bd)/$(AUTH).iana-headers \
-          $(bd)/$(AUTH).iana-status-codes \
           httpbis.abnf
 
 $(bap)/bap:
