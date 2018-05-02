@@ -34,7 +34,8 @@ TARGETS_XHTML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.xhtml))
 TARGETS_REDXML= $(addprefix $(bd)/,$(TARGETS_XML:.xml=.redxml))
 
 TARGETS_ABNF = $(bd)/$(MESSAGING).abnf \
-               $(bd)/$(SEMANTICS).abnf
+               $(bd)/$(SEMANTICS).abnf \
+               $(bd)/$(CACHE).abnf
 TARGETS_ABNFAPPENDIX= $(TARGETS_ABNF:.abnf=.abnf-appendix)
 TARGETS_PARSEDABNF= $(TARGETS_ABNF:.abnf=.parsed-abnf)
 
@@ -48,7 +49,9 @@ TARGETS = $(TARGETS_HTML) \
           $(bd)/$(SEMANTICS).iana-headers \
           $(bd)/$(SEMANTICS).iana-methods	\
           $(bd)/$(SEMANTICS).iana-status-codes \
-          $(bd)/$(SEMANTICS).cache-directives \
+          $(bd)/$(CACHE).iana-headers \
+          $(bd)/$(CACHE).iana-warn-codes \
+          $(bd)/$(CACHE).cache-directives \
           httpbis.abnf
 
 all: $(TARGETS)
@@ -61,6 +64,8 @@ diff:
           egrep -v -- '^<\!-- ' > diffs/diff_semantics.html
 	$(rfcdiff) diffs/frankenRFC723x_msg.txt $(MESSAGING).txt  | \
           egrep -v -- '^<\!-- ' > diffs/diff_messaging.html
+	$(rfcdiff) auth48/rfc7234.txt $(CACHE).txt  | \
+          egrep -v -- '^<\!-- ' > diffs/diff_cache.html
 
 diff00:
 	$(rfcdiff) 00/$(draftname)-messaging-00.txt $(MESSAGING).txt | \
