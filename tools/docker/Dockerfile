@@ -1,5 +1,5 @@
 FROM ubuntu:16.04
-LABEL maintainer="Martin Thomson <martin.thomson@gmail.com>"
+LABEL maintainer="Mark Nottingham <mnot@mnot.net>"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates coreutils curl git make ssh libxml2-utils xsltproc \
