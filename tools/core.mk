@@ -1,6 +1,5 @@
 
 rfcdiff = rfcdiff --width 78 --stdout
-reduction  = $(tools)/clean-for-DTD.xslt
 bap = $(tools)/bap
 bd  = build
 
