@@ -3517,6 +3517,9 @@
         <link rel="Help" title="Additional Information on tools.ietf.org" href="https://tools.ietf.org/html/rfc{@number}"/>
       </xsl:if>
 
+      <!-- viewport -->
+      <meta name="viewport" content="initial-scale=1"/>
+
       <!-- generator -->
       <xsl:variable name="gen">
         <xsl:call-template name="get-generator" />
@@ -6161,7 +6164,7 @@ body {<xsl:if test="$xml2rfc-background!=''">
   background: url(<xsl:value-of select="$xml2rfc-background" />) #ffffff left top;</xsl:if>
   color: black;
   font-family: <xsl:value-of select="$xml2rfc-ext-ff-body"/>;
-  font-size: 12pt;
+  font-size: 16px;
   margin: 10px 0px 10px 10px;
 }<xsl:if test="$parsedMaxwidth!=''">
 @media screen and (min-width: <xsl:value-of select="number($parsedMaxwidth + 40)"/>px) {
@@ -6273,7 +6276,7 @@ p {
   margin-left: 2em;
 }
 pre {
-  font-size: 11pt;
+  font-size: 90%;
   margin-left: 3em;
   background-color: lightyellow;
   padding: .25em;
@@ -6391,7 +6394,7 @@ table.<xsl:value-of select="$css-tcenter"/> {
 caption {
   caption-side: bottom;
   font-weight: bold;
-  font-size: 10pt;
+  font-size: 80%;
   margin-top: .5em;
 }
 <xsl:if test="//@x:caption-side">
@@ -6426,7 +6429,7 @@ tr dl {
 table.<xsl:value-of select="$css-header"/> {
   border-spacing: 1px;
   width: 95%;
-  font-size: 11pt;
+  font-size: 90%;
   color: white;
 }
 td.top {
@@ -6456,11 +6459,11 @@ ul.toc li {
 ul.toc li li {
   line-height: normal;
   font-weight: normal;
-  font-size: 11pt;
+  font-size: 90%;
   margin-left: 0em;
 }
 li.excluded {
-  font-size: 0pt;
+  font-size: 0%;
 }
 ul p {
   margin-left: 0em;
@@ -6524,7 +6527,7 @@ blockquote > * .bcp14 {
 .figure {
   font-weight: bold;
   text-align: center;
-  font-size: 10pt;
+  font-size: 80%;
 }
 .filename {
   color: #333333;
@@ -6599,7 +6602,7 @@ thead th {
 .bg-issue {
   border: solid;
   border-width: 1px;
-  font-size: 8pt;
+  font-size: 66%;
 }
 .closed-issue {
   border: solid;
@@ -6692,7 +6695,7 @@ dd, li, p {
 .<xsl:value-of select="$css-publishedasrfc"/> {
   background-color: yellow;
   color: green;
-  font-size: 14pt;
+  font-size: 115%;
   text-align: center;
 }</xsl:if>
 
@@ -6730,10 +6733,6 @@ dd, li, p {
 
   ul.ind li li a {<!-- links in the leaf nodes of the index should go to page numbers -->
     content: target-counter(attr(href), page);
-  }
-
-  pre {
-    font-size: 10pt;
   }
 
   .print2col {
@@ -9885,11 +9884,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1006 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1006 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1007 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1007 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/04/30 15:53:41 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/04/30 15:53:41 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/05/02 13:03:20 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/02 13:03:20 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
