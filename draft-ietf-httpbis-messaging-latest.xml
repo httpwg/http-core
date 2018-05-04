@@ -15,8 +15,8 @@
   <!ENTITY ID-MONTH "May">
   <!ENTITY ID-YEAR "2018">
   <!ENTITY mdash "&#8212;">
-  <!ENTITY nbsp "&#160;">
   <!ENTITY nbhy  "&#x2011;">
+  <!ENTITY nbsp "&#160;">
   <!ENTITY Note "<x:h xmlns:x='http://purl.org/net/xml2rfc/ext'>Note:</x:h>">
 ]>
 <?rfc toc="yes" ?>
@@ -202,22 +202,34 @@
 <t anchor="imported.rules">
   <x:anchor-alias value="HTTP-version"/>
   <x:anchor-alias value="absolute-URI"/>
-  <x:anchor-alias value="authority"/>
-  <x:anchor-alias value="query"/>
   <x:anchor-alias value="absolute-path"/>
+  <x:anchor-alias value="authority"/>
+  <x:anchor-alias value="comment"/>
+  <x:anchor-alias value="field-name"/>
+  <x:anchor-alias value="field-value"/>
+  <x:anchor-alias value="obs-text"/>
+  <x:anchor-alias value="query"/>
+  <x:anchor-alias value="quoted-string"/>
+  <x:anchor-alias value="token"/>
   The rules below are defined in <xref target="SEMNTCS"/>:
 </t>
 <figure><artwork type="abnf2616">
+  <x:ref>BWS</x:ref>           = &lt;BWS, see <xref target="whitespace"/>&gt;
   <x:ref>OWS</x:ref>           = &lt;OWS, see <xref target="whitespace"/>&gt;
   <x:ref>RWS</x:ref>           = &lt;RWS, see <xref target="whitespace"/>&gt;
-  <x:ref>BWS</x:ref>           = &lt;BWS, see <xref target="whitespace"/>&gt;
   <x:ref>HTTP-version</x:ref>  = &lt;HTTP-version, see <xref target="http.version"/>&gt;
   <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, see <xref target="uri"/>&gt;
-  <x:ref>authority</x:ref>     = &lt;authority, see <xref target="uri"/>&gt;
-  <x:ref>uri-host</x:ref>      = &lt;host, see <xref target="uri"/>&gt;
-  <x:ref>port</x:ref>          = &lt;port, see <xref target="uri"/>&gt;
-  <x:ref>query</x:ref>         = &lt;query, see <xref target="uri"/>&gt;
   <x:ref>absolute-path</x:ref> = &lt;absolute-path, see <xref target="uri"/>&gt;
+  <x:ref>authority</x:ref>     = &lt;authority, see <xref target="uri"/>&gt;
+  <x:ref>comment</x:ref>       = &lt;comment, see <xref target="field.components"/>&gt;
+  <x:ref>port</x:ref>          = &lt;port, see <xref target="uri"/>&gt;
+  <x:ref>field-name</x:ref>    = &lt;field-name, see <xref target="message.fields"/>&gt;
+  <x:ref>field-value</x:ref>   = &lt;field-value, see <xref target="message.fields"/>&gt;
+  <x:ref>obs-text</x:ref>      = &lt;obs-text, see <xref target="field.components"/>&gt;
+  <x:ref>query</x:ref>         = &lt;query, see <xref target="uri"/>&gt;
+  <x:ref>quoted-string</x:ref> = &lt;quoted-string, see <xref target="field.components"/>&gt;
+  <x:ref>token</x:ref>         = &lt;token, see <xref target="field.components"/>&gt;
+  <x:ref>uri-host</x:ref>      = &lt;host, see <xref target="uri"/>&gt;
 </artwork></figure>
 </section>
 </section>
@@ -231,12 +243,11 @@
 <iref item="headers"/>
 <iref item="header field"/>
 <t>
-   Messages are passed in a format similar to that used by Internet mail
+   All HTTP/1.1 messages consist of a start-line followed by a sequence of
+   octets in a format similar to the Internet Message Format
    <xref target="RFC5322"/> and the Multipurpose Internet Mail Extensions
    (MIME) <xref target="RFC2045"/> (see <xref target="differences.between.http.and.mime"/> for the differences
-   between HTTP and MIME messages).
-   Each message consists of a start-line followed by a sequence of
-   octets: zero or more header fields (collectively
+   between HTTP and MIME messages): zero or more header fields (collectively
    referred to as the "headers" or the "header section"), an empty line
    indicating the end of the header section, and an optional message body.
 </t>
@@ -416,103 +427,19 @@
 
 <section title="Header Fields" anchor="header.fields">
   <x:anchor-alias value="header-field"/>
-  <x:anchor-alias value="field-content"/>
-  <x:anchor-alias value="field-name"/>
-  <x:anchor-alias value="field-value"/>
-  <x:anchor-alias value="field-vchar"/>
-  <x:anchor-alias value="obs-fold"/>
 <t>
    Each header field consists of a case-insensitive field name
    followed by a colon (":"), optional leading whitespace, the field value,
    and optional trailing whitespace.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="header-field"/><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/><iref primary="true" item="Grammar" subitem="obs-fold"/>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="header-field"/><iref primary="false" item="Grammar" subitem="field-name"/><iref primary="false" item="Grammar" subitem="field-value"/>
   <x:ref>header-field</x:ref>   = <x:ref>field-name</x:ref> ":" <x:ref>OWS</x:ref> <x:ref>field-value</x:ref> <x:ref>OWS</x:ref>
-
-  <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
-  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
-  <x:ref>field-content</x:ref>  = <x:ref>field-vchar</x:ref> [ 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> ) <x:ref>field-vchar</x:ref> ]
-  <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
-
-  <x:ref>obs-fold</x:ref>       = <x:ref>CRLF</x:ref> 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
-                 ; obsolete line folding
-                 ; see <xref target="field.parsing"/>
 </artwork></figure>
 <t>
-   The field-name token labels the corresponding field-value as having the
-   semantics defined by that header field.  For example, the <x:ref>Date</x:ref>
-   header field is defined in <xref target="header.date"/> as containing the origination
-   timestamp for the message in which it appears.
+   [Field names and rules for parsing within field values are defined in
+   <xref target="message.fields"/>. This section only covers their syntax for
+   inclusion within, and extraction from, HTTP/1.1 messages.]
 </t>
-
-<section title="Field Extensibility" anchor="field.extensibility">
-<t>
-   Header fields are fully extensible: there is no limit on the
-   introduction of new field names, each presumably defining new semantics,
-   nor on the number of header fields used in a given message.  Existing
-   fields are defined in each part of this specification and in many other
-   specifications outside this document set.
-</t>
-<t>
-   New header fields can be defined such that, when they are understood by a
-   recipient, they might override or enhance the interpretation of previously
-   defined header fields, define preconditions on request evaluation, or
-   refine the meaning of responses.
-</t>
-<t>
-   A proxy &MUST; forward unrecognized header fields unless the
-   field-name is listed in the <x:ref>Connection</x:ref> header field
-   (<xref target="header.connection"/>) or the proxy is specifically
-   configured to block, or otherwise transform, such fields.
-   Other recipients &SHOULD; ignore unrecognized header fields.
-   These requirements allow HTTP's functionality to be enhanced without
-   requiring prior update of deployed intermediaries.
-</t>
-<t>
-   All defined header fields ought to be registered with IANA in the
-   "Message Headers" registry, as described in <xref target="header.field.registry"/>.
-</t>
-</section>
-
-<section title="Field Order" anchor="field.order">
-<t>
-   The order in which header fields with differing field names are
-   received is not significant. However, it is good practice to send
-   header fields that contain control data first, such as <x:ref>Host</x:ref>
-   on requests and <x:ref>Date</x:ref> on responses, so that implementations
-   can decide when not to handle a message as early as possible.
-   A server &MUST-NOT; apply a request to the target resource until the entire
-   request header section is received, since later header fields might include
-   conditionals, authentication credentials, or deliberately misleading
-   duplicate header fields that would impact request processing.
-</t>
-<t>
-   A sender &MUST-NOT; generate multiple header fields with the same field
-   name in a message unless either the entire field value for that
-   header field is defined as a comma-separated list [i.e., #(values)]
-   or the header field is a well-known exception (as noted below).
-</t>
-<t>
-   A recipient &MAY; combine multiple header fields with the same field name
-   into one "field-name: field-value" pair, without changing the semantics of
-   the message, by appending each subsequent field value to the combined
-   field value in order, separated by a comma. The order in which
-   header fields with the same field name are received is therefore
-   significant to the interpretation of the combined field value;
-   a proxy &MUST-NOT; change the order of these field values when
-   forwarding a message.
-</t>
-<aside>
-  <t>
-   &Note; In practice, the "Set-Cookie" header field (<xref target="RFC6265"/>)
-   often appears multiple times in a response message and does not use the
-   list syntax, violating the above requirements on multiple header fields
-   with the same name. Since it cannot be combined into a single field-value,
-   recipients ought to handle "Set-Cookie" as a special case while processing
-   header fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
-  </t>
-</aside>
-</section>
 
 <section title="Field Parsing" anchor="field.parsing">
 <t>
@@ -520,12 +447,6 @@
    individual header field names. The contents within a given field value are
    not parsed until a later stage of message interpretation (usually after the
    message's entire header section has been processed).
-   Consequently, this specification does not use ABNF rules to define each
-   "Field-Name: Field Value" pair, as was done in earlier editions.
-   Instead, this specification uses ABNF rules that are named according to
-   each registered field name, wherein the rule defines the valid grammar for
-   that field's corresponding field values (i.e., after the field-value
-   has been extracted from the header section by a generic field parser).
 </t>
 <t>
    No whitespace is allowed between the header field-name and colon.
@@ -545,12 +466,22 @@
    the last non-whitespace octet of the field value ought to be excluded by
    parsers when extracting the field value from a header field.
 </t>
+</section>
+
+<section title="Obsolete Line Folding" anchor="line.folding">
+  <x:anchor-alias value="obs-fold"/>
 <t>
    Historically, HTTP header field values could be extended over multiple
    lines by preceding each extra line with at least one space or horizontal
    tab (obs-fold). This specification deprecates such line folding except
    within the message/http media type
    (<xref target="internet.media.type.message.http"/>).
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="obs-fold"/>
+  <x:ref>obs-fold</x:ref>     = <x:ref>CRLF</x:ref> 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
+              ; obsolete line folding
+</artwork></figure>
+<t>
    A sender &MUST-NOT; generate a message that includes line folding
    (i.e., that has any field-value that contains a match to the
    <x:ref>obs-fold</x:ref> rule) unless the message is intended for packaging
@@ -580,105 +511,7 @@
    <x:ref>obs-fold</x:ref> with one or more <x:ref>SP</x:ref> octets prior to
    interpreting the field value.
 </t>
-<t>
-   Historically, HTTP has allowed field content with text in the ISO&nbhy;8859&nbhy;1
-   charset <xref target="ISO-8859-1"/>, supporting other charsets only
-   through use of <xref target="RFC2047"/> encoding.
-   In practice, most HTTP header field values use only a subset of the
-   US-ASCII charset <xref target="USASCII"/>. Newly defined
-   header fields &SHOULD; limit their field values to US&nbhy;ASCII octets.
-   A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
-   opaque data.
-</t>
 </section>
-
-<section title="Field Limits" anchor="field.limits">
-<t>
-   HTTP does not place a predefined limit on the length of each header field
-   or on the length of the header section as a whole, as described in
-   <xref target="SEMNTCS-conformance"/>. Various ad hoc limitations on individual
-   header field length are found in practice, often depending on the specific
-   field semantics.
-</t>
-<t>
-   A server that receives a request header field, or set of fields, larger
-   than it wishes to process &MUST; respond with an appropriate
-   <x:ref>4xx (Client Error)</x:ref> status code. Ignoring such header fields
-   would increase the server's vulnerability to request smuggling attacks
-   (<xref target="request.smuggling"/>).
-</t>
-<t>
-   A client &MAY; discard or truncate received header fields that are larger
-   than the client wishes to process if the field semantics are such that the
-   dropped value(s) can be safely ignored without changing the
-   message framing or response semantics.
-</t>
-</section>
-
-<section title="Field Value Components" anchor="field.components">
-<t anchor="rule.token.separators">
-  <x:anchor-alias value="tchar"/>
-  <x:anchor-alias value="token"/>
-  <iref item="Delimiters"/>
-   Most HTTP header field values are defined using common syntax components
-   (token, quoted-string, and comment) separated by whitespace or specific
-   delimiting characters. Delimiters are chosen from the set of US-ASCII
-   visual characters not allowed in a <x:ref>token</x:ref>
-   (DQUOTE and "(),/:;&lt;=>?@[\]{}").
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
-  <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
-<!--
-  NOTE: the definition of tchar and the prose above about special characters need to match!
- -->
-  <x:ref>tchar</x:ref>          = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*"
-                 / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
-                 / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
-                 ; any <x:ref>VCHAR</x:ref>, except delimiters
-</artwork></figure>
-<t anchor="rule.quoted-string">
-  <x:anchor-alias value="quoted-string"/>
-  <x:anchor-alias value="qdtext"/>
-  <x:anchor-alias value="obs-text"/>
-   A string of text is parsed as a single value if it is quoted using
-   double-quote marks.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
-  <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
-  <x:ref>qdtext</x:ref>         = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> /%x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-  <x:ref>obs-text</x:ref>       = %x80-FF
-</artwork></figure>
-<t anchor="rule.comment">
-  <x:anchor-alias value="comment"/>
-  <x:anchor-alias value="ctext"/>
-   Comments can be included in some HTTP header fields by surrounding
-   the comment text with parentheses. Comments are only allowed in
-   fields containing "comment" as part of their field value definition.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
-  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
-  <x:ref>ctext</x:ref>          = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-</artwork></figure>
-<t anchor="rule.quoted-pair">
-  <x:anchor-alias value="quoted-pair"/>
-   The backslash octet ("\") can be used as a single-octet
-   quoting mechanism within quoted-string and comment constructs.
-   Recipients that process the value of a quoted-string &MUST; handle a
-   quoted-pair as if it were replaced by the octet following the backslash.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
-  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
-</artwork></figure>
-<t>
-   A sender &SHOULD-NOT; generate a quoted-pair in a quoted-string except
-   where necessary to quote DQUOTE and backslash octets occurring within that
-   string.
-   A sender &SHOULD-NOT; generate a quoted-pair in a comment except
-   where necessary to quote parentheses ["(" and ")"] and backslash octets
-   occurring within that comment.
-</t>
-</section>
-
 </section>
 
 <section title="Message Body" anchor="message.body">
@@ -3128,6 +2961,11 @@ Upgrade: HTTP/2.0
     <x:has anchor="caches"/>
     <x:has anchor="canonicalization.and.text.defaults"/>
     <x:has anchor="content.codings"/>
+    <x:has anchor="field.components"/>
+    <x:has anchor="field.extensibility"/>
+    <x:has anchor="field.order"/>
+    <x:has anchor="field.limits"/>
+    <x:has anchor="field.values"/>
     <x:has anchor="header.date"/>
     <x:has anchor="header.expect"/>
     <x:has anchor="header.field.registry"/>
@@ -3138,6 +2976,7 @@ Upgrade: HTTP/2.0
     <x:has anchor="idempotent.methods"/>
     <x:has anchor="implementation-diversity"/>
     <x:has anchor="intermediaries"/>
+    <x:has anchor="message.fields"/>
     <x:has anchor="methods"/>
     <x:has anchor="multipart.byteranges"/>
     <x:has anchor="operation"/>
@@ -3335,19 +3174,6 @@ Upgrade: HTTP/2.0
 
 <references title="Informative References">
 
-<reference anchor="ISO-8859-1">
-  <front>
-    <title>
-     Information technology -- 8-bit single-byte coded graphic character sets -- Part 1: Latin alphabet No. 1
-    </title>
-    <author>
-      <organization>International Organization for Standardization</organization>
-    </author>
-    <date year="1998"/>
-  </front>
-  <seriesInfo name="ISO/IEC" value="8859-1:1998"/>
-</reference>
-
 <reference anchor="RFC1945">
   <front>
     <title abbrev="HTTP/1.0">Hypertext Transfer Protocol -- HTTP/1.0</title>
@@ -3398,18 +3224,6 @@ Upgrade: HTTP/2.0
     <date month="November" year="1996"/>
   </front>
   <seriesInfo name="RFC" value="2046"/>
-</reference>
-
-<reference anchor="RFC2047">
-  <front>
-    <title abbrev="Message Header Extensions">MIME (Multipurpose Internet Mail Extensions) Part Three: Message Header Extensions for Non-ASCII Text</title>
-    <author initials="K." surname="Moore" fullname="Keith Moore">
-      <organization>University of Tennessee</organization>
-      <address><email>moore@cs.utk.edu</email></address>
-    </author>
-    <date month="November" year="1996"/>
-  </front>
-  <seriesInfo name="RFC" value="2047"/>
 </reference>
 
 <reference anchor="RFC2049">
@@ -3617,15 +3431,6 @@ Upgrade: HTTP/2.0
   <seriesInfo name='BCP' value='97' />
   <seriesInfo name='RFC' value='4897' />
 </reference>-->
-
-<reference anchor="Kri2001" target="http://arxiv.org/abs/cs.SE/0105018">
-  <front>
-    <title>HTTP Cookies: Standards, Privacy, and Politics</title>
-    <author initials="D." surname="Kristol" fullname="David M. Kristol"/>
-    <date year="2001" month="November"/>
-  </front>
-  <seriesInfo name="ACM Transactions on Internet Technology" value="1(2)"/>
-</reference>
 
 <reference anchor="Klein" target="http://packetstormsecurity.com/papers/general/whitepaper_httpresponse.pdf">
   <front>
@@ -3900,7 +3705,7 @@ Upgrade: HTTP/2.0
 <section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf">
 <t>In the collected ABNF below, list rules are expanded as per <xref target="SEMNTCS" x:rel="#abnf.extension"/>.</t><figure>
 <artwork type="abnf" name="draft-ietf-httpbis-messaging-latest.parsed-abnf">
-<x:ref>BWS</x:ref> = &lt;BWS, see <xref target="SEMNTCS" x:fmt="," x:sec="3.4"/>&gt;
+<x:ref>BWS</x:ref> = &lt;BWS, see <xref target="SEMNTCS" x:fmt="," x:sec="4.6"/>&gt;
 
 <x:ref>Connection</x:ref> = *( "," OWS ) connection-option *( OWS "," [ OWS
  connection-option ] )
@@ -3908,12 +3713,12 @@ Upgrade: HTTP/2.0
 
 <x:ref>HTTP-message</x:ref> = start-line *( header-field CRLF ) CRLF [ message-body
  ]
-<x:ref>HTTP-version</x:ref> = &lt;HTTP-version, see <xref target="SEMNTCS" x:fmt="," x:sec="3.5"/>&gt;
+<x:ref>HTTP-version</x:ref> = &lt;HTTP-version, see <xref target="SEMNTCS" x:fmt="," x:sec="3.4"/>&gt;
 <x:ref>Host</x:ref> = uri-host [ ":" port ]
 
-<x:ref>OWS</x:ref> = &lt;OWS, see <xref target="SEMNTCS" x:fmt="," x:sec="3.4"/>&gt;
+<x:ref>OWS</x:ref> = &lt;OWS, see <xref target="SEMNTCS" x:fmt="," x:sec="4.6"/>&gt;
 
-<x:ref>RWS</x:ref> = &lt;RWS, see <xref target="SEMNTCS" x:fmt="," x:sec="3.4"/>&gt;
+<x:ref>RWS</x:ref> = &lt;RWS, see <xref target="SEMNTCS" x:fmt="," x:sec="4.6"/>&gt;
 
 <x:ref>TE</x:ref> = [ ( "," / t-codings ) *( OWS "," [ OWS t-codings ] ) ]
 <x:ref>Trailer</x:ref> = *( "," OWS ) field-name *( OWS "," [ OWS field-name ] )
@@ -3940,17 +3745,11 @@ Upgrade: HTTP/2.0
 <x:ref>chunk-ext-val</x:ref> = token / quoted-string
 <x:ref>chunk-size</x:ref> = 1*HEXDIG
 <x:ref>chunked-body</x:ref> = *chunk last-chunk trailer-part CRLF
-<x:ref>comment</x:ref> = "(" *( ctext / quoted-pair / comment ) ")"
+<x:ref>comment</x:ref> = &lt;comment, see <xref target="SEMNTCS" x:fmt="," x:sec="4.5"/>&gt;
 <x:ref>connection-option</x:ref> = token
-<x:ref>ctext</x:ref> = HTAB / SP / %x21-27 ; '!'-'''
- / %x2A-5B ; '*'-'['
- / %x5D-7E ; ']'-'~'
- / obs-text
 
-<x:ref>field-content</x:ref> = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-<x:ref>field-name</x:ref> = token
-<x:ref>field-value</x:ref> = *( field-content / obs-fold )
-<x:ref>field-vchar</x:ref> = VCHAR / obs-text
+<x:ref>field-name</x:ref> = &lt;field-name, see <xref target="SEMNTCS" x:fmt="," x:sec="4"/>&gt;
+<x:ref>field-value</x:ref> = &lt;field-value, see <xref target="SEMNTCS" x:fmt="," x:sec="4"/>&gt;
 
 <x:ref>header-field</x:ref> = field-name ":" OWS field-value OWS
 
@@ -3960,7 +3759,7 @@ Upgrade: HTTP/2.0
 <x:ref>method</x:ref> = token
 
 <x:ref>obs-fold</x:ref> = CRLF 1*( SP / HTAB )
-<x:ref>obs-text</x:ref> = %x80-FF
+<x:ref>obs-text</x:ref> = &lt;obs-text, see <xref target="SEMNTCS" x:fmt="," x:sec="4.5"/>&gt;
 <x:ref>origin-form</x:ref> = absolute-path [ "?" query ]
 
 <x:ref>port</x:ref> = &lt;port, see <xref target="SEMNTCS" x:fmt="," x:sec="2.4"/>&gt;
@@ -3969,12 +3768,8 @@ Upgrade: HTTP/2.0
 <x:ref>protocol-version</x:ref> = token
 <x:ref>pseudonym</x:ref> = token
 
-<x:ref>qdtext</x:ref> = HTAB / SP / "!" / %x23-5B ; '#'-'['
- / %x5D-7E ; ']'-'~'
- / obs-text
 <x:ref>query</x:ref> = &lt;query, see <xref target="SEMNTCS" x:fmt="," x:sec="2.4"/>&gt;
-<x:ref>quoted-pair</x:ref> = "\" ( HTAB / SP / VCHAR / obs-text )
-<x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+<x:ref>quoted-string</x:ref> = &lt;quoted-string, see <xref target="SEMNTCS" x:fmt="," x:sec="4.5"/>&gt;
 
 <x:ref>rank</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 <x:ref>reason-phrase</x:ref> = *( HTAB / SP / VCHAR / obs-text )
@@ -3990,9 +3785,7 @@ Upgrade: HTTP/2.0
 
 <x:ref>t-codings</x:ref> = "trailers" / ( transfer-coding [ t-ranking ] )
 <x:ref>t-ranking</x:ref> = OWS ";" OWS "q=" rank
-<x:ref>tchar</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "." /
- "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
-<x:ref>token</x:ref> = 1*tchar
+<x:ref>token</x:ref> = &lt;token, see <xref target="SEMNTCS" x:fmt="," x:sec="4.5"/>&gt;
 <x:ref>trailer-part</x:ref> = *( header-field CRLF )
 <x:ref>transfer-coding</x:ref> = "chunked" / "compress" / "deflate" / "gzip" /
  transfer-extension
