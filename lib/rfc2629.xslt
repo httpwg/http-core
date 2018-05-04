@@ -6429,8 +6429,8 @@ tr dl {
 table.<xsl:value-of select="$css-header"/> {
   border-spacing: 1px;
   width: 95%;
-  font-size: 90%;
-  color: white;
+  font-size: 90%;<xsl:if test="not(contains($styles,' header-bw '))">
+  color: white;</xsl:if>
 }
 td.top {
   vertical-align: top;
@@ -6439,12 +6439,12 @@ td.topnowrap {
   vertical-align: top;
   white-space: nowrap;
 }
-table.<xsl:value-of select="$css-header"/> td {
-  background-color: gray;
+table.<xsl:value-of select="$css-header"/> td {<xsl:if test="not(contains($styles,' header-bw '))">
+  background-color: gray;</xsl:if>
   width: 50%;
 }<xsl:if test="/rfc/@obsoletes | /rfc/@updates">
 table.<xsl:value-of select="$css-header"/> a {
-  color: white;
+  color: <xsl:choose><xsl:when test="not(contains($styles,' header-bw '))">white</xsl:when><xsl:otherwise>black</xsl:otherwise></xsl:choose>;
 }</xsl:if>
 ul.toc, ul.toc ul {
   list-style: none;
@@ -9884,11 +9884,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1007 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1007 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1008 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1008 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/05/02 13:03:20 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/02 13:03:20 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/05/04 14:12:26 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/04 14:12:26 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
