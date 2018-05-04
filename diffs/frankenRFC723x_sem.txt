@@ -1110,6 +1110,318 @@ X.  [Message Fields]
       http://EXAMPLE.com/%7Esmith/home.html
       http://EXAMPLE.com:/%7esmith/home.html
 
+5.  Message Routing
+
+   HTTP request message routing is determined by each client based on
+   the target resource, the client's proxy configuration, and
+   establishment or reuse of an inbound connection.  The corresponding
+   response routing follows the same connection chain back to the
+   client.
+
+5.1.  Identifying a Target Resource
+
+   HTTP is used in a wide variety of applications, ranging from
+   general-purpose computers to home appliances.  In some cases,
+   communication options are hard-coded in a client's configuration.
+   However, most HTTP clients rely on the same resource identification
+   mechanism and configuration techniques as general-purpose Web
+   browsers.
+
+   HTTP communication is initiated by a user agent for some purpose.
+   The purpose is a combination of request semantics, which are defined
+   in [RFC7231], and a target resource upon which to apply those
+   semantics.  A URI reference (Section 2.7) is typically used as an
+   identifier for the "target resource", which a user agent would
+   resolve to its absolute form in order to obtain the "target URI".
+   The target URI excludes the reference's fragment component, if any,
+   since fragment identifiers are reserved for client-side processing
+   ([RFC3986], Section 3.5).
+
+5.2.  Connecting Inbound
+
+   Once the target URI is determined, a client needs to decide whether a
+   network request is necessary to accomplish the desired semantics and,
+   if so, where that request is to be directed.
+
+   If the client has a cache [RFC7234] and the request can be satisfied
+   by it, then the request is usually directed there first.
+
+   If the request is not satisfied by a cache, then a typical client
+   will check its configuration to determine whether a proxy is to be
+   used to satisfy the request.  Proxy configuration is implementation-
+   dependent, but is often based on URI prefix matching, selective
+   authority matching, or both, and the proxy itself is usually
+   identified by an "http" or "https" URI.  If a proxy is applicable,
+   the client connects inbound by establishing (or reusing) a connection
+   to that proxy.
+
+   If no proxy is applicable, a typical client will invoke a handler
+   routine, usually specific to the target URI's scheme, to connect
+   directly to an authority for the target resource.  How that is
+   accomplished is dependent on the target URI scheme and defined by its
+   associated specification, similar to how this specification defines
+   origin server access for resolution of the "http" (Section 2.7.1) and
+   "https" (Section 2.7.2) schemes.
+
+   HTTP requirements regarding connection management are defined in
+   Section 6.
+
+5.5.  Effective Request URI
+
+   Once an inbound connection is obtained, the client sends an HTTP
+   request message (Section 3) with a request-target derived from the
+   target URI.
+
+   Since the request-target often contains only part of the user agent's
+   target URI, a server reconstructs the intended target as an
+   "effective request URI" to properly service the request.  This
+   reconstruction involves both the server's local configuration and
+   information communicated in the request-target, Host header field,
+   and connection context.
+
+   For a user agent, the effective request URI is the target URI.
+
+   Once the effective request URI has been constructed, an origin server
+   needs to decide whether or not to provide service for that URI via
+   the connection in which the request was received.  For example, the
+   request might have been misdirected, deliberately or accidentally,
+   such that the information within a received request-target or Host
+   header field differs from the host or port upon which the connection
+   has been made.  If the connection is from a trusted gateway, that
+   inconsistency might be expected; otherwise, it might indicate an
+   attempt to bypass security filters, trick the server into delivering
+   non-public content, or poison a cache.  See Section 9 for security
+   considerations regarding message routing.
+
+5.4.  Host
+
+   The "Host" header field in a request provides the host and port
+   information from the target URI, enabling the origin server to
+   distinguish among resources while servicing requests for multiple
+   host names on a single IP address.
+
+     Host = uri-host [ ":" port ] ; Section 2.7.1
+
+   A client MUST send a Host header field in all HTTP/1.1 request
+   messages.  If the target URI includes an authority component, then a
+   client MUST send a field-value for Host that is identical to that
+   authority component, excluding any userinfo subcomponent and its "@"
+   delimiter (Section 2.7.1).  If the authority component is missing or
+   undefined for the target URI, then a client MUST send a Host header
+   field with an empty field-value.
+
+   Since the Host field-value is critical information for handling a
+   request, a user agent SHOULD generate Host as the first header field
+   following the request-line.
+
+   For example, a GET request to the origin server for
+   <http://www.example.org/pub/WWW/> would begin with:
+
+     GET /pub/WWW/ HTTP/1.1
+     Host: www.example.org
+
+   A client MUST send a Host header field in an HTTP/1.1 request even if
+   the request-target is in the absolute-form, since this allows the
+   Host information to be forwarded through ancient HTTP/1.0 proxies
+   that might not have implemented Host.
+
+   When a proxy receives a request with an absolute-form of
+   request-target, the proxy MUST ignore the received Host header field
+   (if any) and instead replace it with the host information of the
+   request-target.  A proxy that forwards such a request MUST generate a
+   new Host field-value based on the received request-target rather than
+   forward the received Host field-value.
+
+   Since the Host header field acts as an application-level routing
+   mechanism, it is a frequent target for malware seeking to poison a
+   shared cache or redirect a request to an unintended server.  An
+   interception proxy is particularly vulnerable if it relies on the
+   Host field-value for redirecting requests to internal servers, or for
+   use as a cache key in a shared cache, without first verifying that
+   the intercepted connection is targeting a valid IP address for that
+   host.
+
+   A server MUST respond with a 400 (Bad Request) status code to any
+   HTTP/1.1 request message that lacks a Host header field and to any
+   request message that contains more than one Host header field or a
+   Host header field with an invalid field-value.
+
+5.6.  Associating a Response to a Request
+
+   HTTP does not include a request identifier for associating a given
+   request message with its corresponding one or more response messages.
+   Hence, it relies on the order of response arrival to correspond
+   exactly to the order in which requests are made on the same
+   connection.  More than one response message per request only occurs
+   when one or more informational responses (1xx, see Section 6.2 of
+   [RFC7231]) precede a final response to the same request.
+
+   A client that has more than one outstanding request on a connection
+   MUST maintain a list of outstanding requests in the order sent and
+   MUST associate each received response message on that connection to
+   the highest ordered request that has not yet received a final
+   (non-1xx) response.
+
+5.7.  Message Forwarding
+
+   As described in Section 2.3, intermediaries can serve a variety of
+   roles in the processing of HTTP requests and responses.  Some
+   intermediaries are used to improve performance or availability.
+   Others are used for access control or to filter content.  Since an
+   HTTP stream has characteristics similar to a pipe-and-filter
+   architecture, there are no inherent limits to the extent an
+   intermediary can enhance (or interfere) with either direction of the
+   stream.
+
+   An intermediary not acting as a tunnel MUST implement the Connection
+   header field, as specified in Section 6.1, and exclude fields from
+   being forwarded that are only intended for the incoming connection.
+
+   An intermediary MUST NOT forward a message to itself unless it is
+   protected from an infinite request loop.  In general, an intermediary
+   ought to recognize its own server names, including any aliases, local
+   variations, or literal IP addresses, and respond to such requests
+   directly.
+
+5.7.1.  Via
+
+   The "Via" header field indicates the presence of intermediate
+   protocols and recipients between the user agent and the server (on
+   requests) or between the origin server and the client (on responses),
+   similar to the "Received" header field in email (Section 3.6.7 of
+   [RFC5322]).  Via can be used for tracking message forwards, avoiding
+   request loops, and identifying the protocol capabilities of senders
+   along the request/response chain.
+
+     Via = 1#( received-protocol RWS received-by [ RWS comment ] )
+
+     received-protocol = [ protocol-name "/" ] protocol-version
+                         ; see Section 6.7
+     received-by       = ( uri-host [ ":" port ] ) / pseudonym
+     pseudonym         = token
+
+   Multiple Via field values represent each proxy or gateway that has
+   forwarded the message.  Each intermediary appends its own information
+   about how the message was received, such that the end result is
+   ordered according to the sequence of forwarding recipients.
+
+   A proxy MUST send an appropriate Via header field, as described
+   below, in each message that it forwards.  An HTTP-to-HTTP gateway
+   MUST send an appropriate Via header field in each inbound request
+   message and MAY send a Via header field in forwarded response
+   messages.
+
+   For each intermediary, the received-protocol indicates the protocol
+   and protocol version used by the upstream sender of the message.
+   Hence, the Via field value records the advertised protocol
+   capabilities of the request/response chain such that they remain
+   visible to downstream recipients; this can be useful for determining
+   what backwards-incompatible features might be safe to use in
+   response, or within a later request, as described in Section 2.6.
+   For brevity, the protocol-name is omitted when the received protocol
+   is HTTP.
+
+   The received-by portion of the field value is normally the host and
+   optional port number of a recipient server or client that
+   subsequently forwarded the message.  However, if the real host is
+   considered to be sensitive information, a sender MAY replace it with
+   a pseudonym.  If a port is not provided, a recipient MAY interpret
+   that as meaning it was received on the default TCP port, if any, for
+   the received-protocol.
+
+   A sender MAY generate comments in the Via header field to identify
+   the software of each recipient, analogous to the User-Agent and
+   Server header fields.  However, all comments in the Via field are
+   optional, and a recipient MAY remove them prior to forwarding the
+   message.
+
+   For example, a request message could be sent from an HTTP/1.0 user
+   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
+   forward the request to a public proxy at p.example.net, which
+   completes the request by forwarding it to the origin server at
+   www.example.com.  The request received by www.example.com would then
+   have the following Via header field:
+
+     Via: 1.0 fred, 1.1 p.example.net
+
+   An intermediary used as a portal through a network firewall SHOULD
+   NOT forward the names and ports of hosts within the firewall region
+   unless it is explicitly enabled to do so.  If not enabled, such an
+   intermediary SHOULD replace each received-by host of any host behind
+   the firewall by an appropriate pseudonym for that host.
+
+   An intermediary MAY combine an ordered subsequence of Via header
+   field entries into a single such entry if the entries have identical
+   received-protocol values.  For example,
+
+     Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
+
+   could be collapsed to
+
+     Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
+
+   A sender SHOULD NOT combine multiple entries unless they are all
+   under the same organizational control and the hosts have already been
+   replaced by pseudonyms.  A sender MUST NOT combine entries that have
+   different received-protocol values.
+
+5.7.2.  Transformations
+
+   Some intermediaries include features for transforming messages and
+   their payloads.  A proxy might, for example, convert between image
+   formats in order to save cache space or to reduce the amount of
+   traffic on a slow link.  However, operational problems might occur
+   when these transformations are applied to payloads intended for
+   critical applications, such as medical imaging or scientific data
+   analysis, particularly when integrity checks or digital signatures
+   are used to ensure that the payload received is identical to the
+   original.
+
+   An HTTP-to-HTTP proxy is called a "transforming proxy" if it is
+   designed or configured to modify messages in a semantically
+   meaningful way (i.e., modifications, beyond those required by normal
+   HTTP processing, that change the message in a way that would be
+   significant to the original sender or potentially significant to
+   downstream recipients).  For example, a transforming proxy might be
+   acting as a shared annotation server (modifying responses to include
+   references to a local annotation database), a malware filter, a
+   format transcoder, or a privacy filter.  Such transformations are
+   presumed to be desired by whichever client (or client organization)
+   selected the proxy.
+
+   If a proxy receives a request-target with a host name that is not a
+   fully qualified domain name, it MAY add its own domain to the host
+   name it received when forwarding the request.  A proxy MUST NOT
+   change the host name if the request-target contains a fully qualified
+   domain name.
+
+   A proxy MUST NOT modify the "absolute-path" and "query" parts of the
+   received request-target when forwarding it to the next inbound
+   server, except as noted above to replace an empty path with "/" or
+   "*".
+
+   A proxy MAY modify the message body through application or removal of
+   a transfer coding (Section 4).
+
+   A proxy MUST NOT transform the payload (Section 3.3 of [RFC7231]) of
+   a message that contains a no-transform cache-control directive
+   (Section 5.2 of [RFC7234]).
+
+   A proxy MAY transform the payload of a message that does not contain
+   a no-transform cache-control directive.  A proxy that transforms a
+   payload MUST add a Warning header field with the warn-code of 214
+   ("Transformation Applied") if one is not already in the message (see
+   Section 5.5 of [RFC7234]).  A proxy that transforms the payload of a
+   200 (OK) response can further inform downstream recipients that a
+   transformation has been applied by changing the response status code
+   to 203 (Non-Authoritative Information) (Section 6.3.4 of [RFC7231]).
+
+   A proxy SHOULD NOT modify header fields that provide information
+   about the endpoints of the communication chain, the resource state,
+   or the selected representation (other than the payload) unless the
+   field's definition specifically allows such modification or the
+   modification is deemed necessary for privacy or security.
+
 3.  Representations
 
    Considering that a resource could be anything, and that the uniform

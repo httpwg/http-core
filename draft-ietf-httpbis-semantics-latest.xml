@@ -275,12 +275,12 @@
 </t>
 <t anchor="imported.rules">
   <x:anchor-alias value="obs-fold"/>
-  <x:anchor-alias value="pseudonym"/>
+  <x:anchor-alias value="request-target"/>
   The rules below are defined in <xref target="MESSGNG"/>:
 </t>
 <figure><artwork type="abnf2616">
-  <x:ref>obs-fold</x:ref>      = &lt;obs-fold, see <xref target="line.folding"/>&gt;
-  <x:ref>pseudonym</x:ref>     = &lt;pseudonym, see <xref target="header.via"/>&gt;
+  <x:ref>obs-fold</x:ref>       = &lt;obs-fold, see <xref target="line.folding"/>&gt;
+  <x:ref>request-target</x:ref> = &lt;request-target, see <xref target="h1.request.target"/>&gt;
 </artwork></figure>
 <t>
    This specification uses the terms
@@ -337,7 +337,7 @@
 <t>
    HTTP relies upon the Uniform Resource Identifier (URI)
    standard <xref target="RFC3986"/> to indicate the target resource
-   (<xref target="target-resource"/>) and relationships between resources.
+   (<xref target="target.resource"/>) and relationships between resources.
 </t>
 <t>
    Most HTTP communication consists of a retrieval request (GET) for
@@ -1126,20 +1126,12 @@ Content-Type: text/plain
 </section>
 
 <section title="Resources" anchor="resources">
-  <x:anchor-alias value="target resource"/>
 <t>
    The target of an HTTP request is called a "<x:dfn>resource</x:dfn>". 
    HTTP does not limit the nature of a resource; it merely
    defines an interface that might be used to interact with resources.
    Each resource is identified by a Uniform Resource Identifier (URI), as
    described in <xref target="uri"/>.
-</t>
-<t>
-   When a client constructs an HTTP/1.1 request message, it sends the
-   <x:ref>target URI</x:ref> in one of various forms, as defined in
-   (<xref target="request-target"/>). When a request is received, the server reconstructs
-   an <x:ref>effective request URI</x:ref> for the target resource
-   (<xref target="effective.request.uri"/>).
 </t>
 <t>
    One design goal of HTTP is to separate resource identification from
@@ -1307,6 +1299,388 @@ Content-Type: text/plain
    http://EXAMPLE.com/%7Esmith/home.html
    http://EXAMPLE.com:/%7esmith/home.html
 </artwork></figure>
+</section>
+</section>
+
+<section title="Message Routing" anchor="message.routing">
+<t>
+   HTTP request message routing is determined by each client based on the
+   target resource, the client's proxy configuration, and
+   establishment or reuse of an inbound connection.  The corresponding
+   response routing follows the same connection chain back to the client.
+</t>
+
+<section title="Identifying a Target Resource" anchor="target.resource">
+  <iref primary="true" item="target resource"/>
+  <iref primary="true" item="target URI"/>
+  <x:anchor-alias value="target resource"/>
+  <x:anchor-alias value="target URI"/>
+<t>
+   HTTP is used in a wide variety of applications, ranging from
+   general-purpose computers to home appliances.  In some cases,
+   communication options are hard-coded in a client's configuration.
+   However, most HTTP clients rely on the same resource identification
+   mechanism and configuration techniques as general-purpose Web browsers.
+</t>
+<t>
+   HTTP communication is initiated by a user agent for some purpose.
+   The purpose is a combination of request semantics
+   and a target resource upon which to apply those
+   semantics.  A URI reference (<xref target="uri"/>) is typically used as
+   an identifier for the "<x:dfn>target resource</x:dfn>", which a user agent
+   would resolve to its absolute form in order to obtain the
+   "<x:dfn>target URI</x:dfn>".  The target URI
+   excludes the reference's fragment component, if any,
+   since fragment identifiers are reserved for client-side processing
+   (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
+</t>
+</section>
+
+<section title="Connecting Inbound" anchor="connecting.inbound">
+<t>
+   Once the target URI is determined, a client needs to decide whether
+   a network request is necessary to accomplish the desired semantics and,
+   if so, where that request is to be directed.
+</t>
+<t>
+   If the client has a cache <xref target="CACHING"/> and the request can be
+   satisfied by it, then the request is
+   usually directed there first.
+</t>
+<t>
+   If the request is not satisfied by a cache, then a typical client will
+   check its configuration to determine whether a proxy is to be used to
+   satisfy the request.  Proxy configuration is implementation-dependent,
+   but is often based on URI prefix matching, selective authority matching,
+   or both, and the proxy itself is usually identified by an "http" or
+   "https" URI.  If a proxy is applicable, the client connects inbound by
+   establishing (or reusing) a connection to that proxy.
+</t>
+<t>
+   If no proxy is applicable, a typical client will invoke a handler routine,
+   usually specific to the target URI's scheme, to connect directly
+   to an authority for the target resource.  How that is accomplished is
+   dependent on the target URI scheme and defined by its associated
+   specification, similar to how this specification defines origin server
+   access for resolution of the "http" (<xref target="http.uri"/>) and
+   "https" (<xref target="https.uri"/>) schemes.
+</t>
+<t>
+   HTTP requirements regarding connection management are defined in
+   <xref target="connection.management"/>.
+</t>
+</section>
+
+<section title="Effective Request URI" anchor="effective.request.uri">
+  <iref primary="true" item="effective request URI"/>
+  <x:anchor-alias value="effective request URI"/>
+<t>
+   Once an inbound connection is obtained,
+   the client sends an HTTP request message (<xref target="http.message"/>).
+</t>
+<t>
+   [Depending on the nature of the request, the client's target URI might be
+   split into components and transmitted (or implied) within various parts of
+   a request message. These parts are recombined by each recipient, in
+   accordance with their local configuration and incoming connection context,
+   to form an "<x:dfn>effective request URI</x:dfn>" for identifying the
+   intended target resource with respect to that server.]
+   <xref target="h1.effective.request.uri"/> defines how a server
+   determines the effective request URI for an HTTP/1.1 request.]
+</t>
+<t>
+   For a user agent, the effective request URI is the target URI.
+</t>
+<t>
+   Once the effective request URI has been constructed, an origin server needs
+   to decide whether or not to provide service for that URI via the connection
+   in which the request was received. For example, the request might have been
+   misdirected, deliberately or accidentally, such that the information within
+   a received <x:ref>request-target</x:ref> or <x:ref>Host</x:ref> header
+   field differs from the host or port upon which the connection has been
+   made. If the connection is from a trusted gateway, that inconsistency might
+   be expected; otherwise, it might indicate an attempt to bypass security
+   filters, trick the server into delivering non-public content, or poison a
+   cache. See <xref target="security.considerations"/> for security
+   considerations regarding message routing.
+</t>
+</section>
+
+<section title="Host" anchor="header.host">
+  <iref primary="true" item="Host header field" x:for-anchor=""/>
+  <x:anchor-alias value="Host"/>
+<t>
+   The "Host" header field in a request provides the host and port
+   information from the target URI, enabling the origin
+   server to distinguish among resources while servicing requests
+   for multiple host names on a single IP address.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Host"/>
+  <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="http.uri"/>
+</artwork></figure>
+<t>
+   A client &MUST; send a Host header field in all HTTP/1.1 request messages.
+   If the target URI includes an authority component, then a client &MUST;
+   send a field-value for Host that is identical to that authority
+   component, excluding any userinfo subcomponent and its "@" delimiter
+   (<xref target="http.uri"/>).
+   If the authority component is missing or undefined for the target URI,
+   then a client &MUST; send a Host header field with an empty field-value.
+</t>
+<t>
+   Since the Host field-value is critical information for handling a request,
+   a user agent &SHOULD; generate Host as the first header field following the
+   request-line.
+</t>
+<t>
+   For example, a GET request to the origin server for
+   &lt;http://www.example.org/pub/WWW/&gt; would begin with:
+</t>
+<figure><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /pub/WWW/ HTTP/1.1
+Host: www.example.org
+</artwork></figure>
+<t>
+   A client &MUST; send a Host header field in an HTTP/1.1 request even
+   if the request-target is in the absolute-form, since this
+   allows the Host information to be forwarded through ancient HTTP/1.0
+   proxies that might not have implemented Host.
+</t>
+<t>
+   When a proxy receives a request with an absolute-form of
+   request-target, the proxy &MUST; ignore the received
+   Host header field (if any) and instead replace it with the host
+   information of the request-target.  A proxy that forwards such a request
+   &MUST; generate a new Host field-value based on the received
+   request-target rather than forward the received Host field-value.
+</t>
+<t>
+   Since the Host header field acts as an application-level routing
+   mechanism, it is a frequent target for malware seeking to poison
+   a shared cache or redirect a request to an unintended server.
+   An interception proxy is particularly vulnerable if it relies on
+   the Host field-value for redirecting requests to internal
+   servers, or for use as a cache key in a shared cache, without
+   first verifying that the intercepted connection is targeting a
+   valid IP address for that host.
+</t>
+<t>
+   A server &MUST; respond with a <x:ref>400 (Bad Request)</x:ref> status code
+   to any HTTP/1.1 request message that lacks a Host header field and
+   to any request message that contains more than one Host header field
+   or a Host header field with an invalid field-value.
+</t>
+</section>
+
+<section title="Associating a Response to a Request" anchor="associating.response.to.request">
+<t>
+   HTTP does not include a request identifier for associating a given
+   request message with its corresponding one or more response messages.
+   Hence, it relies on the order of response arrival to correspond exactly
+   to the order in which requests are made on the same connection.
+   More than one response message per request only occurs when one or more
+   informational responses (<x:ref>1xx</x:ref>, see <xref target="status.1xx"/>) precede a
+   final response to the same request.
+</t>
+<t>
+   A client that has more than one outstanding request on a connection &MUST;
+   maintain a list of outstanding requests in the order sent and &MUST;
+   associate each received response message on that connection to the highest
+   ordered request that has not yet received a final (non-<x:ref>1xx</x:ref>)
+   response.
+</t>
+</section>
+
+<section title="Message Forwarding" anchor="message.forwarding">
+<t>
+   As described in <xref target="intermediaries"/>, intermediaries can serve
+   a variety of roles in the processing of HTTP requests and responses.
+   Some intermediaries are used to improve performance or availability.
+   Others are used for access control or to filter content.
+   Since an HTTP stream has characteristics similar to a pipe-and-filter
+   architecture, there are no inherent limits to the extent an intermediary
+   can enhance (or interfere) with either direction of the stream.
+</t>
+<t>
+   An intermediary not acting as a tunnel &MUST; implement the
+   <x:ref>Connection</x:ref> header field, as specified in
+   <xref target="header.connection"/>, and exclude fields from being forwarded
+   that are only intended for the incoming connection.
+</t>
+<t>
+   An intermediary &MUST-NOT; forward a message to itself unless it is
+   protected from an infinite request loop. In general, an intermediary ought
+   to recognize its own server names, including any aliases, local variations,
+   or literal IP addresses, and respond to such requests directly.
+</t>
+
+<section title="Via" anchor="header.via">
+  <iref primary="true" item="Via header field" x:for-anchor=""/>
+  <x:anchor-alias value="pseudonym"/>
+  <x:anchor-alias value="received-by"/>
+  <x:anchor-alias value="received-protocol"/>
+  <x:anchor-alias value="Via"/>
+<t>
+   The "Via" header field indicates the presence of intermediate protocols and
+   recipients between the user agent and the server (on requests) or between
+   the origin server and the client (on responses), similar to the
+   "Received" header field in email
+   (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>).
+   Via can be used for tracking message forwards,
+   avoiding request loops, and identifying the protocol capabilities of
+   senders along the request/response chain.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
+  <x:ref>Via</x:ref> = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+
+  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
+                      ; see <xref target="header.upgrade"/>
+  <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
+  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   Multiple Via field values represent each proxy or gateway that has
+   forwarded the message. Each intermediary appends its own information
+   about how the message was received, such that the end result is ordered
+   according to the sequence of forwarding recipients.
+</t>
+<t>
+   A proxy &MUST; send an appropriate Via header field, as described below, in
+   each message that it forwards.
+   An HTTP-to-HTTP gateway &MUST; send an appropriate Via header field in
+   each inbound request message and &MAY; send a Via header field in
+   forwarded response messages.
+</t>
+<t>
+   For each intermediary, the received-protocol indicates the protocol and
+   protocol version used by the upstream sender of the message. Hence, the
+   Via field value records the advertised protocol capabilities of the
+   request/response chain such that they remain visible to downstream
+   recipients; this can be useful for determining what backwards-incompatible
+   features might be safe to use in response, or within a later request, as
+   described in <xref target="http.version"/>. For brevity, the protocol-name
+   is omitted when the received protocol is HTTP.
+</t>
+<t>
+   The received-by portion of the field value is normally the host and optional
+   port number of a recipient server or client that subsequently forwarded the
+   message.
+   However, if the real host is considered to be sensitive information, a
+   sender &MAY; replace it with a pseudonym. If a port is not provided,
+   a recipient &MAY; interpret that as meaning it was received on the default
+   TCP port, if any, for the received-protocol.
+</t>
+<t>
+   A sender &MAY; generate comments in the Via header field to identify the
+   software of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
+   <x:ref>Server</x:ref> header fields. However, all comments in the Via field
+   are optional, and a recipient &MAY; remove them prior to forwarding the
+   message.
+</t>
+<t>
+   For example, a request message could be sent from an HTTP/1.0 user
+   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
+   forward the request to a public proxy at p.example.net, which completes
+   the request by forwarding it to the origin server at www.example.com.
+   The request received by www.example.com would then have the following
+   Via header field:
+</t>
+<figure><artwork type="example">
+  Via: 1.0 fred, 1.1 p.example.net
+</artwork></figure>
+<t>
+   An intermediary used as a portal through a network firewall
+   &SHOULD-NOT; forward the names and ports of hosts within the firewall
+   region unless it is explicitly enabled to do so. If not enabled, such an
+   intermediary &SHOULD; replace each received-by host of any host behind the
+   firewall by an appropriate pseudonym for that host.
+</t>
+<t>
+   An intermediary &MAY; combine an ordered subsequence of Via header
+   field entries into a single such entry if the entries have identical
+   received-protocol values. For example,
+</t>
+<figure><artwork type="example">
+  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
+</artwork></figure>
+<t>
+  could be collapsed to
+</t>
+<figure><artwork type="example">
+  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
+</artwork></figure>
+<t>
+   A sender &SHOULD-NOT; combine multiple entries unless they are all
+   under the same organizational control and the hosts have already been
+   replaced by pseudonyms. A sender &MUST-NOT; combine entries that
+   have different received-protocol values.
+</t>
+</section>
+
+<section title="Transformations" anchor="message.transformations">
+   <iref primary="true" item="transforming proxy"/>
+   <iref primary="true" item="non-transforming proxy"/>
+<t>
+   Some intermediaries include features for transforming messages and their
+   payloads. A proxy might, for example, convert between image formats in
+   order to save cache space or to reduce the amount of traffic on a slow
+   link. However, operational problems might occur when these transformations
+   are applied to payloads intended for critical applications, such as medical
+   imaging or scientific data analysis, particularly when integrity checks or
+   digital signatures are used to ensure that the payload received is
+   identical to the original.
+</t>
+<t>
+   An HTTP-to-HTTP proxy is called a "<x:dfn>transforming proxy</x:dfn>"
+   if it is designed or configured to modify messages in a semantically
+   meaningful way (i.e., modifications, beyond those required by normal
+   HTTP processing, that change the message in a way that would be
+   significant to the original sender or potentially significant to
+   downstream recipients).  For example, a transforming proxy might be
+   acting as a shared annotation server (modifying responses to include
+   references to a local annotation database), a malware filter, a
+   format transcoder, or a privacy filter. Such transformations are presumed
+   to be desired by whichever client (or client organization) selected the
+   proxy.
+</t>
+<t>
+   If a proxy receives a request-target with a host name that is not a
+   fully qualified domain name, it &MAY; add its own domain to the host name
+   it received when forwarding the request.  A proxy &MUST-NOT; change the
+   host name if the request-target contains a fully qualified domain name.
+</t>
+<t>
+   A proxy &MUST-NOT; modify the "absolute-path" and "query" parts of the
+   received request-target when forwarding it to the next inbound server,
+   except as noted above to replace an empty path with "/" or "*".
+</t>
+<t>
+   A proxy &MAY; modify the message body through application
+   or removal of a transfer coding (<xref target="transfer.codings"/>).
+</t>
+<t>
+   A proxy &MUST-NOT; transform the payload (<xref target="payload"/>) of a message that
+   contains a no-transform cache-control directive (<xref target="header.cache-control"/>).
+</t>
+<t>
+   A proxy &MAY; transform the payload of a message
+   that does not contain a no-transform cache-control directive.
+   A proxy that transforms a payload &MUST; add a <x:ref>Warning</x:ref>
+   header field with the warn-code of 214 ("Transformation Applied")
+   if one is not already in the message (see <xref target="header.warning"/>).
+   A proxy that transforms the payload of a <x:ref>200 (OK)</x:ref> response
+   can further inform downstream recipients that a transformation has been
+   applied by changing the response status code to
+   <x:ref>203 (Non-Authoritative Information)</x:ref> (<xref target="status.203"/>).
+</t>
+<t>
+   A proxy &SHOULD-NOT; modify header fields that provide information about
+   the endpoints of the communication chain, the resource state, or the
+   selected representation (other than the payload) unless the field's
+   definition specifically allows such modification or the modification is
+   deemed necessary for privacy or security.
+</t>
+</section>
 </section>
 </section>
 
@@ -2764,7 +3138,7 @@ Content-Type: text/plain
 </t>
 <t>
    A client sending a CONNECT request &MUST; send the authority form of
-   request-target (<xref target="request-target"/>); i.e., the request-target consists
+   request-target (<xref target="h1.request.target"/>); i.e., the request-target consists
    of only the host name and port number of the tunnel destination, separated
    by a colon. For example,
 </t>
@@ -2843,7 +3217,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </t>
 <t>
    An OPTIONS request with an asterisk ("*") as the request-target
-   (<xref target="request-target"/>) applies to the server in general rather than to a
+   (<xref target="h1.request.target"/>) applies to the server in general rather than to a
    specific resource. Since a server's communication options typically depend
    on the resource, the "*" request is only useful as a "ping" or "no-op"
    type of method; it does nothing beyond allowing the client to test
@@ -5922,7 +6296,7 @@ Content-Range: exampleunit 11.2-14.3/25
 <t>
    The <x:dfn>414 (URI Too Long)</x:dfn> status code indicates that the server
    is refusing to service the request because the
-   request-target (<xref target="request-target"/>) is longer than the server is willing to
+   request-target (<xref target="h1.request.target"/>) is longer than the server is willing to
    interpret. This rare condition is only likely to occur when a client has
    improperly converted a POST request to a GET request with long query
    information, when the client has descended into a "black hole" of
@@ -8450,6 +8824,12 @@ Content-Encoding: gzip
    <c>
       <xref target="header.from"/>
    </c>
+   <c>Host</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.host"/>
+   </c>
    <c>If-Match</c>
    <c>http</c>
    <c>standard</c>
@@ -8545,6 +8925,12 @@ Content-Encoding: gzip
    <c>standard</c>
    <c>
       <xref target="header.vary"/>
+   </c>
+   <c>Via</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.via"/>
    </c>
    <c>WWW-Authenticate</c>
    <c>http</c>
@@ -8852,31 +9238,26 @@ Content-Encoding: gzip
     <x:has anchor="compression.codings"/>
     <x:has anchor="deflate.coding"/>
     <x:has anchor="differences.between.http.and.mime"/>
-    <x:has anchor="effective.request.uri"/>
     <x:has anchor="field.parsing"/>
     <x:has anchor="gzip.coding"/>
+    <x:has anchor="h1.effective.request.uri"/>
+    <x:has anchor="h1.request.target"/>
     <x:has anchor="header.connection"/>
     <x:has anchor="header.content-length"/>
     <x:has anchor="header.fields"/>
-    <x:has anchor="header.host"/>
     <x:has anchor="header.te"/>
     <x:has anchor="header.trailer"/>
     <x:has anchor="header.transfer-encoding"/>
     <x:has anchor="header.upgrade"/>
-    <x:has anchor="header.via"/>
     <x:has anchor="http.message"/>
     <x:has anchor="internet.media.type.message.http"/>
     <x:has anchor="line.folding"/>
     <x:has anchor="message.body"/>
-    <x:has anchor="message.routing"/>
-    <x:has anchor="message.transformations"/>
     <x:has anchor="persistent.connections"/>
     <x:has anchor="persistent.tear-down"/>
-    <x:has anchor="request-target"/>
     <x:has anchor="request.line"/>
     <x:has anchor="request.smuggling"/>
     <x:has anchor="status.line"/>
-    <x:has anchor="target-resource"/>
     <x:has anchor="transfer.codings"/>
     <x:has anchor="MESSGNG-acks" target="acks"/>
     <x:has anchor="MESSGNG-security.considerations" target="security.considerations"/>
@@ -9807,6 +10188,7 @@ Content-Encoding: gzip
 <x:ref>HTTP-date</x:ref> = IMF-fixdate / obs-date
 <x:ref>HTTP-name</x:ref> = %x48.54.54.50 ; HTTP
 <x:ref>HTTP-version</x:ref> = HTTP-name "/" DIGIT "." DIGIT
+<x:ref>Host</x:ref> = uri-host [ ":" port ]
 
 <x:ref>IMF-fixdate</x:ref> = day-name "," SP date1 SP time-of-day SP GMT
 <x:ref>If-Match</x:ref> = "*" / ( *( "," OWS ) entity-tag *( OWS "," [ OWS
@@ -9840,6 +10222,9 @@ Content-Encoding: gzip
 
 <x:ref>Vary</x:ref> = "*" / ( *( "," OWS ) field-name *( OWS "," [ OWS field-name ]
  ) )
+<x:ref>Via</x:ref> = *( "," OWS ) ( received-protocol RWS received-by [ RWS comment
+ ] ) *( OWS "," [ OWS ( received-protocol RWS received-by [ RWS
+ comment ] ) ] )
 
 <x:ref>WWW-Authenticate</x:ref> = *( "," OWS ) challenge *( OWS "," [ OWS challenge
  ] )
@@ -9956,7 +10341,7 @@ Content-Encoding: gzip
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
 <x:ref>product</x:ref> = token [ "/" product-version ]
 <x:ref>product-version</x:ref> = token
-<x:ref>pseudonym</x:ref> = &lt;pseudonym, see <xref target="MESSGNG" x:fmt="," x:sec="4.7.1"/>&gt;
+<x:ref>pseudonym</x:ref> = token
 
 <x:ref>qdtext</x:ref> = HTAB / SP / "!" / %x23-5B ; '#'-'['
  / %x5D-7E ; ']'-'~'
@@ -9967,17 +10352,25 @@ Content-Encoding: gzip
 <x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 
 <x:ref>range-unit</x:ref> = bytes-unit / other-range-unit
+<x:ref>received-by</x:ref> = ( uri-host [ ":" port ] ) / pseudonym
+<x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
+
 <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
+
+<x:ref>request-target</x:ref> = &lt;request-target, see <xref target="MESSGNG" x:fmt="," x:sec="4"/>&gt;
 <x:ref>rfc850-date</x:ref> = day-name-l "," SP date2 SP time-of-day SP GMT
 
 <x:ref>second</x:ref> = 2DIGIT
+
 <x:ref>segment</x:ref> = &lt;segment, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
+
 <x:ref>subtype</x:ref> = token
 <x:ref>suffix-byte-range-spec</x:ref> = "-" suffix-length
 <x:ref>suffix-length</x:ref> = 1*DIGIT
 
 <x:ref>tchar</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "." /
  "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+
 <x:ref>time-of-day</x:ref> = hour ":" minute ":" second
 <x:ref>token</x:ref> = 1*tchar
 <x:ref>token68</x:ref> = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" )
@@ -9985,15 +10378,20 @@ Content-Encoding: gzip
 <x:ref>type</x:ref> = token
 
 <x:ref>unsatisfied-range</x:ref> = "*/" complete-length
+
 <x:ref>uri-host</x:ref> = &lt;host, see <xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>&gt;
 
 <x:ref>weak</x:ref> = %x57.2F ; W/
+
 <x:ref>weight</x:ref> = OWS ";" OWS "q=" qvalue
 
 <x:ref>year</x:ref> = 4DIGIT
 </artwork>
 </figure>
-</section>
+<figure><preamble>ABNF diagnostics:</preamble><artwork type="inline">
+; protocol-name UNDEFINED
+; protocol-version UNDEFINED
+</artwork></figure></section>
 <?ENDINC build/draft-ietf-httpbis-semantics-latest.abnf-appendix ?>
 
 <section title="Change Log" anchor="change.log" removeInRFC="true">
