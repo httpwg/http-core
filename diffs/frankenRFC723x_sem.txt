@@ -930,7 +930,90 @@ X. [Conformance]
    sufficiently backwards-compatible to be safely processed by any
    implementation of the same major version.
 
-X.  [Message Fields]
+5.  Message Routing
+
+   HTTP request message routing is determined by each client based on
+   the target resource, the client's proxy configuration, and
+   establishment or reuse of an inbound connection.  The corresponding
+   response routing follows the same connection chain back to the
+   client.
+
+5.1.  Identifying a Target Resource
+
+   HTTP is used in a wide variety of applications, ranging from
+   general-purpose computers to home appliances.  In some cases,
+   communication options are hard-coded in a client's configuration.
+   However, most HTTP clients rely on the same resource identification
+   mechanism and configuration techniques as general-purpose Web
+   browsers.
+
+   HTTP communication is initiated by a user agent for some purpose.
+   The purpose is a combination of request semantics, which are defined
+   in [RFC7231], and a target resource upon which to apply those
+   semantics.  A URI reference (Section 2.7) is typically used as an
+   identifier for the "target resource", which a user agent would
+   resolve to its absolute form in order to obtain the "target URI".
+   The target URI excludes the reference's fragment component, if any,
+   since fragment identifiers are reserved for client-side processing
+   ([RFC3986], Section 3.5).
+
+5.2.  Connecting Inbound
+
+   Once the target URI is determined, a client needs to decide whether a
+   network request is necessary to accomplish the desired semantics and,
+   if so, where that request is to be directed.
+
+   If the client has a cache [RFC7234] and the request can be satisfied
+   by it, then the request is usually directed there first.
+
+   If the request is not satisfied by a cache, then a typical client
+   will check its configuration to determine whether a proxy is to be
+   used to satisfy the request.  Proxy configuration is implementation-
+   dependent, but is often based on URI prefix matching, selective
+   authority matching, or both, and the proxy itself is usually
+   identified by an "http" or "https" URI.  If a proxy is applicable,
+   the client connects inbound by establishing (or reusing) a connection
+   to that proxy.
+
+   If no proxy is applicable, a typical client will invoke a handler
+   routine, usually specific to the target URI's scheme, to connect
+   directly to an authority for the target resource.  How that is
+   accomplished is dependent on the target URI scheme and defined by its
+   associated specification, similar to how this specification defines
+   origin server access for resolution of the "http" (Section 2.7.1) and
+   "https" (Section 2.7.2) schemes.
+
+   HTTP requirements regarding connection management are defined in
+   Section 6.
+
+5.5.  Effective Request URI
+
+   Once an inbound connection is obtained, the client sends an HTTP
+   request message (Section 3) with a request-target derived from the
+   target URI.
+
+   Since the request-target often contains only part of the user agent's
+   target URI, a server reconstructs the intended target as an
+   "effective request URI" to properly service the request.  This
+   reconstruction involves both the server's local configuration and
+   information communicated in the request-target, Host header field,
+   and connection context.
+
+   For a user agent, the effective request URI is the target URI.
+
+   Once the effective request URI has been constructed, an origin server
+   needs to decide whether or not to provide service for that URI via
+   the connection in which the request was received.  For example, the
+   request might have been misdirected, deliberately or accidentally,
+   such that the information within a received request-target or Host
+   header field differs from the host or port upon which the connection
+   has been made.  If the connection is from a trusted gateway, that
+   inconsistency might be expected; otherwise, it might indicate an
+   attempt to bypass security filters, trick the server into delivering
+   non-public content, or poison a cache.  See Section 9 for security
+   considerations regarding message routing.
+
+X.X.  [Message Fields]
 
      field-name     = token
      field-value    = *( field-content / obs-fold )
@@ -1111,89 +1194,6 @@ X.  [Message Fields]
                     ; required whitespace
      BWS            = OWS
                     ; "bad" whitespace
-
-5.  Message Routing
-
-   HTTP request message routing is determined by each client based on
-   the target resource, the client's proxy configuration, and
-   establishment or reuse of an inbound connection.  The corresponding
-   response routing follows the same connection chain back to the
-   client.
-
-5.1.  Identifying a Target Resource
-
-   HTTP is used in a wide variety of applications, ranging from
-   general-purpose computers to home appliances.  In some cases,
-   communication options are hard-coded in a client's configuration.
-   However, most HTTP clients rely on the same resource identification
-   mechanism and configuration techniques as general-purpose Web
-   browsers.
-
-   HTTP communication is initiated by a user agent for some purpose.
-   The purpose is a combination of request semantics, which are defined
-   in [RFC7231], and a target resource upon which to apply those
-   semantics.  A URI reference (Section 2.7) is typically used as an
-   identifier for the "target resource", which a user agent would
-   resolve to its absolute form in order to obtain the "target URI".
-   The target URI excludes the reference's fragment component, if any,
-   since fragment identifiers are reserved for client-side processing
-   ([RFC3986], Section 3.5).
-
-5.2.  Connecting Inbound
-
-   Once the target URI is determined, a client needs to decide whether a
-   network request is necessary to accomplish the desired semantics and,
-   if so, where that request is to be directed.
-
-   If the client has a cache [RFC7234] and the request can be satisfied
-   by it, then the request is usually directed there first.
-
-   If the request is not satisfied by a cache, then a typical client
-   will check its configuration to determine whether a proxy is to be
-   used to satisfy the request.  Proxy configuration is implementation-
-   dependent, but is often based on URI prefix matching, selective
-   authority matching, or both, and the proxy itself is usually
-   identified by an "http" or "https" URI.  If a proxy is applicable,
-   the client connects inbound by establishing (or reusing) a connection
-   to that proxy.
-
-   If no proxy is applicable, a typical client will invoke a handler
-   routine, usually specific to the target URI's scheme, to connect
-   directly to an authority for the target resource.  How that is
-   accomplished is dependent on the target URI scheme and defined by its
-   associated specification, similar to how this specification defines
-   origin server access for resolution of the "http" (Section 2.7.1) and
-   "https" (Section 2.7.2) schemes.
-
-   HTTP requirements regarding connection management are defined in
-   Section 6.
-
-5.5.  Effective Request URI
-
-   Once an inbound connection is obtained, the client sends an HTTP
-   request message (Section 3) with a request-target derived from the
-   target URI.
-
-   Since the request-target often contains only part of the user agent's
-   target URI, a server reconstructs the intended target as an
-   "effective request URI" to properly service the request.  This
-   reconstruction involves both the server's local configuration and
-   information communicated in the request-target, Host header field,
-   and connection context.
-
-   For a user agent, the effective request URI is the target URI.
-
-   Once the effective request URI has been constructed, an origin server
-   needs to decide whether or not to provide service for that URI via
-   the connection in which the request was received.  For example, the
-   request might have been misdirected, deliberately or accidentally,
-   such that the information within a received request-target or Host
-   header field differs from the host or port upon which the connection
-   has been made.  If the connection is from a trusted gateway, that
-   inconsistency might be expected; otherwise, it might indicate an
-   attempt to bypass security filters, trick the server into delivering
-   non-public content, or poison a cache.  See Section 9 for security
-   considerations regarding message routing.
 
 5.4.  Host
 
@@ -6541,47 +6541,6 @@ Appendix A.  Internet Media Type multipart/byteranges
    particularly when the ranges are requested out of order for no
    apparent reason.  Multipart range requests are not designed to
    support random access.
-
-8.  [Caching] Security Considerations
-
-   This section is meant to inform developers, information providers,
-   and users of known security concerns specific to HTTP caching.  More
-   general security considerations are addressed in HTTP messaging
-   [RFC7230] and semantics [RFC7231].
-
-   Caches expose additional potential vulnerabilities, since the
-   contents of the cache represent an attractive target for malicious
-   exploitation.  Because cache contents persist after an HTTP request
-   is complete, an attack on the cache can reveal information long after
-   a user believes that the information has been removed from the
-   network.  Therefore, cache contents need to be protected as sensitive
-   information.
-
-   In particular, various attacks might be amplified by being stored in
-   a shared cache; such "cache poisoning" attacks use the cache to
-   distribute a malicious payload to many clients, and are especially
-   effective when an attacker can use implementation flaws, elevated
-   privileges, or other techniques to insert such a response into a
-   cache.  One common attack vector for cache poisoning is to exploit
-   differences in message parsing on proxies and in user agents; see
-   Section 3.3.3 of [RFC7230] for the relevant requirements.
-
-   Likewise, implementation flaws (as well as misunderstanding of cache
-   operation) might lead to caching of sensitive information (e.g.,
-   authentication credentials) that is thought to be private, exposing
-   it to unauthorized parties.
-
-   Furthermore, the very use of a cache can bring about privacy
-   concerns.  For example, if two users share a cache, and the first one
-   browses to a site, the second may be able to detect that the other
-   has been to that site, because the resources from it load more
-   quickly, thanks to the cache.
-
-   Note that the Set-Cookie response header field [RFC6265] does not
-   inhibit caching; a cacheable response with a Set-Cookie header field
-   can be (and often is) used to satisfy subsequent requests to caches.
-   Servers who wish to control caching of these responses are encouraged
-   to emit appropriate Cache-Control response header fields.
 
 6.  [Auth] Security Considerations
 
