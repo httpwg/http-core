@@ -635,6 +635,182 @@ Content-Type: text/plain
    (<xref target="effective.request.uri"/>).
 </t>
 </section>
+<section title="Resources" anchor="resources">
+<t>
+   The target of an HTTP request is called a "<x:dfn>resource</x:dfn>". 
+   HTTP does not limit the nature of a resource; it merely
+   defines an interface that might be used to interact with resources.
+   Each resource is identified by a Uniform Resource Identifier (URI), as
+   described in <xref target="uri"/>.
+</t>
+<t>
+   One design goal of HTTP is to separate resource identification from
+   request semantics, which is made possible by vesting the request
+   semantics in the request method (<xref target="methods"/>) and a few
+   request-modifying header fields (<xref target="request.header.fields"/>).
+   If there is a conflict between the method semantics and any semantic
+   implied by the URI itself, as described in <xref target="safe.methods"/>,
+   the method semantics take precedence.
+</t>
+<section title="http URI Scheme" anchor="http.uri">
+  <x:anchor-alias value="http-URI"/>
+  <iref item="http URI scheme" primary="true"/>
+  <iref item="URI scheme" subitem="http" primary="true"/>
+<t>
+   The "http" URI scheme is hereby defined for the purpose of minting
+   identifiers according to their association with the hierarchical
+   namespace governed by a potential HTTP origin server listening for
+   TCP (<xref target="RFC0793"/>) connections on a given port.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URI"><!--terminal production--></iref>
+  <x:ref>http-URI</x:ref> = "http:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
+             [ "#" <x:ref>fragment</x:ref> ]
+</artwork></figure>
+<t>
+   The origin server for an "http" URI is identified by the 
+   <x:ref>authority</x:ref> component, which includes a host identifier
+   and optional TCP port (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
+   The hierarchical path component and optional query component serve as an
+   identifier for a potential target resource within that origin server's name
+   space. The optional fragment component allows for indirect identification
+   of a secondary resource, independent of the URI scheme, as defined in
+   <xref target="RFC3986" x:fmt="of" x:sec="3.5"/>.
+</t>
+<t>
+   A sender &MUST-NOT; generate an "http" URI with an empty host identifier.
+   A recipient that processes such a URI reference &MUST; reject it as invalid. 
+</t>
+<t>
+   If the host identifier is provided as an IP address, the origin server is
+   the listener (if any) on the indicated TCP port at that IP address.
+   If host is a registered name, the registered name is an indirect identifier
+   for use with a name resolution service, such as DNS, to find an address for
+   that origin server.
+   If the port subcomponent is empty or not given, TCP port 80 (the
+   reserved port for WWW services) is the default.
+</t>
+<t>
+   Note that the presence of a URI with a given authority component does not
+   imply that there is always an HTTP server listening for connections on
+   that host and port. Anyone can mint a URI. What the authority component
+   determines is who has the right to respond authoritatively to requests that
+   target the identified resource. The delegated nature of registered names
+   and IP addresses creates a federated namespace, based on control over the
+   indicated host and port, whether or not an HTTP server is present.
+   See <xref target="establishing.authority"/> for security considerations
+   related to establishing authority.
+</t>
+<t>
+   When an "http" URI is used within a context that calls for access to the
+   indicated resource, a client &MAY; attempt access by resolving
+   the host to an IP address, establishing a TCP connection to that address
+   on the indicated port, and sending an HTTP request message
+   (<xref target="http.message"/>) containing the URI's identifying data
+   (<xref target="message.routing"/>) to the server.
+   If the server responds to that request with a non-interim HTTP response
+   message, as described in <xref target="status.codes"/>, then that response
+   is considered an authoritative answer to the client's request.
+</t>
+<t>
+   Although HTTP is independent of the transport protocol, the "http"
+   scheme is specific to TCP-based services because the name delegation
+   process depends on TCP for establishing authority.
+   An HTTP service based on some other underlying connection protocol
+   would presumably be identified using a different URI scheme, just as
+   the "https" scheme (below) is used for resources that require an
+   end-to-end secured connection. Other protocols might also be used to
+   provide access to "http" identified resources &mdash; it is only the
+   authoritative interface that is specific to TCP.
+</t>
+<t>
+   The URI generic syntax for authority also includes a deprecated
+   userinfo subcomponent (<xref target="RFC3986" x:fmt="," x:sec="3.2.1"/>)
+   for including user authentication information in the URI.  Some
+   implementations make use of the userinfo component for internal
+   configuration of authentication information, such as within command
+   invocation options, configuration files, or bookmark lists, even
+   though such usage might expose a user identifier or password.
+   A sender &MUST-NOT; generate the userinfo subcomponent (and its "@"
+   delimiter) when an "http" URI reference is generated within a message as a
+   request target or header field value.
+   Before making use of an "http" URI reference received from an untrusted
+   source, a recipient &SHOULD; parse for userinfo and treat its presence as
+   an error; it is likely being used to obscure the authority for the sake of
+   phishing attacks.
+</t>
+</section>
+
+<section title="https URI Scheme" anchor="https.uri">
+   <x:anchor-alias value="https-URI"/>
+   <iref item="https URI scheme"/>
+   <iref item="URI scheme" subitem="https"/>
+<t>
+   The "https" URI scheme is hereby defined for the purpose of minting
+   identifiers according to their association with the hierarchical
+   namespace governed by a potential HTTP origin server listening to a
+   given TCP port for TLS-secured connections (<xref target="RFC5246"/>).
+</t>
+<t>
+   All of the requirements listed above for the "http" scheme are also
+   requirements for the "https" scheme, except that TCP port 443 is the
+   default if the port subcomponent is empty or not given,
+   and the user agent &MUST; ensure that its connection to the origin
+   server is secured through the use of strong encryption, end-to-end,
+   prior to sending the first HTTP request.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
+  <x:ref>https-URI</x:ref> = "https:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
+              [ "#" <x:ref>fragment</x:ref> ]
+</artwork></figure>
+<t>
+   Note that the "https" URI scheme depends on both TLS and TCP for
+   establishing authority.
+   Resources made available via the "https" scheme have no shared
+   identity with the "http" scheme even if their resource identifiers
+   indicate the same authority (the same host listening to the same
+   TCP port).  They are distinct namespaces and are considered to be
+   distinct origin servers.  However, an extension to HTTP that is
+   defined to apply to entire host domains, such as the Cookie protocol 
+   <xref target="RFC6265"/>, can allow information
+   set by one service to impact communication with other services
+   within a matching group of host domains.
+</t>
+<t>
+   The process for authoritative access to an "https" identified
+   resource is defined in <xref target="RFC2818"/>.
+</t>
+</section>
+
+<section title="http and https URI Normalization and Comparison" anchor="uri.comparison">
+<t>
+   Since the "http" and "https" schemes conform to the URI generic syntax,
+   such URIs are normalized and compared according to the algorithm defined
+   in <xref target="RFC3986" x:fmt="of" x:sec="6"/>, using the defaults
+   described above for each scheme.
+</t>
+<t>
+   If the port is equal to the default port for a scheme, the normal form is
+   to omit the port subcomponent. When not being used in absolute form as the
+   request target of an OPTIONS request, an empty path component is equivalent
+   to an absolute path of "/", so the normal form is to provide a path of "/"
+   instead. The scheme and host are case-insensitive and normally provided in
+   lowercase; all other components are compared in a case-sensitive manner.
+   Characters other than those in the "reserved" set are equivalent to their
+   percent-encoded octets: the normal form is to not encode them
+   (see Sections <xref target="RFC3986" x:fmt="number" x:sec="2.1"/> and
+   <xref target="RFC3986" x:fmt="number" x:sec="2.2"/> of 
+   <xref target="RFC3986"/>).
+</t>
+<t>
+   For example, the following three URIs are equivalent:
+</t>
+<figure><artwork type="example">
+   http://example.com:80/~smith/home.html
+   http://EXAMPLE.com/%7Esmith/home.html
+   http://EXAMPLE.com:/%7esmith/home.html
+</artwork></figure>
+</section>
+</section>
 </section>
 
 <section title="Conformance" anchor="conformance">
@@ -1125,183 +1301,6 @@ Content-Type: text/plain
                  ; required whitespace
   <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
                  ; "bad" whitespace
-</artwork></figure>
-</section>
-</section>
-
-<section title="Resources" anchor="resources">
-<t>
-   The target of an HTTP request is called a "<x:dfn>resource</x:dfn>". 
-   HTTP does not limit the nature of a resource; it merely
-   defines an interface that might be used to interact with resources.
-   Each resource is identified by a Uniform Resource Identifier (URI), as
-   described in <xref target="uri"/>.
-</t>
-<t>
-   One design goal of HTTP is to separate resource identification from
-   request semantics, which is made possible by vesting the request
-   semantics in the request method (<xref target="methods"/>) and a few
-   request-modifying header fields (<xref target="request.header.fields"/>).
-   If there is a conflict between the method semantics and any semantic
-   implied by the URI itself, as described in <xref target="safe.methods"/>,
-   the method semantics take precedence.
-</t>
-<section title="http URI Scheme" anchor="http.uri">
-  <x:anchor-alias value="http-URI"/>
-  <iref item="http URI scheme" primary="true"/>
-  <iref item="URI scheme" subitem="http" primary="true"/>
-<t>
-   The "http" URI scheme is hereby defined for the purpose of minting
-   identifiers according to their association with the hierarchical
-   namespace governed by a potential HTTP origin server listening for
-   TCP (<xref target="RFC0793"/>) connections on a given port.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URI"><!--terminal production--></iref>
-  <x:ref>http-URI</x:ref> = "http:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
-             [ "#" <x:ref>fragment</x:ref> ]
-</artwork></figure>
-<t>
-   The origin server for an "http" URI is identified by the 
-   <x:ref>authority</x:ref> component, which includes a host identifier
-   and optional TCP port (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
-   The hierarchical path component and optional query component serve as an
-   identifier for a potential target resource within that origin server's name
-   space. The optional fragment component allows for indirect identification
-   of a secondary resource, independent of the URI scheme, as defined in
-   <xref target="RFC3986" x:fmt="of" x:sec="3.5"/>.
-</t>
-<t>
-   A sender &MUST-NOT; generate an "http" URI with an empty host identifier.
-   A recipient that processes such a URI reference &MUST; reject it as invalid. 
-</t>
-<t>
-   If the host identifier is provided as an IP address, the origin server is
-   the listener (if any) on the indicated TCP port at that IP address.
-   If host is a registered name, the registered name is an indirect identifier
-   for use with a name resolution service, such as DNS, to find an address for
-   that origin server.
-   If the port subcomponent is empty or not given, TCP port 80 (the
-   reserved port for WWW services) is the default.
-</t>
-<t>
-   Note that the presence of a URI with a given authority component does not
-   imply that there is always an HTTP server listening for connections on
-   that host and port. Anyone can mint a URI. What the authority component
-   determines is who has the right to respond authoritatively to requests that
-   target the identified resource. The delegated nature of registered names
-   and IP addresses creates a federated namespace, based on control over the
-   indicated host and port, whether or not an HTTP server is present.
-   See <xref target="establishing.authority"/> for security considerations
-   related to establishing authority.
-</t>
-<t>
-   When an "http" URI is used within a context that calls for access to the
-   indicated resource, a client &MAY; attempt access by resolving
-   the host to an IP address, establishing a TCP connection to that address
-   on the indicated port, and sending an HTTP request message
-   (<xref target="http.message"/>) containing the URI's identifying data
-   (<xref target="message.routing"/>) to the server.
-   If the server responds to that request with a non-interim HTTP response
-   message, as described in <xref target="status.codes"/>, then that response
-   is considered an authoritative answer to the client's request.
-</t>
-<t>
-   Although HTTP is independent of the transport protocol, the "http"
-   scheme is specific to TCP-based services because the name delegation
-   process depends on TCP for establishing authority.
-   An HTTP service based on some other underlying connection protocol
-   would presumably be identified using a different URI scheme, just as
-   the "https" scheme (below) is used for resources that require an
-   end-to-end secured connection. Other protocols might also be used to
-   provide access to "http" identified resources &mdash; it is only the
-   authoritative interface that is specific to TCP.
-</t>
-<t>
-   The URI generic syntax for authority also includes a deprecated
-   userinfo subcomponent (<xref target="RFC3986" x:fmt="," x:sec="3.2.1"/>)
-   for including user authentication information in the URI.  Some
-   implementations make use of the userinfo component for internal
-   configuration of authentication information, such as within command
-   invocation options, configuration files, or bookmark lists, even
-   though such usage might expose a user identifier or password.
-   A sender &MUST-NOT; generate the userinfo subcomponent (and its "@"
-   delimiter) when an "http" URI reference is generated within a message as a
-   request target or header field value.
-   Before making use of an "http" URI reference received from an untrusted
-   source, a recipient &SHOULD; parse for userinfo and treat its presence as
-   an error; it is likely being used to obscure the authority for the sake of
-   phishing attacks.
-</t>
-</section>
-
-<section title="https URI Scheme" anchor="https.uri">
-   <x:anchor-alias value="https-URI"/>
-   <iref item="https URI scheme"/>
-   <iref item="URI scheme" subitem="https"/>
-<t>
-   The "https" URI scheme is hereby defined for the purpose of minting
-   identifiers according to their association with the hierarchical
-   namespace governed by a potential HTTP origin server listening to a
-   given TCP port for TLS-secured connections (<xref target="RFC5246"/>).
-</t>
-<t>
-   All of the requirements listed above for the "http" scheme are also
-   requirements for the "https" scheme, except that TCP port 443 is the
-   default if the port subcomponent is empty or not given,
-   and the user agent &MUST; ensure that its connection to the origin
-   server is secured through the use of strong encryption, end-to-end,
-   prior to sending the first HTTP request.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
-  <x:ref>https-URI</x:ref> = "https:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
-              [ "#" <x:ref>fragment</x:ref> ]
-</artwork></figure>
-<t>
-   Note that the "https" URI scheme depends on both TLS and TCP for
-   establishing authority.
-   Resources made available via the "https" scheme have no shared
-   identity with the "http" scheme even if their resource identifiers
-   indicate the same authority (the same host listening to the same
-   TCP port).  They are distinct namespaces and are considered to be
-   distinct origin servers.  However, an extension to HTTP that is
-   defined to apply to entire host domains, such as the Cookie protocol 
-   <xref target="RFC6265"/>, can allow information
-   set by one service to impact communication with other services
-   within a matching group of host domains.
-</t>
-<t>
-   The process for authoritative access to an "https" identified
-   resource is defined in <xref target="RFC2818"/>.
-</t>
-</section>
-
-<section title="http and https URI Normalization and Comparison" anchor="uri.comparison">
-<t>
-   Since the "http" and "https" schemes conform to the URI generic syntax,
-   such URIs are normalized and compared according to the algorithm defined
-   in <xref target="RFC3986" x:fmt="of" x:sec="6"/>, using the defaults
-   described above for each scheme.
-</t>
-<t>
-   If the port is equal to the default port for a scheme, the normal form is
-   to omit the port subcomponent. When not being used in absolute form as the
-   request target of an OPTIONS request, an empty path component is equivalent
-   to an absolute path of "/", so the normal form is to provide a path of "/"
-   instead. The scheme and host are case-insensitive and normally provided in
-   lowercase; all other components are compared in a case-sensitive manner.
-   Characters other than those in the "reserved" set are equivalent to their
-   percent-encoded octets: the normal form is to not encode them
-   (see Sections <xref target="RFC3986" x:fmt="number" x:sec="2.1"/> and
-   <xref target="RFC3986" x:fmt="number" x:sec="2.2"/> of 
-   <xref target="RFC3986"/>).
-</t>
-<t>
-   For example, the following three URIs are equivalent:
-</t>
-<figure><artwork type="example">
-   http://example.com:80/~smith/home.html
-   http://EXAMPLE.com/%7Esmith/home.html
-   http://EXAMPLE.com:/%7esmith/home.html
 </artwork></figure>
 </section>
 </section>
