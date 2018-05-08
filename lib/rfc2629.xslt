@@ -6165,6 +6165,7 @@ body {<xsl:if test="$xml2rfc-background!=''">
   color: black;
   font-family: <xsl:value-of select="$xml2rfc-ext-ff-body"/>;
   font-size: 16px;
+  line-height: 1.5;
   margin: 10px 0px 10px 10px;
 }<xsl:if test="$parsedMaxwidth!=''">
 @media screen and (min-width: <xsl:value-of select="number($parsedMaxwidth + 40)"/>px) {
@@ -9884,11 +9885,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1008 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1008 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1009 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1009 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/05/04 14:12:26 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/04 14:12:26 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/05/07 16:48:30 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/07 16:48:30 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
