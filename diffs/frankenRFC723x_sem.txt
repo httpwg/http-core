@@ -930,122 +930,73 @@ X. [Conformance]
    sufficiently backwards-compatible to be safely processed by any
    implementation of the same major version.
 
-5.  Message Routing
-
-   HTTP request message routing is determined by each client based on
-   the target resource, the client's proxy configuration, and
-   establishment or reuse of an inbound connection.  The corresponding
-   response routing follows the same connection chain back to the
-   client.
-
-5.1.  Identifying a Target Resource
-
-   HTTP is used in a wide variety of applications, ranging from
-   general-purpose computers to home appliances.  In some cases,
-   communication options are hard-coded in a client's configuration.
-   However, most HTTP clients rely on the same resource identification
-   mechanism and configuration techniques as general-purpose Web
-   browsers.
-
-   HTTP communication is initiated by a user agent for some purpose.
-   The purpose is a combination of request semantics, which are defined
-   in [RFC7231], and a target resource upon which to apply those
-   semantics.  A URI reference (Section 2.7) is typically used as an
-   identifier for the "target resource", which a user agent would
-   resolve to its absolute form in order to obtain the "target URI".
-   The target URI excludes the reference's fragment component, if any,
-   since fragment identifiers are reserved for client-side processing
-   ([RFC3986], Section 3.5).
-
-5.2.  Connecting Inbound
-
-   Once the target URI is determined, a client needs to decide whether a
-   network request is necessary to accomplish the desired semantics and,
-   if so, where that request is to be directed.
-
-   If the client has a cache [RFC7234] and the request can be satisfied
-   by it, then the request is usually directed there first.
-
-   If the request is not satisfied by a cache, then a typical client
-   will check its configuration to determine whether a proxy is to be
-   used to satisfy the request.  Proxy configuration is implementation-
-   dependent, but is often based on URI prefix matching, selective
-   authority matching, or both, and the proxy itself is usually
-   identified by an "http" or "https" URI.  If a proxy is applicable,
-   the client connects inbound by establishing (or reusing) a connection
-   to that proxy.
-
-   If no proxy is applicable, a typical client will invoke a handler
-   routine, usually specific to the target URI's scheme, to connect
-   directly to an authority for the target resource.  How that is
-   accomplished is dependent on the target URI scheme and defined by its
-   associated specification, similar to how this specification defines
-   origin server access for resolution of the "http" (Section 2.7.1) and
-   "https" (Section 2.7.2) schemes.
-
-   HTTP requirements regarding connection management are defined in
-   Section 6.
-
-5.5.  Effective Request URI
-
-   Once an inbound connection is obtained, the client sends an HTTP
-   request message (Section 3) with a request-target derived from the
-   target URI.
-
-   Since the request-target often contains only part of the user agent's
-   target URI, a server reconstructs the intended target as an
-   "effective request URI" to properly service the request.  This
-   reconstruction involves both the server's local configuration and
-   information communicated in the request-target, Host header field,
-   and connection context.
-
-   For a user agent, the effective request URI is the target URI.
-
-   Once the effective request URI has been constructed, an origin server
-   needs to decide whether or not to provide service for that URI via
-   the connection in which the request was received.  For example, the
-   request might have been misdirected, deliberately or accidentally,
-   such that the information within a received request-target or Host
-   header field differs from the host or port upon which the connection
-   has been made.  If the connection is from a trusted gateway, that
-   inconsistency might be expected; otherwise, it might indicate an
-   attempt to bypass security filters, trick the server into delivering
-   non-public content, or poison a cache.  See Section 9 for security
-   considerations regarding message routing.
+X.  [Message Abstraction]
 
 X.X.  [Message Fields]
 
-     field-name     = token
-     field-value    = *( field-content / obs-fold )
-     field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-     field-vchar    = VCHAR / obs-text
+   Header fields are key:value pairs that can be used to communicate
+   data about the message, its payload, the target resource, or the
+   connection (i.e., control data).  See Section 3.2 of [RFC7230] for a
+   general definition of header field syntax in HTTP messages.
+
+   The requirements for header field names are defined in [BCP90].
 
    The field-name token labels the corresponding field-value as having
    the semantics defined by that header field.  For example, the Date
    header field is defined in Section 7.1.1.2 of [RFC7231] as containing
    the origination timestamp for the message in which it appears.
 
-3.2.4.  Field Parsing
+     field-name     = token
 
-   Consequently, this specification does not use ABNF rules
-   to define each "Field-Name: Field Value" pair, as was done in
-   previous editions.  Instead, this specification uses ABNF rules that
-   are named according to each registered field name, wherein the rule
-   defines the valid grammar for that field's corresponding field values
-   (i.e., after the field-value has been extracted from the header
-   section by a generic field parser).
+   The "Message Headers" registry has been updated with the following
+   permanent registrations:
 
-   Historically, HTTP header field values could be extended over
-   multiple lines by preceding each extra line with at least one space
-   or horizontal tab (obs-fold).
+   +-------------------+----------+----------+-----------------+
+   | Header Field Name | Protocol | Status   | Reference       |
+   +-------------------+----------+----------+-----------------+
+   | Accept            | http     | standard | Section 5.3.2   |
+   | Accept-Charset    | http     | standard | Section 5.3.3   |
+   | Accept-Encoding   | http     | standard | Section 5.3.4   |
+   | Accept-Language   | http     | standard | Section 5.3.5   |
+   | Accept-Ranges     | http     | standard | Section 2.3 |
+   | Allow             | http     | standard | Section 7.4.1   |
+   | Authorization       | http     | standard | Section 4.2 |
+   | Content-Encoding  | http     | standard | Section 3.1.2.2 |
+   | Content-Language  | http     | standard | Section 3.1.3.2 |
+   | Content-Location  | http     | standard | Section 3.1.4.2 |
+   | Content-Range     | http     | standard | Section 4.2 |
+   | Content-Type      | http     | standard | Section 3.1.1.5 |
+   | Date              | http     | standard | Section 7.1.1.2 |
+   | ETag                | http     | standard | Section 2.3 |
+   | Expect            | http     | standard | Section 5.1.1   |
+   | From              | http     | standard | Section 5.5.1   |
+   | Host              | http     | standard | Section 5.4   |
+   | If-Match            | http     | standard | Section 3.1 |
+   | If-Modified-Since   | http     | standard | Section 3.3 |
+   | If-None-Match       | http     | standard | Section 3.2 |
+   | If-Range          | http     | standard | Section 3.2 |
+   | If-Unmodified-Since | http     | standard | Section 3.4 |
+   | Last-Modified       | http     | standard | Section 2.2 |
+   | Location          | http     | standard | Section 7.1.2   |
+   | Max-Forwards      | http     | standard | Section 5.1.2   |
+   | Proxy-Authenticate  | http     | standard | Section 4.3 |
+   | Proxy-Authorization | http     | standard | Section 4.4 |
+   | Range             | http     | standard | Section 3.1 |
+   | Referer           | http     | standard | Section 5.5.2   |
+   | Retry-After       | http     | standard | Section 7.1.3   |
+   | Server            | http     | standard | Section 7.4.2   |
+   | User-Agent        | http     | standard | Section 5.5.3   |
+   | Vary              | http     | standard | Section 7.1.4   |
+   | Via               | http     | standard | Section 5.7.1 |
+   | WWW-Authenticate    | http     | standard | Section 4.1 |
+   +-------------------+----------+----------+-----------------+
 
-   Historically, HTTP has allowed field content with text in the
-   ISO-8859-1 charset [ISO-8859-1], supporting other charsets only
-   through use of [RFC2047] encoding.  In practice, most HTTP header
-   field values use only a subset of the US-ASCII charset [USASCII].
-   Newly defined header fields SHOULD limit their field values to
-   US-ASCII octets.  A recipient SHOULD treat other octets in field
-   content (obs-text) as opaque data.
+8.3.  Header Field Registry
+
+   HTTP header fields are registered within the "Message Headers"
+   registry located at
+   <http://www.iana.org/assignments/message-headers>, as defined by
+   [BCP90].
 
 3.2.1.  Field Extensibility
 
@@ -1070,6 +1021,92 @@ X.X.  [Message Fields]
 
    All defined header fields ought to be registered with IANA in the
    "Message Headers" registry, as described in Section 8.3 of [RFC7231].
+
+8.3.1.  Considerations for New Header Fields
+
+   Authors of specifications defining new fields are advised to keep the
+   name as short as practical and not to prefix the name with "X-"
+   unless the header field will never be used on the Internet.  (The
+   "X-" prefix idiom has been extensively misused in practice; it was
+   intended to only be used as a mechanism for avoiding name collisions
+   inside proprietary software or intranet processing, since the prefix
+   would ensure that private names never collide with a newly registered
+   Internet name; see [BCP178] for further information).
+
+   Authors of specifications defining new header fields are advised to
+   consider documenting:
+
+   o  Whether the field is a single value or whether it can be a list
+      (delimited by commas; see Section 3.2 of [RFC7230]).
+
+      If it does not use the list syntax, document how to treat messages
+      where the field occurs multiple times (a sensible default would be
+      to ignore the field, but this might not always be the right
+      choice).
+
+      Note that intermediaries and software libraries might combine
+      multiple header field instances into a single one, despite the
+      field's definition not allowing the list syntax.  A robust format
+      enables recipients to discover these situations (good example:
+      "Content-Type", as the comma can only appear inside quoted
+      strings; bad example: "Location", as a comma can occur inside a
+      URI).
+
+   o  Under what conditions the header field can be used; e.g., only in
+      responses or requests, in all messages, only on responses to a
+      particular request method, etc.
+
+   o  Whether the field should be stored by origin servers that
+      understand it upon a PUT request.
+
+   o  Whether the field semantics are further refined by the context,
+      such as by existing request methods or status codes.
+
+   o  Whether it is appropriate to list the field-name in the Connection
+      header field (i.e., if the header field is to be hop-by-hop; see
+      Section 6.1 of [RFC7230]).
+
+   o  Under what conditions intermediaries are allowed to insert,
+      delete, or modify the field's value.
+
+   o  Whether it is appropriate to list the field-name in a Vary
+      response header field (e.g., when the request header field is used
+      by an origin server's content selection algorithm; see
+      Section 7.1.4).
+
+   o  Whether the header field is useful or allowable in trailers (see
+      Section 4.1 of [RFC7230]).
+
+   o  Whether the header field ought to be preserved across redirects.
+
+   o  Whether it introduces any additional security considerations, such
+      as disclosure of privacy-related data.
+
+3.2.4.  Field Parsing
+
+   Consequently, this specification does not use ABNF rules
+   to define each "Field-Name: Field Value" pair, as was done in
+   previous editions.  Instead, this specification uses ABNF rules that
+   are named according to each registered field name, wherein the rule
+   defines the valid grammar for that field's corresponding field values
+   (i.e., after the field-value has been extracted from the header
+   section by a generic field parser).
+
+     field-value    = *( field-content / obs-fold )
+     field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+     field-vchar    = VCHAR / obs-text
+
+   Historically, HTTP header field values could be extended over
+   multiple lines by preceding each extra line with at least one space
+   or horizontal tab (obs-fold).
+
+   Historically, HTTP has allowed field content with text in the
+   ISO-8859-1 charset [ISO-8859-1], supporting other charsets only
+   through use of [RFC2047] encoding.  In practice, most HTTP header
+   field values use only a subset of the US-ASCII charset [USASCII].
+   Newly defined header fields SHOULD limit their field values to
+   US-ASCII octets.  A recipient SHOULD treat other octets in field
+   content (obs-text) as opaque data.
 
 3.2.2.  Field Order
 
@@ -1166,6 +1203,46 @@ X.X.  [Message Fields]
    except where necessary to quote parentheses ["(" and ")"] and
    backslash octets occurring within that comment.
 
+8.3.1.  [Designing New Field Values]
+
+   New header field values typically have their syntax defined using
+   ABNF ([RFC5234]), using the extension defined in Section 7 of
+   [RFC7230] as necessary, and are usually constrained to the range of
+   US-ASCII characters.  Header fields needing a greater range of
+   characters can use an encoding such as the one defined in [RFC5987].
+
+   Leading and trailing whitespace in raw field values is removed upon
+   field parsing (Section 3.2.4 of [RFC7230]).  Field definitions where
+   leading or trailing whitespace in values is significant will have to
+   use a container syntax such as quoted-string (Section 3.2.6 of
+   [RFC7230]).
+
+   Because commas (",") are used as a generic delimiter between
+   field-values, they need to be treated with care if they are allowed
+   in the field-value.  Typically, components that might contain a comma
+   are protected with double-quotes using the quoted-string ABNF
+   production.
+
+   For example, a textual date and a URI (either of which might contain
+   a comma) could be safely carried in field-values like these:
+
+     Example-URI-Field: "http://example.com/a.html,foo",
+                        "http://without-a-comma.example.com/"
+     Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+
+   Note that double-quote delimiters almost always are used with the
+   quoted-string production; using a different syntax inside
+   double-quotes will likely cause unnecessary confusion.
+
+   Many header fields use a format including (case-insensitively) named
+   parameters (for instance, Content-Type, defined in Section 3.1.1.5).
+   Allowing both unquoted (token) and quoted (quoted-string) syntax for
+   the parameter value enables recipients to use existing parser
+   components.  When allowing both forms, the meaning of a parameter
+   value ought to be independent of the syntax used for it (for an
+   example, see the notes on parameter handling for media types in
+   Section 3.1.1.1).
+
 3.2.3.  Whitespace
 
    This specification uses three rules to denote the use of linear
@@ -1194,6 +1271,89 @@ X.X.  [Message Fields]
                     ; required whitespace
      BWS            = OWS
                     ; "bad" whitespace
+
+5.  Message Routing
+
+   HTTP request message routing is determined by each client based on
+   the target resource, the client's proxy configuration, and
+   establishment or reuse of an inbound connection.  The corresponding
+   response routing follows the same connection chain back to the
+   client.
+
+5.1.  Identifying a Target Resource
+
+   HTTP is used in a wide variety of applications, ranging from
+   general-purpose computers to home appliances.  In some cases,
+   communication options are hard-coded in a client's configuration.
+   However, most HTTP clients rely on the same resource identification
+   mechanism and configuration techniques as general-purpose Web
+   browsers.
+
+   HTTP communication is initiated by a user agent for some purpose.
+   The purpose is a combination of request semantics, which are defined
+   in [RFC7231], and a target resource upon which to apply those
+   semantics.  A URI reference (Section 2.7) is typically used as an
+   identifier for the "target resource", which a user agent would
+   resolve to its absolute form in order to obtain the "target URI".
+   The target URI excludes the reference's fragment component, if any,
+   since fragment identifiers are reserved for client-side processing
+   ([RFC3986], Section 3.5).
+
+5.2.  Connecting Inbound
+
+   Once the target URI is determined, a client needs to decide whether a
+   network request is necessary to accomplish the desired semantics and,
+   if so, where that request is to be directed.
+
+   If the client has a cache [RFC7234] and the request can be satisfied
+   by it, then the request is usually directed there first.
+
+   If the request is not satisfied by a cache, then a typical client
+   will check its configuration to determine whether a proxy is to be
+   used to satisfy the request.  Proxy configuration is implementation-
+   dependent, but is often based on URI prefix matching, selective
+   authority matching, or both, and the proxy itself is usually
+   identified by an "http" or "https" URI.  If a proxy is applicable,
+   the client connects inbound by establishing (or reusing) a connection
+   to that proxy.
+
+   If no proxy is applicable, a typical client will invoke a handler
+   routine, usually specific to the target URI's scheme, to connect
+   directly to an authority for the target resource.  How that is
+   accomplished is dependent on the target URI scheme and defined by its
+   associated specification, similar to how this specification defines
+   origin server access for resolution of the "http" (Section 2.7.1) and
+   "https" (Section 2.7.2) schemes.
+
+   HTTP requirements regarding connection management are defined in
+   Section 6.
+
+5.5.  Effective Request URI
+
+   Once an inbound connection is obtained, the client sends an HTTP
+   request message (Section 3) with a request-target derived from the
+   target URI.
+
+   Since the request-target often contains only part of the user agent's
+   target URI, a server reconstructs the intended target as an
+   "effective request URI" to properly service the request.  This
+   reconstruction involves both the server's local configuration and
+   information communicated in the request-target, Host header field,
+   and connection context.
+
+   For a user agent, the effective request URI is the target URI.
+
+   Once the effective request URI has been constructed, an origin server
+   needs to decide whether or not to provide service for that URI via
+   the connection in which the request was received.  For example, the
+   request might have been misdirected, deliberately or accidentally,
+   such that the information within a received request-target or Host
+   header field differs from the host or port upon which the connection
+   has been made.  If the connection is from a trusted gateway, that
+   inconsistency might be expected; otherwise, it might indicate an
+   attempt to bypass security filters, trick the server into delivering
+   non-public content, or poison a cache.  See Section 9 for security
+   considerations regarding message routing.
 
 5.4.  Host
 
@@ -6842,159 +7002,6 @@ Appendix A.  Internet Media Type multipart/byteranges
    registry located at
    <http://www.iana.org/assignments/message-headers>, as defined by
    [BCP90].
-
-8.3.1.  Considerations for New Header Fields
-
-   Header fields are key:value pairs that can be used to communicate
-   data about the message, its payload, the target resource, or the
-   connection (i.e., control data).  See Section 3.2 of [RFC7230] for a
-   general definition of header field syntax in HTTP messages.
-
-   The requirements for header field names are defined in [BCP90].
-
-   Authors of specifications defining new fields are advised to keep the
-   name as short as practical and not to prefix the name with "X-"
-   unless the header field will never be used on the Internet.  (The
-   "X-" prefix idiom has been extensively misused in practice; it was
-   intended to only be used as a mechanism for avoiding name collisions
-   inside proprietary software or intranet processing, since the prefix
-   would ensure that private names never collide with a newly registered
-   Internet name; see [BCP178] for further information).
-
-   New header field values typically have their syntax defined using
-   ABNF ([RFC5234]), using the extension defined in Section 7 of
-   [RFC7230] as necessary, and are usually constrained to the range of
-   US-ASCII characters.  Header fields needing a greater range of
-   characters can use an encoding such as the one defined in [RFC5987].
-
-   Leading and trailing whitespace in raw field values is removed upon
-   field parsing (Section 3.2.4 of [RFC7230]).  Field definitions where
-   leading or trailing whitespace in values is significant will have to
-   use a container syntax such as quoted-string (Section 3.2.6 of
-   [RFC7230]).
-
-   Because commas (",") are used as a generic delimiter between
-   field-values, they need to be treated with care if they are allowed
-   in the field-value.  Typically, components that might contain a comma
-   are protected with double-quotes using the quoted-string ABNF
-   production.
-
-   For example, a textual date and a URI (either of which might contain
-   a comma) could be safely carried in field-values like these:
-
-     Example-URI-Field: "http://example.com/a.html,foo",
-                        "http://without-a-comma.example.com/"
-     Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
-
-   Note that double-quote delimiters almost always are used with the
-   quoted-string production; using a different syntax inside
-   double-quotes will likely cause unnecessary confusion.
-
-   Many header fields use a format including (case-insensitively) named
-   parameters (for instance, Content-Type, defined in Section 3.1.1.5).
-   Allowing both unquoted (token) and quoted (quoted-string) syntax for
-   the parameter value enables recipients to use existing parser
-   components.  When allowing both forms, the meaning of a parameter
-   value ought to be independent of the syntax used for it (for an
-   example, see the notes on parameter handling for media types in
-   Section 3.1.1.1).
-
-   Authors of specifications defining new header fields are advised to
-   consider documenting:
-
-   o  Whether the field is a single value or whether it can be a list
-      (delimited by commas; see Section 3.2 of [RFC7230]).
-
-      If it does not use the list syntax, document how to treat messages
-      where the field occurs multiple times (a sensible default would be
-      to ignore the field, but this might not always be the right
-      choice).
-
-      Note that intermediaries and software libraries might combine
-      multiple header field instances into a single one, despite the
-      field's definition not allowing the list syntax.  A robust format
-      enables recipients to discover these situations (good example:
-      "Content-Type", as the comma can only appear inside quoted
-      strings; bad example: "Location", as a comma can occur inside a
-      URI).
-
-   o  Under what conditions the header field can be used; e.g., only in
-      responses or requests, in all messages, only on responses to a
-      particular request method, etc.
-
-   o  Whether the field should be stored by origin servers that
-      understand it upon a PUT request.
-
-   o  Whether the field semantics are further refined by the context,
-      such as by existing request methods or status codes.
-
-   o  Whether it is appropriate to list the field-name in the Connection
-      header field (i.e., if the header field is to be hop-by-hop; see
-      Section 6.1 of [RFC7230]).
-
-   o  Under what conditions intermediaries are allowed to insert,
-      delete, or modify the field's value.
-
-   o  Whether it is appropriate to list the field-name in a Vary
-      response header field (e.g., when the request header field is used
-      by an origin server's content selection algorithm; see
-      Section 7.1.4).
-
-   o  Whether the header field is useful or allowable in trailers (see
-      Section 4.1 of [RFC7230]).
-
-   o  Whether the header field ought to be preserved across redirects.
-
-   o  Whether it introduces any additional security considerations, such
-      as disclosure of privacy-related data.
-
-8.3.2.  Registrations
-
-   The "Message Headers" registry has been updated with the following
-   permanent registrations:
-
-   +-------------------+----------+----------+-----------------+
-   | Header Field Name | Protocol | Status   | Reference       |
-   +-------------------+----------+----------+-----------------+
-   | Accept            | http     | standard | Section 5.3.2   |
-   | Accept-Charset    | http     | standard | Section 5.3.3   |
-   | Accept-Encoding   | http     | standard | Section 5.3.4   |
-   | Accept-Language   | http     | standard | Section 5.3.5   |
-   | Accept-Ranges     | http     | standard | Section 2.3 |
-   | Age               | http     | standard | Section 5.1 |
-   | Allow             | http     | standard | Section 7.4.1   |
-   | Authorization       | http     | standard | Section 4.2 |
-   | Cache-Control     | http     | standard | Section 5.2 |
-   | Content-Encoding  | http     | standard | Section 3.1.2.2 |
-   | Content-Language  | http     | standard | Section 3.1.3.2 |
-   | Content-Location  | http     | standard | Section 3.1.4.2 |
-   | Content-Range     | http     | standard | Section 4.2 |
-   | Content-Type      | http     | standard | Section 3.1.1.5 |
-   | Date              | http     | standard | Section 7.1.1.2 |
-   | ETag                | http     | standard | Section 2.3 |
-   | Expect            | http     | standard | Section 5.1.1   |
-   | Expires           | http     | standard | Section 5.3 |
-   | From              | http     | standard | Section 5.5.1   |
-   | If-Match            | http     | standard | Section 3.1 |
-   | If-Modified-Since   | http     | standard | Section 3.3 |
-   | If-None-Match       | http     | standard | Section 3.2 |
-   | If-Range          | http     | standard | Section 3.2 |
-   | If-Unmodified-Since | http     | standard | Section 3.4 |
-   | Last-Modified       | http     | standard | Section 2.2 |
-   | Location          | http     | standard | Section 7.1.2   |
-   | Max-Forwards      | http     | standard | Section 5.1.2   |
-   | Pragma            | http     | standard | Section 5.4 |
-   | Proxy-Authenticate  | http     | standard | Section 4.3 |
-   | Proxy-Authorization | http     | standard | Section 4.4 |
-   | Range             | http     | standard | Section 3.1 |
-   | Referer           | http     | standard | Section 5.5.2   |
-   | Retry-After       | http     | standard | Section 7.1.3   |
-   | Server            | http     | standard | Section 7.4.2   |
-   | User-Agent        | http     | standard | Section 5.5.3   |
-   | Vary              | http     | standard | Section 7.1.4   |
-   | Warning           | http     | standard | Section 5.5 |
-   | WWW-Authenticate    | http     | standard | Section 4.1 |
-   +-------------------+----------+----------+-----------------+
 
    The change controller for the above registrations is: "IETF
    (iesg@ietf.org) - Internet Engineering Task Force".

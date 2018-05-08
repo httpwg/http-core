@@ -1058,115 +1058,7 @@ Content-Type: text/plain
 </section>
 </section>
 
-<section title="Messaging Abstraction" anchor="messaging.abstraction">
-<t>
-   HTTP request message routing is determined by each client based on the
-   target resource, the client's proxy configuration, and
-   establishment or reuse of an inbound connection.  The corresponding
-   response routing follows the same connection chain back to the client.
-</t>
-
-<section title="Identifying a Target Resource" anchor="target.resource">
-  <iref primary="true" item="target resource"/>
-  <iref primary="true" item="target URI"/>
-  <x:anchor-alias value="target resource"/>
-  <x:anchor-alias value="target URI"/>
-<t>
-   HTTP is used in a wide variety of applications, ranging from
-   general-purpose computers to home appliances.  In some cases,
-   communication options are hard-coded in a client's configuration.
-   However, most HTTP clients rely on the same resource identification
-   mechanism and configuration techniques as general-purpose Web browsers.
-</t>
-<t>
-   HTTP communication is initiated by a user agent for some purpose.
-   The purpose is a combination of request semantics
-   and a target resource upon which to apply those
-   semantics.  A URI reference (<xref target="uri"/>) is typically used as
-   an identifier for the "<x:dfn>target resource</x:dfn>", which a user agent
-   would resolve to its absolute form in order to obtain the
-   "<x:dfn>target URI</x:dfn>".  The target URI
-   excludes the reference's fragment component, if any,
-   since fragment identifiers are reserved for client-side processing
-   (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
-</t>
-</section>
-
-<section title="Routing Inbound" anchor="routing.inbound">
-<t>
-   Once the target URI is determined, a client needs to decide whether
-   a network request is necessary to accomplish the desired semantics and,
-   if so, where that request is to be directed.
-</t>
-<t>
-   If the client has a cache <xref target="CACHING"/> and the request can be
-   satisfied by it, then the request is
-   usually directed there first.
-</t>
-<t>
-   If the request is not satisfied by a cache, then a typical client will
-   check its configuration to determine whether a proxy is to be used to
-   satisfy the request.  Proxy configuration is implementation-dependent,
-   but is often based on URI prefix matching, selective authority matching,
-   or both, and the proxy itself is usually identified by an "http" or
-   "https" URI.  If a proxy is applicable, the client connects inbound by
-   establishing (or reusing) a connection to that proxy.
-</t>
-<t>
-   If no proxy is applicable, a typical client will invoke a handler routine,
-   usually specific to the target URI's scheme, to connect directly
-   to an authority for the target resource.  How that is accomplished is
-   dependent on the target URI scheme and defined by its associated
-   specification, similar to how this specification defines origin server
-   access for resolution of the "http" (<xref target="http.uri"/>) and
-   "https" (<xref target="https.uri"/>) schemes.
-</t>
-<t>
-   HTTP requirements regarding connection management are defined in
-   <xref target="connection.management"/>.
-</t>
-</section>
-
-<section title="Effective Request URI" anchor="effective.request.uri">
-  <iref primary="true" item="effective request URI"/>
-  <x:anchor-alias value="effective request URI"/>
-<t>
-   Once an inbound connection is obtained,
-   the client sends an HTTP request message (<xref target="http.message"/>).
-</t>
-<t>
-   [Depending on the nature of the request, the client's target URI might be
-   split into components and transmitted (or implied) within various parts of
-   a request message. These parts are recombined by each recipient, in
-   accordance with their local configuration and incoming connection context,
-   to form an "<x:dfn>effective request URI</x:dfn>" for identifying the
-   intended target resource with respect to that server.]
-   <xref target="h1.effective.request.uri"/> defines how a server
-   determines the effective request URI for an HTTP/1.1 request.]
-</t>
-<t>
-   For a user agent, the effective request URI is the target URI.
-</t>
-<t>
-   Once the effective request URI has been constructed, an origin server needs
-   to decide whether or not to provide service for that URI via the connection
-   in which the request was received. For example, the request might have been
-   misdirected, deliberately or accidentally, such that the information within
-   a received <x:ref>request-target</x:ref> or <x:ref>Host</x:ref> header
-   field differs from the host or port upon which the connection has been
-   made. If the connection is from a trusted gateway, that inconsistency might
-   be expected; otherwise, it might indicate an attempt to bypass security
-   filters, trick the server into delivering non-public content, or poison a
-   cache. See <xref target="security.considerations"/> for security
-   considerations regarding message routing.
-</t>
-</section>
-
-<section title="Message Fields" anchor="message.fields">
-  <x:anchor-alias value="field-name"/>
-  <x:anchor-alias value="field-value"/>
-  <x:anchor-alias value="field-content"/>
-  <x:anchor-alias value="field-vchar"/>
+<section title="Message Abstraction" anchor="message.abstraction">
 <t>
    [Each major version of HTTP defines its own syntax for the inclusion of
    information in messages. Nevertheless, a common abstraction is that a
@@ -1174,45 +1066,260 @@ Content-Type: text/plain
    data fields, and a potential body. This section defines the abstraction
    for message fields as field-name and field-value pairs.]
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="field-name"/><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
-  <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
-  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
-  <x:ref>field-content</x:ref>  = <x:ref>field-vchar</x:ref> [ 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> ) <x:ref>field-vchar</x:ref> ]
-  <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
-</artwork></figure>
+
+<section title="Field Names" anchor="field.names">
+  <x:anchor-alias value="field-name"/>
+<t>
+   Header fields are key:value pairs that can be used to communicate data about
+   the message, its payload, the target resource, or the connection
+   (i.e., control data).
+</t>
+<t>
+   The requirements for header field names are defined in
+   <xref target="BCP90"/>.
+</t>
 <t>
    The field-name token labels the corresponding field-value as having the
    semantics defined by that header field.  For example, the <x:ref>Date</x:ref>
    header field is defined in <xref target="header.date"/> as containing the origination
    timestamp for the message in which it appears.
 </t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="field-name"/>
+  <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
+</artwork></figure>
+<t>
+   The following field names are defined by this document:
+</t>
+<?BEGININC build/draft-ietf-httpbis-semantics-latest.iana-headers ?>
+<!--AUTOGENERATED FROM extract-header-defs.xslt, do not edit manually-->
+<texttable align="left"
+           suppress-title="true"
+           anchor="iana.header.registration.table">
+   <ttcol>Header Field Name</ttcol>
+   <ttcol>Protocol</ttcol>
+   <ttcol>Status</ttcol>
+   <ttcol>Reference</ttcol>
 
-<section title="Field Values" anchor="field.values">
+   <c>Accept</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.accept"/>
+   </c>
+   <c>Accept-Charset</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.accept-charset"/>
+   </c>
+   <c>Accept-Encoding</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.accept-encoding"/>
+   </c>
+   <c>Accept-Language</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.accept-language"/>
+   </c>
+   <c>Accept-Ranges</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.accept-ranges"/>
+   </c>
+   <c>Allow</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.allow"/>
+   </c>
+   <c>Authorization</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.authorization"/>
+   </c>
+   <c>Content-Encoding</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.content-encoding"/>
+   </c>
+   <c>Content-Language</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.content-language"/>
+   </c>
+   <c>Content-Location</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.content-location"/>
+   </c>
+   <c>Content-Range</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.content-range"/>
+   </c>
+   <c>Content-Type</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.content-type"/>
+   </c>
+   <c>Date</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.date"/>
+   </c>
+   <c>ETag</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.etag"/>
+   </c>
+   <c>Expect</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.expect"/>
+   </c>
+   <c>From</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.from"/>
+   </c>
+   <c>Host</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.host"/>
+   </c>
+   <c>If-Match</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.if-match"/>
+   </c>
+   <c>If-Modified-Since</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.if-modified-since"/>
+   </c>
+   <c>If-None-Match</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.if-none-match"/>
+   </c>
+   <c>If-Range</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.if-range"/>
+   </c>
+   <c>If-Unmodified-Since</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.if-unmodified-since"/>
+   </c>
+   <c>Last-Modified</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.last-modified"/>
+   </c>
+   <c>Location</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.location"/>
+   </c>
+   <c>Max-Forwards</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.max-forwards"/>
+   </c>
+   <c>Proxy-Authenticate</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.proxy-authenticate"/>
+   </c>
+   <c>Proxy-Authorization</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.proxy-authorization"/>
+   </c>
+   <c>Range</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.range"/>
+   </c>
+   <c>Referer</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.referer"/>
+   </c>
+   <c>Retry-After</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.retry-after"/>
+   </c>
+   <c>Server</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.server"/>
+   </c>
+   <c>User-Agent</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.user-agent"/>
+   </c>
+   <c>Vary</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.vary"/>
+   </c>
+   <c>Via</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.via"/>
+   </c>
+   <c>WWW-Authenticate</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.www-authenticate"/>
+   </c>
+</texttable>
+<!--(END)-->
+
+<?ENDINC build/draft-ietf-httpbis-semantics-latest.iana-headers ?>
+
+<section title="Field Name Registry" anchor="field.name.registry">
 <t>
-   This specification does not use ABNF rules to define each
-   "Field-Name: Field Value" pair, as was done in earlier editions.
-   Instead, this specification uses ABNF rules that are named according to
-   each registered field name, wherein the rule defines the valid grammar for
-   that field's corresponding field values (i.e., after the field-value
-   has been extracted by a generic field parser).
-</t>
-<t>
-   Historically, HTTP header field values could be extended over multiple
-   lines by preceding each extra line with at least one space or horizontal
-   tab (<x:ref>obs-fold</x:ref>). This document assumes that any such
-   <x:ref>obs-fold</x:ref> has been replaced with one or more
-   <x:ref>SP</x:ref> octets prior to interpreting the field value,
-   as described in <xref target="line.folding"/>.
-</t>
-<t>
-   Historically, HTTP has allowed field content with text in the ISO&nbhy;8859&nbhy;1
-   charset <xref target="ISO-8859-1"/>, supporting other charsets only
-   through use of <xref target="RFC2047"/> encoding.
-   In practice, most HTTP header field values use only a subset of the
-   US-ASCII charset <xref target="USASCII"/>. Newly defined
-   header fields &SHOULD; limit their field values to US&nbhy;ASCII octets.
-   A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
-   opaque data.
+   HTTP header fields are registered within the "Message Headers" registry
+   located at <eref target="http://www.iana.org/assignments/message-headers"/>,
+   as defined by <xref target="BCP90"/>, with the protocol "http".
 </t>
 </section>
 
@@ -1241,9 +1348,100 @@ Content-Type: text/plain
 </t>
 <t>
    All defined header fields ought to be registered with IANA in the
-   "Message Headers" registry, as described in <xref target="header.field.registry"/>.
+   "Message Headers" registry.
 </t>
 </section>
+
+<section title="Considerations for New Fields" anchor="considerations.for.new.header.fields">
+<t>   
+   Authors of specifications defining new fields are
+   advised to keep the name as short as practical and not to prefix the name
+   with "X-" unless the header field will never be used on the Internet.
+   (The "X-" prefix idiom has been extensively misused in practice; it was
+   intended to only be used as a mechanism for avoiding name collisions inside
+   proprietary software or intranet processing, since the prefix would ensure
+   that private names never collide with a newly registered Internet name; see
+   <xref target="BCP178"/> for further information).
+</t>
+<t>
+   Authors of specifications defining new header fields are advised to consider
+   documenting:
+</t>
+<ul>
+  <li>
+    <t>Whether the field is a single value or whether it can be a list
+    (delimited by commas; see <xref target="header.fields"/>).</t>
+    <t>If it does not use the list syntax, document how to treat messages
+    where the field occurs multiple times (a sensible default would
+    be to ignore the field, but this might not always be the right
+    choice).</t>
+    <t>Note that intermediaries and software libraries might combine
+    multiple header field instances into a single one, despite the
+    field's definition not allowing the list syntax. A robust format enables
+    recipients to discover these situations (good example: "Content-Type",
+    as the comma can only appear inside quoted strings;
+    bad example: "Location", as a comma can occur inside a URI).</t>
+  </li>
+  <li><t>Under what conditions the header field can be used; e.g., only in
+    responses or requests, in all messages, only on responses to a
+    particular request method, etc.</t></li>
+  <li><t>Whether the field should be stored by origin servers that
+    understand it upon a PUT request.</t></li>
+  <li><t>Whether the field semantics are further refined by the context,
+    such as by existing request methods or status codes.</t></li>
+  <li><t>Whether it is appropriate to list the field-name in the
+    <x:ref>Connection</x:ref> header field (i.e., if the header field is to
+    be hop-by-hop; see <xref target="header.connection"/>).</t></li>
+  <li><t>Under what conditions intermediaries are allowed to insert,
+    delete, or modify the field's value.</t></li>
+  <li><t>Whether it is appropriate to list the field-name in a
+    <x:ref>Vary</x:ref> response header field (e.g., when the request header
+    field is used by an origin server's content selection algorithm; see
+    <xref target="header.vary"/>).</t></li>
+  <li><t>Whether the header field is useful or allowable in trailers (see
+    <xref target="chunked.encoding"/>).</t></li>
+  <li><t>Whether the header field ought to be preserved across redirects.</t></li>
+  <li><t>Whether it introduces any additional security considerations, such
+    as disclosure of privacy-related data.</t></li>
+</ul>
+</section>
+</section>
+
+<section title="Field Values" anchor="field.values">
+  <x:anchor-alias value="field-value"/>
+  <x:anchor-alias value="field-content"/>
+  <x:anchor-alias value="field-vchar"/>
+<t>
+   This specification does not use ABNF rules to define each
+   "Field-Name: Field Value" pair, as was done in earlier editions.
+   Instead, this specification uses ABNF rules that are named according to
+   each registered field name, wherein the rule defines the valid grammar for
+   that field's corresponding field values (i.e., after the field-value
+   has been extracted by a generic field parser).
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
+  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
+  <x:ref>field-content</x:ref>  = <x:ref>field-vchar</x:ref> [ 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> ) <x:ref>field-vchar</x:ref> ]
+  <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
+</artwork></figure>
+<t>
+   Historically, HTTP header field values could be extended over multiple
+   lines by preceding each extra line with at least one space or horizontal
+   tab (<x:ref>obs-fold</x:ref>). This document assumes that any such
+   <x:ref>obs-fold</x:ref> has been replaced with one or more
+   <x:ref>SP</x:ref> octets prior to interpreting the field value,
+   as described in <xref target="line.folding"/>.
+</t>
+<t>
+   Historically, HTTP has allowed field content with text in the ISO&nbhy;8859&nbhy;1
+   charset <xref target="ISO-8859-1"/>, supporting other charsets only
+   through use of <xref target="RFC2047"/> encoding.
+   In practice, most HTTP header field values use only a subset of the
+   US-ASCII charset <xref target="USASCII"/>. Newly defined
+   header fields &SHOULD; limit their field values to US&nbhy;ASCII octets.
+   A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
+   opaque data.
+</t>
 
 <section title="Field Order" anchor="field.order">
 <t>
@@ -1372,6 +1570,53 @@ Content-Type: text/plain
 </t>
 </section>
 
+<section title="Designing New Field Values" anchor="new.field.values">
+<t>
+   New header field values typically have their syntax defined using ABNF
+   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
+   as necessary, and are usually constrained to the range of US-ASCII characters.
+   Header fields needing a greater range of characters can use an encoding
+   such as the one defined in <xref target="RFC5987"/>. 
+</t>
+<t>
+   Leading and trailing whitespace in raw field values is removed upon field
+   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
+   whitespace in values is significant will have to use a container syntax such
+   as quoted-string (<xref target="field.components"/>).
+</t>
+<t>
+   Because commas (",") are used as a generic delimiter between field-values,
+   they need to be treated with care if they are allowed in the field-value.
+   Typically, components that might contain a comma are protected with
+   double-quotes using the quoted-string ABNF production.
+</t>
+<t>
+   For example, a textual date and a URI (either of which might contain a comma)
+   could be safely carried in field-values like these:
+</t>
+<figure><artwork type="example">
+  Example-URI-Field: "http://example.com/a.html,foo",
+                     "http://without-a-comma.example.com/"
+  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+</artwork></figure>
+<t>
+   Note that double-quote delimiters almost always are used with the
+   quoted-string production; using a different syntax inside double-quotes
+   will likely cause unnecessary confusion.
+</t>
+<t>
+   Many header fields use a format including (case-insensitively) named
+   parameters (for instance, <x:ref>Content-Type</x:ref>, defined in
+   <xref target="header.content-type"/>). Allowing both unquoted (token) and quoted
+   (quoted-string) syntax for the parameter value enables recipients to use
+   existing parser components. When allowing both forms, the meaning of a
+   parameter value ought to be independent of the syntax used for it (for an
+   example, see the notes on parameter handling for media types in
+   <xref target="media.type"/>).
+</t>
+</section>
+</section>
+
 <section title="Whitespace" anchor="whitespace">
   <x:anchor-alias value="BWS"/>
   <x:anchor-alias value="OWS"/>
@@ -1408,6 +1653,110 @@ Content-Type: text/plain
                  ; "bad" whitespace
 </artwork></figure>
 </section>
+</section>
+
+<section title="Message Routing" anchor="message.routing">
+<t>
+   HTTP request message routing is determined by each client based on the
+   target resource, the client's proxy configuration, and
+   establishment or reuse of an inbound connection.  The corresponding
+   response routing follows the same connection chain back to the client.
+</t>
+
+<section title="Identifying a Target Resource" anchor="target.resource">
+  <iref primary="true" item="target resource"/>
+  <iref primary="true" item="target URI"/>
+  <x:anchor-alias value="target resource"/>
+  <x:anchor-alias value="target URI"/>
+<t>
+   HTTP is used in a wide variety of applications, ranging from
+   general-purpose computers to home appliances.  In some cases,
+   communication options are hard-coded in a client's configuration.
+   However, most HTTP clients rely on the same resource identification
+   mechanism and configuration techniques as general-purpose Web browsers.
+</t>
+<t>
+   HTTP communication is initiated by a user agent for some purpose.
+   The purpose is a combination of request semantics
+   and a target resource upon which to apply those
+   semantics.  A URI reference (<xref target="uri"/>) is typically used as
+   an identifier for the "<x:dfn>target resource</x:dfn>", which a user agent
+   would resolve to its absolute form in order to obtain the
+   "<x:dfn>target URI</x:dfn>".  The target URI
+   excludes the reference's fragment component, if any,
+   since fragment identifiers are reserved for client-side processing
+   (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
+</t>
+</section>
+
+<section title="Routing Inbound" anchor="routing.inbound">
+<t>
+   Once the target URI is determined, a client needs to decide whether
+   a network request is necessary to accomplish the desired semantics and,
+   if so, where that request is to be directed.
+</t>
+<t>
+   If the client has a cache <xref target="CACHING"/> and the request can be
+   satisfied by it, then the request is
+   usually directed there first.
+</t>
+<t>
+   If the request is not satisfied by a cache, then a typical client will
+   check its configuration to determine whether a proxy is to be used to
+   satisfy the request.  Proxy configuration is implementation-dependent,
+   but is often based on URI prefix matching, selective authority matching,
+   or both, and the proxy itself is usually identified by an "http" or
+   "https" URI.  If a proxy is applicable, the client connects inbound by
+   establishing (or reusing) a connection to that proxy.
+</t>
+<t>
+   If no proxy is applicable, a typical client will invoke a handler routine,
+   usually specific to the target URI's scheme, to connect directly
+   to an authority for the target resource.  How that is accomplished is
+   dependent on the target URI scheme and defined by its associated
+   specification, similar to how this specification defines origin server
+   access for resolution of the "http" (<xref target="http.uri"/>) and
+   "https" (<xref target="https.uri"/>) schemes.
+</t>
+<t>
+   HTTP requirements regarding connection management are defined in
+   <xref target="connection.management"/>.
+</t>
+</section>
+
+<section title="Effective Request URI" anchor="effective.request.uri">
+  <iref primary="true" item="effective request URI"/>
+  <x:anchor-alias value="effective request URI"/>
+<t>
+   Once an inbound connection is obtained,
+   the client sends an HTTP request message (<xref target="http.message"/>).
+</t>
+<t>
+   [Depending on the nature of the request, the client's target URI might be
+   split into components and transmitted (or implied) within various parts of
+   a request message. These parts are recombined by each recipient, in
+   accordance with their local configuration and incoming connection context,
+   to form an "<x:dfn>effective request URI</x:dfn>" for identifying the
+   intended target resource with respect to that server.]
+   <xref target="h1.effective.request.uri"/> defines how a server
+   determines the effective request URI for an HTTP/1.1 request.]
+</t>
+<t>
+   For a user agent, the effective request URI is the target URI.
+</t>
+<t>
+   Once the effective request URI has been constructed, an origin server needs
+   to decide whether or not to provide service for that URI via the connection
+   in which the request was received. For example, the request might have been
+   misdirected, deliberately or accidentally, such that the information within
+   a received <x:ref>request-target</x:ref> or <x:ref>Host</x:ref> header
+   field differs from the host or port upon which the connection has been
+   made. If the connection is from a trusted gateway, that inconsistency might
+   be expected; otherwise, it might indicate an attempt to bypass security
+   filters, trick the server into delivering non-public content, or poison a
+   cache. See <xref target="security.considerations"/> for security
+   considerations regarding message routing.
+</t>
 </section>
 
 <section title="Host" anchor="header.host">
@@ -8605,352 +8954,13 @@ Content-Encoding: gzip
 
 <section title="Header Field Registry" anchor="header.field.registry">
 <t>
-   HTTP header fields are registered within the "Message Headers" registry
+   In the "Message Headers" registry, as defined by <xref target="BCP90"/> and
    located at <eref target="http://www.iana.org/assignments/message-headers"/>,
-   as defined by <xref target="BCP90"/>.
-</t>
-
-<section title="Considerations for New Header Fields" anchor="considerations.for.new.header.fields">
-<t>
-   Header fields are key:value pairs that can be used to communicate data about
-   the message, its payload, the target resource, or the connection
-   (i.e., control data).  See <xref target="header.fields"/> for a general definition
-   of header field syntax in HTTP messages.
-</t>
-<t>
-   The requirements for header field names are defined in
-   <xref target="BCP90"/>.
-</t>
-<t>   
-   Authors of specifications defining new fields are
-   advised to keep the name as short as practical and not to prefix the name
-   with "X-" unless the header field will never be used on the Internet.
-   (The "X-" prefix idiom has been extensively misused in practice; it was
-   intended to only be used as a mechanism for avoiding name collisions inside
-   proprietary software or intranet processing, since the prefix would ensure
-   that private names never collide with a newly registered Internet name; see
-   <xref target="BCP178"/> for further information).
-</t>
-<t>
-   New header field values typically have their syntax defined using ABNF
-   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
-   as necessary, and are usually constrained to the range of US-ASCII characters.
-   Header fields needing a greater range of characters can use an encoding
-   such as the one defined in <xref target="RFC5987"/>. 
-</t>
-<t>
-   Leading and trailing whitespace in raw field values is removed upon field
-   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
-   whitespace in values is significant will have to use a container syntax such
-   as quoted-string (<xref target="field.components"/>).
-</t>
-<t>
-   Because commas (",") are used as a generic delimiter between field-values,
-   they need to be treated with care if they are allowed in the field-value.
-   Typically, components that might contain a comma are protected with
-   double-quotes using the quoted-string ABNF production.
-</t>
-<t>
-   For example, a textual date and a URI (either of which might contain a comma)
-   could be safely carried in field-values like these:
-</t>
-<figure><artwork type="example">
-  Example-URI-Field: "http://example.com/a.html,foo",
-                     "http://without-a-comma.example.com/"
-  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
-</artwork></figure>
-<t>
-   Note that double-quote delimiters almost always are used with the
-   quoted-string production; using a different syntax inside double-quotes
-   will likely cause unnecessary confusion.
-</t>
-<t>
-   Many header fields use a format including (case-insensitively) named
-   parameters (for instance, <x:ref>Content-Type</x:ref>, defined in
-   <xref target="header.content-type"/>). Allowing both unquoted (token) and quoted
-   (quoted-string) syntax for the parameter value enables recipients to use
-   existing parser components. When allowing both forms, the meaning of a
-   parameter value ought to be independent of the syntax used for it (for an
-   example, see the notes on parameter handling for media types in
-   <xref target="media.type"/>).
-</t>
-<t>
-   Authors of specifications defining new header fields are advised to consider
-   documenting:
-</t>
-<ul>
-  <li>
-    <t>Whether the field is a single value or whether it can be a list
-    (delimited by commas; see <xref target="header.fields"/>).</t>
-    <t>If it does not use the list syntax, document how to treat messages
-    where the field occurs multiple times (a sensible default would
-    be to ignore the field, but this might not always be the right
-    choice).</t>
-    <t>Note that intermediaries and software libraries might combine
-    multiple header field instances into a single one, despite the
-    field's definition not allowing the list syntax. A robust format enables
-    recipients to discover these situations (good example: "Content-Type",
-    as the comma can only appear inside quoted strings;
-    bad example: "Location", as a comma can occur inside a URI).</t>
-  </li>
-  <li><t>Under what conditions the header field can be used; e.g., only in
-    responses or requests, in all messages, only on responses to a
-    particular request method, etc.</t></li>
-  <li><t>Whether the field should be stored by origin servers that
-    understand it upon a PUT request.</t></li>
-  <li><t>Whether the field semantics are further refined by the context,
-    such as by existing request methods or status codes.</t></li>
-  <li><t>Whether it is appropriate to list the field-name in the
-    <x:ref>Connection</x:ref> header field (i.e., if the header field is to
-    be hop-by-hop; see <xref target="header.connection"/>).</t></li>
-  <li><t>Under what conditions intermediaries are allowed to insert,
-    delete, or modify the field's value.</t></li>
-  <li><t>Whether it is appropriate to list the field-name in a
-    <x:ref>Vary</x:ref> response header field (e.g., when the request header
-    field is used by an origin server's content selection algorithm; see
-    <xref target="header.vary"/>).</t></li>
-  <li><t>Whether the header field is useful or allowable in trailers (see
-    <xref target="chunked.encoding"/>).</t></li>
-  <li><t>Whether the header field ought to be preserved across redirects.</t></li>
-  <li><t>Whether it introduces any additional security considerations, such
-    as disclosure of privacy-related data.</t></li>
-</ul>
-</section>
-
-<section title="Registrations" anchor="header.field.registration">
-<t>
-   The "Message Headers" registry shall be updated with the
-   following permanent registrations:
-</t>
-<?BEGININC build/draft-ietf-httpbis-semantics-latest.iana-headers ?>
-<!--AUTOGENERATED FROM extract-header-defs.xslt, do not edit manually-->
-<texttable align="left"
-           suppress-title="true"
-           anchor="iana.header.registration.table">
-   <ttcol>Header Field Name</ttcol>
-   <ttcol>Protocol</ttcol>
-   <ttcol>Status</ttcol>
-   <ttcol>Reference</ttcol>
-
-   <c>Accept</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.accept"/>
-   </c>
-   <c>Accept-Charset</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.accept-charset"/>
-   </c>
-   <c>Accept-Encoding</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.accept-encoding"/>
-   </c>
-   <c>Accept-Language</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.accept-language"/>
-   </c>
-   <c>Accept-Ranges</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.accept-ranges"/>
-   </c>
-   <c>Allow</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.allow"/>
-   </c>
-   <c>Authorization</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.authorization"/>
-   </c>
-   <c>Content-Encoding</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.content-encoding"/>
-   </c>
-   <c>Content-Language</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.content-language"/>
-   </c>
-   <c>Content-Location</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.content-location"/>
-   </c>
-   <c>Content-Range</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.content-range"/>
-   </c>
-   <c>Content-Type</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.content-type"/>
-   </c>
-   <c>Date</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.date"/>
-   </c>
-   <c>ETag</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.etag"/>
-   </c>
-   <c>Expect</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.expect"/>
-   </c>
-   <c>From</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.from"/>
-   </c>
-   <c>Host</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.host"/>
-   </c>
-   <c>If-Match</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.if-match"/>
-   </c>
-   <c>If-Modified-Since</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.if-modified-since"/>
-   </c>
-   <c>If-None-Match</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.if-none-match"/>
-   </c>
-   <c>If-Range</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.if-range"/>
-   </c>
-   <c>If-Unmodified-Since</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.if-unmodified-since"/>
-   </c>
-   <c>Last-Modified</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.last-modified"/>
-   </c>
-   <c>Location</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.location"/>
-   </c>
-   <c>Max-Forwards</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.max-forwards"/>
-   </c>
-   <c>Proxy-Authenticate</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.proxy-authenticate"/>
-   </c>
-   <c>Proxy-Authorization</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.proxy-authorization"/>
-   </c>
-   <c>Range</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.range"/>
-   </c>
-   <c>Referer</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.referer"/>
-   </c>
-   <c>Retry-After</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.retry-after"/>
-   </c>
-   <c>Server</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.server"/>
-   </c>
-   <c>User-Agent</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.user-agent"/>
-   </c>
-   <c>Vary</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.vary"/>
-   </c>
-   <c>Via</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.via"/>
-   </c>
-   <c>WWW-Authenticate</c>
-   <c>http</c>
-   <c>standard</c>
-   <c>
-      <xref target="header.www-authenticate"/>
-   </c>
-</texttable>
-<!--(END)-->
-
-<?ENDINC build/draft-ietf-httpbis-semantics-latest.iana-headers ?>
-<t>
-   The change controller for the above registrations is:
+   please update the "http" header field permanent registrations for the
+   header field names listed in the table of <xref target="field.names"/>.
+   The change controller for these registrations is:
    "IETF (iesg@ietf.org) - Internet Engineering Task Force".
 </t>
-</section>
 </section>
 
 <section title="Authentication Scheme Registry" anchor="authentication.scheme.registry">
