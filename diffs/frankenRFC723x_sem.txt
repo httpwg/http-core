@@ -1624,64 +1624,6 @@ X.X.  [Field Names]
 
      representation-data := Content-Encoding( Content-Type( bits ) )
 
-3.1.  Representation Metadata
-
-   Representation header fields provide metadata about the
-   representation.  When a message includes a payload body, the
-   representation header fields describe how to interpret the
-   representation data enclosed in the payload body.  In a response to a
-   HEAD request, the representation header fields describe the
-   representation data that would have been enclosed in the payload body
-   if the same request had been a GET.
-
-   The following header fields convey representation metadata:
-
-   +-------------------+-----------------+
-   | Header Field Name | Defined in...   |
-   +-------------------+-----------------+
-   | Content-Type      | Section 3.1.1.5 |
-   | Content-Encoding  | Section 3.1.2.2 |
-   | Content-Language  | Section 3.1.3.2 |
-   | Content-Location  | Section 3.1.4.2 |
-   +-------------------+-----------------+
-
-3.1.1.  Processing Representation Data
-
-3.1.1.5.  Content-Type
-
-   The "Content-Type" header field indicates the media type of the
-   associated representation: either the representation enclosed in the
-   message payload or the selected representation, as determined by the
-   message semantics.  The indicated media type defines both the data
-   format and how that data is intended to be processed by a recipient,
-   within the scope of the received message semantics, after any content
-   codings indicated by Content-Encoding are decoded.
-
-     Content-Type = media-type
-
-   Media types are defined in Section 3.1.1.1.  An example of the field
-   is
-
-     Content-Type: text/html; charset=ISO-8859-4
-
-   A sender that generates a message containing a payload body SHOULD
-   generate a Content-Type header field in that message unless the
-   intended media type of the enclosed representation is unknown to the
-   sender.  If a Content-Type header field is not present, the recipient
-   MAY either assume a media type of "application/octet-stream"
-   ([RFC2046], Section 4.5.1) or examine the data to determine its type.
-
-   In practice, resource owners do not always properly configure their
-   origin server to provide the correct Content-Type for a given
-   representation, with the result that some clients will examine a
-   payload's content and override the specified type.  Clients that do
-   so risk drawing incorrect conclusions, which might expose additional
-   security risks (e.g., "privilege escalation").  Furthermore, it is
-   impossible to determine the sender's intent by examining the data
-   format: many data formats match multiple media types that differ only
-   in processing semantics.  Implementers are encouraged to provide a
-   means of disabling such "content sniffing" when it is used.
-
 3.1.1.1.  Media Type
 
    HTTP uses Internet media types [RFC2046] in the Content-Type
@@ -1782,55 +1724,6 @@ X.X.  [Field Names]
    byteranges" type is defined by this specification for use in some 206
    (Partial Content) responses [RFC7233].
 
-3.1.2.  Encoding for Compression or Integrity
-
-3.1.2.2.  Content-Encoding
-
-   The "Content-Encoding" header field indicates what content codings
-   have been applied to the representation, beyond those inherent in the
-   media type, and thus what decoding mechanisms have to be applied in
-   order to obtain data in the media type referenced by the Content-Type
-   header field.  Content-Encoding is primarily used to allow a
-   representation's data to be compressed without losing the identity of
-   its underlying media type.
-
-     Content-Encoding = 1#content-coding
-
-   An example of its use is
-
-     Content-Encoding: gzip
-
-   If one or more encodings have been applied to a representation, the
-   sender that applied the encodings MUST generate a Content-Encoding
-   header field that lists the content codings in the order in which
-   they were applied.  Additional information about the encoding
-   parameters can be provided by other header fields not defined by this
-   specification.
-
-   Unlike Transfer-Encoding (Section 3.3.1 of [RFC7230]), the codings
-   listed in Content-Encoding are a characteristic of the
-   representation; the representation is defined in terms of the coded
-   form, and all other metadata about the representation is about the
-   coded form unless otherwise noted in the metadata definition.
-   Typically, the representation is only decoded just prior to rendering
-   or analogous usage.
-
-   If the media type includes an inherent encoding, such as a data
-   format that is always compressed, then that encoding would not be
-   restated in Content-Encoding even if it happens to be the same
-   algorithm as one of the content codings.  Such a content coding would
-   only be listed if, for some bizarre reason, it is applied a second
-   time to form the representation.  Likewise, an origin server might
-   choose to publish the same data as multiple representations that
-   differ only in whether the coding is defined as part of Content-Type
-   or Content-Encoding, since some user agents will behave differently
-   in their handling of each response (e.g., open a "Save as ..." dialog
-   instead of automatic decompression and rendering of content).
-
-   An origin server MAY respond with a status code of 415 (Unsupported
-   Media Type) if a representation in the request message has a content
-   coding that is not acceptable.
-
 3.1.2.1.  Content Codings
 
    Content coding values indicate an encoding transformation that has
@@ -1885,6 +1778,140 @@ X.X.  [Field Names]
    program [RFC1952].  A recipient SHOULD consider "x-gzip" to be
    equivalent to "gzip".
 
+3.1.3.1.  Language Tags
+
+   A language tag, as defined in [RFC5646], identifies a natural
+   language spoken, written, or otherwise conveyed by human beings for
+   communication of information to other human beings.  Computer
+   languages are explicitly excluded.
+
+   HTTP uses language tags within the Accept-Language and
+   Content-Language header fields.  Accept-Language uses the broader
+   language-range production defined in Section 5.3.5, whereas
+   Content-Language uses the language-tag production defined below.
+
+     language-tag = <Language-Tag, see [RFC5646], Section 2.1>
+
+   A language tag is a sequence of one or more case-insensitive subtags,
+   each separated by a hyphen character ("-", %x2D).  In most cases, a
+   language tag consists of a primary language subtag that identifies a
+   broad family of related languages (e.g., "en" = English), which is
+   optionally followed by a series of subtags that refine or narrow that
+   language's range (e.g., "en-CA" = the variety of English as
+   communicated in Canada).  Whitespace is not allowed within a language
+   tag.  Example tags include:
+
+     fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
+
+   See [RFC5646] for further information.
+
+3.1.  Representation Metadata
+
+   Representation header fields provide metadata about the
+   representation.  When a message includes a payload body, the
+   representation header fields describe how to interpret the
+   representation data enclosed in the payload body.  In a response to a
+   HEAD request, the representation header fields describe the
+   representation data that would have been enclosed in the payload body
+   if the same request had been a GET.
+
+   The following header fields convey representation metadata:
+
+   +-------------------+-----------------+
+   | Header Field Name | Defined in...   |
+   +-------------------+-----------------+
+   | Content-Type      | Section 3.1.1.5 |
+   | Content-Encoding  | Section 3.1.2.2 |
+   | Content-Language  | Section 3.1.3.2 |
+   | Content-Location  | Section 3.1.4.2 |
+   +-------------------+-----------------+
+
+3.1.1.  Processing Representation Data
+
+3.1.1.5.  Content-Type
+
+   The "Content-Type" header field indicates the media type of the
+   associated representation: either the representation enclosed in the
+   message payload or the selected representation, as determined by the
+   message semantics.  The indicated media type defines both the data
+   format and how that data is intended to be processed by a recipient,
+   within the scope of the received message semantics, after any content
+   codings indicated by Content-Encoding are decoded.
+
+     Content-Type = media-type
+
+   Media types are defined in Section 3.1.1.1.  An example of the field
+   is
+
+     Content-Type: text/html; charset=ISO-8859-4
+
+   A sender that generates a message containing a payload body SHOULD
+   generate a Content-Type header field in that message unless the
+   intended media type of the enclosed representation is unknown to the
+   sender.  If a Content-Type header field is not present, the recipient
+   MAY either assume a media type of "application/octet-stream"
+   ([RFC2046], Section 4.5.1) or examine the data to determine its type.
+
+   In practice, resource owners do not always properly configure their
+   origin server to provide the correct Content-Type for a given
+   representation, with the result that some clients will examine a
+   payload's content and override the specified type.  Clients that do
+   so risk drawing incorrect conclusions, which might expose additional
+   security risks (e.g., "privilege escalation").  Furthermore, it is
+   impossible to determine the sender's intent by examining the data
+   format: many data formats match multiple media types that differ only
+   in processing semantics.  Implementers are encouraged to provide a
+   means of disabling such "content sniffing" when it is used.
+
+3.1.2.  Encoding for Compression or Integrity
+
+3.1.2.2.  Content-Encoding
+
+   The "Content-Encoding" header field indicates what content codings
+   have been applied to the representation, beyond those inherent in the
+   media type, and thus what decoding mechanisms have to be applied in
+   order to obtain data in the media type referenced by the Content-Type
+   header field.  Content-Encoding is primarily used to allow a
+   representation's data to be compressed without losing the identity of
+   its underlying media type.
+
+     Content-Encoding = 1#content-coding
+
+   An example of its use is
+
+     Content-Encoding: gzip
+
+   If one or more encodings have been applied to a representation, the
+   sender that applied the encodings MUST generate a Content-Encoding
+   header field that lists the content codings in the order in which
+   they were applied.  Additional information about the encoding
+   parameters can be provided by other header fields not defined by this
+   specification.
+
+   Unlike Transfer-Encoding (Section 3.3.1 of [RFC7230]), the codings
+   listed in Content-Encoding are a characteristic of the
+   representation; the representation is defined in terms of the coded
+   form, and all other metadata about the representation is about the
+   coded form unless otherwise noted in the metadata definition.
+   Typically, the representation is only decoded just prior to rendering
+   or analogous usage.
+
+   If the media type includes an inherent encoding, such as a data
+   format that is always compressed, then that encoding would not be
+   restated in Content-Encoding even if it happens to be the same
+   algorithm as one of the content codings.  Such a content coding would
+   only be listed if, for some bizarre reason, it is applied a second
+   time to form the representation.  Likewise, an origin server might
+   choose to publish the same data as multiple representations that
+   differ only in whether the coding is defined as part of Content-Type
+   or Content-Encoding, since some user agents will behave differently
+   in their handling of each response (e.g., open a "Save as ..." dialog
+   instead of automatic decompression and rendering of content).
+
+   An origin server MAY respond with a status code of 415 (Unsupported
+   Media Type) if a representation in the request message has a content
+   coding that is not acceptable.
+
 3.1.3.  Audience Language
 
 3.1.3.2.  Content-Language
@@ -1925,33 +1952,6 @@ X.X.  [Field Names]
 
    Content-Language MAY be applied to any media type -- it is not
    limited to textual documents.
-
-3.1.3.1.  Language Tags
-
-   A language tag, as defined in [RFC5646], identifies a natural
-   language spoken, written, or otherwise conveyed by human beings for
-   communication of information to other human beings.  Computer
-   languages are explicitly excluded.
-
-   HTTP uses language tags within the Accept-Language and
-   Content-Language header fields.  Accept-Language uses the broader
-   language-range production defined in Section 5.3.5, whereas
-   Content-Language uses the language-tag production defined below.
-
-     language-tag = <Language-Tag, see [RFC5646], Section 2.1>
-
-   A language tag is a sequence of one or more case-insensitive subtags,
-   each separated by a hyphen character ("-", %x2D).  In most cases, a
-   language tag consists of a primary language subtag that identifies a
-   broad family of related languages (e.g., "en" = English), which is
-   optionally followed by a series of subtags that refine or narrow that
-   language's range (e.g., "en-CA" = the variety of English as
-   communicated in Canada).  Whitespace is not allowed within a language
-   tag.  Example tags include:
-
-     fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
-
-   See [RFC5646] for further information.
 
 3.1.4.  Identification
 
