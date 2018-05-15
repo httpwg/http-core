@@ -1427,10 +1427,11 @@ Content-Type: text/plain
 <t>
    Historically, HTTP header field values could be extended over multiple
    lines by preceding each extra line with at least one space or horizontal
-   tab (<x:ref>obs-fold</x:ref>). This document assumes that any such
+   tab (<x:ref>obs-fold</x:ref>).
+   [[This document assumes that any such
    <x:ref>obs-fold</x:ref> has been replaced with one or more
    <x:ref>SP</x:ref> octets prior to interpreting the field value,
-   as described in <xref target="line.folding"/>.
+   as described in <xref target="line.folding"/>.]]
 </t>
 <t>
    Historically, HTTP has allowed field content with text in the ISO&nbhy;8859&nbhy;1
@@ -2070,6 +2071,25 @@ Host: www.example.org
    <x:ref>304 (Not Modified)</x:ref> responses to GET (<xref target="GET"/>).
 </t>
 
+<section title="Representation Data" anchor="representation.data">
+  <x:anchor-alias value="representation-data"/>
+<t>
+   The representation data associated with an HTTP message is
+   either provided as the payload body of the message or
+   referred to by the message semantics and the effective request
+   URI.  The representation data is in a format and encoding defined by
+   the representation metadata header fields.
+</t>
+<t>
+   The data type of the representation data is determined via the header fields
+   <x:ref>Content-Type</x:ref> and <x:ref>Content-Encoding</x:ref>.
+   These define a two-layer, ordered encoding model:
+</t>
+<figure><artwork type="example">
+  representation-data := Content-Encoding( Content-Type( bits ) )
+</artwork></figure>
+</section>
+
 <section title="Representation Metadata" anchor="representation.metadata">
   <x:anchor-alias value="representation-header"/>
 <t>
@@ -2093,7 +2113,49 @@ Host: www.example.org
   <c>Content-Location</c> <c><xref target="header.content-location"/></c>
 </texttable>
 
-<section title="Processing Representation Data" anchor="data.type">
+<section title="Content-Type" anchor="header.content-type">
+  <iref primary="true" item="Content-Type header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Type"/>
+<t>
+   The "Content-Type" header field indicates the media type of the
+   associated representation: either the representation enclosed in
+   the message payload or the <x:ref>selected representation</x:ref>, as determined by the
+   message semantics.  The indicated media type defines both the data format
+   and how that data is intended to be processed by a recipient, within the
+   scope of the received message semantics, after any content codings
+   indicated by <x:ref>Content-Encoding</x:ref> are decoded.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Type"/>
+  <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
+</artwork></figure>
+<t>
+   Media types are defined in <xref target="media.type"/>. An example of the
+   field is
+</t>
+<figure><artwork type="example">
+  Content-Type: text/html; charset=ISO-8859-4
+</artwork></figure>
+<t>
+   A sender that generates a message containing a payload body &SHOULD;
+   generate a Content-Type header field in that message unless the intended
+   media type of the enclosed representation is unknown to the sender.
+   If a Content-Type header field is not present, the recipient &MAY; either
+   assume a media type of
+   "application/octet-stream" (<xref target="RFC2046" x:fmt="," x:sec="4.5.1"/>)
+   or examine the data to determine its type.
+</t>
+<t>
+   In practice, resource owners do not always properly configure their origin
+   server to provide the correct Content-Type for a given representation,
+   with the result that some clients will examine a payload's content
+   and override the specified type.
+   Clients that do so risk drawing incorrect conclusions, which might expose
+   additional security risks (e.g., "privilege escalation").  Furthermore,
+   it is impossible to determine the sender's intent by examining the data
+   format: many data formats match multiple media types that differ only in
+   processing semantics.  Implementers are encouraged to provide a means of
+   disabling such "content sniffing" when it is used.
+</t>
 
 <section title="Media Type" anchor="media.type">
   <x:anchor-alias value="media-type"/>
@@ -2224,54 +2286,62 @@ Host: www.example.org
    responses <xref target="status.206"/>.
 </t>
 </section>
+</section>
 
-<section title="Content-Type" anchor="header.content-type">
-  <iref primary="true" item="Content-Type header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Type"/>
+<section title="Content-Encoding" anchor="header.content-encoding">
+  <iref primary="true" item="Content-Encoding header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Encoding"/>
 <t>
-   The "Content-Type" header field indicates the media type of the
-   associated representation: either the representation enclosed in
-   the message payload or the <x:ref>selected representation</x:ref>, as determined by the
-   message semantics.  The indicated media type defines both the data format
-   and how that data is intended to be processed by a recipient, within the
-   scope of the received message semantics, after any content codings
-   indicated by <x:ref>Content-Encoding</x:ref> are decoded.
+   The "Content-Encoding" header field indicates what content codings 
+   have been applied to the representation, beyond those inherent in the media
+   type, and thus what decoding mechanisms have to be applied in order to
+   obtain data in the media type referenced by the <x:ref>Content-Type</x:ref>
+   header field.
+   Content-Encoding is primarily used to allow a representation's data to be
+   compressed without losing the identity of its underlying media type.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Type"/>
-  <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
+  <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
 </artwork></figure>
 <t>
-   Media types are defined in <xref target="media.type"/>. An example of the
-   field is
+   An example of its use is
 </t>
 <figure><artwork type="example">
-  Content-Type: text/html; charset=ISO-8859-4
+  Content-Encoding: gzip
 </artwork></figure>
 <t>
-   A sender that generates a message containing a payload body &SHOULD;
-   generate a Content-Type header field in that message unless the intended
-   media type of the enclosed representation is unknown to the sender.
-   If a Content-Type header field is not present, the recipient &MAY; either
-   assume a media type of
-   "application/octet-stream" (<xref target="RFC2046" x:fmt="," x:sec="4.5.1"/>)
-   or examine the data to determine its type.
+   If one or more encodings have been applied to a representation, the sender
+   that applied the encodings &MUST; generate a Content-Encoding header field
+   that lists the content codings in the order in which they were applied.
+   Additional information about the encoding parameters can be provided
+   by other header fields not defined by this specification.
 </t>
 <t>
-   In practice, resource owners do not always properly configure their origin
-   server to provide the correct Content-Type for a given representation,
-   with the result that some clients will examine a payload's content
-   and override the specified type.
-   Clients that do so risk drawing incorrect conclusions, which might expose
-   additional security risks (e.g., "privilege escalation").  Furthermore,
-   it is impossible to determine the sender's intent by examining the data
-   format: many data formats match multiple media types that differ only in
-   processing semantics.  Implementers are encouraged to provide a means of
-   disabling such "content sniffing" when it is used.
+   Unlike Transfer-Encoding (<xref target="header.transfer-encoding"/>), the codings listed
+   in Content-Encoding are a characteristic of the representation; the
+   representation is defined in terms of the coded form, and all other
+   metadata about the representation is about the coded form unless otherwise
+   noted in the metadata definition. Typically, the representation is only
+   decoded just prior to rendering or analogous usage.
 </t>
-</section>
-</section>
-
-<section title="Encoding for Compression or Integrity" anchor="data.encoding">
+<t>
+   If the media type includes an inherent encoding, such as a data format
+   that is always compressed, then that encoding would not be restated in 
+   Content-Encoding even if it happens to be the same algorithm as one
+   of the content codings.  Such a content coding would only be listed if,
+   for some bizarre reason, it is applied a second time to form the
+   representation.  Likewise, an origin server might choose to publish the
+   same data as multiple representations that differ only in whether
+   the coding is defined as part of <x:ref>Content-Type</x:ref> or
+   Content-Encoding, since some user agents will behave differently in their
+   handling of each response (e.g., open a "Save as ..." dialog instead of
+   automatic decompression and rendering of content).
+</t>
+<t>
+   An origin server &MAY; respond with a status code of
+   <x:ref>415 (Unsupported Media Type)</x:ref> if a representation in the
+   request message has a content coding that is not acceptable.
+</t>
 
 <section title="Content Codings" anchor="content.codings">
   <iref primary="true" item="content coding"/>
@@ -2341,101 +2411,6 @@ Host: www.example.org
 </t>
 </section>
 </section>
-
-<section title="Content-Encoding" anchor="header.content-encoding">
-  <iref primary="true" item="Content-Encoding header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Encoding"/>
-<t>
-   The "Content-Encoding" header field indicates what content codings 
-   have been applied to the representation, beyond those inherent in the media
-   type, and thus what decoding mechanisms have to be applied in order to
-   obtain data in the media type referenced by the <x:ref>Content-Type</x:ref>
-   header field.
-   Content-Encoding is primarily used to allow a representation's data to be
-   compressed without losing the identity of its underlying media type.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
-  <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
-</artwork></figure>
-<t>
-   An example of its use is
-</t>
-<figure><artwork type="example">
-  Content-Encoding: gzip
-</artwork></figure>
-<t>
-   If one or more encodings have been applied to a representation, the sender
-   that applied the encodings &MUST; generate a Content-Encoding header field
-   that lists the content codings in the order in which they were applied.
-   Additional information about the encoding parameters can be provided
-   by other header fields not defined by this specification.
-</t>
-<t>
-   Unlike Transfer-Encoding (<xref target="header.transfer-encoding"/>), the codings listed
-   in Content-Encoding are a characteristic of the representation; the
-   representation is defined in terms of the coded form, and all other
-   metadata about the representation is about the coded form unless otherwise
-   noted in the metadata definition. Typically, the representation is only
-   decoded just prior to rendering or analogous usage.
-</t>
-<t>
-   If the media type includes an inherent encoding, such as a data format
-   that is always compressed, then that encoding would not be restated in 
-   Content-Encoding even if it happens to be the same algorithm as one
-   of the content codings.  Such a content coding would only be listed if,
-   for some bizarre reason, it is applied a second time to form the
-   representation.  Likewise, an origin server might choose to publish the
-   same data as multiple representations that differ only in whether
-   the coding is defined as part of <x:ref>Content-Type</x:ref> or
-   Content-Encoding, since some user agents will behave differently in their
-   handling of each response (e.g., open a "Save as ..." dialog instead of
-   automatic decompression and rendering of content).
-</t>
-<t>
-   An origin server &MAY; respond with a status code of
-   <x:ref>415 (Unsupported Media Type)</x:ref> if a representation in the
-   request message has a content coding that is not acceptable.
-</t>
-</section>
-</section>
-
-<section title="Audience Language" anchor="audience.language">
-
-<section title="Language Tags" anchor="language.tags">
-  <x:anchor-alias value="language-tag"/>
-<t>
-   A language tag, as defined in <xref target="RFC5646"/>, identifies a
-   natural language spoken, written, or otherwise conveyed by human beings for
-   communication of information to other human beings. Computer languages are
-   explicitly excluded.
-</t>
-<t>
-   HTTP uses language tags within the <x:ref>Accept-Language</x:ref> and
-   <x:ref>Content-Language</x:ref> header fields.
-   <x:ref>Accept-Language</x:ref> uses the broader language-range production
-   defined in <xref target="header.accept-language"/>, whereas
-   <x:ref>Content-Language</x:ref> uses the language-tag production defined
-   below.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="language-tag"/>
-  <x:ref>language-tag</x:ref> = &lt;Language-Tag, see <xref target="RFC5646" x:sec="2.1"/>&gt;
-</artwork></figure>
-<t>
-   A language tag is a sequence of one or more case-insensitive subtags, each
-   separated by a hyphen character ("-", %x2D).  In most cases, a language tag
-   consists of a primary language subtag that identifies a broad family of
-   related languages (e.g., "en" = English), which is optionally followed by a
-   series of subtags that refine or narrow that language's range (e.g.,
-   "en-CA" = the variety of English as communicated in Canada).
-   Whitespace is not allowed within a language tag.
-   Example tags include:
-</t>
-<figure><artwork type="example">
-  fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
-</artwork></figure>
-<t>
-   See <xref target="RFC5646"/> for further information. 
-</t>
 </section>
 
 <section title="Content-Language" anchor="header.content-language">
@@ -2486,58 +2461,43 @@ Host: www.example.org
    Content-Language &MAY; be applied to any media type &mdash; it is not
    limited to textual documents.
 </t>
-</section>
-</section>
 
-<section title="Identification" anchor="identification">
-
-<section title="Identifying a Representation" anchor="identifying.payload">
+<section title="Language Tags" anchor="language.tags">
+  <x:anchor-alias value="language-tag"/>
 <t>
-   When a complete or partial representation is transferred in a message
-   payload, it is often desirable for the sender to supply, or the recipient
-   to determine, an identifier for a resource corresponding to that
-   representation.
+   A language tag, as defined in <xref target="RFC5646"/>, identifies a
+   natural language spoken, written, or otherwise conveyed by human beings for
+   communication of information to other human beings. Computer languages are
+   explicitly excluded.
 </t>
 <t>
-   For a request message:
-   <list style="symbols">
-      <t>If the request has a <x:ref>Content-Location</x:ref> header field,
-         then the sender asserts that the payload is a representation of the
-         resource identified by the Content-Location field-value. However,
-         such an assertion cannot be trusted unless it can be verified by
-         other means (not defined by this specification). The information
-         might still be useful for revision history links.</t>
-      <t>Otherwise, the payload is unidentified.</t>
-   </list>
+   HTTP uses language tags within the <x:ref>Accept-Language</x:ref> and
+   <x:ref>Content-Language</x:ref> header fields.
+   <x:ref>Accept-Language</x:ref> uses the broader language-range production
+   defined in <xref target="header.accept-language"/>, whereas
+   <x:ref>Content-Language</x:ref> uses the language-tag production defined
+   below.
 </t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="language-tag"/>
+  <x:ref>language-tag</x:ref> = &lt;Language-Tag, see <xref target="RFC5646" x:sec="2.1"/>&gt;
+</artwork></figure>
 <t>
-   For a response message, the following rules are applied in order until a
-   match is found:
-   <list style="numbers">
-      <t>If the request method is GET or HEAD and the response status code is
-         <x:ref>200 (OK)</x:ref>, 
-         <x:ref>204 (No Content)</x:ref>,
-         <x:ref>206 (Partial Content)</x:ref>, or
-         <x:ref>304 (Not Modified)</x:ref>,
-         the payload is a representation of the resource identified by the
-         effective request URI (<xref target="effective.request.uri"/>).</t>
-      <t>If the request method is GET or HEAD and the response status code is
-         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
-         a potentially modified or enhanced representation of the
-         <x:ref>target resource</x:ref> as provided by an intermediary.</t>
-      <t>If the response has a <x:ref>Content-Location</x:ref> header field
-         and its field-value is a reference to the same URI as the effective
-         request URI, the payload is a representation of the resource
-         identified by the effective request URI.</t>
-      <t>If the response has a <x:ref>Content-Location</x:ref> header field
-         and its field-value is a reference to a URI different from the
-         effective request URI, then the sender asserts that the payload is a
-         representation of the resource identified by the Content-Location
-         field-value. However, such an assertion cannot be trusted unless
-         it can be verified by other means (not defined by this specification).</t>
-      <t>Otherwise, the payload is unidentified.</t>
-   </list>
+   A language tag is a sequence of one or more case-insensitive subtags, each
+   separated by a hyphen character ("-", %x2D).  In most cases, a language tag
+   consists of a primary language subtag that identifies a broad family of
+   related languages (e.g., "en" = English), which is optionally followed by a
+   series of subtags that refine or narrow that language's range (e.g.,
+   "en-CA" = the variety of English as communicated in Canada).
+   Whitespace is not allowed within a language tag.
+   Example tags include:
 </t>
+<figure><artwork type="example">
+  fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
+</artwork></figure>
+<t>
+   See <xref target="RFC5646"/> for further information. 
+</t>
+</section>
 </section>
 
 <section title="Content-Location" anchor="header.content-location">
@@ -2633,26 +2593,6 @@ Host: www.example.org
 </t>
 </section>
 </section>
-</section>
-
-<section title="Representation Data" anchor="representation.data">
-  <x:anchor-alias value="representation-data"/>
-<t>
-   The representation data associated with an HTTP message is
-   either provided as the payload body of the message or
-   referred to by the message semantics and the effective request
-   URI.  The representation data is in a format and encoding defined by
-   the representation metadata header fields.
-</t>
-<t>
-   The data type of the representation data is determined via the header fields
-   <x:ref>Content-Type</x:ref> and <x:ref>Content-Encoding</x:ref>.
-   These define a two-layer, ordered encoding model:
-</t>
-<figure><artwork type="example">
-  representation-data := Content-Encoding( Content-Type( bits ) )
-</artwork></figure>
-</section>
 
 <section title="Payload Semantics" anchor="payload">
 <iref item="payload"/>
@@ -2663,6 +2603,23 @@ Host: www.example.org
    HEAD) or only some part(s) of the representation data
    (e.g., the <x:ref>206 (Partial Content)</x:ref> status code).
 </t>
+<t>
+   Header fields that specifically describe the payload, rather than the
+   associated representation, are referred to as "payload header fields".
+   Payload header fields are defined in other parts of this specification,
+   due to their impact on message parsing.
+</t>
+<texttable align="left">
+  <ttcol>Header Field Name</ttcol>
+  <ttcol>Defined in...</ttcol>
+
+  <c>Content-Length</c> <c><xref target="header.content-length"/></c>
+  <c>Content-Range</c> <c><xref target="header.content-range"/></c>
+  <c>Trailer</c> <c><xref target="header.trailer"/></c>
+  <c>Transfer-Encoding</c> <c><xref target="header.transfer-encoding"/></c>
+</texttable>
+
+<section title="Purpose" anchor="payload.purpose">
 <t>
    The purpose of a payload in a request is defined by the method semantics.
    For example, a representation in the payload of a PUT request
@@ -2685,21 +2642,56 @@ Host: www.example.org
    a payload that represents the error condition, such that it describes the
    error state and what next steps are suggested for resolving it.
 </t>
-<t>
-   Header fields that specifically describe the payload, rather than the
-   associated representation, are referred to as "payload header fields".
-   Payload header fields are defined in other parts of this specification,
-   due to their impact on message parsing.
-</t>
-<texttable align="left">
-  <ttcol>Header Field Name</ttcol>
-  <ttcol>Defined in...</ttcol>
+</section>
 
-  <c>Content-Length</c> <c><xref target="header.content-length"/></c>
-  <c>Content-Range</c> <c><xref target="header.content-range"/></c>
-  <c>Trailer</c> <c><xref target="header.trailer"/></c>
-  <c>Transfer-Encoding</c> <c><xref target="header.transfer-encoding"/></c>
-</texttable>
+<section title="Identification" anchor="identifying.payload">
+<t>
+   When a complete or partial representation is transferred in a message
+   payload, it is often desirable for the sender to supply, or the recipient
+   to determine, an identifier for a resource corresponding to that
+   representation.
+</t>
+<t>
+   For a request message:
+   <list style="symbols">
+      <t>If the request has a <x:ref>Content-Location</x:ref> header field,
+         then the sender asserts that the payload is a representation of the
+         resource identified by the Content-Location field-value. However,
+         such an assertion cannot be trusted unless it can be verified by
+         other means (not defined by this specification). The information
+         might still be useful for revision history links.</t>
+      <t>Otherwise, the payload is unidentified.</t>
+   </list>
+</t>
+<t>
+   For a response message, the following rules are applied in order until a
+   match is found:
+   <list style="numbers">
+      <t>If the request method is GET or HEAD and the response status code is
+         <x:ref>200 (OK)</x:ref>, 
+         <x:ref>204 (No Content)</x:ref>,
+         <x:ref>206 (Partial Content)</x:ref>, or
+         <x:ref>304 (Not Modified)</x:ref>,
+         the payload is a representation of the resource identified by the
+         effective request URI (<xref target="effective.request.uri"/>).</t>
+      <t>If the request method is GET or HEAD and the response status code is
+         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
+         a potentially modified or enhanced representation of the
+         <x:ref>target resource</x:ref> as provided by an intermediary.</t>
+      <t>If the response has a <x:ref>Content-Location</x:ref> header field
+         and its field-value is a reference to the same URI as the effective
+         request URI, the payload is a representation of the resource
+         identified by the effective request URI.</t>
+      <t>If the response has a <x:ref>Content-Location</x:ref> header field
+         and its field-value is a reference to a URI different from the
+         effective request URI, then the sender asserts that the payload is a
+         representation of the resource identified by the Content-Location
+         field-value. However, such an assertion cannot be trusted unless
+         it can be verified by other means (not defined by this specification).</t>
+      <t>Otherwise, the payload is unidentified.</t>
+   </list>
+</t>
+</section>
 
 <section title="Content-Range" anchor="header.content-range">
   <iref primary="true" item="Content-Range header field" x:for-anchor=""/>
@@ -9104,7 +9096,7 @@ Content-Encoding: gzip
 <section title="Content Coding Registry" anchor="content.coding.registry">
 <t>
    The "HTTP Content Coding Registry" defines the namespace for content
-   coding names (<xref target="data.encoding"/>). It is maintained
+   coding names (<xref target="content.codings"/>). It is maintained
    at <eref target="http://www.iana.org/assignments/http-parameters"/>.
 </t>
 
@@ -9121,7 +9113,7 @@ Content-Encoding: gzip
    Names of content codings &MUST-NOT; overlap with names of transfer codings
    (<xref target="transfer.codings"/>), unless the encoding transformation is identical (as
    is the case for the compression codings defined in
-   <xref target="data.encoding"/>).
+   <xref target="content.codings"/>).
 </t>
 <t>
    Values to be added to this namespace require IETF Review

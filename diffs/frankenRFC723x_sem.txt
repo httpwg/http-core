@@ -932,7 +932,7 @@ X. [Conformance]
 
 X.  [Message Abstraction]
 
-X.X.  [Message Fields]
+X.X.  [Field Names]
 
    Header fields are key:value pairs that can be used to communicate
    data about the message, its payload, the target resource, or the
@@ -1610,6 +1610,20 @@ X.X.  [Message Fields]
    constructing the payload for 200 (OK) and 304 (Not Modified)
    responses to GET (Section 4.3.1).
 
+3.2.  Representation Data
+
+   The representation data associated with an HTTP message is either
+   provided as the payload body of the message or referred to by the
+   message semantics and the effective request URI.  The representation
+   data is in a format and encoding defined by the representation
+   metadata header fields.
+
+   The data type of the representation data is determined via the header
+   fields Content-Type and Content-Encoding.  These define a two-layer,
+   ordered encoding model:
+
+     representation-data := Content-Encoding( Content-Type( bits ) )
+
 3.1.  Representation Metadata
 
    Representation header fields provide metadata about the
@@ -1632,6 +1646,41 @@ X.X.  [Message Fields]
    +-------------------+-----------------+
 
 3.1.1.  Processing Representation Data
+
+3.1.1.5.  Content-Type
+
+   The "Content-Type" header field indicates the media type of the
+   associated representation: either the representation enclosed in the
+   message payload or the selected representation, as determined by the
+   message semantics.  The indicated media type defines both the data
+   format and how that data is intended to be processed by a recipient,
+   within the scope of the received message semantics, after any content
+   codings indicated by Content-Encoding are decoded.
+
+     Content-Type = media-type
+
+   Media types are defined in Section 3.1.1.1.  An example of the field
+   is
+
+     Content-Type: text/html; charset=ISO-8859-4
+
+   A sender that generates a message containing a payload body SHOULD
+   generate a Content-Type header field in that message unless the
+   intended media type of the enclosed representation is unknown to the
+   sender.  If a Content-Type header field is not present, the recipient
+   MAY either assume a media type of "application/octet-stream"
+   ([RFC2046], Section 4.5.1) or examine the data to determine its type.
+
+   In practice, resource owners do not always properly configure their
+   origin server to provide the correct Content-Type for a given
+   representation, with the result that some clients will examine a
+   payload's content and override the specified type.  Clients that do
+   so risk drawing incorrect conclusions, which might expose additional
+   security risks (e.g., "privilege escalation").  Furthermore, it is
+   impossible to determine the sender's intent by examining the data
+   format: many data formats match multiple media types that differ only
+   in processing semantics.  Implementers are encouraged to provide a
+   means of disabling such "content sniffing" when it is used.
 
 3.1.1.1.  Media Type
 
@@ -1733,59 +1782,7 @@ X.X.  [Message Fields]
    byteranges" type is defined by this specification for use in some 206
    (Partial Content) responses [RFC7233].
 
-3.1.1.5.  Content-Type
-
-   The "Content-Type" header field indicates the media type of the
-   associated representation: either the representation enclosed in the
-   message payload or the selected representation, as determined by the
-   message semantics.  The indicated media type defines both the data
-   format and how that data is intended to be processed by a recipient,
-   within the scope of the received message semantics, after any content
-   codings indicated by Content-Encoding are decoded.
-
-     Content-Type = media-type
-
-   Media types are defined in Section 3.1.1.1.  An example of the field
-   is
-
-     Content-Type: text/html; charset=ISO-8859-4
-
-   A sender that generates a message containing a payload body SHOULD
-   generate a Content-Type header field in that message unless the
-   intended media type of the enclosed representation is unknown to the
-   sender.  If a Content-Type header field is not present, the recipient
-   MAY either assume a media type of "application/octet-stream"
-   ([RFC2046], Section 4.5.1) or examine the data to determine its type.
-
-   In practice, resource owners do not always properly configure their
-   origin server to provide the correct Content-Type for a given
-   representation, with the result that some clients will examine a
-   payload's content and override the specified type.  Clients that do
-   so risk drawing incorrect conclusions, which might expose additional
-   security risks (e.g., "privilege escalation").  Furthermore, it is
-   impossible to determine the sender's intent by examining the data
-   format: many data formats match multiple media types that differ only
-   in processing semantics.  Implementers are encouraged to provide a
-   means of disabling such "content sniffing" when it is used.
-
 3.1.2.  Encoding for Compression or Integrity
-
-3.1.2.1.  Content Codings
-
-   Content coding values indicate an encoding transformation that has
-   been or can be applied to a representation.  Content codings are
-   primarily used to allow a representation to be compressed or
-   otherwise usefully transformed without losing the identity of its
-   underlying media type and without loss of information.  Frequently,
-   the representation is stored in coded form, transmitted directly, and
-   only decoded by the final recipient.
-
-     content-coding   = token
-
-   All content-coding values are case-insensitive and ought to be
-   registered within the "HTTP Content Coding Registry", as defined in
-   Section 8.4.  They are used in the Accept-Encoding (Section 5.3.4)
-   and Content-Encoding (Section 3.1.2.2) header fields.
 
 3.1.2.2.  Content-Encoding
 
@@ -1834,34 +1831,61 @@ X.X.  [Message Fields]
    Media Type) if a representation in the request message has a content
    coding that is not acceptable.
 
+3.1.2.1.  Content Codings
+
+   Content coding values indicate an encoding transformation that has
+   been or can be applied to a representation.  Content codings are
+   primarily used to allow a representation to be compressed or
+   otherwise usefully transformed without losing the identity of its
+   underlying media type and without loss of information.  Frequently,
+   the representation is stored in coded form, transmitted directly, and
+   only decoded by the final recipient.
+
+     content-coding   = token
+
+   All content-coding values are case-insensitive and ought to be
+   registered within the "HTTP Content Coding Registry", as defined in
+   Section 8.4.  They are used in the Accept-Encoding (Section 5.3.4)
+   and Content-Encoding (Section 3.1.2.2) header fields.
+
+   The following content-coding values are defined by this
+   specification:
+
+      compress (and x-compress): See Section 4.2.1 of [RFC7230].
+
+      deflate: See Section 4.2.2 of [RFC7230].
+
+      gzip (and x-gzip): See Section 4.2.3 of [RFC7230].
+
+4.2.  Compression Codings
+
+   The codings defined below can be used to compress the payload of a
+   message.
+
+4.2.1.  Compress Coding
+
+   The "compress" coding is an adaptive Lempel-Ziv-Welch (LZW) coding
+   [Welch] that is commonly produced by the UNIX file compression
+   program "compress".  A recipient SHOULD consider "x-compress" to be
+   equivalent to "compress".
+
+4.2.2.  Deflate Coding
+
+   The "deflate" coding is a "zlib" data format [RFC1950] containing a
+   "deflate" compressed data stream [RFC1951] that uses a combination of
+   the Lempel-Ziv (LZ77) compression algorithm and Huffman coding.
+
+      Note: Some non-conformant implementations send the "deflate"
+      compressed data without the zlib wrapper.
+
+4.2.3.  Gzip Coding
+
+   The "gzip" coding is an LZ77 coding with a 32-bit Cyclic Redundancy
+   Check (CRC) that is commonly produced by the gzip file compression
+   program [RFC1952].  A recipient SHOULD consider "x-gzip" to be
+   equivalent to "gzip".
+
 3.1.3.  Audience Language
-
-3.1.3.1.  Language Tags
-
-   A language tag, as defined in [RFC5646], identifies a natural
-   language spoken, written, or otherwise conveyed by human beings for
-   communication of information to other human beings.  Computer
-   languages are explicitly excluded.
-
-   HTTP uses language tags within the Accept-Language and
-   Content-Language header fields.  Accept-Language uses the broader
-   language-range production defined in Section 5.3.5, whereas
-   Content-Language uses the language-tag production defined below.
-
-     language-tag = <Language-Tag, see [RFC5646], Section 2.1>
-
-   A language tag is a sequence of one or more case-insensitive subtags,
-   each separated by a hyphen character ("-", %x2D).  In most cases, a
-   language tag consists of a primary language subtag that identifies a
-   broad family of related languages (e.g., "en" = English), which is
-   optionally followed by a series of subtags that refine or narrow that
-   language's range (e.g., "en-CA" = the variety of English as
-   communicated in Canada).  Whitespace is not allowed within a language
-   tag.  Example tags include:
-
-     fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
-
-   See [RFC5646] for further information.
 
 3.1.3.2.  Content-Language
 
@@ -1902,54 +1926,34 @@ X.X.  [Message Fields]
    Content-Language MAY be applied to any media type -- it is not
    limited to textual documents.
 
+3.1.3.1.  Language Tags
+
+   A language tag, as defined in [RFC5646], identifies a natural
+   language spoken, written, or otherwise conveyed by human beings for
+   communication of information to other human beings.  Computer
+   languages are explicitly excluded.
+
+   HTTP uses language tags within the Accept-Language and
+   Content-Language header fields.  Accept-Language uses the broader
+   language-range production defined in Section 5.3.5, whereas
+   Content-Language uses the language-tag production defined below.
+
+     language-tag = <Language-Tag, see [RFC5646], Section 2.1>
+
+   A language tag is a sequence of one or more case-insensitive subtags,
+   each separated by a hyphen character ("-", %x2D).  In most cases, a
+   language tag consists of a primary language subtag that identifies a
+   broad family of related languages (e.g., "en" = English), which is
+   optionally followed by a series of subtags that refine or narrow that
+   language's range (e.g., "en-CA" = the variety of English as
+   communicated in Canada).  Whitespace is not allowed within a language
+   tag.  Example tags include:
+
+     fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
+
+   See [RFC5646] for further information.
+
 3.1.4.  Identification
-
-3.1.4.1.  Identifying a Representation
-
-   When a complete or partial representation is transferred in a message
-   payload, it is often desirable for the sender to supply, or the
-   recipient to determine, an identifier for a resource corresponding to
-   that representation.
-
-   For a request message:
-
-   o  If the request has a Content-Location header field, then the
-      sender asserts that the payload is a representation of the
-      resource identified by the Content-Location field-value.  However,
-      such an assertion cannot be trusted unless it can be verified by
-      other means (not defined by this specification).  The information
-      might still be useful for revision history links.
-
-   o  Otherwise, the payload is unidentified.
-
-   For a response message, the following rules are applied in order
-   until a match is found:
-
-   1.  If the request method is GET or HEAD and the response status code
-       is 200 (OK), 204 (No Content), 206 (Partial Content), or 304 (Not
-       Modified), the payload is a representation of the resource
-       identified by the effective request URI (Section 5.5 of
-       [RFC7230]).
-
-   2.  If the request method is GET or HEAD and the response status code
-       is 203 (Non-Authoritative Information), the payload is a
-       potentially modified or enhanced representation of the target
-       resource as provided by an intermediary.
-
-   3.  If the response has a Content-Location header field and its
-       field-value is a reference to the same URI as the effective
-       request URI, the payload is a representation of the resource
-       identified by the effective request URI.
-
-   4.  If the response has a Content-Location header field and its
-       field-value is a reference to a URI different from the effective
-       request URI, then the sender asserts that the payload is a
-       representation of the resource identified by the Content-Location
-       field-value.  However, such an assertion cannot be trusted unless
-       it can be verified by other means (not defined by this
-       specification).
-
-   5.  Otherwise, the payload is unidentified.
 
 3.1.4.2.  Content-Location
 
@@ -2035,20 +2039,6 @@ X.X.  [Message Fields]
    wanted the latter semantics, it would have applied the PUT directly
    to the Content-Location URI.
 
-3.2.  Representation Data
-
-   The representation data associated with an HTTP message is either
-   provided as the payload body of the message or referred to by the
-   message semantics and the effective request URI.  The representation
-   data is in a format and encoding defined by the representation
-   metadata header fields.
-
-   The data type of the representation data is determined via the header
-   fields Content-Type and Content-Encoding.  These define a two-layer,
-   ordered encoding model:
-
-     representation-data := Content-Encoding( Content-Type( bits ) )
-
 3.3.  Payload Semantics
 
    Some HTTP messages transfer a complete or partial representation as
@@ -2056,6 +2046,22 @@ X.X.  [Message Fields]
    the associated representation's header fields (e.g., responses to
    HEAD) or only some part(s) of the representation data (e.g., the 206
    (Partial Content) status code).
+
+   Header fields that specifically describe the payload, rather than the
+   associated representation, are referred to as "payload header
+   fields".  Payload header fields are defined in other parts of this
+   specification, due to their impact on message parsing.
+
+   +-------------------+----------------------------+
+   | Header Field Name | Defined in...              |
+   +-------------------+----------------------------+
+   | Content-Length    | Section 3.3.2 of [RFC7230] |
+   | Content-Range     | Section 4.2 of [RFC7233]   |
+   | Trailer           | Section 4.4 of [RFC7230]   |
+   | Transfer-Encoding | Section 3.3.1 of [RFC7230] |
+   +-------------------+----------------------------+
+
+X.X.X.  [Purpose]
 
    The purpose of a payload in a request is defined by the method
    semantics.  For example, a representation in the payload of a PUT
@@ -2076,19 +2082,52 @@ X.X.  [Message Fields]
    that it describes the error state and what next steps are suggested
    for resolving it.
 
-   Header fields that specifically describe the payload, rather than the
-   associated representation, are referred to as "payload header
-   fields".  Payload header fields are defined in other parts of this
-   specification, due to their impact on message parsing.
+3.1.4.1.  Identifying a Representation
 
-   +-------------------+----------------------------+
-   | Header Field Name | Defined in...              |
-   +-------------------+----------------------------+
-   | Content-Length    | Section 3.3.2 of [RFC7230] |
-   | Content-Range     | Section 4.2 of [RFC7233]   |
-   | Trailer           | Section 4.4 of [RFC7230]   |
-   | Transfer-Encoding | Section 3.3.1 of [RFC7230] |
-   +-------------------+----------------------------+
+   When a complete or partial representation is transferred in a message
+   payload, it is often desirable for the sender to supply, or the
+   recipient to determine, an identifier for a resource corresponding to
+   that representation.
+
+   For a request message:
+
+   o  If the request has a Content-Location header field, then the
+      sender asserts that the payload is a representation of the
+      resource identified by the Content-Location field-value.  However,
+      such an assertion cannot be trusted unless it can be verified by
+      other means (not defined by this specification).  The information
+      might still be useful for revision history links.
+
+   o  Otherwise, the payload is unidentified.
+
+   For a response message, the following rules are applied in order
+   until a match is found:
+
+   1.  If the request method is GET or HEAD and the response status code
+       is 200 (OK), 204 (No Content), 206 (Partial Content), or 304 (Not
+       Modified), the payload is a representation of the resource
+       identified by the effective request URI (Section 5.5 of
+       [RFC7230]).
+
+   2.  If the request method is GET or HEAD and the response status code
+       is 203 (Non-Authoritative Information), the payload is a
+       potentially modified or enhanced representation of the target
+       resource as provided by an intermediary.
+
+   3.  If the response has a Content-Location header field and its
+       field-value is a reference to the same URI as the effective
+       request URI, the payload is a representation of the resource
+       identified by the effective request URI.
+
+   4.  If the response has a Content-Location header field and its
+       field-value is a reference to a URI different from the effective
+       request URI, then the sender asserts that the payload is a
+       representation of the resource identified by the Content-Location
+       field-value.  However, such an assertion cannot be trusted unless
+       it can be verified by other means (not defined by this
+       specification).
+
+   5.  Otherwise, the payload is unidentified.
 
 4.2.  Content-Range
 
