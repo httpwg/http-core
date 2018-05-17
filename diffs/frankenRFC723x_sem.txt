@@ -4244,18 +4244,6 @@ X.X. [Method Extensibility]
    authentication, via an extensible set of challenge-response
    authentication schemes, which can be used by a server to challenge a
    client request and by a client to provide authentication information.
-   This document defines HTTP/1.1 authentication in terms of the
-   architecture defined in "Hypertext Transfer Protocol (HTTP/1.1):
-   Message Syntax and Routing" [RFC7230], including the general
-   framework previously described in "HTTP Authentication: Basic and
-   Digest Access Authentication" [RFC2617] and the related fields and
-   status codes previously defined in "Hypertext Transfer Protocol --
-   HTTP/1.1" [RFC2616].
-
-   The IANA Authentication Scheme Registry (Section 5.1) lists
-   registered authentication schemes and their corresponding
-   specifications, including the "basic" and "digest" authentication
-   schemes previously defined by RFC 2617.
 
    Two header fields are used for carrying authentication credentials,
    as defined in [RFC7235].  Note that various custom mechanisms for
@@ -4430,6 +4418,103 @@ X.X. [Method Extensibility]
    the credentials from the client request to the next proxy if that is
    the mechanism by which the proxies cooperatively authenticate a given
    request.
+
+X.X. [Authentication Scheme Extensibility]
+
+   This document defines HTTP/1.1 authentication in terms of the
+   architecture defined in "Hypertext Transfer Protocol (HTTP/1.1):
+   Message Syntax and Routing" [RFC7230], including the general
+   framework previously described in "HTTP Authentication: Basic and
+   Digest Access Authentication" [RFC2617] and the related fields and
+   status codes previously defined in "Hypertext Transfer Protocol --
+   HTTP/1.1" [RFC2616].
+
+   The IANA Authentication Scheme Registry (Section 5.1) lists
+   registered authentication schemes and their corresponding
+   specifications, including the "basic" and "digest" authentication
+   schemes previously defined by RFC 2617.
+
+5.1.  Authentication Scheme Registry
+
+   The "Hypertext Transfer Protocol (HTTP) Authentication Scheme
+   Registry" defines the namespace for the authentication schemes in
+   challenges and credentials.  It has been created and is now
+   maintained at <http://www.iana.org/assignments/http-authschemes>.
+
+5.1.1.  Procedure
+
+   Registrations MUST include the following fields:
+
+   o  Authentication Scheme Name
+
+   o  Pointer to specification text
+
+   o  Notes (optional)
+
+   Values to be added to this namespace require IETF Review (see
+   [RFC5226], Section 4.1).
+
+5.1.2.  Considerations for New Authentication Schemes
+
+   There are certain aspects of the HTTP Authentication Framework that
+   put constraints on how new authentication schemes can work:
+
+   o  HTTP authentication is presumed to be stateless: all of the
+      information necessary to authenticate a request MUST be provided
+      in the request, rather than be dependent on the server remembering
+      prior requests.  Authentication based on, or bound to, the
+      underlying connection is outside the scope of this specification
+      and inherently flawed unless steps are taken to ensure that the
+      connection cannot be used by any party other than the
+      authenticated user (see Section 2.3 of [RFC7230]).
+
+   o  The authentication parameter "realm" is reserved for defining
+      protection spaces as described in Section 2.2.  New schemes MUST
+      NOT use it in a way incompatible with that definition.
+
+   o  The "token68" notation was introduced for compatibility with
+      existing authentication schemes and can only be used once per
+      challenge or credential.  Thus, new schemes ought to use the
+      auth-param syntax instead, because otherwise future extensions
+      will be impossible.
+
+   o  The parsing of challenges and credentials is defined by this
+      specification and cannot be modified by new authentication
+      schemes.  When the auth-param syntax is used, all parameters ought
+      to support both token and quoted-string syntax, and syntactical
+      constraints ought to be defined on the field value after parsing
+      (i.e., quoted-string processing).  This is necessary so that
+      recipients can use a generic parser that applies to all
+      authentication schemes.
+
+      Note: The fact that the value syntax for the "realm" parameter is
+      restricted to quoted-string was a bad design choice not to be
+      repeated for new parameters.
+
+   o  Definitions of new schemes ought to define the treatment of
+      unknown extension parameters.  In general, a "must-ignore" rule is
+      preferable to a "must-understand" rule, because otherwise it will
+      be hard to introduce new parameters in the presence of legacy
+      recipients.  Furthermore, it's good to describe the policy for
+      defining new parameters (such as "update the specification" or
+      "use this registry").
+
+   o  Authentication schemes need to document whether they are usable in
+      origin-server authentication (i.e., using WWW-Authenticate),
+      and/or proxy authentication (i.e., using Proxy-Authenticate).
+
+   o  The credentials carried in an Authorization header field are
+      specific to the user agent and, therefore, have the same effect on
+      HTTP caches as the "private" Cache-Control response directive
+      (Section 5.2.2.6 of [RFC7234]), within the scope of the request in
+      which they appear.
+
+      Therefore, new authentication schemes that choose not to carry
+      credentials in the Authorization header field (e.g., using a newly
+      defined header field) will need to explicitly disallow caching, by
+      mandating the use of either Cache-Control request directives
+      (e.g., "no-store", Section 5.2.1.5 of [RFC7234]) or response
+      directives (e.g., "private").
 
 5.5.  Request Context
 
@@ -7097,81 +7182,6 @@ Appendix A.  Internet Media Type multipart/byteranges
    Registry" defines the namespace for the authentication schemes in
    challenges and credentials.  It has been created and is now
    maintained at <http://www.iana.org/assignments/http-authschemes>.
-
-5.1.1.  Procedure
-
-   Registrations MUST include the following fields:
-
-   o  Authentication Scheme Name
-
-   o  Pointer to specification text
-
-   o  Notes (optional)
-
-   Values to be added to this namespace require IETF Review (see
-   [RFC5226], Section 4.1).
-
-5.1.2.  Considerations for New Authentication Schemes
-
-   There are certain aspects of the HTTP Authentication Framework that
-   put constraints on how new authentication schemes can work:
-
-   o  HTTP authentication is presumed to be stateless: all of the
-      information necessary to authenticate a request MUST be provided
-      in the request, rather than be dependent on the server remembering
-      prior requests.  Authentication based on, or bound to, the
-      underlying connection is outside the scope of this specification
-      and inherently flawed unless steps are taken to ensure that the
-      connection cannot be used by any party other than the
-      authenticated user (see Section 2.3 of [RFC7230]).
-
-   o  The authentication parameter "realm" is reserved for defining
-      protection spaces as described in Section 2.2.  New schemes MUST
-      NOT use it in a way incompatible with that definition.
-
-   o  The "token68" notation was introduced for compatibility with
-      existing authentication schemes and can only be used once per
-      challenge or credential.  Thus, new schemes ought to use the
-      auth-param syntax instead, because otherwise future extensions
-      will be impossible.
-
-   o  The parsing of challenges and credentials is defined by this
-      specification and cannot be modified by new authentication
-      schemes.  When the auth-param syntax is used, all parameters ought
-      to support both token and quoted-string syntax, and syntactical
-      constraints ought to be defined on the field value after parsing
-      (i.e., quoted-string processing).  This is necessary so that
-      recipients can use a generic parser that applies to all
-      authentication schemes.
-
-      Note: The fact that the value syntax for the "realm" parameter is
-      restricted to quoted-string was a bad design choice not to be
-      repeated for new parameters.
-
-   o  Definitions of new schemes ought to define the treatment of
-      unknown extension parameters.  In general, a "must-ignore" rule is
-      preferable to a "must-understand" rule, because otherwise it will
-      be hard to introduce new parameters in the presence of legacy
-      recipients.  Furthermore, it's good to describe the policy for
-      defining new parameters (such as "update the specification" or
-      "use this registry").
-
-   o  Authentication schemes need to document whether they are usable in
-      origin-server authentication (i.e., using WWW-Authenticate),
-      and/or proxy authentication (i.e., using Proxy-Authenticate).
-
-   o  The credentials carried in an Authorization header field are
-      specific to the user agent and, therefore, have the same effect on
-      HTTP caches as the "private" Cache-Control response directive
-      (Section 5.2.2.6 of [RFC7234]), within the scope of the request in
-      which they appear.
-
-      Therefore, new authentication schemes that choose not to carry
-      credentials in the Authorization header field (e.g., using a newly
-      defined header field) will need to explicitly disallow caching, by
-      mandating the use of either Cache-Control request directives
-      (e.g., "no-store", Section 5.2.1.5 of [RFC7234]) or response
-      directives (e.g., "private").
 
 8.4.  Content Coding Registry
 

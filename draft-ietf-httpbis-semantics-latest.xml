@@ -5363,11 +5363,6 @@ Expect: 100-continue
    provide authentication information.
 </t>
 <t>
-   The IANA Authentication Scheme Registry
-   (<xref target="authentication.scheme.registry"/>) lists registered
-   authentication schemes and their corresponding specifications.
-</t>
-<t>
    Two header fields are used for carrying authentication credentials.
    Note that various custom mechanisms for
    user authentication use the Cookie header field for this purpose, as
@@ -5588,6 +5583,122 @@ Expect: 100-continue
    the mechanism by which the proxies cooperatively authenticate a given
    request.
 </t>
+</section>
+
+<section title="Authentication Scheme Extensibility" anchor="auth.scheme.extensibility">
+<t>
+   Aside from the general framework, this document does not specify any
+   authentication schemes. New and existing authentication schemes are
+   specified independently and ought to be registered within the
+   "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry".
+   For example, the "basic" and "digest" authentication schemes are defined by
+   <xref target="RFC7617" x:fmt="none">RFC 7617</xref> and
+   <xref target="RFC7616" x:fmt="none">RFC 7616</xref>, respectively.
+</t>
+
+<section title="Authentication Scheme Registry" anchor="auth.scheme.registry">
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry"
+   defines the namespace for the authentication schemes in challenges and
+   credentials. It is maintained
+   at <eref target="http://www.iana.org/assignments/http-authschemes"/>.
+</t>
+<t>
+  Registrations &MUST; include the following fields:
+  <list style="symbols">
+    <t>Authentication Scheme Name</t>
+    <t>Pointer to specification text</t>
+    <t>Notes (optional)</t>
+  </list>
+</t>
+<t>
+  Values to be added to this namespace require IETF Review
+  (see <xref target="RFC5226" x:fmt="," x:sec="4.1"/>).
+</t>
+</section>
+
+<section title="Considerations for New Authentication Schemes" anchor="considerations.for.new.auth.schemes">
+<t>
+  There are certain aspects of the HTTP Authentication framework that put
+  constraints on how new authentication schemes can work:
+</t>
+<ul>
+  <li><t>
+    HTTP authentication is presumed to be stateless: all of the information
+    necessary to authenticate a request &MUST; be provided in the request,
+    rather than be dependent on the server remembering prior requests.
+    Authentication based on, or bound to, the underlying connection is
+    outside the scope of this specification and inherently flawed unless
+    steps are taken to ensure that the connection cannot be used by any
+    party other than the authenticated user
+    (see <xref target="intermediaries"/>).
+  </t>
+  </li>
+  <li>
+    <t>
+      The authentication parameter "realm" is reserved for defining protection
+      spaces as described in <xref target="protection.space"/>. New schemes
+      &MUST-NOT; use it in a way incompatible with that definition.
+    </t>
+  </li>
+  <li>
+    <t>
+      The "token68" notation was introduced for compatibility with existing
+      authentication schemes and can only be used once per challenge or credential.
+      Thus, new schemes ought to use the auth-param syntax instead, because
+      otherwise future extensions will be impossible.
+    </t>
+  </li>
+  <li>
+    <t>
+      The parsing of challenges and credentials is defined by this specification
+      and cannot be modified by new authentication schemes. When the auth-param
+      syntax is used, all parameters ought to support both token and
+      quoted-string syntax, and syntactical constraints ought to be defined on
+      the field value after parsing (i.e., quoted-string processing). This is
+      necessary so that recipients can use a generic parser that applies to
+      all authentication schemes.
+    </t>
+    <t>
+      &Note; The fact that the value syntax for the "realm" parameter
+      is restricted to quoted-string was a bad design choice not to be repeated
+      for new parameters.
+    </t>
+  </li>
+  <li>
+    <t>
+      Definitions of new schemes ought to define the treatment of unknown
+      extension parameters. In general, a "must-ignore" rule is preferable
+      to a "must-understand" rule, because otherwise it will be hard to introduce
+      new parameters in the presence of legacy recipients. Furthermore,
+      it's good to describe the policy for defining new parameters (such
+      as "update the specification" or "use this registry").
+    </t>
+  </li>
+  <li>
+    <t>
+      Authentication schemes need to document whether they are usable in
+      origin-server authentication (i.e., using <x:ref>WWW-Authenticate</x:ref>),
+      and/or proxy authentication (i.e., using <x:ref>Proxy-Authenticate</x:ref>).
+    </t>
+  </li>
+  <li>
+    <t>
+      The credentials carried in an <x:ref>Authorization</x:ref> header field are specific to
+      the user agent and, therefore, have the same effect on HTTP caches as the
+      "private" Cache-Control response directive (<xref target="cache-response-directive.private"/>),
+      within the scope of the request in which they appear.
+    </t>
+    <t>
+      Therefore, new authentication schemes that choose not to carry
+      credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
+      header field) will need to explicitly disallow caching, by mandating the use of
+      either Cache-Control request directives (e.g., "no-store",
+      <xref target="cache-request-directive.no-store"/>) or response directives (e.g., "private").
+    </t>
+  </li>
+</ul>
+</section>
 </section>
 </section>
 
@@ -9094,110 +9205,13 @@ Content-Encoding: gzip
 </t>
 </section>
 
-<section title="Authentication Scheme Registry" anchor="authentication.scheme.registry">
+<section title="Authentication Scheme Registration" anchor="auth.scheme.registration">
 <t>
-   The "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry" defines the namespace for the
-   authentication schemes in challenges and credentials. It is maintained
-   at <eref target="http://www.iana.org/assignments/http-authschemes"/>.
+   Please update the
+   "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry"
+   at <eref target="http://www.iana.org/assignments/http-authschemes"/> with
+   the registration procedure of <xref target="auth.scheme.registry"/>.
 </t>
-
-<section title="Procedure" anchor="authentication.scheme.registry.procedure">
-<t>
-  Registrations &MUST; include the following fields:
-  <list style="symbols">
-    <t>Authentication Scheme Name</t>
-    <t>Pointer to specification text</t>
-    <t>Notes (optional)</t>
-  </list>
-</t>
-<t>
-  Values to be added to this namespace require IETF Review
-  (see <xref target="RFC5226" x:fmt="," x:sec="4.1"/>).
-</t>
-</section>
-
-<section title="Considerations for New Authentication Schemes" anchor="considerations.for.new.authentication.schemes">
-<t>
-  There are certain aspects of the HTTP Authentication Framework that put
-  constraints on how new authentication schemes can work:
-</t>
-<ul>
-  <li><t>
-    HTTP authentication is presumed to be stateless: all of the information
-    necessary to authenticate a request &MUST; be provided in the request,
-    rather than be dependent on the server remembering prior requests.
-    Authentication based on, or bound to, the underlying connection is
-    outside the scope of this specification and inherently flawed unless
-    steps are taken to ensure that the connection cannot be used by any
-    party other than the authenticated user
-    (see <xref target="intermediaries"/>).
-  </t>
-  </li>
-  <li>
-    <t>
-      The authentication parameter "realm" is reserved for defining protection
-      spaces as described in <xref target="protection.space"/>. New schemes
-      &MUST-NOT; use it in a way incompatible with that definition.
-    </t>
-  </li>
-  <li>
-    <t>
-      The "token68" notation was introduced for compatibility with existing
-      authentication schemes and can only be used once per challenge or credential.
-      Thus, new schemes ought to use the auth-param syntax instead, because
-      otherwise future extensions will be impossible.
-    </t>
-  </li>
-  <li>
-    <t>
-      The parsing of challenges and credentials is defined by this specification
-      and cannot be modified by new authentication schemes. When the auth-param
-      syntax is used, all parameters ought to support both token and
-      quoted-string syntax, and syntactical constraints ought to be defined on
-      the field value after parsing (i.e., quoted-string processing). This is
-      necessary so that recipients can use a generic parser that applies to
-      all authentication schemes.
-    </t>
-    <t>
-      &Note; The fact that the value syntax for the "realm" parameter
-      is restricted to quoted-string was a bad design choice not to be repeated
-      for new parameters.
-    </t>
-  </li>
-  <li>
-    <t>
-      Definitions of new schemes ought to define the treatment of unknown
-      extension parameters. In general, a "must-ignore" rule is preferable
-      to a "must-understand" rule, because otherwise it will be hard to introduce
-      new parameters in the presence of legacy recipients. Furthermore,
-      it's good to describe the policy for defining new parameters (such
-      as "update the specification" or "use this registry").
-    </t>
-  </li>
-  <li>
-    <t>
-      Authentication schemes need to document whether they are usable in
-      origin-server authentication (i.e., using <x:ref>WWW-Authenticate</x:ref>),
-      and/or proxy authentication (i.e., using <x:ref>Proxy-Authenticate</x:ref>).
-    </t>
-  </li>
-  <li>
-    <t>
-      The credentials carried in an <x:ref>Authorization</x:ref> header field are specific to
-      the user agent and, therefore, have the same effect on HTTP caches as the
-      "private" Cache-Control response directive (<xref target="cache-response-directive.private"/>),
-      within the scope of the request in which they appear.
-    </t>
-    <t>
-      Therefore, new authentication schemes that choose not to carry
-      credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
-      header field) will need to explicitly disallow caching, by mandating the use of
-      either Cache-Control request directives (e.g., "no-store",
-      <xref target="cache-request-directive.no-store"/>) or response directives (e.g., "private").
-    </t>
-  </li>
-</ul>
-</section>
 </section>
 
 <section title="Content Coding Registry" anchor="content.coding.registry">
@@ -10155,27 +10169,6 @@ Content-Encoding: gzip
   <seriesInfo name="RFC" value="7235"/>
 </reference>
 
-<reference anchor='BCP90'>
-  <front>
-    <title>Registration Procedures for Message Header Fields</title>
-    <author initials='G.' surname='Klyne' fullname='G. Klyne'>
-      <organization>Nine by Nine</organization>
-      <address><email>GK-IETF@ninebynine.org</email></address>
-    </author>
-    <author initials='M.' surname='Nottingham' fullname='M. Nottingham'>
-      <organization>BEA Systems</organization>
-      <address><email>mnot@pobox.com</email></address>
-    </author>
-    <author initials='J.' surname='Mogul' fullname='J. Mogul'>
-      <organization>HP Labs</organization>
-      <address><email>JeffMogul@acm.org</email></address>
-    </author>
-    <date year='2004' month='September' />
-  </front>
-  <seriesInfo name='BCP' value='90' />
-  <seriesInfo name='RFC' value='3864' />
-</reference>
-
 <reference anchor="BCP13">
   <front>
     <title>Media Type Specifications and Registration Procedures</title>
@@ -10200,6 +10193,66 @@ Content-Encoding: gzip
   </front>
   <seriesInfo name="BCP" value="13"/>
   <seriesInfo name="RFC" value="6838"/>
+</reference>
+
+<reference anchor='BCP90'>
+  <front>
+    <title>Registration Procedures for Message Header Fields</title>
+    <author initials='G.' surname='Klyne' fullname='G. Klyne'>
+      <organization>Nine by Nine</organization>
+      <address><email>GK-IETF@ninebynine.org</email></address>
+    </author>
+    <author initials='M.' surname='Nottingham' fullname='M. Nottingham'>
+      <organization>BEA Systems</organization>
+      <address><email>mnot@pobox.com</email></address>
+    </author>
+    <author initials='J.' surname='Mogul' fullname='J. Mogul'>
+      <organization>HP Labs</organization>
+      <address><email>JeffMogul@acm.org</email></address>
+    </author>
+    <date year='2004' month='September' />
+  </front>
+  <seriesInfo name='BCP' value='90' />
+  <seriesInfo name='RFC' value='3864' />
+</reference>
+
+<reference anchor='BCP115'>
+  <front>
+    <title>Guidelines and Registration Procedures for New URI Schemes</title>
+    <author initials='T.' surname='Hansen' fullname='T. Hansen'>
+      <organization>AT&amp;T Laboratories</organization>
+      <address>
+        <email>tony+urireg@maillennium.att.com</email>
+      </address>
+    </author>
+    <author initials='T.' surname='Hardie' fullname='T. Hardie'>
+      <organization>Qualcomm, Inc.</organization>
+      <address>
+        <email>hardie@qualcomm.com</email>
+      </address>
+    </author>
+    <author initials='L.' surname='Masinter' fullname='L. Masinter'>
+      <organization>Adobe</organization>
+      <address>
+        <email>LMM@acm.org</email>
+      </address>
+    </author>
+    <date year='2006' month='February' />
+  </front>
+  <seriesInfo name='BCP' value='115' />
+  <seriesInfo name='RFC' value='4395' />
+</reference>
+
+<reference anchor="BCP178">
+  <front>
+    <title>Deprecating the "X-" Prefix and Similar Constructs in Application Protocols</title>
+    <author initials="P." surname="Saint-Andre" fullname="Peter Saint-Andre"/>
+    <author initials="D." surname="Crocker" fullname="Dave Crocker"/>
+    <author initials="M." surname="Nottingham" fullname="Mark Nottingham"/>
+    <date year="2012" month="June"/>
+  </front>
+  <seriesInfo name="BCP" value="178"/>
+  <seriesInfo name="RFC" value="6648"/>
 </reference>
 
 <reference anchor='RFC5226'>
@@ -10299,45 +10352,6 @@ Content-Encoding: gzip
    <seriesInfo name='RFC' value='6585' />
 </reference>
 
-<reference anchor='BCP115'>
-  <front>
-    <title>Guidelines and Registration Procedures for New URI Schemes</title>
-    <author initials='T.' surname='Hansen' fullname='T. Hansen'>
-      <organization>AT&amp;T Laboratories</organization>
-      <address>
-        <email>tony+urireg@maillennium.att.com</email>
-      </address>
-    </author>
-    <author initials='T.' surname='Hardie' fullname='T. Hardie'>
-      <organization>Qualcomm, Inc.</organization>
-      <address>
-        <email>hardie@qualcomm.com</email>
-      </address>
-    </author>
-    <author initials='L.' surname='Masinter' fullname='L. Masinter'>
-      <organization>Adobe</organization>
-      <address>
-        <email>LMM@acm.org</email>
-      </address>
-    </author>
-    <date year='2006' month='February' />
-  </front>
-  <seriesInfo name='BCP' value='115' />
-  <seriesInfo name='RFC' value='4395' />
-</reference>
-
-<reference anchor="BCP178">
-  <front>
-    <title>Deprecating the "X-" Prefix and Similar Constructs in Application Protocols</title>
-    <author initials="P." surname="Saint-Andre" fullname="Peter Saint-Andre"/>
-    <author initials="D." surname="Crocker" fullname="Dave Crocker"/>
-    <author initials="M." surname="Nottingham" fullname="Mark Nottingham"/>
-    <date year="2012" month="June"/>
-  </front>
-  <seriesInfo name="BCP" value="178"/>
-  <seriesInfo name="RFC" value="6648"/>
-</reference>
-
 <reference anchor="RFC7238">
 	<front>
     <title abbrev="HTTP Status Code 308">The Hypertext Transfer Protocol (HTTP) Status Code 308 (Permanent Redirect)</title>
@@ -10350,6 +10364,39 @@ Content-Encoding: gzip
     <date month="March" year="2012"/>
   </front>
   <seriesInfo name="Internet-Draft" value="draft-reschke-http-status-308-07"/>
+</reference>
+
+<reference anchor='RFC7616' target='https://www.rfc-editor.org/info/rfc7616'>
+  <front>
+    <title>HTTP Digest Access Authentication</title>
+    <author initials='R.' surname='Shekh-Yusef' fullname='R. Shekh-Yusef' role='editor'>
+      <organization>Avaya</organization>
+    </author>
+    <author initials='D.' surname='Ahrens' fullname='D. Ahrens'>
+      <organization />
+    </author>
+    <author initials='S.' surname='Bremer' fullname='S. Bremer'>
+      <organization>Netzkonform</organization>
+    </author>
+    <date year='2015' month='September' />
+  </front>
+  <seriesInfo name='RFC' value='7616'/>
+  <seriesInfo name='DOI' value='10.17487/RFC7616'/>
+</reference>
+
+<reference anchor='RFC7617' target='https://www.rfc-editor.org/info/rfc7617'>
+  <front>
+    <title>The 'Basic' HTTP Authentication Scheme</title>
+    <author initials="J. F." surname="Reschke" fullname="Julian F. Reschke">
+      <organization abbrev="greenbytes">greenbytes GmbH</organization>
+      <address>
+        <email>julian.reschke@greenbytes.de</email>
+      </address>
+    </author>
+    <date year='2015' month='September' />
+  </front>
+  <seriesInfo name='RFC' value='7617'/>
+  <seriesInfo name='DOI' value='10.17487/RFC7617'/>
 </reference>
 
 <reference anchor="OWASP" target="https://www.owasp.org/">
