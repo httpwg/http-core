@@ -20,7 +20,7 @@
     <xsl:text>&#10;</xsl:text>
       <t>
         <xsl:choose>
-          <xsl:when test="not(starts-with(/rfc/@docName,'draft-ietf-httpbis-semantics'))">In the collected ABNF below, list rules are expanded as per <xref target='SEMNTCS' x:rel='#abnf.extension'/>.</xsl:when>
+          <xsl:when test="not(starts-with(/rfc/@docName,'draft-ietf-httpbis-semantics'))">In the collected ABNF below, list rules are expanded as per <xref target='Semantics' x:rel='#abnf.extension'/>.</xsl:when>
           <xsl:otherwise>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension"/>.</xsl:otherwise>
         </xsl:choose>
       </t>
