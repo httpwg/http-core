@@ -1862,6 +1862,141 @@ X.X.  [Field Names]
 
    See [RFC5646] for further information.
 
+2.  Range Units
+
+   A representation can be partitioned into subranges according to
+   various structural units, depending on the structure inherent in the
+   representation's media type.  This "range unit" is used in the
+   Accept-Ranges (Section 2.3) response header field to advertise
+   support for range requests, the Range (Section 3.1) request header
+   field to delineate the parts of a representation that are requested,
+   and the Content-Range (Section 4.2) payload header field to describe
+   which part of a representation is being transferred.
+
+     range-unit       = bytes-unit / other-range-unit
+
+   +-------------+---------------------------------------+-------------+
+   | Range Unit  | Description                           | Reference   |
+   | Name        |                                       |             |
+   +-------------+---------------------------------------+-------------+
+   | bytes       | a range of octets                     | Section 2.1 |
+   | none        | reserved as keyword, indicating no    | Section 2.3 |
+   |             | ranges are supported                  |             |
+   +-------------+---------------------------------------+-------------+
+
+2.1.  Byte Ranges
+
+   Since representation data is transferred in payloads as a sequence of
+   octets, a byte range is a meaningful substructure for any
+   representation transferable over HTTP (Section 3 of [RFC7231]).  The
+   "bytes" range unit is defined for expressing subranges of the data's
+   octet sequence.
+
+     bytes-unit       = "bytes"
+
+   A byte-range request can specify a single range of bytes or a set of
+   ranges within a single representation.
+
+     byte-ranges-specifier = bytes-unit "=" byte-range-set
+     byte-range-set  = 1#( byte-range-spec / suffix-byte-range-spec )
+     byte-range-spec = first-byte-pos "-" [ last-byte-pos ]
+     first-byte-pos  = 1*DIGIT
+     last-byte-pos   = 1*DIGIT
+
+   The first-byte-pos value in a byte-range-spec gives the byte-offset
+   of the first byte in a range.  The last-byte-pos value gives the
+   byte-offset of the last byte in the range; that is, the byte
+   positions specified are inclusive.  Byte offsets start at zero.
+
+   Examples of byte-ranges-specifier values:
+
+   o  The first 500 bytes (byte offsets 0-499, inclusive):
+
+        bytes=0-499
+
+   o  The second 500 bytes (byte offsets 500-999, inclusive):
+
+        bytes=500-999
+
+   A byte-range-spec is invalid if the last-byte-pos value is present
+   and less than the first-byte-pos.
+
+   A client can limit the number of bytes requested without knowing the
+   size of the selected representation.  If the last-byte-pos value is
+   absent, or if the value is greater than or equal to the current
+   length of the representation data, the byte range is interpreted as
+   the remainder of the representation (i.e., the server replaces the
+   value of last-byte-pos with a value that is one less than the current
+   length of the selected representation).
+
+   A client can request the last N bytes of the selected representation
+   using a suffix-byte-range-spec.
+
+     suffix-byte-range-spec = "-" suffix-length
+     suffix-length = 1*DIGIT
+
+   If the selected representation is shorter than the specified
+   suffix-length, the entire representation is used.
+
+   Additional examples, assuming a representation of length 10000:
+
+   o  The final 500 bytes (byte offsets 9500-9999, inclusive):
+
+        bytes=-500
+
+   Or:
+
+        bytes=9500-
+
+   o  The first and last bytes only (bytes 0 and 9999):
+
+        bytes=0-0,-1
+
+   o  Other valid (but not canonical) specifications of the second 500
+      bytes (byte offsets 500-999, inclusive):
+
+        bytes=500-600,601-999
+        bytes=500-700,601-999
+
+   If a valid byte-range-set includes at least one byte-range-spec with
+   a first-byte-pos that is less than the current length of the
+   representation, or at least one suffix-byte-range-spec with a
+   non-zero suffix-length, then the byte-range-set is satisfiable.
+   Otherwise, the byte-range-set is unsatisfiable.
+
+   In the byte-range syntax, first-byte-pos, last-byte-pos, and
+   suffix-length are expressed as decimal number of octets.  Since there
+   is no predefined limit to the length of a payload, recipients MUST
+   anticipate potentially large decimal numerals and prevent parsing
+   errors due to integer conversion overflows.
+
+2.2.  Other Range Units
+
+   Range units are intended to be extensible.  New range units ought to
+   be registered with IANA, as defined in Section 5.1.
+
+     other-range-unit = token
+
+5.1.  Range Unit Registry
+
+   The "HTTP Range Unit Registry" defines the namespace for the range
+   unit names and refers to their corresponding specifications.  The
+   registry has been created and is now maintained at
+   <http://www.iana.org/assignments/http-parameters>.
+
+5.1.1.  Procedure
+
+   Registration of an HTTP Range Unit MUST include the following fields:
+
+   o  Name
+
+   o  Description
+
+   o  Pointer to specification text
+
+   Values to be added to this namespace require IETF Review (see
+   [RFC5226], Section 4.1).
+
 3.1.  Representation Metadata
 
    Representation header fields provide metadata about the
@@ -3761,112 +3896,6 @@ X.X. [Method Extensibility]
    Although the range request mechanism is designed to allow for
    extensible range types, this specification only defines requests for
    byte ranges.
-
-2.  Range Units
-
-   A representation can be partitioned into subranges according to
-   various structural units, depending on the structure inherent in the
-   representation's media type.  This "range unit" is used in the
-   Accept-Ranges (Section 2.3) response header field to advertise
-   support for range requests, the Range (Section 3.1) request header
-   field to delineate the parts of a representation that are requested,
-   and the Content-Range (Section 4.2) payload header field to describe
-   which part of a representation is being transferred.
-
-     range-unit       = bytes-unit / other-range-unit
-
-2.1.  Byte Ranges
-
-   Since representation data is transferred in payloads as a sequence of
-   octets, a byte range is a meaningful substructure for any
-   representation transferable over HTTP (Section 3 of [RFC7231]).  The
-   "bytes" range unit is defined for expressing subranges of the data's
-   octet sequence.
-
-     bytes-unit       = "bytes"
-
-   A byte-range request can specify a single range of bytes or a set of
-   ranges within a single representation.
-
-     byte-ranges-specifier = bytes-unit "=" byte-range-set
-     byte-range-set  = 1#( byte-range-spec / suffix-byte-range-spec )
-     byte-range-spec = first-byte-pos "-" [ last-byte-pos ]
-     first-byte-pos  = 1*DIGIT
-     last-byte-pos   = 1*DIGIT
-
-   The first-byte-pos value in a byte-range-spec gives the byte-offset
-   of the first byte in a range.  The last-byte-pos value gives the
-   byte-offset of the last byte in the range; that is, the byte
-   positions specified are inclusive.  Byte offsets start at zero.
-
-   Examples of byte-ranges-specifier values:
-
-   o  The first 500 bytes (byte offsets 0-499, inclusive):
-
-        bytes=0-499
-
-   o  The second 500 bytes (byte offsets 500-999, inclusive):
-
-        bytes=500-999
-
-   A byte-range-spec is invalid if the last-byte-pos value is present
-   and less than the first-byte-pos.
-
-   A client can limit the number of bytes requested without knowing the
-   size of the selected representation.  If the last-byte-pos value is
-   absent, or if the value is greater than or equal to the current
-   length of the representation data, the byte range is interpreted as
-   the remainder of the representation (i.e., the server replaces the
-   value of last-byte-pos with a value that is one less than the current
-   length of the selected representation).
-
-   A client can request the last N bytes of the selected representation
-   using a suffix-byte-range-spec.
-
-     suffix-byte-range-spec = "-" suffix-length
-     suffix-length = 1*DIGIT
-
-   If the selected representation is shorter than the specified
-   suffix-length, the entire representation is used.
-
-   Additional examples, assuming a representation of length 10000:
-
-   o  The final 500 bytes (byte offsets 9500-9999, inclusive):
-
-        bytes=-500
-
-   Or:
-
-        bytes=9500-
-
-   o  The first and last bytes only (bytes 0 and 9999):
-
-        bytes=0-0,-1
-
-   o  Other valid (but not canonical) specifications of the second 500
-      bytes (byte offsets 500-999, inclusive):
-
-        bytes=500-600,601-999
-        bytes=500-700,601-999
-
-   If a valid byte-range-set includes at least one byte-range-spec with
-   a first-byte-pos that is less than the current length of the
-   representation, or at least one suffix-byte-range-spec with a
-   non-zero suffix-length, then the byte-range-set is satisfiable.
-   Otherwise, the byte-range-set is unsatisfiable.
-
-   In the byte-range syntax, first-byte-pos, last-byte-pos, and
-   suffix-length are expressed as decimal number of octets.  Since there
-   is no predefined limit to the length of a payload, recipients MUST
-   anticipate potentially large decimal numerals and prevent parsing
-   errors due to integer conversion overflows.
-
-2.2.  Other Range Units
-
-   Range units are intended to be extensible.  New range units ought to
-   be registered with IANA, as defined in Section 5.1.
-
-     other-range-unit = token
 
 3.1.  Range
 
@@ -7230,38 +7259,9 @@ Appendix A.  Internet Media Type multipart/byteranges
    The "HTTP Content Coding Registry" has been updated with the
    registrations below:
 
-5.1.  Range Unit Registry
-
-   The "HTTP Range Unit Registry" defines the namespace for the range
-   unit names and refers to their corresponding specifications.  The
-   registry has been created and is now maintained at
-   <http://www.iana.org/assignments/http-parameters>.
-
-5.1.1.  Procedure
-
-   Registration of an HTTP Range Unit MUST include the following fields:
-
-   o  Name
-
-   o  Description
-
-   o  Pointer to specification text
-
-   Values to be added to this namespace require IETF Review (see
-   [RFC5226], Section 4.1).
-
-5.1.2.  Registrations
+5.1.2.  [Range Unit] Registrations
 
    The initial range unit registry contains the registrations below:
-
-   +-------------+---------------------------------------+-------------+
-   | Range Unit  | Description                           | Reference   |
-   | Name        |                                       |             |
-   +-------------+---------------------------------------+-------------+
-   | bytes       | a range of octets                     | Section 2.1 |
-   | none        | reserved as keyword, indicating no    | Section 2.3 |
-   |             | ranges are supported                  |             |
-   +-------------+---------------------------------------+-------------+
 
    The change controller is: "IETF (iesg@ietf.org) - Internet
    Engineering Task Force".

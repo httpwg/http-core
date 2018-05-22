@@ -2454,6 +2454,196 @@ Host: www.example.org
    See <xref target="RFC5646"/> for further information. 
 </t>
 </section>
+
+<section title="Range Units" anchor="range.units">
+  <x:anchor-alias value="range-unit"/>
+  <x:anchor-alias value="range unit"/>
+<t>
+   A representation can be partitioned into subranges according to various
+   structural units, depending on the structure inherent in the
+   representation's media type. This "<x:dfn>range unit</x:dfn>" is used
+   in the <x:ref>Accept-Ranges</x:ref> (<xref target="header.accept-ranges"/>)
+   response header field to advertise support for range requests, the
+   <x:ref>Range</x:ref> (<xref target="header.range"/>) request header field
+   to delineate the parts of a representation that are requested, and the
+   <x:ref>Content-Range</x:ref> (<xref target="header.content-range"/>)
+   payload header field to describe which part of a representation is being
+   transferred.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="range-unit"/><iref item="Grammar" subitem="bytes-unit"/><iref item="Grammar" subitem="other-range-unit"/>
+  <x:ref>range-unit</x:ref>       = <x:ref>bytes-unit</x:ref> / <x:ref>other-range-unit</x:ref>
+</artwork></figure>
+<t>
+  The following range unit names are defined by this document:
+</t>
+<texttable align="left" suppress-title="true" anchor="iana.range.units.table">
+   <ttcol>Range Unit Name</ttcol>
+   <ttcol>Description</ttcol>
+   <ttcol>Reference</ttcol>
+
+   <c>bytes</c>
+   <c>a range of octets</c>
+   <c><xref target="byte.ranges"/></c>
+
+   <c>none</c>
+   <c>reserved as keyword, indicating no ranges are supported</c>
+   <c><xref target="header.accept-ranges"/></c>
+</texttable>
+
+<section title="Byte Ranges" anchor="byte.ranges">
+  <x:anchor-alias value="bytes-unit"/>
+<t>
+   Since representation data is transferred in payloads as a sequence of
+   octets, a byte range is a meaningful substructure for any representation
+   transferable over HTTP (<xref target="representations"/>). The "bytes" range unit is
+   defined for expressing subranges of the data's octet sequence.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="bytes-unit"/>
+  <x:ref>bytes-unit</x:ref>       = "bytes"
+</artwork></figure>
+<t anchor="rule.ranges-specifier">
+  <x:anchor-alias value="byte-range-set"/>
+  <x:anchor-alias value="byte-range-spec"/>
+  <x:anchor-alias value="byte-ranges-specifier"/>
+  <x:anchor-alias value="first-byte-pos"/>
+  <x:anchor-alias value="last-byte-pos"/>
+  <x:anchor-alias value="ranges-specifier"/>
+  <x:anchor-alias value="suffix-byte-range-spec"/>
+  <x:anchor-alias value="suffix-length"/>
+   A byte-range request can specify a single range of bytes or a set
+   of ranges within a single representation.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-range-set"/><iref primary="true" item="Grammar" subitem="byte-range-spec"/><iref primary="true" item="Grammar" subitem="first-byte-pos"/><iref primary="true" item="Grammar" subitem="last-byte-pos"/>
+  <x:ref>byte-ranges-specifier</x:ref> = <x:ref>bytes-unit</x:ref> "=" <x:ref>byte-range-set</x:ref>
+  <x:ref>byte-range-set</x:ref>  = 1#( <x:ref>byte-range-spec</x:ref> / <x:ref>suffix-byte-range-spec</x:ref> )
+  <x:ref>byte-range-spec</x:ref> = <x:ref>first-byte-pos</x:ref> "-" [ <x:ref>last-byte-pos</x:ref> ]
+  <x:ref>first-byte-pos</x:ref>  = 1*<x:ref>DIGIT</x:ref>
+  <x:ref>last-byte-pos</x:ref>   = 1*<x:ref>DIGIT</x:ref>
+</artwork></figure>
+<t>
+   The <x:ref>first-byte-pos</x:ref> value in a <x:ref>byte-range-spec</x:ref>
+   gives the byte-offset of the first byte in a range.
+   The <x:ref>last-byte-pos</x:ref> value gives the byte-offset of the last
+   byte in the range; that is, the byte positions specified are inclusive.
+   Byte offsets start at zero.
+</t>
+<t>
+   Examples of <x:ref>byte-ranges-specifier</x:ref> values:
+  <list style="symbols">
+     <t>The first 500 bytes (byte offsets 0-499, inclusive):
+<figure><artwork type="example" x:indent-with="   ">
+  bytes=0-499
+</artwork></figure>
+    </t>
+     <t>The second 500 bytes (byte offsets 500-999, inclusive):
+<figure><artwork type="example" x:indent-with="   ">
+  bytes=500-999
+</artwork></figure>
+    </t>
+  </list>
+</t>
+<t>
+   A <x:ref>byte-range-spec</x:ref> is invalid if the
+   <x:ref>last-byte-pos</x:ref> value is present and less than the
+   <x:ref>first-byte-pos</x:ref>.
+</t>
+<t>
+   A client can limit the number of bytes requested without knowing the size
+   of the selected representation.
+   If the <x:ref>last-byte-pos</x:ref> value is absent, or if the value is
+   greater than or equal to the current length of the representation data, the
+   byte range is interpreted as the remainder of the representation (i.e., the
+   server replaces the value of <x:ref>last-byte-pos</x:ref> with a value that
+   is one less than the current length of the selected representation).
+</t>
+<t>
+   A client can request the last N bytes of the selected representation using
+   a <x:ref>suffix-byte-range-spec</x:ref>.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="suffix-byte-range-spec"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
+  <x:ref>suffix-byte-range-spec</x:ref> = "-" <x:ref>suffix-length</x:ref>
+  <x:ref>suffix-length</x:ref> = 1*<x:ref>DIGIT</x:ref>
+</artwork></figure>
+<t>
+   If the selected representation is shorter than the specified
+   <x:ref>suffix-length</x:ref>, the entire representation is used.
+</t>
+<t>
+   Additional examples, assuming a representation of length 10000:
+  <list style="symbols">
+     <t>The final 500 bytes (byte offsets 9500-9999, inclusive):
+<figure><artwork type="example" x:indent-with="   ">
+  bytes=-500
+</artwork></figure>
+    Or:
+<figure><artwork type="example" x:indent-with="   ">
+  bytes=9500-
+</artwork></figure>
+    </t>
+     <t>The first and last bytes only (bytes 0 and 9999):
+<figure><artwork type="example" x:indent-with="   ">
+  bytes=0-0,-1
+</artwork></figure>
+     </t>
+     <t>Other valid (but not canonical) specifications of the second 500
+        bytes (byte offsets 500-999, inclusive):
+<figure><artwork type="example" x:indent-with="   ">
+  bytes=500-600,601-999
+  bytes=500-700,601-999
+</artwork></figure>
+     </t>
+  </list>
+</t>
+<t>
+   If a valid <x:ref>byte-range-set</x:ref> includes at least one
+   <x:ref>byte-range-spec</x:ref> with a <x:ref>first-byte-pos</x:ref> that is
+   less than the current length of the representation, or at least one
+   <x:ref>suffix-byte-range-spec</x:ref> with a non-zero
+   <x:ref>suffix-length</x:ref>, then the <x:ref>byte-range-set</x:ref> is
+   satisfiable. Otherwise, the <x:ref>byte-range-set</x:ref> is unsatisfiable.
+</t>
+<t>
+   In the byte-range syntax, <x:ref>first-byte-pos</x:ref>,
+   <x:ref>last-byte-pos</x:ref>, and <x:ref>suffix-length</x:ref> are
+   expressed as decimal number of octets. Since there is no predefined limit
+   to the length of a payload, recipients &MUST; anticipate potentially
+   large decimal numerals and prevent parsing errors due to integer conversion
+   overflows.
+</t>
+</section>
+
+<section title="Other Range Units" anchor="range.units.other">
+  <x:anchor-alias value="other-range-unit"/>
+<t>
+  Range units are intended to be extensible.  New range units ought to be
+  registered with IANA, as defined in <xref target="range.unit.registry"/>.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="other-range-unit"/>
+  <x:ref>other-range-unit</x:ref> = <x:ref>token</x:ref>
+</artwork></figure>
+</section>
+
+<section title="Range Unit Registry" anchor="range.unit.registry">
+<t>
+   The "HTTP Range Unit Registry" defines the namespace for the range
+   unit names and refers to their corresponding specifications.
+   It is maintained at
+   <eref target="http://www.iana.org/assignments/http-parameters"/>.
+</t>
+<t>
+   Registration of an HTTP Range Unit &MUST; include the following fields:
+   <list style="symbols">
+     <t>Name</t>
+     <t>Description</t>
+     <t>Pointer to specification text</t>
+   </list>
+</t>
+<t>
+  Values to be added to this namespace require IETF Review
+  (see <xref target="RFC5226" x:fmt="," x:sec="4.1"/>).
+</t>
+</section>
+</section>
 </section>
 
 <section title="Representation Metadata" anchor="representation.metadata">
@@ -4771,159 +4961,6 @@ Expect: 100-continue
    extensible range types, this specification only defines requests for
    byte ranges.
 </t>
-
-<section title="Range Units" anchor="range.units">
-  <x:anchor-alias value="range-unit"/>
-  <x:anchor-alias value="range unit"/>
-<t>
-   A representation can be partitioned into subranges according to various
-   structural units, depending on the structure inherent in the
-   representation's media type. This "<x:dfn>range unit</x:dfn>" is used
-   in the <x:ref>Accept-Ranges</x:ref> (<xref target="header.accept-ranges"/>)
-   response header field to advertise support for range requests, the
-   <x:ref>Range</x:ref> (<xref target="header.range"/>) request header field
-   to delineate the parts of a representation that are requested, and the
-   <x:ref>Content-Range</x:ref> (<xref target="header.content-range"/>)
-   payload header field to describe which part of a representation is being
-   transferred.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="range-unit"/><iref item="Grammar" subitem="bytes-unit"/><iref item="Grammar" subitem="other-range-unit"/>
-  <x:ref>range-unit</x:ref>       = <x:ref>bytes-unit</x:ref> / <x:ref>other-range-unit</x:ref>
-</artwork></figure>
-
-<section title="Byte Ranges" anchor="byte.ranges">
-  <x:anchor-alias value="bytes-unit"/>
-<t>
-   Since representation data is transferred in payloads as a sequence of
-   octets, a byte range is a meaningful substructure for any representation
-   transferable over HTTP (<xref target="representations"/>). The "bytes" range unit is
-   defined for expressing subranges of the data's octet sequence.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="bytes-unit"/>
-  <x:ref>bytes-unit</x:ref>       = "bytes"
-</artwork></figure>
-<t anchor="rule.ranges-specifier">
-  <x:anchor-alias value="byte-range-set"/>
-  <x:anchor-alias value="byte-range-spec"/>
-  <x:anchor-alias value="byte-ranges-specifier"/>
-  <x:anchor-alias value="first-byte-pos"/>
-  <x:anchor-alias value="last-byte-pos"/>
-  <x:anchor-alias value="ranges-specifier"/>
-  <x:anchor-alias value="suffix-byte-range-spec"/>
-  <x:anchor-alias value="suffix-length"/>
-   A byte-range request can specify a single range of bytes or a set
-   of ranges within a single representation.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-range-set"/><iref primary="true" item="Grammar" subitem="byte-range-spec"/><iref primary="true" item="Grammar" subitem="first-byte-pos"/><iref primary="true" item="Grammar" subitem="last-byte-pos"/>
-  <x:ref>byte-ranges-specifier</x:ref> = <x:ref>bytes-unit</x:ref> "=" <x:ref>byte-range-set</x:ref>
-  <x:ref>byte-range-set</x:ref>  = 1#( <x:ref>byte-range-spec</x:ref> / <x:ref>suffix-byte-range-spec</x:ref> )
-  <x:ref>byte-range-spec</x:ref> = <x:ref>first-byte-pos</x:ref> "-" [ <x:ref>last-byte-pos</x:ref> ]
-  <x:ref>first-byte-pos</x:ref>  = 1*<x:ref>DIGIT</x:ref>
-  <x:ref>last-byte-pos</x:ref>   = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
-<t>
-   The <x:ref>first-byte-pos</x:ref> value in a <x:ref>byte-range-spec</x:ref>
-   gives the byte-offset of the first byte in a range.
-   The <x:ref>last-byte-pos</x:ref> value gives the byte-offset of the last
-   byte in the range; that is, the byte positions specified are inclusive.
-   Byte offsets start at zero.
-</t>
-<t>
-   Examples of <x:ref>byte-ranges-specifier</x:ref> values:
-  <list style="symbols">
-     <t>The first 500 bytes (byte offsets 0-499, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=0-499
-</artwork></figure>
-    </t>
-     <t>The second 500 bytes (byte offsets 500-999, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=500-999
-</artwork></figure>
-    </t>
-  </list>
-</t>
-<t>
-   A <x:ref>byte-range-spec</x:ref> is invalid if the
-   <x:ref>last-byte-pos</x:ref> value is present and less than the
-   <x:ref>first-byte-pos</x:ref>.
-</t>
-<t>
-   A client can limit the number of bytes requested without knowing the size
-   of the selected representation.
-   If the <x:ref>last-byte-pos</x:ref> value is absent, or if the value is
-   greater than or equal to the current length of the representation data, the
-   byte range is interpreted as the remainder of the representation (i.e., the
-   server replaces the value of <x:ref>last-byte-pos</x:ref> with a value that
-   is one less than the current length of the selected representation).
-</t>
-<t>
-   A client can request the last N bytes of the selected representation using
-   a <x:ref>suffix-byte-range-spec</x:ref>.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="suffix-byte-range-spec"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
-  <x:ref>suffix-byte-range-spec</x:ref> = "-" <x:ref>suffix-length</x:ref>
-  <x:ref>suffix-length</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
-<t>
-   If the selected representation is shorter than the specified
-   <x:ref>suffix-length</x:ref>, the entire representation is used.
-</t>
-<t>
-   Additional examples, assuming a representation of length 10000:
-  <list style="symbols">
-     <t>The final 500 bytes (byte offsets 9500-9999, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=-500
-</artwork></figure>
-    Or:
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=9500-
-</artwork></figure>
-    </t>
-     <t>The first and last bytes only (bytes 0 and 9999):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=0-0,-1
-</artwork></figure>
-     </t>
-     <t>Other valid (but not canonical) specifications of the second 500
-        bytes (byte offsets 500-999, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=500-600,601-999
-  bytes=500-700,601-999
-</artwork></figure>
-     </t>
-  </list>
-</t>
-<t>
-   If a valid <x:ref>byte-range-set</x:ref> includes at least one
-   <x:ref>byte-range-spec</x:ref> with a <x:ref>first-byte-pos</x:ref> that is
-   less than the current length of the representation, or at least one
-   <x:ref>suffix-byte-range-spec</x:ref> with a non-zero
-   <x:ref>suffix-length</x:ref>, then the <x:ref>byte-range-set</x:ref> is
-   satisfiable. Otherwise, the <x:ref>byte-range-set</x:ref> is unsatisfiable.
-</t>
-<t>
-   In the byte-range syntax, <x:ref>first-byte-pos</x:ref>,
-   <x:ref>last-byte-pos</x:ref>, and <x:ref>suffix-length</x:ref> are
-   expressed as decimal number of octets. Since there is no predefined limit
-   to the length of a payload, recipients &MUST; anticipate potentially
-   large decimal numerals and prevent parsing errors due to integer conversion
-   overflows.
-</t>
-</section>
-
-<section title="Other Range Units" anchor="range.units.other">
-  <x:anchor-alias value="other-range-unit"/>
-<t>
-  Range units are intended to be extensible.  New range units ought to be
-  registered with IANA, as defined in <xref target="range.unit.registry"/>.
-</t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="other-range-unit"/>
-  <x:ref>other-range-unit</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
-</section>
-</section>
 
 <section title="Range" anchor="header.range">
   <iref primary="true" item="Range header field" x:for-anchor=""/>
@@ -9294,51 +9331,16 @@ Content-Encoding: gzip
 </t>
 </section>
 
-<section title="Range Unit Registry" anchor="range.unit.registry">
+<section title="Range Unit Registrations" anchor="range.unit.registration">
 <t>
-   The "HTTP Range Unit Registry" defines the namespace for the range
-   unit names and refers to their corresponding specifications.
-   It is maintained at
-   <eref target="http://www.iana.org/assignments/http-parameters"/>.
+   Please update the "HTTP Range Unit Registry" at
+   <eref target="https://www.iana.org/assignments/http-parameters/"/>
+   with the registration procedure of <xref target="range.unit.registry"/>
+   and the range unit names summarized in the table of
+   <xref target="range.units"/>.
+   The change controller for these registrations is:
+   "IETF (iesg@ietf.org) - Internet Engineering Task Force".
 </t>
-
-<section title="Procedure" anchor="range.unit.registry.procedure">
-<t>
-   Registration of an HTTP Range Unit &MUST; include the following fields:
-   <list style="symbols">
-     <t>Name</t>
-     <t>Description</t>
-     <t>Pointer to specification text</t>
-   </list>
-</t>
-<t>
-  Values to be added to this namespace require IETF Review
-  (see <xref target="RFC5226" x:fmt="," x:sec="4.1"/>).
-</t>
-</section>
-
-<section title="Registrations" anchor="range.unit.registration">
-<t>
-   The range unit registry shall be updated with the registrations
-   below:
-</t>
-<texttable align="left" suppress-title="true" anchor="iana.range.units.table">
-   <ttcol>Range Unit Name</ttcol>
-   <ttcol>Description</ttcol>
-   <ttcol>Reference</ttcol>
-
-   <c>bytes</c>
-   <c>a range of octets</c>
-   <c><xref target="byte.ranges"/></c>
-
-   <c>none</c>
-   <c>reserved as keyword, indicating no ranges are supported</c>
-   <c><xref target="header.accept-ranges"/></c>
-</texttable>
-<t>
-   The change controller is: "IETF (iesg@ietf.org) - Internet Engineering Task Force".
-</t>
-</section>
 </section>
 
 <section title="Internet Media Type Registration" anchor="internet.media.type.http">
