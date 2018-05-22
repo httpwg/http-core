@@ -198,6 +198,10 @@
    "<x:dfn>content negotiation</x:dfn>" (<xref target="content.negotiation"/>).
 </t>
 <t>
+   This document defines HTTP/1.1 range requests, partial responses, and the
+   multipart/byteranges media type.
+</t>
+<t>
    This specification obsoletes <xref target="RFC7231" x:fmt="none">RFC 7231</xref>,
    with the changes being summarized in <xref target="changes.from.rfc.7231"/>.
 </t>
@@ -4193,7 +4197,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    (<xref target="preconditions"/>) and, if so, how a server responds
    when the condition is false.
    Likewise, if the new method might have some use for partial response
-   semantics (<xref target="range.requests"/>), it ought to document this, too.
+   semantics (<xref target="header.range"/>), it ought to document this, too.
 </t>
 <aside>
   <t>
@@ -4936,32 +4940,6 @@ Expect: 100-continue
 </section>
 </section>
 
-<section title="Range Requests" anchor="range.requests">
-<t>
-   Hypertext Transfer Protocol (HTTP) clients often encounter interrupted data
-   transfers as a result of canceled requests or dropped connections. When a
-   client has stored a partial representation, it is desirable to request the
-   remainder of that representation in a subsequent request rather than
-   transfer the entire representation. Likewise, devices with limited local
-   storage might benefit from being able to request only a subset of a larger
-   representation, such as a single page of a very large document, or the
-   dimensions of an embedded image.
-</t>
-<t>
-   This document defines HTTP/1.1 range requests, partial responses, and the
-   multipart/byteranges media type. Range requests are an &OPTIONAL; feature
-   of HTTP, designed so that recipients not implementing this feature (or not
-   supporting it for the target resource) can respond as if it is a normal
-   GET request without impacting interoperability. Partial responses are
-   indicated by a distinct status code to not be mistaken for full responses
-   by caches that might not implement the feature.
-</t>
-<t>
-   Although the range request mechanism is designed to allow for
-   extensible range types, this specification only defines requests for
-   byte ranges.
-</t>
-
 <section title="Range" anchor="header.range">
   <iref primary="true" item="Range header field" x:for-anchor=""/>
   <x:anchor-alias value="Range"/>
@@ -4978,11 +4956,34 @@ Expect: 100-continue
   <x:ref>other-range-set</x:ref> = 1*<x:ref>VCHAR</x:ref>
 </artwork></figure>
 <t>
+   Clients often encounter interrupted data
+   transfers as a result of canceled requests or dropped connections. When a
+   client has stored a partial representation, it is desirable to request the
+   remainder of that representation in a subsequent request rather than
+   transfer the entire representation. Likewise, devices with limited local
+   storage might benefit from being able to request only a subset of a larger
+   representation, such as a single page of a very large document, or the
+   dimensions of an embedded image.
+</t>
+<t>
+   Range requests are an &OPTIONAL; feature
+   of HTTP, designed so that recipients not implementing this feature (or not
+   supporting it for the target resource) can respond as if it is a normal
+   GET request without impacting interoperability. Partial responses are
+   indicated by a distinct status code to not be mistaken for full responses
+   by caches that might not implement the feature.
+</t>
+<t>
    A server &MAY; ignore the Range header field. However, origin servers and
    intermediate caches ought to support byte ranges when possible, since Range
    supports efficient recovery from partially failed transfers and partial
    retrieval of large representations. A server &MUST; ignore a Range header
    field received with a request method other than GET.
+</t>
+<t>
+   Although the range request mechanism is designed to allow for
+   extensible range types, this specification only defines requests for
+   byte ranges.
 </t>
 <t>
    An origin server &MUST; ignore a Range header field that contains a range
@@ -5033,57 +5034,6 @@ Expect: 100-continue
    unsatisfiable, the server &SHOULD; send a
    <x:ref>416 (Range Not Satisfiable)</x:ref> response.
 </t>
-</section>
-
-<section title="Combining Ranges" anchor="combining.byte.ranges">
-<t>
-   A response might transfer only a subrange of a representation if the
-   connection closed prematurely or if the request used one or more Range
-   specifications.  After several such transfers, a client might have
-   received several ranges of the same representation.  These ranges can only
-   be safely combined if they all have in common the same strong validator
-   (<xref target="weak.and.strong.validators"/>).
-</t>
-<t>
-   A client that has received multiple partial responses to GET requests on a
-   target resource &MAY; combine those responses into a larger continuous
-   range if they share the same strong validator.
-</t>
-<t>
-   If the most recent response is an incomplete <x:ref>200 (OK)</x:ref>
-   response, then the header fields of that response are used for any
-   combined response and replace those of the matching stored responses.
-</t>
-<t>
-   If the most recent response is a <x:ref>206 (Partial Content)</x:ref>
-   response and at least one of the matching stored responses is a
-   <x:ref>200 (OK)</x:ref>, then the combined response header fields consist
-   of the most recent 200 response's header fields. If all of the matching
-   stored responses are 206 responses, then the stored response with the most
-   recent header fields is used as the source of header fields for the
-   combined response, except that the client &MUST; use other header fields
-   provided in the new response, aside from <x:ref>Content-Range</x:ref>, to
-   replace all instances of the corresponding header fields in the stored
-   response.
-</t>
-<t>
-   The combined response message body consists of the union of partial
-   content ranges in the new response and each of the selected responses.
-   If the union consists of the entire range of the representation, then the
-   client &MUST; process the combined response as if it were a complete
-   <x:ref>200 (OK)</x:ref> response, including a <x:ref>Content-Length</x:ref>
-   header field that reflects the complete length.
-   Otherwise, the client &MUST; process the set of continuous ranges as one of
-   the following:
-   an incomplete <x:ref>200 (OK)</x:ref> response if the combined response is
-   a prefix of the representation,
-   a single <x:ref>206 (Partial Content)</x:ref> response containing a
-   multipart/byteranges body, or
-   multiple <x:ref>206 (Partial Content)</x:ref> responses, each with one
-   continuous range that is indicated by a <x:ref>Content-Range</x:ref> header
-   field.
-</t>
-</section>
 </section>
 
 <section title="Content Negotiation" anchor="request.conneg">
@@ -6719,6 +6669,56 @@ Content-Range: exampleunit 11.2-14.3/25
 --THIS_STRING_SEPARATES--
 </artwork>
 </figure>
+</section>
+
+<section title="Combining Ranges" anchor="combining.byte.ranges">
+<t>
+   A response might transfer only a subrange of a representation if the
+   connection closed prematurely or if the request used one or more Range
+   specifications.  After several such transfers, a client might have
+   received several ranges of the same representation.  These ranges can only
+   be safely combined if they all have in common the same strong validator
+   (<xref target="weak.and.strong.validators"/>).
+</t>
+<t>
+   A client that has received multiple partial responses to GET requests on a
+   target resource &MAY; combine those responses into a larger continuous
+   range if they share the same strong validator.
+</t>
+<t>
+   If the most recent response is an incomplete <x:ref>200 (OK)</x:ref>
+   response, then the header fields of that response are used for any
+   combined response and replace those of the matching stored responses.
+</t>
+<t>
+   If the most recent response is a <x:ref>206 (Partial Content)</x:ref>
+   response and at least one of the matching stored responses is a
+   <x:ref>200 (OK)</x:ref>, then the combined response header fields consist
+   of the most recent 200 response's header fields. If all of the matching
+   stored responses are 206 responses, then the stored response with the most
+   recent header fields is used as the source of header fields for the
+   combined response, except that the client &MUST; use other header fields
+   provided in the new response, aside from <x:ref>Content-Range</x:ref>, to
+   replace all instances of the corresponding header fields in the stored
+   response.
+</t>
+<t>
+   The combined response message body consists of the union of partial
+   content ranges in the new response and each of the selected responses.
+   If the union consists of the entire range of the representation, then the
+   client &MUST; process the combined response as if it were a complete
+   <x:ref>200 (OK)</x:ref> response, including a <x:ref>Content-Length</x:ref>
+   header field that reflects the complete length.
+   Otherwise, the client &MUST; process the set of continuous ranges as one of
+   the following:
+   an incomplete <x:ref>200 (OK)</x:ref> response if the combined response is
+   a prefix of the representation,
+   a single <x:ref>206 (Partial Content)</x:ref> response containing a
+   multipart/byteranges body, or
+   multiple <x:ref>206 (Partial Content)</x:ref> responses, each with one
+   continuous range that is indicated by a <x:ref>Content-Range</x:ref> header
+   field.
+</t>
 </section>
 </section>
 </section>

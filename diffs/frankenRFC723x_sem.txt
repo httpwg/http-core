@@ -264,6 +264,9 @@ Table of Contents
    selection algorithms that are collectively referred to as "content
    negotiation" (Section 3.4).
 
+   This document defines HTTP/1.1 range requests, partial responses, and
+   the multipart/byteranges media type.
+   
 1.1.  Conformance and Error Handling
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
@@ -3872,31 +3875,6 @@ X.X. [Method Extensibility]
    "earlier than or equal to" comparison used when evaluating an
    If-Unmodified-Since conditional.
 
-3.  Range Requests
-
-   Hypertext Transfer Protocol (HTTP) clients often encounter
-   interrupted data transfers as a result of canceled requests or
-   dropped connections.  When a client has stored a partial
-   representation, it is desirable to request the remainder of that
-   representation in a subsequent request rather than transfer the
-   entire representation.  Likewise, devices with limited local storage
-   might benefit from being able to request only a subset of a larger
-   representation, such as a single page of a very large document, or
-   the dimensions of an embedded image.
-
-   This document defines HTTP/1.1 range requests, partial responses, and
-   the multipart/byteranges media type.  Range requests are an OPTIONAL
-   feature of HTTP, designed so that recipients not implementing this
-   feature (or not supporting it for the target resource) can respond as
-   if it is a normal GET request without impacting interoperability.
-   Partial responses are indicated by a distinct status code to not be
-   mistaken for full responses by caches that might not implement the
-   feature.
-
-   Although the range request mechanism is designed to allow for
-   extensible range types, this specification only defines requests for
-   byte ranges.
-
 3.1.  Range
 
    The "Range" header field on a GET request modifies the method
@@ -3908,12 +3886,34 @@ X.X. [Method Extensibility]
      other-ranges-specifier = other-range-unit "=" other-range-set
      other-range-set = 1*VCHAR
 
+   Hypertext Transfer Protocol (HTTP) clients often encounter
+   interrupted data transfers as a result of canceled requests or
+   dropped connections.  When a client has stored a partial
+   representation, it is desirable to request the remainder of that
+   representation in a subsequent request rather than transfer the
+   entire representation.  Likewise, devices with limited local storage
+   might benefit from being able to request only a subset of a larger
+   representation, such as a single page of a very large document, or
+   the dimensions of an embedded image.
+
+   Range requests are an OPTIONAL
+   feature of HTTP, designed so that recipients not implementing this
+   feature (or not supporting it for the target resource) can respond as
+   if it is a normal GET request without impacting interoperability.
+   Partial responses are indicated by a distinct status code to not be
+   mistaken for full responses by caches that might not implement the
+   feature.
+
    A server MAY ignore the Range header field.  However, origin servers
    and intermediate caches ought to support byte ranges when possible,
    since Range supports efficient recovery from partially failed
    transfers and partial retrieval of large representations.  A server
    MUST ignore a Range header field received with a request method other
    than GET.
+
+   Although the range request mechanism is designed to allow for
+   extensible range types, this specification only defines requests for
+   byte ranges.
 
    An origin server MUST ignore a Range header field that contains a
    range unit it does not understand.  A proxy MAY discard a Range
@@ -3956,47 +3956,6 @@ X.X. [Method Extensibility]
    header field for the target resource, and the specified range(s) are
    invalid or unsatisfiable, the server SHOULD send a 416 (Range Not
    Satisfiable) response.
-
-4.3.  Combining Ranges
-
-   A response might transfer only a subrange of a representation if the
-   connection closed prematurely or if the request used one or more
-   Range specifications.  After several such transfers, a client might
-   have received several ranges of the same representation.  These
-   ranges can only be safely combined if they all have in common the
-   same strong validator (Section 2.1 of [RFC7232]).
-
-   A client that has received multiple partial responses to GET requests
-   on a target resource MAY combine those responses into a larger
-   continuous range if they share the same strong validator.
-
-   If the most recent response is an incomplete 200 (OK) response, then
-   the header fields of that response are used for any combined response
-   and replace those of the matching stored responses.
-
-   If the most recent response is a 206 (Partial Content) response and
-   at least one of the matching stored responses is a 200 (OK), then the
-   combined response header fields consist of the most recent 200
-   response's header fields.  If all of the matching stored responses
-   are 206 responses, then the stored response with the most recent
-   header fields is used as the source of header fields for the combined
-   response, except that the client MUST use other header fields
-   provided in the new response, aside from Content-Range, to replace
-   all instances of the corresponding header fields in the stored
-   response.
-
-   The combined response message body consists of the union of partial
-   content ranges in the new response and each of the selected
-   responses.  If the union consists of the entire range of the
-   representation, then the client MUST process the combined response as
-   if it were a complete 200 (OK) response, including a Content-Length
-   header field that reflects the complete length.  Otherwise, the
-   client MUST process the set of continuous ranges as one of the
-   following: an incomplete 200 (OK) response if the combined response
-   is a prefix of the representation, a single 206 (Partial Content)
-   response containing a multipart/byteranges body, or multiple 206
-   (Partial Content) responses, each with one continuous range that is
-   indicated by a Content-Range header field.
 
 5.3.  Content Negotiation
 
@@ -5182,6 +5141,47 @@ Appendix A.  Internet Media Type multipart/byteranges
 
      ...the second range
      --THIS_STRING_SEPARATES--
+
+4.3.  Combining Ranges
+
+   A response might transfer only a subrange of a representation if the
+   connection closed prematurely or if the request used one or more
+   Range specifications.  After several such transfers, a client might
+   have received several ranges of the same representation.  These
+   ranges can only be safely combined if they all have in common the
+   same strong validator (Section 2.1 of [RFC7232]).
+
+   A client that has received multiple partial responses to GET requests
+   on a target resource MAY combine those responses into a larger
+   continuous range if they share the same strong validator.
+
+   If the most recent response is an incomplete 200 (OK) response, then
+   the header fields of that response are used for any combined response
+   and replace those of the matching stored responses.
+
+   If the most recent response is a 206 (Partial Content) response and
+   at least one of the matching stored responses is a 200 (OK), then the
+   combined response header fields consist of the most recent 200
+   response's header fields.  If all of the matching stored responses
+   are 206 responses, then the stored response with the most recent
+   header fields is used as the source of header fields for the combined
+   response, except that the client MUST use other header fields
+   provided in the new response, aside from Content-Range, to replace
+   all instances of the corresponding header fields in the stored
+   response.
+
+   The combined response message body consists of the union of partial
+   content ranges in the new response and each of the selected
+   responses.  If the union consists of the entire range of the
+   representation, then the client MUST process the combined response as
+   if it were a complete 200 (OK) response, including a Content-Length
+   header field that reflects the complete length.  Otherwise, the
+   client MUST process the set of continuous ranges as one of the
+   following: an incomplete 200 (OK) response if the combined response
+   is a prefix of the representation, a single 206 (Partial Content)
+   response containing a multipart/byteranges body, or multiple 206
+   (Partial Content) responses, each with one continuous range that is
+   indicated by a Content-Range header field.
 
 6.4.  Redirection 3xx
 
