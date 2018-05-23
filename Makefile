@@ -64,7 +64,7 @@ diff:
           egrep -v -- '^<\!-- ' > diffs/diff_semantics.html
 	$(rfcdiff) diffs/frankenRFC723x_msg.txt $(MESSAGING).txt  | \
           egrep -v -- '^<\!-- ' > diffs/diff_messaging.html
-	$(rfcdiff) auth48/rfc7234.txt $(CACHE).txt  | \
+	$(rfcdiff) diffs/frankenRFC723x_cache.txt $(CACHE).txt  | \
           egrep -v -- '^<\!-- ' > diffs/diff_cache.html
 
 diff00:
