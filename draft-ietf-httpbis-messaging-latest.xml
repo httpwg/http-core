@@ -259,6 +259,8 @@
                    <x:ref>CRLF</x:ref>
                    [ <x:ref>message-body</x:ref> ]
 </artwork></figure>
+
+<section title="Message Parsing" anchor="message.parsing">
 <t>
    The normal procedure for parsing an HTTP message is to read the
    start-line into a structure, read each header field into a hash
@@ -280,11 +282,24 @@
    after message parsing has delineated the individual fields.
 </t>
 <t>
-   An HTTP message can be parsed as a stream for incremental processing or
-   forwarding downstream.  However, recipients cannot rely on incremental
-   delivery of partial messages, since some implementations will buffer or
-   delay message forwarding for the sake of network efficiency, security
-   checks, or payload transformations.
+   Although the line terminator for the start-line and header
+   fields is the sequence CRLF, a recipient &MAY; recognize a
+   single LF as a line terminator and ignore any preceding CR.
+</t>
+<t>
+   Older HTTP/1.0 user agent implementations might send an extra CRLF
+   after a POST request as a workaround for some early server
+   applications that failed to read message body content that was
+   not terminated by a line-ending. An HTTP/1.1 user agent &MUST-NOT;
+   preface or follow a request with an extra CRLF.  If terminating
+   the request message body with a line-ending is desired, then the
+   user agent &MUST; count the terminating CRLF octets as part of the
+   message body length.
+</t>
+<t>
+   In the interest of robustness, a server that is expecting to receive and
+   parse a request-line &SHOULD; ignore at least one empty line (CRLF)
+   received prior to the request-line.
 </t>
 <t>
    A sender &MUST-NOT; send whitespace between the start-line and
@@ -305,6 +320,14 @@
    Likewise, the presence of such whitespace in a response might be
    ignored by some clients or cause others to cease parsing.
 </t>
+<t>
+   When a server listening only for HTTP request messages, or processing
+   what appears from the start-line to be an HTTP request message,
+   receives a sequence of octets that does not match the HTTP-message
+   grammar aside from the robustness exceptions listed above, the
+   server &SHOULD; respond with a <x:ref>400 (Bad Request)</x:ref> response.
+</t>
+</section>
 
 <section title="Start Line" anchor="start.line">
   <x:anchor-alias value="Start-Line"/>
@@ -337,6 +360,18 @@
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="request-line"/>
   <x:ref>request-line</x:ref>   = <x:ref>method</x:ref> <x:ref>SP</x:ref> <x:ref>request-target</x:ref> <x:ref>SP</x:ref> <x:ref>HTTP-version</x:ref> <x:ref>CRLF</x:ref>
 </artwork></figure>
+<t>
+   Although the request-line grammar rule requires that each of the component
+   elements be separated by a single SP octet, recipients &MAY; instead parse
+   on whitespace-delimited word boundaries and, aside from the CRLF
+   terminator, treat any form of whitespace as the SP separator while
+   ignoring preceding or trailing whitespace; such whitespace includes one or
+   more of the following octets: SP, HTAB, VT (%x0B), FF (%x0C), or bare CR.
+   However, lenient parsing can result in request smuggling security
+   vulnerabilities if there are multiple recipients of the message and each
+   has its own unique interpretation of robustness
+   (see <xref target="request.smuggling"/>).
+</t>
 <iref primary="true" item="method"/>
 <t anchor="method">
    The method token indicates the request method to be performed on the
@@ -356,12 +391,10 @@
    the request, as defined in <xref target="h1.request.target"/>.
 </t>
 <t>
-   Recipients typically parse the request-line into its component parts by
-   splitting on whitespace (see <xref target="message.robustness"/>), since
-   no whitespace is allowed in the three components.
+   No whitespace is allowed in the request-target.
    Unfortunately, some user agents fail to properly encode or exclude
    whitespace found in hypertext references, resulting in those disallowed
-   characters being sent in a request-target.
+   characters being sent as the request-target in a malformed request-line.
 </t>
 <t>
    Recipients of an invalid request-line &SHOULD; respond with either a
@@ -401,6 +434,18 @@
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="status-line"/>
   <x:ref>status-line</x:ref> = <x:ref>HTTP-version</x:ref> <x:ref>SP</x:ref> <x:ref>status-code</x:ref> <x:ref>SP</x:ref> <x:ref>reason-phrase</x:ref> <x:ref>CRLF</x:ref>
 </artwork></figure>
+<t>
+   Although the status-line grammar rule requires that each of the component
+   elements be separated by a single SP octet, recipients &MAY; instead parse
+   on whitespace-delimited word boundaries and, aside from the line
+   terminator, treat any form of whitespace as the SP separator while
+   ignoring preceding or trailing whitespace; such whitespace includes one or
+   more of the following octets: SP, HTAB, VT (%x0B), FF (%x0C), or bare CR.
+   However, lenient parsing can result in response splitting security
+   vulnerabilities if there are multiple recipients of the message and each
+   has its own unique interpretation of robustness
+   (see <xref target="response.splitting"/>).
+</t>
 <t>
    The status-code element is a 3-digit integer code describing the
    result of the server's attempt to understand and satisfy the client's
@@ -883,48 +928,6 @@
    connection and, thus, is considered complete regardless of the number of
    message body octets received, provided that the header section was received
    intact.
-</t>
-</section>
-
-<section title="Message Parsing Robustness" anchor="message.robustness">
-<t>
-   Older HTTP/1.0 user agent implementations might send an extra CRLF
-   after a POST request as a workaround for some early server
-   applications that failed to read message body content that was
-   not terminated by a line-ending. An HTTP/1.1 user agent &MUST-NOT;
-   preface or follow a request with an extra CRLF.  If terminating
-   the request message body with a line-ending is desired, then the
-   user agent &MUST; count the terminating CRLF octets as part of the
-   message body length.
-</t>
-<t>
-   In the interest of robustness, a server that is expecting to receive and
-   parse a request-line &SHOULD; ignore at least one empty line (CRLF)
-   received prior to the request-line.
-</t>
-<t>
-   Although the line terminator for the start-line and header
-   fields is the sequence CRLF, a recipient &MAY; recognize a
-   single LF as a line terminator and ignore any preceding CR.
-</t>
-<t>
-   Although the request-line and status-line grammar rules require that each
-   of the component elements be separated by a single SP octet, recipients
-   &MAY; instead parse on whitespace-delimited word boundaries and, aside
-   from the CRLF terminator, treat any form of whitespace as the SP separator
-   while ignoring preceding or trailing whitespace;
-   such whitespace includes one or more of the following octets:
-   SP, HTAB, VT (%x0B), FF (%x0C), or bare CR.
-   However, lenient parsing can result in security vulnerabilities if there
-   are multiple recipients of the message and each has its own unique
-   interpretation of robustness (see <xref target="request.smuggling"/>).
-</t>
-<t>
-   When a server listening only for HTTP request messages, or processing
-   what appears from the start-line to be an HTTP request message,
-   receives a sequence of octets that does not match the HTTP-message
-   grammar aside from the robustness exceptions listed above, the
-   server &SHOULD; respond with a <x:ref>400 (Bad Request)</x:ref> response.
 </t>
 </section>
 </section>

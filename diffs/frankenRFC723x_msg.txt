@@ -277,12 +277,6 @@ Table of Contents
    a header field-value after message parsing has delineated the
    individual fields.
 
-   An HTTP message can be parsed as a stream for incremental processing
-   or forwarding downstream.  However, recipients cannot rely on
-   incremental delivery of partial messages, since some implementations
-   will buffer or delay message forwarding for the sake of network
-   efficiency, security checks, or payload transformations.
-
    A sender MUST NOT send whitespace between the start-line and the
    first header field.  A recipient that receives whitespace between the
    start-line and the first header field MUST either reject the message
@@ -298,6 +292,30 @@ Table of Contents
    interpret the same message differently.  Likewise, the presence of
    such whitespace in a response might be ignored by some clients or
    cause others to cease parsing.
+
+3.5.  Message Parsing Robustness
+
+   Older HTTP/1.0 user agent implementations might send an extra CRLF
+   after a POST request as a workaround for some early server
+   applications that failed to read message body content that was not
+   terminated by a line-ending.  An HTTP/1.1 user agent MUST NOT preface
+   or follow a request with an extra CRLF.  If terminating the request
+   message body with a line-ending is desired, then the user agent MUST
+   count the terminating CRLF octets as part of the message body length.
+
+   In the interest of robustness, a server that is expecting to receive
+   and parse a request-line SHOULD ignore at least one empty line (CRLF)
+   received prior to the request-line.
+
+   Although the line terminator for the start-line and header fields is
+   the sequence CRLF, a recipient MAY recognize a single LF as a line
+   terminator and ignore any preceding CR.
+
+   When a server listening only for HTTP request messages, or processing
+   what appears from the start-line to be an HTTP request message,
+   receives a sequence of octets that does not match the HTTP-message
+   grammar aside from the robustness exceptions listed above, the server
+   SHOULD respond with a 400 (Bad Request) response.
 
 3.1.  Start Line
 
@@ -322,6 +340,17 @@ Table of Contents
    version, and ends with CRLF.
 
      request-line   = method SP request-target SP HTTP-version CRLF
+
+   Although the request-line and status-line grammar rules require that
+   each of the component elements be separated by a single SP octet,
+   recipients MAY instead parse on whitespace-delimited word boundaries
+   and, aside from the CRLF terminator, treat any form of whitespace as
+   the SP separator while ignoring preceding or trailing whitespace;
+   such whitespace includes one or more of the following octets: SP,
+   HTAB, VT (%x0B), FF (%x0C), or bare CR.  However, lenient parsing can
+   result in security vulnerabilities if there are multiple recipients
+   of the message and each has its own unique interpretation of
+   robustness (see Section 9.5).
 
    The method token indicates the request method to be performed on the
    target resource.  The request method is case-sensitive.
@@ -369,6 +398,17 @@ Table of Contents
    and ending with CRLF.
 
      status-line = HTTP-version SP status-code SP reason-phrase CRLF
+
+   Although the request-line and status-line grammar rules require that
+   each of the component elements be separated by a single SP octet,
+   recipients MAY instead parse on whitespace-delimited word boundaries
+   and, aside from the CRLF terminator, treat any form of whitespace as
+   the SP separator while ignoring preceding or trailing whitespace;
+   such whitespace includes one or more of the following octets: SP,
+   HTAB, VT (%x0B), FF (%x0C), or bare CR.  However, lenient parsing can
+   result in security vulnerabilities if there are multiple recipients
+   of the message and each has its own unique interpretation of
+   robustness (see Section 9.5).
 
    The status-code element is a 3-digit integer code describing the
    result of the server's attempt to understand and satisfy the client's
@@ -730,41 +770,6 @@ Table of Contents
    connection and, thus, is considered complete regardless of the number
    of message body octets received, provided that the header section was
    received intact.
-
-3.5.  Message Parsing Robustness
-
-   Older HTTP/1.0 user agent implementations might send an extra CRLF
-   after a POST request as a workaround for some early server
-   applications that failed to read message body content that was not
-   terminated by a line-ending.  An HTTP/1.1 user agent MUST NOT preface
-   or follow a request with an extra CRLF.  If terminating the request
-   message body with a line-ending is desired, then the user agent MUST
-   count the terminating CRLF octets as part of the message body length.
-
-   In the interest of robustness, a server that is expecting to receive
-   and parse a request-line SHOULD ignore at least one empty line (CRLF)
-   received prior to the request-line.
-
-   Although the line terminator for the start-line and header fields is
-   the sequence CRLF, a recipient MAY recognize a single LF as a line
-   terminator and ignore any preceding CR.
-
-   Although the request-line and status-line grammar rules require that
-   each of the component elements be separated by a single SP octet,
-   recipients MAY instead parse on whitespace-delimited word boundaries
-   and, aside from the CRLF terminator, treat any form of whitespace as
-   the SP separator while ignoring preceding or trailing whitespace;
-   such whitespace includes one or more of the following octets: SP,
-   HTAB, VT (%x0B), FF (%x0C), or bare CR.  However, lenient parsing can
-   result in security vulnerabilities if there are multiple recipients
-   of the message and each has its own unique interpretation of
-   robustness (see Section 9.5).
-
-   When a server listening only for HTTP request messages, or processing
-   what appears from the start-line to be an HTTP request message,
-   receives a sequence of octets that does not match the HTTP-message
-   grammar aside from the robustness exceptions listed above, the server
-   SHOULD respond with a 400 (Bad Request) response.
 
 4.  Transfer Codings
 
