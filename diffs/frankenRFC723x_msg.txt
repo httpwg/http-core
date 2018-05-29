@@ -246,6 +246,8 @@ Table of Contents
      quoted-string = <quoted-string, see [RFC7230], Section 3.2.6>
      token         = <token, see [RFC7230], Section 3.2.6>
 
+X.  [Message]
+
 3.  Message Format
 
    All HTTP/1.1 messages consist of a start-line followed by a sequence
@@ -258,6 +260,24 @@ Table of Contents
                       *( header-field CRLF )
                       CRLF
                       [ message-body ]
+
+3.1.  Start Line
+
+   An HTTP message can be either a request from client to server or a
+   response from server to client.  Syntactically, the two types of
+   message differ only in the start-line, which is either a request-line
+   (for requests) or a status-line (for responses), and in the algorithm
+   for determining the length of the message body (Section 3.3).
+
+     start-line     = request-line / status-line
+
+   In theory, a client could receive requests and a server could receive
+   responses, distinguishing them by their different start-line formats,
+   but, in practice, servers are implemented to only expect a request (a
+   response is interpreted as an unknown or invalid request method) and
+   clients are implemented to only expect a response.
+
+3.5.  Message Parsing Robustness
 
    The normal procedure for parsing an HTTP message is to read the
    start-line into a structure, read each header field into a hash table
@@ -277,6 +297,22 @@ Table of Contents
    a header field-value after message parsing has delineated the
    individual fields.
 
+   Although the line terminator for the start-line and header fields is
+   the sequence CRLF, a recipient MAY recognize a single LF as a line
+   terminator and ignore any preceding CR.
+
+   Older HTTP/1.0 user agent implementations might send an extra CRLF
+   after a POST request as a workaround for some early server
+   applications that failed to read message body content that was not
+   terminated by a line-ending.  An HTTP/1.1 user agent MUST NOT preface
+   or follow a request with an extra CRLF.  If terminating the request
+   message body with a line-ending is desired, then the user agent MUST
+   count the terminating CRLF octets as part of the message body length.
+
+   In the interest of robustness, a server that is expecting to receive
+   and parse a request-line SHOULD ignore at least one empty line (CRLF)
+   received prior to the request-line.
+
    A sender MUST NOT send whitespace between the start-line and the
    first header field.  A recipient that receives whitespace between the
    start-line and the first header field MUST either reject the message
@@ -293,45 +329,11 @@ Table of Contents
    such whitespace in a response might be ignored by some clients or
    cause others to cease parsing.
 
-3.5.  Message Parsing Robustness
-
-   Older HTTP/1.0 user agent implementations might send an extra CRLF
-   after a POST request as a workaround for some early server
-   applications that failed to read message body content that was not
-   terminated by a line-ending.  An HTTP/1.1 user agent MUST NOT preface
-   or follow a request with an extra CRLF.  If terminating the request
-   message body with a line-ending is desired, then the user agent MUST
-   count the terminating CRLF octets as part of the message body length.
-
-   In the interest of robustness, a server that is expecting to receive
-   and parse a request-line SHOULD ignore at least one empty line (CRLF)
-   received prior to the request-line.
-
-   Although the line terminator for the start-line and header fields is
-   the sequence CRLF, a recipient MAY recognize a single LF as a line
-   terminator and ignore any preceding CR.
-
    When a server listening only for HTTP request messages, or processing
    what appears from the start-line to be an HTTP request message,
    receives a sequence of octets that does not match the HTTP-message
    grammar aside from the robustness exceptions listed above, the server
    SHOULD respond with a 400 (Bad Request) response.
-
-3.1.  Start Line
-
-   An HTTP message can be either a request from client to server or a
-   response from server to client.  Syntactically, the two types of
-   message differ only in the start-line, which is either a request-line
-   (for requests) or a status-line (for responses), and in the algorithm
-   for determining the length of the message body (Section 3.3).
-
-   In theory, a client could receive requests and a server could receive
-   responses, distinguishing them by their different start-line formats,
-   but, in practice, servers are implemented to only expect a request (a
-   response is interpreted as an unknown or invalid request method) and
-   clients are implemented to only expect a response.
-
-     start-line     = request-line / status-line
 
 3.1.1.  Request Line
 
@@ -352,6 +354,18 @@ Table of Contents
    of the message and each has its own unique interpretation of
    robustness (see Section 9.5).
 
+   HTTP does not place a predefined limit on the length of a
+   request-line, as described in Section 2.5.  A server that receives a
+   method longer than any that it implements SHOULD respond with a 501
+   (Not Implemented) status code.  A server that receives a
+   request-target longer than any URI it wishes to parse MUST respond
+   with a 414 (URI Too Long) status code (see Section 6.5.12 of
+   [RFC7231]).
+
+   Various ad hoc limitations on request-line length are found in
+   practice.  It is RECOMMENDED that all HTTP senders and recipients
+   support, at a minimum, request-line lengths of 8000 octets.
+
    The method token indicates the request method to be performed on the
    target resource.  The request method is case-sensitive.
 
@@ -361,8 +375,21 @@ Table of Contents
    Section 4 of [RFC7231], along with information regarding the HTTP
    method registry and considerations for defining new methods.
 
+5.3.  Request Target
+
    The request-target identifies the target resource upon which to apply
    the request, as defined in Section 5.3.
+
+   Once an inbound connection is obtained, the client sends an HTTP
+   request message (Section 3) with a request-target derived from the
+   target URI.  There are four distinct formats for the request-target,
+   depending on both the method being requested and whether the request
+   is to a proxy.
+
+     request-target = origin-form
+                    / absolute-form
+                    / authority-form
+                    / asterisk-form
 
    Recipients typically parse the request-line into its component parts
    by splitting on whitespace (see Section 3.5), since no whitespace is
@@ -378,17 +405,163 @@ Table of Contents
    the invalid request-line might be deliberately crafted to bypass
    security filters along the request chain.
 
-   HTTP does not place a predefined limit on the length of a
-   request-line, as described in Section 2.5.  A server that receives a
-   method longer than any that it implements SHOULD respond with a 501
-   (Not Implemented) status code.  A server that receives a
-   request-target longer than any URI it wishes to parse MUST respond
-   with a 414 (URI Too Long) status code (see Section 6.5.12 of
-   [RFC7231]).
+5.3.1.  origin-form
 
-   Various ad hoc limitations on request-line length are found in
-   practice.  It is RECOMMENDED that all HTTP senders and recipients
-   support, at a minimum, request-line lengths of 8000 octets.
+   The most common form of request-target is the origin-form.
+
+     origin-form    = absolute-path [ "?" query ]
+
+   When making a request directly to an origin server, other than a
+   CONNECT or server-wide OPTIONS request (as detailed below), a client
+   MUST send only the absolute path and query components of the target
+   URI as the request-target.  If the target URI's path component is
+   empty, the client MUST send "/" as the path within the origin-form of
+   request-target.  A Host header field is also sent, as defined in
+   Section 5.4.
+
+   For example, a client wishing to retrieve a representation of the
+   resource identified as
+
+     http://www.example.org/where?q=now
+
+   directly from the origin server would open (or reuse) a TCP
+   connection to port 80 of the host "www.example.org" and send the
+   lines:
+
+     GET /where?q=now HTTP/1.1
+     Host: www.example.org
+
+   followed by the remainder of the request message.
+
+5.3.2.  absolute-form
+
+   When making a request to a proxy, other than a CONNECT or server-wide
+   OPTIONS request (as detailed below), a client MUST send the target
+   URI in absolute-form as the request-target.
+
+     absolute-form  = absolute-URI
+
+   The proxy is requested to either service that request from a valid
+   cache, if possible, or make the same request on the client's behalf
+   to either the next inbound proxy server or directly to the origin
+   server indicated by the request-target.  Requirements on such
+   "forwarding" of messages are defined in Section 5.7.
+
+   An example absolute-form of request-line would be:
+
+     GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
+
+   To allow for transition to the absolute-form for all requests in some
+   future version of HTTP, a server MUST accept the absolute-form in
+   requests, even though HTTP/1.1 clients will only send them in
+   requests to proxies.
+
+5.3.3.  authority-form
+
+   The authority-form of request-target is only used for CONNECT
+   requests (Section 4.3.6 of [RFC7231]).
+
+     authority-form = authority
+
+   When making a CONNECT request to establish a tunnel through one or
+   more proxies, a client MUST send only the target URI's authority
+   component (excluding any userinfo and its "@" delimiter) as the
+   request-target.  For example,
+
+     CONNECT www.example.com:80 HTTP/1.1
+
+5.3.4.  asterisk-form
+
+   The asterisk-form of request-target is only used for a server-wide
+   OPTIONS request (Section 4.3.7 of [RFC7231]).
+
+     asterisk-form  = "*"
+
+   When a client wishes to request OPTIONS for the server as a whole, as
+   opposed to a specific named resource of that server, the client MUST
+   send only "*" (%x2A) as the request-target.  For example,
+
+     OPTIONS * HTTP/1.1
+
+   If a proxy receives an OPTIONS request with an absolute-form of
+   request-target in which the URI has an empty path and no query
+   component, then the last proxy on the request chain MUST send a
+   request-target of "*" when it forwards the request to the indicated
+   origin server.
+
+   For example, the request
+
+     OPTIONS http://www.example.org:8001 HTTP/1.1
+
+   would be forwarded by the final proxy as
+
+     OPTIONS * HTTP/1.1
+     Host: www.example.org:8001
+
+   after connecting to port 8001 of host "www.example.org".
+
+5.5.  Effective Request URI
+
+   Since the request-target often contains only part of the user agent's
+   target URI, a server reconstructs the intended target as an
+   "effective request URI" to properly service the request.
+
+   If the request-target is in absolute-form, the effective request URI
+   is the same as the request-target.  Otherwise, the effective request
+   URI is constructed as follows:
+
+      If the server's configuration (or outbound gateway) provides a
+      fixed URI scheme, that scheme is used for the effective request
+      URI.  Otherwise, if the request is received over a TLS-secured TCP
+      connection, the effective request URI's scheme is "https"; if not,
+      the scheme is "http".
+
+      If the server's configuration (or outbound gateway) provides a
+      fixed URI authority component, that authority is used for the
+      effective request URI.  If not, then if the request-target is in
+      authority-form, the effective request URI's authority component is
+      the same as the request-target.  If not, then if a Host header
+      field is supplied with a non-empty field-value, the authority
+      component is the same as the Host field-value.  Otherwise, the
+      authority component is assigned the default name configured for
+      the server and, if the connection's incoming TCP port number
+      differs from the default port for the effective request URI's
+      scheme, then a colon (":") and the incoming port number (in
+      decimal form) are appended to the authority component.
+
+      If the request-target is in authority-form or asterisk-form, the
+      effective request URI's combined path and query component is
+      empty.  Otherwise, the combined path and query component is the
+      same as the request-target.
+
+      The components of the effective request URI, once determined as
+      above, can be combined into absolute-URI form by concatenating the
+      scheme, "://", authority, and combined path and query component.
+
+   Example 1: the following message received over an insecure TCP
+   connection
+
+     GET /pub/WWW/TheProject.html HTTP/1.1
+     Host: www.example.org:8080
+
+   has an effective request URI of
+
+     http://www.example.org:8080/pub/WWW/TheProject.html
+
+   Example 2: the following message received over a TLS-secured TCP
+   connection
+
+     OPTIONS * HTTP/1.1
+     Host: www.example.org
+
+   has an effective request URI of
+
+     https://www.example.org
+
+   Recipients of an HTTP/1.0 request that lacks a Host header field
+   might need to use heuristics (e.g., examination of the URI path for
+   something unique to a particular host) in order to guess the
+   effective request URI's authority component.
 
 3.1.2.  Status Line
 
@@ -743,34 +916,6 @@ Table of Contents
    separate response, since such behavior would be vulnerable to cache
    poisoning.
 
-3.4.  Handling Incomplete Messages
-
-   A server that receives an incomplete request message, usually due to
-   a canceled request or a triggered timeout exception, MAY send an
-   error response prior to closing the connection.
-
-   A client that receives an incomplete response message, which can
-   occur when a connection is closed prematurely or when decoding a
-   supposedly chunked transfer coding fails, MUST record the message as
-   incomplete.  Cache requirements for incomplete responses are defined
-   in Section 3 of [RFC7234].
-
-   If a response terminates in the middle of the header section (before
-   the empty line is received) and the status code might rely on header
-   fields to convey the full meaning of the response, then the client
-   cannot assume that meaning has been conveyed; the client might need
-   to repeat the request in order to determine what action to take next.
-
-   A message body that uses the chunked transfer coding is incomplete if
-   the zero-sized chunk that terminates the encoding has not been
-   received.  A message that uses a valid Content-Length is incomplete
-   if the size of the message body received (in octets) is less than the
-   value given by Content-Length.  A response that has neither chunked
-   transfer coding nor Content-Length is terminated by closure of the
-   connection and, thus, is considered complete regardless of the number
-   of message body octets received, provided that the header section was
-   received intact.
-
 4.  Transfer Codings
 
    Transfer coding names are used to indicate an encoding transformation
@@ -1023,176 +1168,33 @@ Table of Contents
    field from being forwarded by intermediaries that do not support its
    semantics.
 
-5.3.  Request Target
+3.4.  Handling Incomplete Messages
 
-   Once an inbound connection is obtained, the client sends an HTTP
-   request message (Section 3) with a request-target derived from the
-   target URI.  There are four distinct formats for the request-target,
-   depending on both the method being requested and whether the request
-   is to a proxy.
+   A server that receives an incomplete request message, usually due to
+   a canceled request or a triggered timeout exception, MAY send an
+   error response prior to closing the connection.
 
-     request-target = origin-form
-                    / absolute-form
-                    / authority-form
-                    / asterisk-form
+   A client that receives an incomplete response message, which can
+   occur when a connection is closed prematurely or when decoding a
+   supposedly chunked transfer coding fails, MUST record the message as
+   incomplete.  Cache requirements for incomplete responses are defined
+   in Section 3 of [RFC7234].
 
-5.3.1.  origin-form
+   If a response terminates in the middle of the header section (before
+   the empty line is received) and the status code might rely on header
+   fields to convey the full meaning of the response, then the client
+   cannot assume that meaning has been conveyed; the client might need
+   to repeat the request in order to determine what action to take next.
 
-   The most common form of request-target is the origin-form.
-
-     origin-form    = absolute-path [ "?" query ]
-
-   When making a request directly to an origin server, other than a
-   CONNECT or server-wide OPTIONS request (as detailed below), a client
-   MUST send only the absolute path and query components of the target
-   URI as the request-target.  If the target URI's path component is
-   empty, the client MUST send "/" as the path within the origin-form of
-   request-target.  A Host header field is also sent, as defined in
-   Section 5.4.
-
-   For example, a client wishing to retrieve a representation of the
-   resource identified as
-
-     http://www.example.org/where?q=now
-
-   directly from the origin server would open (or reuse) a TCP
-   connection to port 80 of the host "www.example.org" and send the
-   lines:
-
-     GET /where?q=now HTTP/1.1
-     Host: www.example.org
-
-   followed by the remainder of the request message.
-
-5.3.2.  absolute-form
-
-   When making a request to a proxy, other than a CONNECT or server-wide
-   OPTIONS request (as detailed below), a client MUST send the target
-   URI in absolute-form as the request-target.
-
-     absolute-form  = absolute-URI
-
-   The proxy is requested to either service that request from a valid
-   cache, if possible, or make the same request on the client's behalf
-   to either the next inbound proxy server or directly to the origin
-   server indicated by the request-target.  Requirements on such
-   "forwarding" of messages are defined in Section 5.7.
-
-   An example absolute-form of request-line would be:
-
-     GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
-
-   To allow for transition to the absolute-form for all requests in some
-   future version of HTTP, a server MUST accept the absolute-form in
-   requests, even though HTTP/1.1 clients will only send them in
-   requests to proxies.
-
-5.3.3.  authority-form
-
-   The authority-form of request-target is only used for CONNECT
-   requests (Section 4.3.6 of [RFC7231]).
-
-     authority-form = authority
-
-   When making a CONNECT request to establish a tunnel through one or
-   more proxies, a client MUST send only the target URI's authority
-   component (excluding any userinfo and its "@" delimiter) as the
-   request-target.  For example,
-
-     CONNECT www.example.com:80 HTTP/1.1
-
-5.3.4.  asterisk-form
-
-   The asterisk-form of request-target is only used for a server-wide
-   OPTIONS request (Section 4.3.7 of [RFC7231]).
-
-     asterisk-form  = "*"
-
-   When a client wishes to request OPTIONS for the server as a whole, as
-   opposed to a specific named resource of that server, the client MUST
-   send only "*" (%x2A) as the request-target.  For example,
-
-     OPTIONS * HTTP/1.1
-
-   If a proxy receives an OPTIONS request with an absolute-form of
-   request-target in which the URI has an empty path and no query
-   component, then the last proxy on the request chain MUST send a
-   request-target of "*" when it forwards the request to the indicated
-   origin server.
-
-   For example, the request
-
-     OPTIONS http://www.example.org:8001 HTTP/1.1
-
-   would be forwarded by the final proxy as
-
-     OPTIONS * HTTP/1.1
-     Host: www.example.org:8001
-
-   after connecting to port 8001 of host "www.example.org".
-
-5.5.  Effective Request URI
-
-   Since the request-target often contains only part of the user agent's
-   target URI, a server reconstructs the intended target as an
-   "effective request URI" to properly service the request.
-
-   If the request-target is in absolute-form, the effective request URI
-   is the same as the request-target.  Otherwise, the effective request
-   URI is constructed as follows:
-
-      If the server's configuration (or outbound gateway) provides a
-      fixed URI scheme, that scheme is used for the effective request
-      URI.  Otherwise, if the request is received over a TLS-secured TCP
-      connection, the effective request URI's scheme is "https"; if not,
-      the scheme is "http".
-
-      If the server's configuration (or outbound gateway) provides a
-      fixed URI authority component, that authority is used for the
-      effective request URI.  If not, then if the request-target is in
-      authority-form, the effective request URI's authority component is
-      the same as the request-target.  If not, then if a Host header
-      field is supplied with a non-empty field-value, the authority
-      component is the same as the Host field-value.  Otherwise, the
-      authority component is assigned the default name configured for
-      the server and, if the connection's incoming TCP port number
-      differs from the default port for the effective request URI's
-      scheme, then a colon (":") and the incoming port number (in
-      decimal form) are appended to the authority component.
-
-      If the request-target is in authority-form or asterisk-form, the
-      effective request URI's combined path and query component is
-      empty.  Otherwise, the combined path and query component is the
-      same as the request-target.
-
-      The components of the effective request URI, once determined as
-      above, can be combined into absolute-URI form by concatenating the
-      scheme, "://", authority, and combined path and query component.
-
-   Example 1: the following message received over an insecure TCP
-   connection
-
-     GET /pub/WWW/TheProject.html HTTP/1.1
-     Host: www.example.org:8080
-
-   has an effective request URI of
-
-     http://www.example.org:8080/pub/WWW/TheProject.html
-
-   Example 2: the following message received over a TLS-secured TCP
-   connection
-
-     OPTIONS * HTTP/1.1
-     Host: www.example.org
-
-   has an effective request URI of
-
-     https://www.example.org
-
-   Recipients of an HTTP/1.0 request that lacks a Host header field
-   might need to use heuristics (e.g., examination of the URI path for
-   something unique to a particular host) in order to guess the
-   effective request URI's authority component.
+   A message body that uses the chunked transfer coding is incomplete if
+   the zero-sized chunk that terminates the encoding has not been
+   received.  A message that uses a valid Content-Length is incomplete
+   if the size of the message body received (in octets) is less than the
+   value given by Content-Length.  A response that has neither chunked
+   transfer coding nor Content-Length is terminated by closure of the
+   connection and, thus, is considered complete regardless of the number
+   of message body octets received, provided that the header section was
+   received intact.
 
 6.  Connection Management
 
