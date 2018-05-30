@@ -1000,7 +1000,7 @@
   <xsl:text>&gt;</xsl:text>
 </xsl:template>
 
-<xsl:template match="cref//xref" mode="cleanup" priority="9">
+<xsl:template match="cref//xref|cref//x:dfn|cref//x:ref" mode="cleanup" priority="9">
   <xsl:variable name="text">
     <xsl:apply-templates select="."/>
   </xsl:variable>

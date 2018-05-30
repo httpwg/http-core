@@ -404,11 +404,18 @@
     </xsl:variable>
     <xsl:if test="$uri1!=''">
       <xsl:variable name="ends-with-xml" select="substring($uri1, string-length($uri1)-3)='.xml'"/>
+      <xsl:variable name="for-draft" select="contains($uri1,'reference.I-D')"/>
       <xsl:variable name="uri2" select="concat($uri1,'.xml')"/>
-      <xsl:variable name="uri3" select="concat($toolsBaseUriForRFCReferences,$uri1)"/>
-      <xsl:variable name="uri4" select="concat($toolsBaseUriForRFCReferences,$uri1,'.xml')"/>
+      <xsl:variable name="uri3r" select="concat($toolsBaseUriForRFCReferences,$uri1)"/>
+      <xsl:variable name="uri4r" select="concat($toolsBaseUriForRFCReferences,$uri1,'.xml')"/>
+      <xsl:variable name="uri3i" select="concat($toolsBaseUriForIDReferences,$uri1)"/>
+      <xsl:variable name="uri4i" select="concat($toolsBaseUriForIDReferences,$uri1,'.xml')"/>
       <xsl:choose>
         <xsl:when test="not($ends-with-xml) and document($uri2)/reference">
+          <xsl:call-template name="include-uri-warning">
+            <xsl:with-param name="specified" select="$uri1"/>
+            <xsl:with-param name="success" select="$uri2"/>
+          </xsl:call-template>
           <myns:include from="{$uri2}" in="{generate-id(..)}">
             <xsl:copy-of select="document($uri2)"/>
           </myns:include>
@@ -418,20 +425,54 @@
             <xsl:copy-of select="document($uri1)"/>
           </myns:include>
         </xsl:when>
-        <xsl:when test="not($ends-with-xml) and not(contains($uri1,':')) and document($uri4)/reference">
-          <myns:include from="{$uri4}" in="{generate-id(..)}">
-            <xsl:copy-of select="document($uri4)"/>
+        <xsl:when test="not($ends-with-xml) and $for-draft and not(contains($uri1,':')) and document($uri4i)/reference">
+          <xsl:call-template name="include-uri-warning">
+            <xsl:with-param name="specified" select="$uri1"/>
+            <xsl:with-param name="success" select="$uri4i"/>
+          </xsl:call-template>
+          <myns:include from="{$uri4i}" in="{generate-id(..)}">
+            <xsl:copy-of select="document($uri4i)"/>
           </myns:include>
         </xsl:when>
-        <xsl:when test="not(contains($uri1,':')) and document($uri3)/reference">
-          <myns:include from="{$uri3}" in="{generate-id(..)}">
-            <xsl:copy-of select="document($uri3)"/>
+        <xsl:when test="not(contains($uri1,':')) and $for-draft and document($uri3i)/reference">
+          <xsl:call-template name="include-uri-warning">
+            <xsl:with-param name="specified" select="$uri1"/>
+            <xsl:with-param name="success" select="$uri3i"/>
+          </xsl:call-template>
+          <myns:include from="{$uri3i}" in="{generate-id(..)}">
+            <xsl:copy-of select="document($uri3i)"/>
+          </myns:include>
+        </xsl:when>
+        <xsl:when test="not($ends-with-xml) and not(contains($uri1,':')) and document($uri4r)/reference">
+          <xsl:call-template name="include-uri-warning">
+            <xsl:with-param name="specified" select="$uri1"/>
+            <xsl:with-param name="success" select="$uri4r"/>
+          </xsl:call-template>
+          <myns:include from="{$uri4r}" in="{generate-id(..)}">
+            <xsl:copy-of select="document($uri4r)"/>
+          </myns:include>
+        </xsl:when>
+        <xsl:when test="not(contains($uri1,':')) and document($uri3r)/reference">
+          <xsl:call-template name="include-uri-warning">
+            <xsl:with-param name="specified" select="$uri1"/>
+            <xsl:with-param name="success" select="$uri3r"/>
+          </xsl:call-template>
+          <myns:include from="{$uri3r}" in="{generate-id(..)}">
+            <xsl:copy-of select="document($uri3r)"/>
           </myns:include>
         </xsl:when>
         <xsl:otherwise/>
       </xsl:choose>
     </xsl:if>
   </xsl:for-each>
+</xsl:template>
+
+<xsl:template name="include-uri-warning">
+  <xsl:param name="specified"/>
+  <xsl:param name="success"/>
+  <xsl:call-template name="warning">
+    <xsl:with-param name="msg">include succeeded for best-guess URI <xsl:value-of select="$success"/> while <xsl:value-of select="$specified"/> was specified - you may want to adjust the include directive in order to avoid future warnings</xsl:with-param>
+  </xsl:call-template>
 </xsl:template>
 
 <xsl:template name="getXIncludes">
@@ -790,8 +831,11 @@
 <xsl:param name="internetDraftUrlFragSection" select="'section-'" />
 <xsl:param name="internetDraftUrlFragAppendix" select="'appendix-'" />
 
-<!-- base URI for include directive when relative reference does not resolve -->
+<!-- base URI for include directive when relative reference does not resolve for RFCs -->
 <xsl:param name="toolsBaseUriForRFCReferences">https://xml2rfc.tools.ietf.org/public/rfc/bibxml/</xsl:param>
+
+<!-- base URI for include directive when relative reference does not resolve for Intetnet Drafts -->
+<xsl:param name="toolsBaseUriForIDReferences">https://xml2rfc.tools.ietf.org/public/rfc/bibxml-ids/</xsl:param>
 
 <!--templates for URI calculation -->
 
@@ -3555,7 +3599,9 @@
               <meta name="dcterms.identifier" content="urn:ietf:rfc:{@number}" />
             </xsl:when>
             <xsl:when test="@docName">
-              <meta name="dcterms.identifier" content="urn:ietf:id:{@docName}" />
+              <xsl:if test="'-latest'!=substring(@docName,string-length(@docName)-string-length('-latest')+1)">
+                <meta name="dcterms.identifier" content="urn:ietf:id:{@docName}" />
+              </xsl:if>
             </xsl:when>
             <xsl:otherwise/>
           </xsl:choose>
@@ -9917,11 +9963,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1017 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1017 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1020 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1020 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/05/24 13:15:49 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/24 13:15:49 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/05/28 11:05:59 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/28 11:05:59 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -10439,9 +10485,18 @@ prev: <xsl:value-of select="$prev"/>
                       <xsl:when test="$attrname='footer'"/>
                       <xsl:when test="$attrname='header'"/>
                       <xsl:when test="$attrname='include'">
-                        <xsl:call-template name="warning">
-                          <xsl:with-param name="msg">the rfc include pseudo-attribute is only partially supported by this processor, see http://greenbytes.de/tech/webdav/rfc2629xslt/rfc2629xslt.html#examples.internalsubset for alternative syntax.</xsl:with-param>
-                        </xsl:call-template>
+                        <xsl:choose>
+                          <xsl:when test="not(parent::references)">
+                            <xsl:call-template name="error">
+                              <xsl:with-param name="msg">the rfc include pseudo-attribute (unless a child node of &lt;references&gt;) is not supported by this processor, see http://greenbytes.de/tech/webdav/rfc2629xslt/rfc2629xslt.html#examples.internalsubset for alternative syntax.</xsl:with-param>
+                            </xsl:call-template>
+                          </xsl:when>
+                          <xsl:otherwise>
+                            <xsl:call-template name="warning">
+                              <xsl:with-param name="msg">the rfc include pseudo-attribute is only partially supported by this processor, see http://greenbytes.de/tech/webdav/rfc2629xslt/rfc2629xslt.html#examples.internalsubset for alternative syntax.</xsl:with-param>
+                            </xsl:call-template>
+                          </xsl:otherwise>
+                        </xsl:choose>
                       </xsl:when>
                       <xsl:when test="$attrname='inline'"/>
                       <xsl:when test="$attrname='iprnotified'"/>
