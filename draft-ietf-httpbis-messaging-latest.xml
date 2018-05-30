@@ -205,7 +205,6 @@
    VCHAR (any visible <xref target="USASCII"/> character).
 </t>
 <t anchor="imported.rules">
-  <x:anchor-alias value="HTTP-version"/>
   <x:anchor-alias value="absolute-URI"/>
   <x:anchor-alias value="absolute-path"/>
   <x:anchor-alias value="authority"/>
@@ -222,7 +221,6 @@
   <x:ref>BWS</x:ref>           = &lt;BWS, see <xref target="whitespace"/>&gt;
   <x:ref>OWS</x:ref>           = &lt;OWS, see <xref target="whitespace"/>&gt;
   <x:ref>RWS</x:ref>           = &lt;RWS, see <xref target="whitespace"/>&gt;
-  <x:ref>HTTP-version</x:ref>  = &lt;HTTP-version, see <xref target="http.version"/>&gt;
   <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, see <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
   <x:ref>absolute-path</x:ref> = &lt;absolute-path, see <xref target="uri"/>&gt;
   <x:ref>authority</x:ref>     = &lt;authority, see <xref target="RFC3986" x:fmt="," x:sec="3.2"/>&gt;
@@ -284,6 +282,59 @@
    the Multipurpose Internet Mail Extensions (MIME) <xref target="RFC2045"/>, 
    see <xref target="differences.between.http.and.mime"/> for the differences
    between HTTP and MIME messages.</cref>
+</t>
+</section>
+
+<section title="HTTP Version" anchor="http.version">
+  <x:anchor-alias value="HTTP-version"/>
+  <x:anchor-alias value="HTTP-name"/>
+<t>
+   HTTP uses a "&lt;major&gt;.&lt;minor&gt;" numbering scheme to indicate
+   versions of the protocol. This specification defines version "1.1".
+   <xref target="protocol.version"/> specifies the semantics of HTTP version
+   numbers.
+</t>
+<t>
+   The version of an HTTP/1.x message is indicated by an HTTP-version field
+   in the <x:ref>start-line</x:ref>. HTTP-version is case-sensitive.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-version"/><iref primary="true" item="Grammar" subitem="HTTP-name"/>
+  <x:ref>HTTP-version</x:ref>  = <x:ref>HTTP-name</x:ref> "/" <x:ref>DIGIT</x:ref> "." <x:ref>DIGIT</x:ref>
+  <x:ref>HTTP-name</x:ref>     = <x:abnf-char-sequence>"HTTP"</x:abnf-char-sequence> ; "HTTP", case-sensitive 
+</artwork></figure>
+<t>
+   When an HTTP/1.1 message is sent to an HTTP/1.0 recipient
+   <xref target="RFC1945"/> or a recipient whose version is unknown,
+   the HTTP/1.1 message is constructed such that it can be interpreted
+   as a valid HTTP/1.0 message if all of the newer features are ignored.
+   This specification places recipient-version requirements on some
+   new features so that a conformant sender will only use compatible
+   features until it has determined, through configuration or the
+   receipt of a message, that the recipient supports HTTP/1.1.
+</t>
+<t>
+   Intermediaries that process HTTP messages (i.e., all intermediaries
+   other than those acting as tunnels) &MUST; send their own HTTP-version
+   in forwarded messages.  In other words, they are not allowed to blindly
+   forward the <x:ref>start-line</x:ref> without ensuring that the
+   protocol version in that message matches a version to which that
+   intermediary is conformant for both the receiving and
+   sending of messages.  Forwarding an HTTP message without rewriting
+   the HTTP-version might result in communication errors when downstream
+   recipients use the message sender's version to determine what features
+   are safe to use for later communication with that sender.
+</t>
+<t>
+   A server &MAY; send an HTTP/1.0 response to an HTTP/1.1 request
+   if it is known or suspected that the client incorrectly implements the
+   HTTP specification and is incapable of correctly processing later
+   version responses, such as when a client fails to parse the version
+   number correctly or when an intermediary is known to blindly forward
+   the HTTP-version even when it doesn't conform to the given minor
+   version of the protocol. Such protocol downgrades &SHOULD-NOT; be
+   performed unless triggered by specific client attributes, such as when
+   one or more of the request header fields (e.g., <x:ref>User-Agent</x:ref>)
+   uniquely match the values sent by a client known to be in error.
 </t>
 </section>
 
@@ -2014,7 +2065,7 @@ Upgrade: HTTP/2.0
 <t>
    This specification only defines the protocol name "HTTP" for use by
    the family of Hypertext Transfer Protocols, as defined by the HTTP
-   version rules of <xref target="http.version"/> and future updates to this
+   version rules of <xref target="protocol.version"/> and future updates to this
    specification. Additional protocol names ought to be registered using the
    registration procedure defined in <xref target="upgrade.token.registry"/>.
 </t>
@@ -2027,7 +2078,7 @@ Upgrade: HTTP/2.0
    <c>HTTP</c>
    <c>Hypertext Transfer Protocol</c>
    <c>any DIGIT.DIGIT (e.g, "2.0")</c>
-   <c><xref target="http.version"/></c>
+   <c><xref target="protocol.version"/></c>
 </texttable>
 </section>
 
@@ -2428,7 +2479,6 @@ Upgrade: HTTP/2.0
     <x:has anchor="header.via"/>
     <x:has anchor="http.date"/>
     <x:has anchor="http.uri"/>
-    <x:has anchor="http.version"/>
     <x:has anchor="https.uri"/>
     <x:has anchor="idempotent.methods"/>
     <x:has anchor="implementation-diversity"/>
@@ -2441,6 +2491,7 @@ Upgrade: HTTP/2.0
     <x:has anchor="multipart.byteranges"/>
     <x:has anchor="operation"/>
     <x:has anchor="payload"/>
+    <x:has anchor="protocol.version"/>
     <x:has anchor="quality.values"/>
     <x:has anchor="representation.metadata"/>
     <x:has anchor="representations"/>
@@ -2863,7 +2914,8 @@ Upgrade: HTTP/2.0
 
 <x:ref>HTTP-message</x:ref> = start-line *( header-field CRLF ) CRLF [ message-body
  ]
-<x:ref>HTTP-version</x:ref> = &lt;HTTP-version, see <xref target="Semantics" x:fmt="," x:sec="3.5"/>&gt;
+<x:ref>HTTP-name</x:ref> = %x48.54.54.50 ; HTTP
+<x:ref>HTTP-version</x:ref> = HTTP-name "/" DIGIT "." DIGIT
 
 <x:ref>OWS</x:ref> = &lt;OWS, see <xref target="Semantics" x:fmt="," x:sec="4.3"/>&gt;
 
