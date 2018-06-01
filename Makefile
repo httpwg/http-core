@@ -14,19 +14,13 @@ GPATH = build
 
 draftname = draft-ietf-httpbis
 
-AUTH        = $(draftname)-auth-latest
 CACHE       = $(draftname)-cache-latest
-CONDITIONAL = $(draftname)-conditional-latest
 MESSAGING   = $(draftname)-messaging-latest
-RANGE       = $(draftname)-range-latest
 SEMANTICS   = $(draftname)-semantics-latest
 
 TARGETS_XML = $(MESSAGING).xml \
               $(SEMANTICS).xml \
-              $(CONDITIONAL).xml \
-              $(RANGE).xml \
-              $(CACHE).xml \
-              $(AUTH).xml
+              $(CACHE).xml 
 
 TARGETS_TXT= $(TARGETS_XML:.xml=.txt)
 TARGETS_HTML= $(TARGETS_XML:.xml=.html)
