@@ -12,9 +12,6 @@
   <data:name>draft-ietf-httpbis-semantics-latest</data:name>
   <data:name>draft-ietf-httpbis-cache-latest</data:name>
   <data:name>draft-ietf-httpbis-messaging-latest</data:name>
-  <data:name>draft-ietf-httpbis-conditional-latest</data:name>
-  <data:name>draft-ietf-httpbis-range-latest</data:name>
-  <data:name>draft-ietf-httpbis-auth-latest</data:name>
 </data:specs>
 
 <xsl:template match="/">
