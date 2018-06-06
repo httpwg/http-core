@@ -1245,7 +1245,7 @@
 
 <xsl:variable name="no-funding" select="$ipr-2007-08"/>
 
-<xsl:variable name="no-copylong" select="$ipr-2008-11"/>
+<xsl:variable name="no-copylong" select="$ipr-2008-11 or /rfc/@ipr='none'"/>
 
 <!-- will document have an index -->
 <xsl:variable name="has-index" select="(//iref or (//xref and $xml2rfc-ext-include-references-in-index='yes')) and $xml2rfc-ext-include-index!='no'" />
@@ -1822,10 +1822,14 @@
 
 <xsl:variable name="all-notes" select="/rfc/front/note"/>
 <xsl:variable name="all-edited-notes" select="/rfc/front/ed:replace[.//note]"/>
-<xsl:variable name="notes-not-in-boilerplate" select="$all-notes[@title!='IESG Note' or $xml2rfc-private!='' or $notes-follow-abstract]"/>
-<xsl:variable name="edited-notes-not-in-boilerplate" select="$all-edited-notes[.//note/@title!='IESG Note' or $xml2rfc-private!='' or $notes-follow-abstract]"/>
-<xsl:variable name="notes-in-boilerplate" select="$all-notes[not(@title!='IESG Note' or $xml2rfc-private!='' or $notes-follow-abstract)]"/>
-<xsl:variable name="edited-notes-in-boilerplate" select="$all-edited-notes[not(.//note/@title!='IESG Note' or $xml2rfc-private!='' or $notes-follow-abstract)]"/>
+
+<!-- TODO:extend for other streams -->
+<xsl:variable name="stream-note-titles">[IESG Note][IESG Note:]</xsl:variable>
+
+<xsl:variable name="notes-not-in-boilerplate" select="$all-notes[not(contains($stream-note-titles,concat('[',normalize-space(@title),']'))) or $xml2rfc-private!='' or $notes-follow-abstract]"/>
+<xsl:variable name="edited-notes-not-in-boilerplate" select="$all-edited-notes[not(contains($stream-note-titles,concat('[',normalize-space(.//note/@title),']'))) or $xml2rfc-private!='' or $notes-follow-abstract]"/>
+<xsl:variable name="notes-in-boilerplate" select="$all-notes[not(not(contains($stream-note-titles,concat('[',normalize-space(@title),']'))) or $xml2rfc-private!='' or $notes-follow-abstract)]"/>
+<xsl:variable name="edited-notes-in-boilerplate" select="$all-edited-notes[not(not(contains($stream-note-titles,concat('[',normalize-space(.//note/@title),']'))) or $xml2rfc-private!='' or $notes-follow-abstract)]"/>
 
 <xsl:template match="front">
   <xsl:call-template name="check-no-text-content"/>
@@ -1983,8 +1987,9 @@
       </xsl:call-template>
     </xsl:if>
   </xsl:if>
-  
-  <xsl:apply-templates select="abstract" />
+
+  <xsl:apply-templates select="abstract"/>
+
   <xsl:if test="$notes-follow-abstract">
     <xsl:apply-templates select="$notes-not-in-boilerplate|$edited-notes-not-in-boilerplate" />
   </xsl:if>
@@ -3299,17 +3304,25 @@
       </xsl:call-template>
     </xsl:if>
 
-    <xsl:if test="$front[1]/date/@year != ''">
-      <xsl:if test="string(number($front[1]/date/@year)) = 'NaN'">
-        <xsl:call-template name="warning">
-          <xsl:with-param name="msg">date/@year should be a number: '<xsl:value-of select="$front[1]/date/@year"/>' in reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
-        </xsl:call-template>
-      </xsl:if>
-      <xsl:text>, </xsl:text>
-      <xsl:if test="$front[1]/date/@month!=''"><xsl:value-of select="$front[1]/date/@month" />&#0160;</xsl:if>
-      <xsl:value-of select="$front[1]/date/@year" />
-    </xsl:if>
+    <xsl:choose>
+      <xsl:when test="$front[1]/date/@year != ''">
+        <xsl:if test="string(number($front[1]/date/@year)) = 'NaN'">
+          <xsl:call-template name="warning">
+            <xsl:with-param name="msg">date/@year should be a number: '<xsl:value-of select="$front[1]/date/@year"/>' in reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+          </xsl:call-template>
+        </xsl:if>
+        <xsl:text>, </xsl:text>
+        <xsl:if test="$front[1]/date/@month!=''"><xsl:value-of select="$front[1]/date/@month" />&#0160;</xsl:if>
+        <xsl:value-of select="$front[1]/date/@year" />
+      </xsl:when>
+      <xsl:when test="document(x:source/@href)/rfc/front">
+        <!-- is the date element maybe included and should be defaulted? -->
+        <xsl:value-of select="concat(', ',$xml2rfc-ext-pub-month,'&#160;',$xml2rfc-ext-pub-year)"/>
+      </xsl:when>
+      <xsl:otherwise/>
+    </xsl:choose>
 
+    
     <xsl:choose>
       <xsl:when test="string-length(normalize-space(@target)) &gt; 0">
         <xsl:text>, &lt;</xsl:text>
@@ -3529,7 +3542,7 @@
       <xsl:if test="$xml2rfc-authorship!='no'">
         <link rel="Author" href="#{$anchor-pref}authors" />
       </xsl:if>
-      <xsl:if test="$xml2rfc-private=''">
+      <xsl:if test="$xml2rfc-private='' and not($src/rfc/@ipr='none')">
         <xsl:choose>
           <xsl:when test="$no-copylong">
             <link rel="License" href="#{$anchor-pref}copyrightnotice" />
@@ -7682,6 +7695,7 @@ dd, li, p {
   <xsl:copy-of select="$notes"/>
 
   <xsl:choose>
+    <xsl:when test="$src/rfc/@ipr='none'"/>
     <xsl:when test="$ipr-2008-11">
       <section anchor="{$anchor-pref}copyrightnotice">
         <name>Copyright Notice</name>
@@ -8598,6 +8612,7 @@ dd, li, p {
 
 <!-- Notes -->
 <xsl:template match="x:note|aside">
+  <xsl:call-template name="check-no-text-content"/>
   <xsl:variable name="p">
     <xsl:call-template name="get-paragraph-number" />
   </xsl:variable>
@@ -9963,11 +9978,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1020 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1020 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1025 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1025 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/05/28 11:05:59 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/05/28 11:05:59 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/06/06 14:32:26 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/06/06 14:32:26 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>

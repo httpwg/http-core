@@ -1,5 +1,5 @@
 <!--
-    Strip rfc2629.xslt extensions, generating XML input for MTR's xml2rfc
+    Strip rfc2629.xslt extensions, generating XML input for "official" xml2rfc
 
     Copyright (c) 2006-2018, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
@@ -75,7 +75,7 @@
   <xsl:text>&#10;</xsl:text>
   <xsl:comment>
     This XML document is the output of clean-for-DTD.xslt; a tool that strips
-    extensions to RFC2629(bis) from documents for processing with xml2rfc.
+    extensions to RFC 7749 from documents for processing with xml2rfc.
 </xsl:comment>
 <xsl:text>&#10;</xsl:text>
 <xsl:comment>TARGET-GENERATOR: <xsl:value-of select="$xml2rfc-ext-xml2rfc-backend"/></xsl:comment>
@@ -1183,7 +1183,22 @@
         <xsl:apply-templates select="front" mode="cleanup"/>
       </xsl:when>
       <xsl:when test="x:source">
-        <xsl:apply-templates select="document(x:source/@href)/rfc/front" mode="cleanup"/>
+        <xsl:variable name="d" select="document(x:source/@href)"/>
+        <xsl:comment>included from <xsl:value-of select="x:source/@href"/></xsl:comment>
+        <front>
+          <xsl:apply-templates select="$d/rfc/front/title" mode="cleanup"/>
+          <xsl:apply-templates select="$d/rfc/front/author" mode="cleanup"/>
+          <xsl:choose>
+            <xsl:when test="$d/rfc/front/date/@*">
+              <!-- any date info present? -->
+              <xsl:apply-templates select="$d/rfc/front/date" mode="cleanup"/>
+            </xsl:when>
+            <xsl:otherwise>
+              <!-- let defaults apply -->
+              <date year="{$xml2rfc-ext-pub-year}" month="{$xml2rfc-ext-pub-month}"/>
+            </xsl:otherwise>
+          </xsl:choose>
+        </front>
       </xsl:when>
       <xsl:otherwise/>
     </xsl:choose>
