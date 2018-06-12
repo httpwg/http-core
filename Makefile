@@ -46,6 +46,7 @@ TARGETS = $(TARGETS_HTML) \
           $(bd)/$(CACHE).iana-headers \
           $(bd)/$(CACHE).iana-warn-codes \
           $(bd)/$(CACHE).cache-directives \
+          httpbis-errata-status.html \
           httpbis.abnf
 
 all: $(TARGETS)

@@ -8,6 +8,8 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 
 [Editors' Drafts Combined ToC](https://httpwg.org/http-core/outlineALL.html)
 
+[RFC723* Errata Status](https://httpwg.org/http-core/httpbis-errata-status.html)
+
 ### HTTP Semantics
 
 * [Editors' Draft](https://httpwg.org/http-core/draft-ietf-httpbis-semantics-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-semantics-latest.xml))
