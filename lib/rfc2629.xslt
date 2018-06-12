@@ -3529,6 +3529,9 @@
   <html lang="{$lang}">
     <head>
       <title>
+        <xsl:if test="$rfcno!=''">
+          <xsl:value-of select="concat('RFC ',$rfcno,' - ')"/>
+        </xsl:if>
         <xsl:apply-templates select="front/title" mode="get-text-content" />
       </title>
       <xsl:call-template name="insertScripts" />
@@ -6489,11 +6492,16 @@ caption.caption-top {
 }
 </xsl:if>
 <xsl:if test="//table">
+table:not([class]) tr {
+    vertical-align: top;
+}
 table:not([class]) th {
   background-color: #e9e9e9;
+  vertical-align: top;
 }
 table:not([class]) tr:nth-child(2n) > td {
   background-color: #f5f5f5;
+  vertical-align: top;
 }
 tr p {
   margin-left: 0em;
@@ -9978,11 +9986,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1025 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1025 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1027 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1027 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/06/06 14:32:26 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/06/06 14:32:26 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/06/12 07:40:44 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/06/12 07:40:44 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -10336,7 +10344,7 @@ prev: <xsl:value-of select="$prev"/>
 <!-- get text content from marked-up text -->
 
 <xsl:template match="text()" mode="get-text-content">
-  <xsl:value-of select="."/>
+  <xsl:value-of select="normalize-space(.)"/>
 </xsl:template>
 
 <xsl:template match="*" mode="get-text-content">
