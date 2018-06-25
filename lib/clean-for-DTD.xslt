@@ -1176,6 +1176,15 @@
         </xsl:variable>
         <xsl:attribute name="target"><xsl:value-of select="$uri"/></xsl:attribute>
       </xsl:when>
+      <xsl:when test="not(@target) and $xml2rfc-ext-link-rfc-to-info-page='yes' and not(seriesInfo) and document(x:source/@href)/rfc/@number">
+        <xsl:variable name="uri">
+          <xsl:call-template name="compute-rfc-info-uri">
+            <xsl:with-param name="type" select="'rfc'"/>
+            <xsl:with-param name="no" select="document(x:source/@href)/rfc/@number"/>
+          </xsl:call-template>
+        </xsl:variable>
+        <xsl:attribute name="target"><xsl:value-of select="$uri"/></xsl:attribute>
+      </xsl:when>
       <xsl:otherwise/>
     </xsl:choose>
     <xsl:choose>
@@ -1199,6 +1208,12 @@
             </xsl:otherwise>
           </xsl:choose>
         </front>
+        <xsl:if test="not(seriesInfo) and document(x:source/@href)/rfc/@docName">
+          <seriesInfo name="Internet-Draft" value="{document(x:source/@href)/rfc/@docName}"/>
+        </xsl:if>
+        <xsl:if test="not(seriesInfo) and document(x:source/@href)/rfc/@number">
+          <seriesInfo name="RFC" value="{document(x:source/@href)/rfc/@number}"/>
+        </xsl:if>
       </xsl:when>
       <xsl:otherwise/>
     </xsl:choose>
@@ -1206,15 +1221,26 @@
 
     <!-- Insert DOI for RFCs -->
     <xsl:variable name="doi">
-      <xsl:call-template name="compute-doi"/>
+      <xsl:choose>
+        <xsl:when test="seriesInfo|front/seriesInfo">
+          <xsl:call-template name="compute-doi"/>
+        </xsl:when>
+        <xsl:when test="document(x:source/@href)/rfc/@number">
+          <xsl:call-template name="compute-doi">
+            <xsl:with-param name="rfc" select="document(x:source/@href)/rfc/@number"/>
+          </xsl:call-template>
+        </xsl:when>
+        <xsl:otherwise/>
+      </xsl:choose>
     </xsl:variable>
-    <xsl:if test="$xml2rfc-ext-insert-doi='yes' and $doi!='' and not(seriesInfo[@name='DOI'])">
+    <xsl:if test="$xml2rfc-ext-insert-doi='yes' and $doi!='' and not(seriesInfo[@name='DOI']|front/seriesInfo[@name='DOI'])">
       <seriesInfo name="DOI" value="{$doi}"/>
     </xsl:if>
 
     <xsl:apply-templates select="*[not(self::front) and not(self::seriesInfo)]" mode="cleanup"/>
   </reference>
 </xsl:template>
+
 <xsl:template match="seriesInfo" mode="cleanup">
   <xsl:choose>
     <xsl:when test="@name='Internet-Draft' and $rfcno > 7375">

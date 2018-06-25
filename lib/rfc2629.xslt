@@ -2771,7 +2771,7 @@
       <xsl:value-of select="concat($bib/x:source/@basename,'.',$outputExtension,'#',$ref/@anchor)" />
     </xsl:when>
     <!-- tools.ietf.org won't have the "-latest" draft -->
-    <xsl:when test="$bib//seriesInfo/@name='Internet-Draft' and $bib/x:source/@href and $bib/x:source/@basename and substring($bib/x:source/@basename, (string-length($bib/x:source/@basename) - string-length('-latest')) + 1)='-latest'">
+    <xsl:when test="$bib/x:source/@href and $bib/x:source/@basename and substring($bib/x:source/@basename, (string-length($bib/x:source/@basename) - string-length('-latest')) + 1)='-latest'">
       <xsl:value-of select="concat($bib/x:source/@basename,'.',$outputExtension)" />
     </xsl:when>
     <!-- TODO: this should handle the case where there's one BCP entry but
@@ -2814,6 +2814,21 @@
             </xsl:otherwise>
           </xsl:choose>
         </xsl:if>
+      </xsl:if>
+    </xsl:when>
+    <xsl:when test="$bib//x:source/@href and document($bib//x:source/@href)/rfc/@number">
+      <xsl:call-template name="compute-rfc-uri">
+        <xsl:with-param name="rfc" select="document($bib//x:source/@href)/rfc/@number"/>
+      </xsl:call-template>
+      <xsl:if test="$ref and $sec!='' and $rfcUrlFragSection and $rfcUrlFragAppendix">
+        <xsl:choose>
+          <xsl:when test="translate(substring($sec,1,1),$ucase,'')=''">
+            <xsl:value-of select="concat('#',$rfcUrlFragAppendix,$sec)"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="concat('#',$rfcUrlFragSection,$sec)"/>
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:if>
     </xsl:when>
     <xsl:otherwise />
@@ -2939,12 +2954,16 @@
 </xsl:template>
 
 <xsl:template name="compute-doi">
+  <xsl:param name="rfc"/>
   <xsl:choose>
+    <xsl:when test="$rfc!=''">
+      <xsl:value-of select="concat('10.17487/RFC', format-number($rfc,'#0000'))"/>
+    </xsl:when>
     <!-- xref seems to be for BCP, not RFC -->
     <xsl:when test=".//seriesInfo[@name='BCP'] and starts-with(@anchor, 'BCP')" />
     <xsl:when test=".//seriesInfo[@name='RFC'] and not(normalize-space((.//organization)[1])='RFC Errata') and not(starts-with(@target,'http://www.rfc-editor.org') or starts-with(@target,'https://www.rfc-editor.org'))">
-      <xsl:variable name="rfc" select=".//seriesInfo[@name='RFC'][1]/@value"/>
-      <xsl:value-of select="concat('10.17487/RFC', format-number($rfc,'#0000'))"/>
+      <xsl:variable name="t" select=".//seriesInfo[@name='RFC'][1]/@value"/>
+      <xsl:value-of select="concat('10.17487/RFC', format-number($t,'#0000'))"/>
     </xsl:when>
     <xsl:otherwise/>
   </xsl:choose>
@@ -3055,6 +3074,71 @@
       </xsl:call-template>
     </xsl:otherwise>
   </xsl:choose>
+</xsl:template>
+
+<xsl:template name="emit-series-info">
+  <xsl:param name="multiple-rfcs" select="false()"/>
+  <xsl:param name="doi"/>
+
+  <xsl:text>, </xsl:text>
+  <xsl:choose>
+    <xsl:when test="not(@name) and not(@value) and ./text()"><xsl:value-of select="." /></xsl:when>
+    <xsl:when test="@name='RFC' and $multiple-rfcs">
+      <xsl:variable name="uri">
+        <xsl:call-template name="compute-rfc-uri">
+          <xsl:with-param name="rfc" select="@value"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <a href="{$uri}">
+        <xsl:value-of select="@name" />
+        <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+      </a>
+    </xsl:when>
+    <xsl:when test="@name='DOI'">
+      <xsl:variable name="uri">
+        <xsl:call-template name="compute-doi-uri">
+          <xsl:with-param name="doi" select="@value"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <a href="{$uri}">
+        <xsl:value-of select="@name" />
+        <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+      </a>
+      <xsl:if test="$doi!='' and $doi!=@value">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">Unexpected DOI for RFC, found <xsl:value-of select="@value"/>, expected <xsl:value-of select="$doi"/></xsl:with-param>
+        </xsl:call-template>
+      </xsl:if>
+    </xsl:when>
+    <xsl:when test="@name='ISBN'">
+      <xsl:variable name="uri">
+        <xsl:call-template name="compute-isbn-uri">
+          <xsl:with-param name="isbn" select="@value"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <a href="{$uri}">
+        <xsl:value-of select="@name" />
+        <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+      </a>
+    </xsl:when>
+    <xsl:when test="@name='Internet-Draft' and $rfcno > 7375">
+      <!-- special case in RFC formatting since 2015 -->            
+      <xsl:text>Work in Progress, </xsl:text>
+      <xsl:value-of select="@value" />
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="@name" />
+      <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+      <xsl:if test="translate(@name,$ucase,$lcase)='internet-draft'"> (work in progress)</xsl:if>
+    </xsl:otherwise>
+  </xsl:choose>
+
+  <!-- check that BCP FYI STD RFC are in the right order -->
+  <xsl:if test="(@name='BCP' or @name='FYI' or @name='STD') and preceding-sibling::seriesInfo[@name='RFC']">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">RFC number preceding <xsl:value-of select="@name"/> number in reference '<xsl:value-of select="../@anchor"/>'</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
 </xsl:template>
 
 <xsl:template match="reference">
@@ -3212,74 +3296,42 @@
       </xsl:call-template>
     </xsl:if>
     
-    <xsl:variable name="rfcs" select="count($si[@name='RFC'])"/>
-
     <xsl:variable name="doi">
-      <xsl:call-template name="compute-doi"/>
+      <xsl:choose>
+        <xsl:when test="$si">
+          <xsl:call-template name="compute-doi"/>
+        </xsl:when>
+        <xsl:when test="document(x:source/@href)/rfc/@number">
+          <xsl:call-template name="compute-doi">
+            <xsl:with-param name="rfc" select="document(x:source/@href)/rfc/@number"/>
+          </xsl:call-template>
+        </xsl:when>
+        <xsl:otherwise/>
+      </xsl:choose>
     </xsl:variable>
 
     <xsl:for-each select="$si">
-      <xsl:text>, </xsl:text>
-      <xsl:choose>
-        <xsl:when test="not(@name) and not(@value) and ./text()"><xsl:value-of select="." /></xsl:when>
-        <xsl:when test="@name='RFC' and $rfcs > 1">
-          <xsl:variable name="uri">
-            <xsl:call-template name="compute-rfc-uri">
-              <xsl:with-param name="rfc" select="@value"/>
-            </xsl:call-template>
-          </xsl:variable>
-          <a href="{$uri}">
-            <xsl:value-of select="@name" />
-            <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
-          </a>
-        </xsl:when>
-        <xsl:when test="@name='DOI'">
-          <xsl:variable name="uri">
-            <xsl:call-template name="compute-doi-uri">
-              <xsl:with-param name="doi" select="@value"/>
-            </xsl:call-template>
-          </xsl:variable>
-          <a href="{$uri}">
-            <xsl:value-of select="@name" />
-            <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
-          </a>
-          <xsl:if test="$doi!='' and $doi!=@value">
-            <xsl:call-template name="warning">
-              <xsl:with-param name="msg">Unexpected DOI for RFC, found <xsl:value-of select="@value"/>, expected <xsl:value-of select="$doi"/></xsl:with-param>
-            </xsl:call-template>
-          </xsl:if>
-        </xsl:when>
-        <xsl:when test="@name='ISBN'">
-          <xsl:variable name="uri">
-            <xsl:call-template name="compute-isbn-uri">
-              <xsl:with-param name="isbn" select="@value"/>
-            </xsl:call-template>
-          </xsl:variable>
-          <a href="{$uri}">
-            <xsl:value-of select="@name" />
-            <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
-          </a>
-        </xsl:when>
-        <xsl:when test="@name='Internet-Draft' and $rfcno > 7375">
-          <!-- special case in RFC formatting since 2015 -->            
-          <xsl:text>Work in Progress, </xsl:text>
-          <xsl:value-of select="@value" />
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:value-of select="@name" />
-          <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
-          <xsl:if test="translate(@name,$ucase,$lcase)='internet-draft'"> (work in progress)</xsl:if>
-        </xsl:otherwise>
-      </xsl:choose>
-
-      <!-- check that BCP FYI STD RFC are in the right order -->
-      <xsl:if test="(@name='BCP' or @name='FYI' or @name='STD') and preceding-sibling::seriesInfo[@name='RFC']">
-        <xsl:call-template name="warning">
-          <xsl:with-param name="msg">RFC number preceding <xsl:value-of select="@name"/> number in reference '<xsl:value-of select="../@anchor"/>'</xsl:with-param>
-        </xsl:call-template>
-      </xsl:if>
-
+      <xsl:call-template name="emit-series-info">
+        <xsl:with-param name="multiple-rfcs" select="count($si[@name='RFC']) > 1"/>
+        <xsl:with-param name="doi" select="$doi"/>
+      </xsl:call-template>
     </xsl:for-each>
+
+    <!-- fall back to x:source when needed -->
+    <xsl:if test="not($si) and x:source/@href">
+      <xsl:variable name="derivedsi" myns:namespaceless-elements="xml2rfc">
+        <xsl:if test="document(x:source/@href)/rfc/@docName">
+          <seriesInfo name="Internet-Draft" value="{document(x:source/@href)/rfc/@docName}"/>
+        </xsl:if>
+        <xsl:if test="document(x:source/@href)/rfc/@number">
+          <seriesInfo name="RFC" value="{document(x:source/@href)/rfc/@number}"/>
+        </xsl:if>
+      </xsl:variable>
+      <xsl:variable name="tsi" select="exslt:node-set($derivedsi)/seriesInfo"/>
+      <xsl:for-each select="$tsi">
+        <xsl:call-template name="emit-series-info"/>
+      </xsl:for-each>
+    </xsl:if>
 
     <!-- Insert DOI for RFCs -->
     <xsl:if test="$xml2rfc-ext-insert-doi='yes' and $doi!='' and not($si[@name='DOI'])">
@@ -6343,11 +6395,11 @@ h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
 img {
   margin-left: 3em;
 }
-li {
-  margin-left: 2em;
-}
 ol {
   margin-left: 2em;
+}
+li ol {
+  margin-left: 0em;
 }
 ol.la {
   list-style-type: lower-alpha;
@@ -6558,6 +6610,12 @@ ul.toc li li {
 }
 li.excluded {
   font-size: 0%;
+}
+ul {
+  margin-left: 2em;
+}
+li ul {
+  margin-left: 0em;
 }
 ul p {
   margin-left: 0em;
@@ -9986,11 +10044,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1027 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1027 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1031 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1031 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/06/12 07:40:44 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/06/12 07:40:44 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/06/24 13:08:17 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/06/24 13:08:17 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
