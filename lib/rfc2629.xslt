@@ -507,6 +507,20 @@
   </xsl:call-template>
 </xsl:variable>
 
+<xsl:variable name="sourcedReferences">
+  <xsl:for-each select="//reference[x:source/@href and not(seriesInfo)]">
+    <xsl:copy>
+      <xsl:variable name="f" select="document(x:source/@href)"/>
+      <xsl:if test="$f/rfc/@number" myns:namespaceless-elements="xml2rfc">
+        <seriesInfo name="RFC" value="{$f/rfc/@number}"/>
+      </xsl:if>
+      <xsl:if test="$f/rfc/@docName" myns:namespaceless-elements="xml2rfc">
+        <seriesInfo name="Internet-Draft" value="{$f/@docName}"/>
+      </xsl:if>
+    </xsl:copy>
+  </xsl:for-each>
+</xsl:variable>
+
 <!-- logging -->
 
 <xsl:param name="xml2rfc-ext-log-level">
@@ -961,6 +975,23 @@
     <xsl:with-param name="default">https://www.rfc-editor.org/errata_search.php?rfc={rfc}</xsl:with-param>
   </xsl:call-template>
 </xsl:param>
+
+<xsl:param name="xml2rfc-ext-draft-status-uri">
+  <xsl:call-template name="parse-pis">
+    <xsl:with-param name="nodes" select="/processing-instruction('rfc-ext')"/>
+    <xsl:with-param name="attr" select="'draft-status-uri'"/>
+    <xsl:with-param name="default">https://datatracker.ietf.org/doc/{draftname}</xsl:with-param>
+  </xsl:call-template>
+</xsl:param>
+
+<xsl:template name="compute-draft-status-uri">
+  <xsl:param name="draftname"/>
+  <xsl:call-template name="replace-substring">
+    <xsl:with-param name="string" select="$xml2rfc-ext-draft-status-uri"/>
+    <xsl:with-param name="replace" select="'{draftname}'"/>
+    <xsl:with-param name="by" select="$draftname"/>
+  </xsl:call-template>
+</xsl:template>
 
 <!-- the format we're producing -->
 <xsl:param name="outputExtension" select="'html'"/>
@@ -1831,6 +1862,79 @@
 <xsl:variable name="notes-in-boilerplate" select="$all-notes[not(not(contains($stream-note-titles,concat('[',normalize-space(@title),']'))) or $xml2rfc-private!='' or $notes-follow-abstract)]"/>
 <xsl:variable name="edited-notes-in-boilerplate" select="$all-edited-notes[not(not(contains($stream-note-titles,concat('[',normalize-space(.//note/@title),']'))) or $xml2rfc-private!='' or $notes-follow-abstract)]"/>
 
+<xsl:template name="draft-sequence-number">
+  <xsl:param name="name"/>
+  <xsl:choose>
+    <xsl:when test="contains($name,'-')">
+      <xsl:call-template name="draft-sequence-number">
+        <xsl:with-param name="name" select="substring-after($name,'-')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="$name"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<xsl:template name="draft-base-name">
+  <xsl:param name="name"/>
+  <xsl:variable name="seq">
+    <xsl:call-template name="draft-sequence-number">
+      <xsl:with-param name="name" select="$name"/>
+    </xsl:call-template>
+  </xsl:variable>
+  <xsl:value-of select="substring($name,1,string-length($name)-string-length($seq)-1)"/>
+</xsl:template>
+
+<xsl:template name="draft-name-legal">
+  <xsl:param name="name"/>
+
+  <xsl:if test="contains($name,'.')">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">The Internet-Draft name '<xsl:value-of select="$name"/>' should contain the base name, not the filename (thus no file extension).</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+
+  <xsl:variable name="offending" select="translate($name,concat($lcase,$digits,'-.'),'')"/>
+  <xsl:if test="$offending != ''">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">The Internet-Draft name  '<xsl:value-of select="$name"/>' should not contain the character '<xsl:value-of select="substring($offending,1,1)"/>'.</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+
+  <xsl:if test="contains($name,'--')">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">The Internet-Draft name '<xsl:value-of select="$name"/>' should not contain the character sequence '--'.</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+
+  <xsl:if test="not(starts-with($name,'draft-'))">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">The Internet-Draft name '<xsl:value-of select="$name"/>' should start with 'draft-'.</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+
+  <xsl:variable name="seq">
+    <xsl:call-template name="draft-sequence-number">
+      <xsl:with-param name="name" select="$name"/>
+    </xsl:call-template>
+  </xsl:variable>
+
+  <xsl:if test="$seq='' or ($seq!='latest' and translate($seq,$digits,'')!='')">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">The Internet-Draft name '<xsl:value-of select="$name"/>' should end with a two-digit sequence number or 'latest'.</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+
+    <xsl:if test="string-length($name)-string-length($seq) > 50">
+      <xsl:call-template name="warning">
+        <xsl:with-param name="msg">The Internet-Draft name '<xsl:value-of select="$name"/>', excluding sequence number, should have less than 50 characters.</xsl:with-param>
+      </xsl:call-template>
+    </xsl:if>
+
+</xsl:template>
+
+
 <xsl:template match="front">
   <xsl:call-template name="check-no-text-content"/>
   <header>
@@ -1873,65 +1977,47 @@
             </xsl:call-template>
           </xsl:when>
           <xsl:otherwise>
-            <div class="filename"><xsl:value-of select="$docname"/></div>
+            <div class="filename">
+              <xsl:variable name="seq">
+                <xsl:call-template name="draft-sequence-number">
+                  <xsl:with-param name="name" select="$docname"/>
+                </xsl:call-template>
+              </xsl:variable>
+              <xsl:variable name="base">
+                <xsl:call-template name="draft-base-name">
+                  <xsl:with-param name="name" select="$docname"/>
+                </xsl:call-template>
+              </xsl:variable>
+              <xsl:variable name="status-uri">
+                <xsl:call-template name="compute-draft-status-uri">
+                  <xsl:with-param name="draftname" select="$base"/>
+                </xsl:call-template>
+              </xsl:variable>
+              <xsl:choose>
+                <xsl:when test="number($seq)>=0">
+                  <xsl:variable name="draft-uri">
+                    <xsl:call-template name="compute-internet-draft-uri">
+                      <xsl:with-param name="internet-draft" select="$docname"/>
+                    </xsl:call-template>
+                  </xsl:variable>
+                  <a href="{$status-uri}" class="smpl"><xsl:value-of select="$base"/></a>
+                  <xsl:text>-</xsl:text>
+                  <a href="{$draft-uri}" class="smpl"><xsl:value-of select="$seq"/></a>
+                </xsl:when>
+                <xsl:when test="$base!=''">
+                  <a href="{$status-uri}" class="smpl"><xsl:value-of select="$docname"/></a>
+                </xsl:when>
+                <xsl:otherwise>
+                  <xsl:value-of select="$docname"/>
+                </xsl:otherwise>
+              </xsl:choose>
+            </div>
           </xsl:otherwise>
         </xsl:choose>
         
-        <xsl:variable name="docname-noext">
-          <xsl:choose>
-            <xsl:when test="contains($docname,'.')">
-              <xsl:call-template name="warning">
-                <xsl:with-param name="msg">The @docName attribute '<xsl:value-of select="$docname"/>' should contain the base name, not the filename (thus no file extension).</xsl:with-param>
-              </xsl:call-template>
-              <xsl:value-of select="substring-before($docname,'.')"/>
-            </xsl:when>
-            <xsl:otherwise>
-              <xsl:value-of select="$docname"/>
-            </xsl:otherwise>
-          </xsl:choose>
-        </xsl:variable>
-  
-        <!-- more name checks -->
-        <xsl:variable name="offending" select="translate($docname,concat($lcase,$digits,'-.'),'')"/>
-        <xsl:if test="$offending != ''">
-          <xsl:call-template name="warning">
-            <xsl:with-param name="msg">The @docName attribute '<xsl:value-of select="$docname"/>' should not contain the character '<xsl:value-of select="substring($offending,1,1)"/>'.</xsl:with-param>
-          </xsl:call-template>
-        </xsl:if>
-  
-        <xsl:if test="contains($docname,'--')">
-          <xsl:call-template name="warning">
-            <xsl:with-param name="msg">The @docName attribute '<xsl:value-of select="$docname"/>' should not contain the character sequence '--'.</xsl:with-param>
-          </xsl:call-template>
-        </xsl:if>
-  
-        <xsl:if test="not(starts-with($docname,'draft-'))">
-          <xsl:call-template name="warning">
-            <xsl:with-param name="msg">The @docName attribute '<xsl:value-of select="$docname"/>' should start with 'draft-'.</xsl:with-param>
-          </xsl:call-template>
-        </xsl:if>
-  
-        <!-- sequence number -->
-        <xsl:variable name="seq">
-          <xsl:choose>
-            <xsl:when test="substring($docname-noext,string-length($docname-noext) + 1 - string-length('-latest'))='-latest'">latest</xsl:when>
-            <xsl:when test="substring($docname-noext,string-length($docname-noext) - 2, 1)='-'"><xsl:value-of select="substring($docname-noext,string-length($docname-noext)-1)"/></xsl:when>
-            <xsl:otherwise/>
-          </xsl:choose>
-        </xsl:variable>
-  
-        <xsl:if test="$seq='' or ($seq!='latest' and translate($seq,$digits,'')!='')">
-          <xsl:call-template name="warning">
-            <xsl:with-param name="msg">The @docName attribute '<xsl:value-of select="$docname"/>' should end with a two-digit sequence number or 'latest'.</xsl:with-param>
-          </xsl:call-template>
-        </xsl:if>
-  
-        <xsl:if test="string-length($docname)-string-length($seq) > 50">
-          <xsl:call-template name="warning">
-            <xsl:with-param name="msg">The @docName attribute '<xsl:value-of select="$docname"/>', excluding sequence number, should have less than 50 characters.</xsl:with-param>
-          </xsl:call-template>
-        </xsl:if>
-  
+        <xsl:call-template name="draft-name-legal">
+          <xsl:with-param name="name" select="$docname"/>
+        </xsl:call-template>
       </xsl:if>
     </div>
   </header>
@@ -3121,15 +3207,34 @@
         <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
       </a>
     </xsl:when>
-    <xsl:when test="@name='Internet-Draft' and $rfcno > 7375">
-      <!-- special case in RFC formatting since 2015 -->            
-      <xsl:text>Work in Progress, </xsl:text>
-      <xsl:value-of select="@value" />
+    <xsl:when test="@name='Internet-Draft'">
+      <xsl:variable name="basename">
+        <xsl:call-template name="draft-base-name">
+          <xsl:with-param name="name" select="@value"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:variable name="uri">
+        <xsl:call-template name="compute-draft-status-uri">
+          <xsl:with-param name="draftname" select="$basename"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:choose>
+        <xsl:when test="$rfcno > 7375">
+          <!-- special case in RFC formatting since 2015 -->
+          <a href="{$uri}">Work in Progress</a>
+          <xsl:text>, </xsl:text>
+          <xsl:value-of select="@value" />
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="@name" />
+          <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+          <xsl:if test="@name='Internet-Draft'"> (<a href="{$uri}">work in progress</a>)</xsl:if>
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:when>
     <xsl:otherwise>
       <xsl:value-of select="@name" />
       <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
-      <xsl:if test="translate(@name,$ucase,$lcase)='internet-draft'"> (work in progress)</xsl:if>
     </xsl:otherwise>
   </xsl:choose>
 
@@ -3667,7 +3772,12 @@
               <meta name="dcterms.identifier" content="urn:ietf:rfc:{@number}" />
             </xsl:when>
             <xsl:when test="@docName">
-              <xsl:if test="'-latest'!=substring(@docName,string-length(@docName)-string-length('-latest')+1)">
+              <xsl:variable name="seq">
+                <xsl:call-template name="draft-sequence-number">
+                  <xsl:with-param name="name" select="@docName"/>
+                </xsl:call-template>
+              </xsl:variable>
+              <xsl:if test="number($seq)>=0">
                 <meta name="dcterms.identifier" content="urn:ietf:id:{@docName}" />
               </xsl:if>
             </xsl:when>
@@ -9256,7 +9366,7 @@ dd, li, p {
     </xsl:call-template>
   </xsl:if>
 
-  <xsl:variable name="all-refs" select="/rfc/back/references/reference|exslt:node-set($includeDirectives)//reference"/>
+  <xsl:variable name="all-refs" select="/rfc/back/references/reference|exslt:node-set($includeDirectives)//reference|exslt:node-set($sourcedReferences)//reference"/>
 
   <!-- check ABNF syntax references -->
   <xsl:if test="//artwork[@type='abnf2616' or @type='abnf7230']">
@@ -10044,11 +10154,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1031 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1031 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1037 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1037 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/06/24 13:08:17 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/06/24 13:08:17 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/07/07 15:36:02 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/07/07 15:36:02 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
