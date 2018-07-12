@@ -904,6 +904,22 @@
   </xsl:call-template>
 </xsl:template>
 
+<xsl:param name="xml2rfc-ext-latest-diff-uri">
+  <xsl:call-template name="parse-pis">
+    <xsl:with-param name="nodes" select="/processing-instruction('rfc-ext')"/>
+    <xsl:with-param name="attr" select="'latest-diff-uri'"/>
+  </xsl:call-template>
+</xsl:param>
+
+<xsl:template name="compute-latest-diff-uri">
+  <xsl:param name="name"/>
+  <xsl:call-template name="replace-substring">
+    <xsl:with-param name="string" select="$xml2rfc-ext-latest-diff-uri"/>
+    <xsl:with-param name="replace" select="'{internet-draft}'"/>
+    <xsl:with-param name="by" select="$name"/>
+  </xsl:call-template>
+</xsl:template>
+
 <xsl:param name="xml2rfc-ext-doi-uri">
   <xsl:call-template name="parse-pis">
     <xsl:with-param name="nodes" select="/processing-instruction('rfc-ext')"/>
@@ -4097,9 +4113,9 @@
         </xsl:when>
         <xsl:otherwise/>
       </xsl:choose>
-  
+
       <xsl:call-template name="insertInsDelClass" />
-  
+
       <xsl:if test="$sectionNumber!='' and not(contains($sectionNumber,$unnumbered))">
         <a href="#{$anchor-pref}section.{$sectionNumber}">
           <xsl:call-template name="emit-section-number">
@@ -4108,7 +4124,7 @@
         </a>
         <xsl:text>&#0160;</xsl:text>
       </xsl:if>
-  
+
       <!-- issue tracking? -->
       <xsl:if test="@ed:resolves">
         <xsl:call-template name="insert-issue-pointer"/>
@@ -4121,7 +4137,46 @@
           <xsl:otherwise><xsl:call-template name="sluggy-anchor"/></xsl:otherwise>
         </xsl:choose>
       </xsl:variable>
-      
+
+      <xsl:variable name="name" select="substring-after(@title,'Since ')"/>
+      <xsl:variable name="basename">
+        <xsl:call-template name="draft-base-name">
+          <xsl:with-param name="name" select="$name"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:variable name="seq">
+        <xsl:call-template name="draft-sequence-number">
+          <xsl:with-param name="name" select="$name"/>
+        </xsl:call-template>
+      </xsl:variable>
+
+      <xsl:variable name="diff-uri">
+        <xsl:if test="ancestor-or-self::section[@removeInRFC='true'] and $basename!=''">
+          <xsl:variable name="next" select="concat($basename,'-',format-number(1 + $seq,'00'))"/>
+          <xsl:choose>
+            <!-- check whether the "next" draft exists (is mentioned in a sibling section -->
+            <xsl:when test="../section[contains(@title,$next)]">
+              <xsl:text>https://tools.ietf.org/rfcdiff?url2=</xsl:text>
+              <xsl:value-of select="$next"/>
+            </xsl:when>
+            <xsl:when test="starts-with(ancestor::rfc/@docName,$basename)">
+              <xsl:call-template name="compute-latest-diff-uri">
+                <xsl:with-param name="name" select="$basename"/>
+              </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise/>
+          </xsl:choose>
+        </xsl:if>
+      </xsl:variable>
+
+      <xsl:variable name="text-uri">
+        <xsl:if test="ancestor-or-self::section[@removeInRFC='true'] and $basename!=''">
+          <xsl:call-template name="compute-internet-draft-uri">
+            <xsl:with-param name="internet-draft" select="$name"/>
+          </xsl:call-template>
+        </xsl:if>
+      </xsl:variable>
+
       <xsl:choose>
         <xsl:when test="$anchor!=''">
           <a href="#{$anchor}"><xsl:call-template name="insertTitle"/></a>
@@ -4130,6 +4185,15 @@
           <xsl:call-template name="insertTitle"/>
         </xsl:otherwise>
       </xsl:choose>
+
+      <xsl:if test="$xml2rfc-ext-paragraph-links='yes' and $text-uri!=''">
+        <xsl:text> </xsl:text>
+        <a class="self" href="{$text-uri}" title="plain text">&#x1f4c4;</a>
+      </xsl:if>
+      <xsl:if test="$xml2rfc-ext-paragraph-links='yes' and $diff-uri!=''">
+        <xsl:text> </xsl:text>
+        <a class="self" href="{$diff-uri}" title="diffs">&#x1f50d;</a>
+      </xsl:if>
     </xsl:element>
 
     <xsl:if test="$sectionNumber!=''">
@@ -6824,7 +6888,7 @@ blockquote > * .bcp14 {
 .self:hover {
     text-decoration: none;
 }
-li:hover > a.self, p:hover > a.self {
+h1:hover > a.self, h2:hover > a.self, h3:hover > a.self, li:hover > a.self, p:hover > a.self {
     visibility: visible;
 }</xsl:if><xsl:if test="$has-edits">del {
   color: red;
@@ -10154,11 +10218,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1037 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1037 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1038 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1038 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/07/07 15:36:02 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/07/07 15:36:02 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/07/11 20:13:31 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/07/11 20:13:31 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
