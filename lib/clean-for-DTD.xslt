@@ -49,7 +49,7 @@
 <xsl:preserve-space elements="*"/>
 
 <!-- generate DTD-valid output, override all values imported from rfc2629.xslt -->
-<xsl:output doctype-system="rfc2629.dtd" doctype-public="" method="xml" version="1.0" encoding="UTF-8" cdata-section-elements="artwork" />
+<xsl:output doctype-system="rfc2629.dtd" doctype-public="" method="xml" version="1.0" encoding="UTF-8" cdata-section-elements="artwork sourcecode" />
 
 <!-- Workaround for http://trac.tools.ietf.org/tools/xml2rfc/trac/ticket/297 -->
 <xsl:param name="xml2rfc-ext-strip-vbare">false</xsl:param>
@@ -1516,18 +1516,29 @@
 
 <!-- Source Code -->
 <xsl:template match="sourcecode" mode="cleanup">
+  <xsl:variable name="content2"><xsl:apply-templates select="node()"/></xsl:variable>
+  <xsl:variable name="content" select="translate($content2,'&#160;&#x2500;&#x2502;&#x2508;&#x250c;&#x2510;&#x2514;&#x2518;&#x251c;&#x2524;',' -|+++++++')"/>
+
   <xsl:choose>
     <xsl:when test="parent::figure">
       <artwork>
         <xsl:copy-of select="@anchor|@type"/>
-        <xsl:apply-templates mode="cleanup"/>
+        <xsl:if test="starts-with(.,'&#10;')">
+          <xsl:text>&#10;</xsl:text>
+          <xsl:value-of select="@x:indent-with"/>
+        </xsl:if>
+        <xsl:value-of select="$content"/>
       </artwork>
     </xsl:when>
     <xsl:otherwise>
       <figure>
         <artwork>
           <xsl:copy-of select="@anchor|@type"/>
-          <xsl:apply-templates mode="cleanup"/>
+          <xsl:if test="starts-with(.,'&#10;')">
+            <xsl:text>&#10;</xsl:text>
+            <xsl:value-of select="@x:indent-with"/>
+          </xsl:if>
+          <xsl:value-of select="$content"/>
         </artwork>
       </figure>
     </xsl:otherwise>

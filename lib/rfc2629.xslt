@@ -904,6 +904,23 @@
   </xsl:call-template>
 </xsl:template>
 
+<xsl:param name="xml2rfc-ext-diff-uri">
+  <xsl:call-template name="parse-pis">
+    <xsl:with-param name="nodes" select="/processing-instruction('rfc-ext')"/>
+    <xsl:with-param name="attr" select="'diff-uri'"/>
+    <xsl:with-param name="default">https://tools.ietf.org/rfcdiff?url2={internet-draft}</xsl:with-param>
+  </xsl:call-template>
+</xsl:param>
+
+<xsl:template name="compute-diff-uri">
+  <xsl:param name="name"/>
+  <xsl:call-template name="replace-substring">
+    <xsl:with-param name="string" select="$xml2rfc-ext-diff-uri"/>
+    <xsl:with-param name="replace" select="'{internet-draft}'"/>
+    <xsl:with-param name="by" select="$name"/>
+  </xsl:call-template>
+</xsl:template>
+
 <xsl:param name="xml2rfc-ext-latest-diff-uri">
   <xsl:call-template name="parse-pis">
     <xsl:with-param name="nodes" select="/processing-instruction('rfc-ext')"/>
@@ -4150,14 +4167,17 @@
         </xsl:call-template>
       </xsl:variable>
 
+      <xsl:variable name="smells-like-change-log" select="ancestor-or-self::section[@removeInRFC='true'] or ancestor::section[@title='Changes'] or ancestor::section[@title='Change Log']"/>
+      
       <xsl:variable name="diff-uri">
-        <xsl:if test="ancestor-or-self::section[@removeInRFC='true'] and $basename!=''">
+        <xsl:if test="$smells-like-change-log and $basename!=''">
           <xsl:variable name="next" select="concat($basename,'-',format-number(1 + $seq,'00'))"/>
           <xsl:choose>
             <!-- check whether the "next" draft exists (is mentioned in a sibling section -->
             <xsl:when test="../section[contains(@title,$next)]">
-              <xsl:text>https://tools.ietf.org/rfcdiff?url2=</xsl:text>
-              <xsl:value-of select="$next"/>
+              <xsl:call-template name="compute-diff-uri">
+                <xsl:with-param name="name" select="$next"/>
+              </xsl:call-template>
             </xsl:when>
             <xsl:when test="starts-with(ancestor::rfc/@docName,$basename)">
               <xsl:call-template name="compute-latest-diff-uri">
@@ -4170,7 +4190,7 @@
       </xsl:variable>
 
       <xsl:variable name="text-uri">
-        <xsl:if test="ancestor-or-self::section[@removeInRFC='true'] and $basename!=''">
+        <xsl:if test="$smells-like-change-log and $basename!=''">
           <xsl:call-template name="compute-internet-draft-uri">
             <xsl:with-param name="internet-draft" select="$name"/>
           </xsl:call-template>
@@ -9433,7 +9453,7 @@ dd, li, p {
   <xsl:variable name="all-refs" select="/rfc/back/references/reference|exslt:node-set($includeDirectives)//reference|exslt:node-set($sourcedReferences)//reference"/>
 
   <!-- check ABNF syntax references -->
-  <xsl:if test="//artwork[@type='abnf2616' or @type='abnf7230']">
+  <xsl:if test="//artwork[@type='abnf2616' or @type='abnf7230']|//sourcecode[@type='abnf2616' or type='abnf7320']">
     <xsl:if test="not($all-refs//seriesInfo[@name='RFC' and (@value='2068' or @value='2616' or @value='7230')]) and not($all-refs//seriesInfo[@name='Internet-Draft' and (starts-with(@value, 'draft-ietf-httpbis-p1-messaging-'))])">
       <!-- check for draft-ietf-httpbis-p1-messaging- is for backwards compat -->
       <xsl:call-template name="warning">
@@ -9441,7 +9461,7 @@ dd, li, p {
       </xsl:call-template>
     </xsl:if>
   </xsl:if>
-  <xsl:if test="//artwork[@type='abnf']">
+  <xsl:if test="//artwork[@type='abnf']|//sourcecode[@type='abnf']">
     <xsl:if test="not($all-refs//seriesInfo[@name='RFC' and (@value='2234' or @value='4234' or @value='5234')])">
       <xsl:call-template name="warning">
         <xsl:with-param name="msg">document uses ABNF syntax, but doesn't reference RFC 2234, 4234 or 5234.</xsl:with-param>
@@ -10218,11 +10238,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1038 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1038 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1043 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1043 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/07/11 20:13:31 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/07/11 20:13:31 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/07/16 07:39:28 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/07/16 07:39:28 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
