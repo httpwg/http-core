@@ -31,7 +31,7 @@
 <?rfc-ext html-pretty-print="prettyprint https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"?>
 <?rfc-ext include-references-in-index="yes" ?>
 
-<rfc obsoletes="7230,7231,7232,7233,7235"
+<rfc obsoletes="7230,7231,7232,7233,7235,7615"
      category="std" x:maturity-level="proposed"
      ipr="pre5378Trust200902" docName="draft-ietf-httpbis-semantics-&ID-VERSION;"
      xmlns:x='http://purl.org/net/xml2rfc/ext'
@@ -101,7 +101,7 @@
 </t>
 <t>
    This document obsoletes RFC 7231, RFC 7232, RFC 7233,
-   RFC 7235, and portions of RFC 7230.
+   RFC 7235, RFC 7615, and portions of RFC 7230.
 </t>
 </abstract>
 
@@ -217,8 +217,10 @@
    (see <xref target="changes.from.rfc.7232"/>),
    <xref target="RFC7233" x:fmt="none">RFC 7233</xref>
    (see <xref target="changes.from.rfc.7233"/>), and
-   <xref target="RFC7235" x:fmt="none">RFC 7235</xref>
-   (see <xref target="changes.from.rfc.7235"/>).
+   <xref target="RFC7233" x:fmt="none">RFC 7235</xref>
+   (see <xref target="changes.from.rfc.7235"/>), and
+   <xref target="RFC7615" x:fmt="none">RFC 7615</xref>
+   (see <xref target="changes.from.rfc.7615"/>).
 </t>
 
 <section title="Requirements Notation" anchor="intro.requirements">
@@ -1024,11 +1026,11 @@ Content-Type: text/plain
    support for that higher version, is sufficiently backwards-compatible to be
    safely processed by any implementation of the same major version.
 </t>
-<t><cref>
+<t>
    When a major version of HTTP does not define any minor versions, the minor
-   version "0" is implied and ought to be used when referring to that
-   protocol within a protocol element that requires sending a minor version.
-</cref></t>
+   version "0" is implied and is used when referring to that protocol within a
+   protocol element that requires sending a minor version.
+</t>
 </section>
 </section>
 
@@ -1124,6 +1126,12 @@ Content-Type: text/plain
    <c>standard</c>
    <c>
       <xref target="header.allow"/>
+   </c>
+   <c>Authentication-Info</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.authentication-info"/>
    </c>
    <c>Authorization</c>
    <c>http</c>
@@ -1250,6 +1258,12 @@ Content-Type: text/plain
    <c>standard</c>
    <c>
       <xref target="header.proxy-authenticate"/>
+   </c>
+   <c>Proxy-Authentication-Info</c>
+   <c>http</c>
+   <c>standard</c>
+   <c>
+      <xref target="header.proxy-authentication-info"/>
    </c>
    <c>Proxy-Authorization</c>
    <c>http</c>
@@ -2199,8 +2213,18 @@ Host: www.example.org
 <t>
    Charset names ought to be registered in the IANA "Character Sets" registry
    (<eref target="https://www.iana.org/assignments/character-sets"/>)
-   according to the procedures defined in <xref target="RFC2978"/>.
+   according to the procedures defined in <xref target="RFC2978" x:fmt="of" x:sec="2"/>.
 </t>
+<aside>
+  <t>
+    &Note; in practice, charset names are furthermore restricted by the
+    "mime-charset" ABNF rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/>
+    (as corrected in <xref target="Err1912"/>). However, that rule
+    allows two characters not included in "token" ("{" and "}"), but
+    at the time of this writing no character set using
+    these was registered (see <xref target="Err5433"/>).
+  </t>
+</aside>
 </section>
 
 <section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
@@ -5522,7 +5546,7 @@ Expect: 100-continue
 <texttable align="left">
   <ttcol>Header Field Name</ttcol>
   <ttcol>Defined in...</ttcol>
-
+  
   <c>Authorization</c> <c><xref target="header.authorization"/></c>
   <c>Proxy-Authorization</c> <c><xref target="header.proxy-authorization"/></c>
 </texttable>
@@ -5846,6 +5870,14 @@ Expect: 100-continue
       header field) will need to explicitly disallow caching, by mandating the use of
       either Cache-Control request directives (e.g., "no-store",
       <xref target="cache-request-directive.no-store"/>) or response directives (e.g., "private").
+    </t>
+  </li>
+  <li>
+    <t>
+      Schemes using <x:ref>Authentication-Info</x:ref>, <x:ref>Proxy-Authentication-Info</x:ref>,
+      or any other authentication related response header field need to
+      consider and document the related security considerations (see 
+      <xref target="security.auth.add.resp"/>). 
     </t>
   </li>
 </ul>
@@ -6274,6 +6306,11 @@ Expect: 100-continue
    <c>Expectation Failed</c>
    <c>
       <xref target="status.417"/>
+   </c>
+   <c>422</c>
+   <c>Unprocessable Entity</c>
+   <c>
+      <xref target="status.422"/>
    </c>
    <c>426</c>
    <c>Upgrade Required</c>
@@ -7436,6 +7473,20 @@ Content-Range: bytes */47022
 </t>
 </section>
 
+<section title="422 Unprocessable Entity" anchor="status.422">
+  <iref primary="true" item="422 Unprocessable Entity (status code)" x:for-anchor=""/>
+  <x:anchor-alias value="422 (Unprocessable Entity)"/>
+<t>
+   The 422 (Unprocessable Entity) status code indicates that the server
+   understands the content type of the request entity (hence a
+   <x:ref>415 (Unsupported Media Type)</x:ref> status code is inappropriate),
+   and the syntax of the request entity is correct but was unable to process
+   the contained instructions. For example, this error condition may occur if
+   an XML request body contains well-formed (i.e., syntactically correct), but
+   semantically erroneous, XML instructions.
+</t>
+</section>
+
 <section title="426 Upgrade Required" anchor="status.426">
   <iref primary="true" item="426 Upgrade Required (status code)" x:for-anchor=""/>
   <x:anchor-alias value="426 (Upgrade Required)"/>
@@ -8555,6 +8606,20 @@ Content-Encoding: gzip
   <c>WWW-Authenticate</c> <c><xref target="header.www-authenticate"/></c>
   <c>Proxy-Authenticate</c> <c><xref target="header.proxy-authenticate"/></c>
 </texttable>
+<t>
+   Furthermore, the "Authentication-Info" and
+   "Proxy-Authentication-Info" response header fields are defined
+   for use in authentication schemes that need to return
+   information once the client's authentication credentials have been accepted.
+</t>
+<texttable align="left">
+  <ttcol>Header Field Name</ttcol>
+  <ttcol>Defined in...</ttcol>
+  
+  <c>Authentication-Info</c> <c><xref target="header.authentication-info"/></c>
+  <c>Proxy-Authentication-Info</c> <c><xref target="header.proxy-authentication-info"/></c>
+</texttable>
+
 
 <section title="WWW-Authenticate" anchor="header.www-authenticate">
   <iref primary="true" item="WWW-Authenticate header field" x:for-anchor=""/>
@@ -8640,6 +8705,91 @@ Content-Encoding: gzip
    for details.
 </t>
 </section>
+
+<section title="Authentication-Info" anchor="header.authentication-info">
+  <iref primary="true" item="Authentication-Info header field" x:for-anchor=""/>
+  <x:anchor-alias value="Authentication-Info"/>
+<t>
+   HTTP authentication schemes can use the Authentication-Info response header
+   field to communicate information after the client's authentication credentials have been accepted.
+   This information can include a finalization message from the server (e.g., it can contain the
+   server authentication).
+</t>
+<t>
+   The field value is a list of parameters (name/value pairs), using the "auth-param"
+   syntax defined in <xref target="challenge.and.response"/>.
+   This specification only describes the generic format; authentication schemes
+   using Authentication-Info will define the individual parameters. The "Digest"
+   Authentication Scheme, for instance, defines multiple parameters in
+   <xref target="RFC7616" x:sec="3.5"/>.
+</t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Authentication-Info"/>
+  <x:ref>Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
+</artwork></figure>
+<t>
+   The Authentication-Info header field can be used in any HTTP response,
+   independently of request method and status code. Its semantics are defined
+   by the authentication scheme indicated by the <x:ref>Authorization</x:ref> header field
+   (<xref target="header.authorization"/>) of the corresponding request.
+</t>
+<t>
+   A proxy forwarding a response is not allowed to modify the field value in any
+   way. 
+</t>
+<t>  
+   Authentication-Info can be used inside trailers (<xref target="chunked.trailer.part"/>)
+   when the authentication scheme explicitly allows this.
+</t>
+
+<section title="Parameter Value Format">
+<t>
+   Parameter values can be expressed either as "token" or as "quoted-string"
+   (<xref target="field.components"/>).
+</t>
+<t>
+   Authentication scheme definitions need to allow both notations, both for
+   senders and recipients. This allows recipients to use generic parsing
+   components, independent of the authentication scheme in use.
+</t>
+<t>
+   For backwards compatibility, authentication scheme definitions can restrict
+   the format for senders to one of the two variants. This can be important
+   when it is known that deployed implementations will fail when encountering
+   one of the two formats.
+</t>
+</section>
+</section>
+
+<section title="Proxy-Authentication-Info" anchor="header.proxy-authentication-info">
+  <iref primary="true" item="Proxy-Authentication-Info header field" x:for-anchor=""/>
+  <x:anchor-alias value="Proxy-Authentication-Info"/>
+<t>
+   The Proxy-Authentication-Info response header field is equivalent to
+   <x:ref>Authentication-Info</x:ref>, except that it applies to proxy authentication (<xref target="challenge.and.response"/>)
+   and its semantics are defined by the
+   authentication scheme indicated by the Proxy-Authorization header field
+   (<xref target="header.proxy-authorization"/>)
+   of the corresponding request:
+</t>
+<t>
+<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Proxy-Authentication-Info"/>
+  <x:ref>Proxy-Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
+</artwork></figure>
+</t>
+<t>
+   However, unlike <x:ref>Authentication-Info</x:ref>, the Proxy-Authentication-Info header
+   field applies only to the next outbound client on the response chain. This is
+   because only the client that chose a given proxy is likely to have the
+   credentials necessary for authentication. However, when multiple proxies are
+   used within the same administrative domain, such as office and regional
+   caching proxies within a large corporate network, it is common for
+   credentials to be generated by the user agent and passed through the
+   hierarchy until consumed. Hence, in such a configuration, it will appear as
+   if Proxy-Authentication-Info is being forwarded because each proxy will send
+   the same field value.
+</t>
+</section>
+
 </section>
 
 <section title="Response Context" anchor="response.context">
@@ -9305,6 +9455,19 @@ Content-Encoding: gzip
   spaces by using a different host name (or port number) for each party.
 </t>
 </section>
+
+<section title="Additional Response Header Fields" anchor="security.auth.add.resp">
+<t>
+  Adding information to responses that are sent over an unencrypted
+  channel can affect security and privacy. The presence of the
+  <x:ref>Authentication-Info</x:ref> and <x:ref>Proxy-Authentication-Info</x:ref>
+  header fields alone indicates that HTTP authentication is in use. Additional
+  information could be exposed by the contents of the authentication-scheme
+  specific parameters; this will have to be considered in the definitions of these
+  schemes.
+</t>
+</section>
+
 </section>
 </section>
 
@@ -9398,6 +9561,7 @@ Content-Encoding: gzip
 <reference anchor="Messaging">
   <x:source href="draft-ietf-httpbis-messaging-latest.xml" basename="draft-ietf-httpbis-messaging-latest">
     <x:has anchor="chunked.encoding"/>
+    <x:has anchor="chunked.trailer.part"/>
     <x:has anchor="connection.management"/>
     <x:has anchor="differences.between.http.and.mime"/>
     <x:has anchor="field.parsing"/>
@@ -9680,6 +9844,26 @@ Content-Encoding: gzip
 </references>
 
 <references title="Informative References">
+
+<reference anchor="Err1912" target="https://www.rfc-editor.org/errata/eid1912" quoteTitle="false">
+  <front>
+    <title>Erratum ID 1912, RFC 2978</title>
+    <author>
+      <organization>RFC Errata</organization>
+    </author>
+    <date/>
+  </front>
+</reference>
+
+<reference anchor="Err5433" target="https://www.rfc-editor.org/errata/eid5433" quoteTitle="false">
+  <front>
+    <title>Erratum ID 5433, RFC 2978</title>
+    <author>
+      <organization>RFC Errata</organization>
+    </author>
+    <date/>
+  </front>
+</reference>
 
 <reference anchor="Georgiev" target="http://doi.acm.org/10.1145/2382196.2382204">
   <front>
@@ -10146,6 +10330,18 @@ Content-Encoding: gzip
   <seriesInfo name="RFC" value="7578"/>
 </reference>
 
+<reference anchor="RFC7615">
+  <front>
+    <title>HTTP Authentication-Info and Proxy-Authentication-Info Response Header Fields</title>
+    <author initials="J. F." surname="Reschke" fullname="Julian F. Reschke">
+      <organization abbrev="greenbytes">greenbytes GmbH</organization>
+      <address><email>julian.reschke@greenbytes.de</email></address>
+    </author>
+    <date year='2015' month='September' />
+    </front>
+  <seriesInfo name='RFC' value='7615'/>
+</reference>
+
 <reference anchor="BCP13">
   <front>
     <title>Media Type Specifications and Registration Procedures</title>
@@ -10350,9 +10546,7 @@ Content-Encoding: gzip
 </references>
 
 <?BEGININC build/draft-ietf-httpbis-semantics-latest.abnf-appendix ?>
-<section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf">
-<t>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension"/>.</t><figure>
-<artwork type="abnf" name="draft-ietf-httpbis-semantics-latest.parsed-abnf">
+<section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf"><t>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension"/>.</t><sourcecode type="abnf" name="draft-ietf-httpbis-semantics-latest.parsed-abnf">
 <x:ref>Accept</x:ref> = [ ( "," / ( media-range [ accept-params ] ) ) *( OWS "," [
  OWS ( media-range [ accept-params ] ) ] ) ]
 <x:ref>Accept-Charset</x:ref> = *( "," OWS ) ( ( charset / "*" ) [ weight ] ) *( OWS
@@ -10363,6 +10557,8 @@ Content-Encoding: gzip
  "," [ OWS ( language-range [ weight ] ) ] )
 <x:ref>Accept-Ranges</x:ref> = acceptable-ranges
 <x:ref>Allow</x:ref> = [ ( "," / method ) *( OWS "," [ OWS method ] ) ]
+<x:ref>Authentication-Info</x:ref> = [ ( "," / auth-param ) *( OWS "," [ OWS
+ auth-param ] ) ]
 <x:ref>Authorization</x:ref> = credentials
 
 <x:ref>BWS</x:ref> = OWS
@@ -10406,6 +10602,8 @@ Content-Encoding: gzip
 
 <x:ref>Proxy-Authenticate</x:ref> = *( "," OWS ) challenge *( OWS "," [ OWS
  challenge ] )
+<x:ref>Proxy-Authentication-Info</x:ref> = [ ( "," / auth-param ) *( OWS "," [ OWS
+ auth-param ] ) ]
 <x:ref>Proxy-Authorization</x:ref> = credentials
 
 <x:ref>RWS</x:ref> = 1*( SP / HTAB )
@@ -10581,8 +10779,7 @@ Content-Encoding: gzip
 <x:ref>weight</x:ref> = OWS ";" OWS "q=" qvalue
 
 <x:ref>year</x:ref> = 4DIGIT
-</artwork>
-</figure>
+</sourcecode>
 </section>
 <?ENDINC build/draft-ietf-httpbis-semantics-latest.abnf-appendix ?>
 
@@ -10591,6 +10788,14 @@ Content-Encoding: gzip
   Most of the sections introducing HTTP's design goals, history, architecture,
   conformance criteria, protocol versioning, URIs, message routing, and
   header field values have been moved here (without substantive change).
+</t>
+<t>
+  Furthermore:
+</t>
+<t>
+  Add status code 422 (previously defined in <xref target="RFC4918" x:fmt="of" x:sec="11.2"/>)
+  because of it's general applicability.
+  (<xref target="status.422"/>)
 </t>
 </section>
 
@@ -10613,6 +10818,12 @@ Content-Encoding: gzip
 </section>
 
 <section title="Changes from RFC 7235" anchor="changes.from.rfc.7235">
+<t>
+   None yet.
+</t>
+</section>
+
+<section title="Changes from RFC 7615" anchor="changes.from.rfc.7615">
 <t>
    None yet.
 </t>
@@ -10682,7 +10893,11 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-02" anchor="changes.since.02">
 <ul>
+  <li>Included (Proxy-)Auth-Info header field definition from RFC 7615 (<eref target="https://github.com/httpwg/http-core/issues/9"/>)</li>
   <li>In <xref target="media.type"/>, clarify that the charset parameter value is case-insensitive due to the definition in RFC 2046 (<eref target="https://github.com/httpwg/http-core/issues/13"/>)</li>
+  <li>In <xref target="charset"/>, explain the difference between the "token" production, the RFC 2978 ABNF for charset names, and the actual registration practice (<eref target="https://github.com/httpwg/http-core/issues/100"/>, <eref target="https://www.rfc-editor.org/errata/eid4689"/>)</li>
+  <li>In <xref target="protocol.version"/>, add language about minor HTTP version number defaulting (<eref target="https://github.com/httpwg/http-core/issues/115"/>)</li>
+  <li>Added <xref target="status.422"/> for status code 422, previously defined in <xref target="RFC4918" x:fmt="of" x:sec="11.2"/> (<eref target="https://github.com/httpwg/http-core/issues/123"/>)</li>
 </ul>
 </section>
 </section>
