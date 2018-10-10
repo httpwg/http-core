@@ -17,59 +17,54 @@
   <xsl:variable name="lines" select="$all-lines[normalize-space(.)!='']"/>
   
   <xsl:variable name="generated"><section title="Collected ABNF" anchor="collected.abnf">
-    <xsl:text>&#10;</xsl:text>
-      <t>
-        <xsl:choose>
-          <xsl:when test="not(starts-with(/rfc/@docName,'draft-ietf-httpbis-semantics'))">In the collected ABNF below, list rules are expanded as per <xref target='Semantics' x:rel='#abnf.extension'/>.</xsl:when>
-          <xsl:otherwise>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension"/>.</xsl:otherwise>
-        </xsl:choose>
-      </t>
-      <figure>
-      <xsl:text>&#10;</xsl:text>
-      <artwork type="abnf" name="{x:basename($abnf)}">
-        <xsl:for-each select="$lines[substring(.,1,2)!='; ']">
-        
-          <!-- Group by start character -->
-          <xsl:variable name="lineno" select="position()"/>
-          <xsl:variable name="sc1" select="substring(.,1,1)"/>
-          <xsl:variable name="sc0" select="x:laststartchar($lines, $lineno - 1)"/>
-          <xsl:if test="$sc1!=' ' and $sc0!=' ' and $sc1!=$sc0">
-            <xsl:text>&#10;</xsl:text>
-          </xsl:if>
-
-          <!-- Add cross-refs for terms -->
-          <xsl:analyze-string select="." regex='^([A-Za-z0-9\-]+) = ' flags="sm">
-            <xsl:matching-substring>
-              <xsl:variable name="term" select="regex-group(1)"/>
-              <xsl:choose>
-                <xsl:when test="$src//*[@anchor=$term] or $src//x:anchor-alias[@value=$term] or $src//x:defines=$term">
-                  <x:ref><xsl:value-of select="$term"/></x:ref>
-                </xsl:when>
-                <xsl:otherwise>
-                  <xsl:value-of select="$term"/>
-                </xsl:otherwise>
-              </xsl:choose>
-              <xsl:text> = </xsl:text>
-            </xsl:matching-substring>
-            <xsl:non-matching-substring>
-              <xsl:analyze-string select="." regex='(.*) see \[([A-Za-z0-9\-]+)\], Section ([A-Za-z0-9\.]+)>' flags="sm">
-                <xsl:matching-substring>
-                  <xsl:value-of select="regex-group(1)"/>
-                  <xsl:text> see </xsl:text>
-                  <xref target="{regex-group(2)}" x:fmt="," x:sec="{regex-group(3)}"/>
-                  <xsl:text>&gt;</xsl:text>
-                </xsl:matching-substring>
-                <xsl:non-matching-substring>
-                  <xsl:value-of select="."/>
-                </xsl:non-matching-substring>
-              </xsl:analyze-string>
-            </xsl:non-matching-substring>
-          </xsl:analyze-string>
+    <t>
+      <xsl:choose>
+        <xsl:when test="not(starts-with(/rfc/@docName,'draft-ietf-httpbis-semantics'))">In the collected ABNF below, list rules are expanded as per <xref target='Semantics' x:rel='#abnf.extension'/>.</xsl:when>
+        <xsl:otherwise>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension"/>.</xsl:otherwise>
+      </xsl:choose>
+    </t>
+    <sourcecode type="abnf" name="{x:basename($abnf)}">
+      <xsl:for-each select="$lines[substring(.,1,2)!='; ']">
+      
+        <!-- Group by start character -->
+        <xsl:variable name="lineno" select="position()"/>
+        <xsl:variable name="sc1" select="substring(.,1,1)"/>
+        <xsl:variable name="sc0" select="x:laststartchar($lines, $lineno - 1)"/>
+        <xsl:if test="$sc1!=' ' and $sc0!=' ' and $sc1!=$sc0">
           <xsl:text>&#10;</xsl:text>
-        </xsl:for-each>
-      </artwork>
-      <xsl:text>&#10;</xsl:text>
-    </figure>  
+        </xsl:if>
+
+        <!-- Add cross-refs for terms -->
+        <xsl:analyze-string select="." regex='^([A-Za-z0-9\-]+) = ' flags="sm">
+          <xsl:matching-substring>
+            <xsl:variable name="term" select="regex-group(1)"/>
+            <xsl:choose>
+              <xsl:when test="$src//*[@anchor=$term] or $src//x:anchor-alias[@value=$term] or $src//x:defines=$term">
+                <x:ref><xsl:value-of select="$term"/></x:ref>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:value-of select="$term"/>
+              </xsl:otherwise>
+            </xsl:choose>
+            <xsl:text> = </xsl:text>
+          </xsl:matching-substring>
+          <xsl:non-matching-substring>
+            <xsl:analyze-string select="." regex='(.*) see \[([A-Za-z0-9\-]+)\], Section ([A-Za-z0-9\.]+)>' flags="sm">
+              <xsl:matching-substring>
+                <xsl:value-of select="regex-group(1)"/>
+                <xsl:text> see </xsl:text>
+                <xref target="{regex-group(2)}" x:fmt="," x:sec="{regex-group(3)}"/>
+                <xsl:text>&gt;</xsl:text>
+              </xsl:matching-substring>
+              <xsl:non-matching-substring>
+                <xsl:value-of select="."/>
+              </xsl:non-matching-substring>
+            </xsl:analyze-string>
+          </xsl:non-matching-substring>
+        </xsl:analyze-string>
+        <xsl:text>&#10;</xsl:text>
+      </xsl:for-each>
+    </sourcecode>
     <xsl:text>&#10;</xsl:text>
     
     <xsl:variable name="diags">
@@ -113,13 +108,13 @@
 
   <!-- check whether it's up-to-date... -->
   <xsl:variable name="src">
-    <xsl:for-each select="//section[@anchor='collected.abnf']//artwork">
+    <xsl:for-each select="//section[@anchor='collected.abnf']//sourcecode">
       <xsl:value-of select="."/>
     </xsl:for-each>
   </xsl:variable>
   
   <xsl:variable name="new">
-    <xsl:value-of select="$generated//artwork"/>
+    <xsl:value-of select="$generated//sourcecode"/>
   </xsl:variable>
   
   <xsl:if test="not(//section[@anchor='collected.abnf']) or normalize-space($src) != normalize-space($new)">
