@@ -16,6 +16,7 @@
   <!ENTITY Note "<x:h xmlns:x='http://purl.org/net/xml2rfc/ext'>Note:</x:h>">
 ]>
 <?rfc toc="yes" ?>
+<?rfc tocdepth="4" ?>
 <?rfc symrefs="yes" ?>
 <?rfc sortrefs="yes" ?>
 <?rfc compact="yes"?>
@@ -409,14 +410,6 @@
    In this specification, the following <x:ref>Cache-Control</x:ref> response
    directives (<xref target="cache-response-directive"/>) have such an effect:
    must-revalidate, public, and s-maxage.
-</t>
-<t>
-   Note that cached responses that contain the "must-revalidate" and/or
-   "s-maxage" response directives are not allowed to be served stale (<xref
-   target="serving.stale.responses"/>) by shared caches. In particular, a
-   response with either "max-age=0, must-revalidate" or "s-maxage=0" cannot be
-   used to satisfy a subsequent request without revalidating it on the origin
-   server.
 </t>
 </section>
 
@@ -875,10 +868,21 @@
 
 <section title="Sending a Validation Request" anchor="validation.sent"><iref item="validator" />
 <t>
-   When sending a conditional request for cache validation, a cache sends one
-   or more precondition header fields containing <x:dfn>validator</x:dfn>
-   metadata from its stored response(s), which is then compared by recipients
-   to determine whether a stored response is equivalent to a current
+   When generating a conditional request for validation, a cache starts with
+   either a request it is attempting to satisfy, or -- if it is initiating
+   the request independently -- it synthesises a request using a stored
+   response by copying the method, request-target, and request header fields
+   used for identifying the secondary cache key <xref
+   target="caching.negotiated.responses"/>.
+</t>
+<t>
+   It then updates that request with one or more precondition header fields.
+   These contain validator metadata sourced from stored response(s) that have
+   the same cache key (both primary and secondary, as applicable).
+</t>
+<t>
+   The precondition header fields are then compared by recipients to
+   determine whether any stored response is equivalent to a current
    representation of the resource.
 </t>
 <t>
@@ -1476,9 +1480,10 @@
 <section title="must-revalidate" anchor="cache-response-directive.must-revalidate">
    <iref item="must-revalidate (cache directive)" primary="true" />
 <t>
-   The "must-revalidate" response directive indicates that once it has
-   become stale, a cache &MUST-NOT; use the response to satisfy subsequent
-   requests without successful validation on the origin server.
+   The "must-revalidate" response directive indicates that once it has become
+   stale, the response &MUST-NOT; be used to satisfy any other request
+   without forwarding it for validation and receiving a successful response;
+   see <xref target="validation.model"/>.
 </t>
 <t>
    The must-revalidate directive is necessary to support reliable
@@ -1507,10 +1512,13 @@
 </t>
 <t>
    The "no-cache" response directive indicates that the response &MUST-NOT;
-   be used to satisfy a subsequent request without successful validation on
-   the origin server. This allows an origin server to prevent a cache from
-   using it to satisfy a request without contacting it, even by caches that
-   have been configured to send stale responses.
+   be used to satisfy any other request without forwarding it for validation
+   and receiving a successful response; see <xref target="validation.model"/>.
+</t>
+<t>
+   This allows an origin server to prevent a cache from using
+   it to satisfy a request without contacting it, even by caches that have
+   been configured to send stale responses.
 </t>
 <t>
    If the no-cache response directive specifies one or more field-names,
@@ -1543,13 +1551,16 @@
 <section title="no-store" anchor="cache-response-directive.no-store">
    <iref item="no-store (cache directive)" primary="true" />
 <t>
-   The "no-store" response directive indicates that a cache &MUST-NOT;
-   store any part of either the immediate request or response. This
-   directive applies to both private and shared caches. "&MUST-NOT;
-   store" in this context means that the cache &MUST-NOT; intentionally
-   store the information in non-volatile storage, and &MUST; make a
-   best-effort attempt to remove the information from volatile storage as
-   promptly as possible after forwarding it.
+   The "no-store" response directive indicates that a cache &MUST-NOT; store
+   any part of either the immediate request or response, and &MUST-NOT; use
+   the response to satisfy any other request.
+</t>
+<t>
+   This directive applies to both private and shared caches. "&MUST-NOT;
+   store" in this context means that the cache &MUST-NOT; intentionally store
+   the information in non-volatile storage, and &MUST; make a best-effort
+   attempt to remove the information from volatile storage as promptly as
+   possible after forwarding it.
 </t>
 <t>
    This directive is NOT a reliable or sufficient mechanism for ensuring
@@ -2102,21 +2113,29 @@ Warning: 112 - "network down" "Sat, 25 Aug 2012 23:34:45 GMT"
 </section>
 </section>
 
-<section title="History Lists" anchor="history.lists">
+<section title="Relationship to Applications" anchor="history.lists">
 <t>
-   User agents often have history mechanisms, such as "Back" buttons and
-   history lists, that can be used to redisplay a representation retrieved
-   earlier in a session.
+   Applications using HTTP often specify additional forms of caching. For
+   example, Web browsers often have history mechanisms such as "Back" buttons
+   that can be used to redisplay a representation retrieved earlier in a
+   session.
 </t>
 <t>
-   The freshness model (<xref target="expiration.model"/>) does not
-   necessarily apply to history mechanisms. That is, a history mechanism can
-   display a previous representation even if it has expired.
+   Likewise, some Web browsers implement caching of images and other assets
+   within a page view; they may or may not honor HTTP caching semantics.
 </t>
 <t>
-   This does not prohibit the history mechanism from telling the user that a
-   view might be stale or from honoring cache directives (e.g.,
-   Cache-Control: no-store).
+   The requirements in this specification do not necessarily apply to how
+   applications use data after it is retrieved from a HTTP cache. That is, a
+   history mechanism can display a previous representation even if it has
+   expired, and an application can use cached data in other ways beyond its
+   freshness lifetime.
+</t>
+<t>
+   This does not prohibit the application from taking HTTP caching into
+   account; for example, a history mechanism might tell the user that a view
+   is stale, or it might honor cache directives (e.g., Cache-Control:
+   no-store).
 </t>
 </section>
 
@@ -2525,9 +2544,11 @@ Warning: 112 - "network down" "Sat, 25 Aug 2012 23:34:45 GMT"
 </section>
 
 <section title="Since draft-ietf-httpbis-cache-02" anchor="changes.since.02">
-<t>
-  None yet.
-</t>
+<ul>
+   <li>Revise <xref target="history.lists"/> to apply to more than just History Lists (<eref target="https://github.com/httpwg/http-core/issues/126"/>)</li>
+   <li>In <xref target="validation.sent"/>, clarify the source of validators in conditional requests (<eref target="https://github.com/httpwg/http-core/issues/110"/>)</li>
+   <li>In <xref target="caching.authenticated.responses"/>, remove a spurious note (<eref target="https://github.com/httpwg/http-core/issues/141"/>)</li>
+</ul>
 </section>
 </section>
 
