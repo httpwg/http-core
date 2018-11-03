@@ -324,6 +324,30 @@
   </t>
 </xsl:template>
 
+<xsl:template match="li/blockquote" mode="cleanup">
+  <list style="empty">
+    <xsl:choose>
+      <xsl:when test="t|ul|ol|dl|artwork|figure|sourcecode">
+        <xsl:apply-templates mode="cleanup" />
+      </xsl:when>
+      <xsl:otherwise>
+        <t>
+          <xsl:apply-templates mode="cleanup" />
+        </t>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:if test="@quotedFrom">
+      <t>
+        <xsl:text>&#8212; </xsl:text>
+        <xsl:choose>
+          <xsl:when test="@cite"><eref target="{@cite}"><xsl:value-of select="@quotedFrom"/></eref></xsl:when>
+          <xsl:otherwise><xsl:value-of select="@quotedFrom"/></xsl:otherwise>
+        </xsl:choose>
+      </t>
+    </xsl:if>
+  </list>
+</xsl:template>
+
 <xsl:template match="x:h" mode="cleanup">
   <xsl:apply-templates mode="cleanup" />
 </xsl:template>
@@ -1370,7 +1394,7 @@
 </xsl:template>
 
 <xsl:template name="process-dl">
-  <xsl:variable name="hang" select="@hanging"/>
+  <xsl:variable name="hang" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
   <xsl:processing-instruction name="rfc">
     <xsl:choose>
@@ -1614,10 +1638,6 @@
       </xsl:call-template>
     </xsl:if>
   </texttable>
-</xsl:template>
-
-<xsl:template match="td/br|th/br" mode="cleanup">
-  <xsl:text> </xsl:text>
 </xsl:template>
 
 <!-- date formats -->
