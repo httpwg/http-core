@@ -9808,7 +9808,16 @@ dd, li, p {
   <div>
     <xsl:call-template name="copy-anchor"/>
     <xsl:apply-templates select="iref"/>
-    <table>
+    <xsl:variable name="style">
+      <xsl:choose>
+        <xsl:when test="@align='left'"><xsl:value-of select="$css-tleft"/></xsl:when>
+        <xsl:when test="@align='right'"><xsl:value-of select="$css-tright"/></xsl:when>
+        <xsl:when test="@align='center' or not(@align) or @align=''"><xsl:value-of select="$css-tcenter"/></xsl:when>
+        <xsl:otherwise/>
+      </xsl:choose>
+    </xsl:variable>
+
+    <table class="{$style}">
       <xsl:if test="name or @anchor!=''">
         <xsl:variable name="n"><xsl:call-template name="get-table-number"/></xsl:variable>
         <caption>
@@ -10236,11 +10245,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1046 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1046 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1047 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1047 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/11/03 14:22:13 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/11/03 14:22:13 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/11/04 13:32:03 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/11/04 13:32:03 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>

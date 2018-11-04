@@ -1572,7 +1572,7 @@
 <!-- Tables -->
 <xsl:template match="table" mode="cleanup">
   <texttable>
-    <xsl:apply-templates select="@anchor" mode="cleanup"/>
+    <xsl:apply-templates select="@anchor|@align" mode="cleanup"/>
     <xsl:variable name="title">
       <xsl:choose>
         <xsl:when test="name">
