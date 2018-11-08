@@ -1403,6 +1403,10 @@
     </xsl:choose>
   </xsl:processing-instruction>
   <list style="hanging">
+    <xsl:variable name="indent" select="@indent"/>
+    <xsl:if test="number($indent)=$indent">
+      <xsl:attribute name="hangIndent"><xsl:value-of select="$indent"/></xsl:attribute>
+    </xsl:if>
     <xsl:for-each select="dt">
       <xsl:variable name="txt">
         <xsl:apply-templates select="." mode="cleanup"/>
