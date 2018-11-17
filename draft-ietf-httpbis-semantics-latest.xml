@@ -31,7 +31,7 @@
 <?rfc-ext html-pretty-print="prettyprint https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"?>
 <?rfc-ext include-references-in-index="yes" ?>
 
-<rfc obsoletes="7230,7231,7232,7233,7235,7615"
+<rfc obsoletes="7230,7231,7232,7233,7235,7538,7615"
      category="std" x:maturity-level="proposed"
      ipr="pre5378Trust200902" docName="draft-ietf-httpbis-semantics-&ID-VERSION;"
      xmlns:x='http://purl.org/net/xml2rfc/ext'
@@ -101,7 +101,7 @@
 </t>
 <t>
    This document obsoletes RFC 7231, RFC 7232, RFC 7233,
-   RFC 7235, RFC 7615, and portions of RFC 7230.
+   RFC 7235, RFC 7538, RFC 7615, and portions of RFC 7230.
 </t>
 </abstract>
 
@@ -216,9 +216,11 @@
    <xref target="RFC7232" x:fmt="none">RFC 7232</xref>
    (see <xref target="changes.from.rfc.7232"/>),
    <xref target="RFC7233" x:fmt="none">RFC 7233</xref>
-   (see <xref target="changes.from.rfc.7233"/>), and
+   (see <xref target="changes.from.rfc.7233"/>),
    <xref target="RFC7233" x:fmt="none">RFC 7235</xref>
-   (see <xref target="changes.from.rfc.7235"/>), and
+   (see <xref target="changes.from.rfc.7235"/>),
+   <xref target="RFC7233" x:fmt="none">RFC 7538</xref>
+   (see <xref target="changes.from.rfc.7538"/>), and
    <xref target="RFC7615" x:fmt="none">RFC 7615</xref>
    (see <xref target="changes.from.rfc.7615"/>).
 </t>
@@ -6205,6 +6207,11 @@ Expect: 100-continue
    <c>
       <xref target="status.307"/>
    </c>
+   <c>308</c>
+   <c>Permanent Redirect</c>
+   <c>
+      <xref target="status.308"/>
+   </c>
    <c>400</c>
    <c>Bad Request</c>
    <c>
@@ -6814,8 +6821,8 @@ Content-Range: bytes 7000-7999/8000
       Redirects that indicate the resource might be available at a
       different URI, as provided by the <x:ref>Location</x:ref> field,
       as in the status codes <x:ref>301 (Moved Permanently)</x:ref>,
-      <x:ref>302 (Found)</x:ref>, and
-      <x:ref>307 (Temporary Redirect)</x:ref>.
+      <x:ref>302 (Found)</x:ref>, <x:ref>307 (Temporary Redirect)</x:ref>, and
+      <x:ref>308 (Permanent Redirect)</x:ref>.
     </t>
   </li>
   <li>
@@ -6853,10 +6860,12 @@ Content-Range: bytes 7000-7999/8000
     prevailing practice gradually converged on the latter semantics for
     <x:ref>301</x:ref> and <x:ref>302</x:ref> as well. The first revision of
     HTTP/1.1 added <x:ref>307 (Temporary Redirect)</x:ref> to indicate the
-    former semantics without being impacted by divergent practice.
+    former semantics of <x:ref>302</x:ref> without being impacted by divergent practice.
+    For the same reason, <x:ref>308 (Permanent Redirect)</x:ref> was later on
+    added in <xref target="RFC7538"/> to match <x:ref>301</x:ref>.
     Over 10 years later, most user agents still do method rewriting for
-    <x:ref>301</x:ref> and <x:ref>302</x:ref>; therefore, this specification
-    makes that behavior conformant when the original request is POST.
+    <x:ref>301</x:ref> and <x:ref>302</x:ref>; therefore, <xref target="RFC7231"/>
+    made that behavior conformant when the original request is POST.
   </t>
 </aside>
 <t>
@@ -6944,7 +6953,7 @@ Content-Range: bytes 7000-7999/8000
   <t>
     &Note; For historical reasons, a user agent &MAY; change the
     request method from POST to GET for the subsequent request. If this
-    behavior is undesired, the <x:ref>307 (Temporary Redirect)</x:ref>
+    behavior is undesired, the <x:ref>308 (Permanent Redirect)</x:ref>
     status code can be used instead.
   </t>
 </aside>
@@ -7105,13 +7114,36 @@ Content-Range: bytes 7000-7999/8000
    The server's response payload usually contains a short hypertext note with
    a hyperlink to the different URI(s).
 </t>
+</section>
+
+<section title="308 Permanent Redirect" anchor="status.308">
+  <iref primary="true" item="308 Permanent Redirect (status code)" x:for-anchor=""/>
+  <x:anchor-alias value="308"/>
+  <x:anchor-alias value="308 (Permanent Redirect)"/>
+<t>
+   The <x:dfn>308 (Permanent Redirect)</x:dfn> status code indicates that the
+   <x:ref>target resource</x:ref> has been assigned a new permanent URI and
+   any future references to this resource ought to use one of the enclosed
+   URIs. Clients with link editing capabilities ought to automatically re-link
+   references to the effective request URI
+   to one or more of the new references sent by the server, where possible.
+</t>
+<t>
+   The server &SHOULD; generate a <x:ref>Location</x:ref> header field in the
+   response containing a preferred URI reference for the new permanent URI.
+   The user agent &MAY; use the Location field value for automatic redirection.
+   The server's response payload usually contains a short hypertext note with
+   a hyperlink to the new URI(s).
+</t>
+<t>
+   A 308 response is cacheable by default; i.e., unless otherwise indicated by
+   the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
+</t>
 <aside>
   <t>
-    &Note; This status code is similar to <x:ref>302 (Found)</x:ref>, except
-    that it does not allow changing the request method from POST to GET. This
-    specification defines no equivalent counterpart for <x:ref>301 (Moved
-    Permanently)</x:ref> (<xref target="RFC7538"/>,
-    however, defines the status code 308 (Permanent Redirect) for this purpose). 
+    &Note; This status code is much younger (June 2014) than its sibling codes, and thus
+    might not be recognized everywhere. See <xref target="RFC7538" x:fmt="of" x:sec="4"/>
+    for deployment considerations.
   </t>
 </aside>
 </section>
@@ -10823,6 +10855,11 @@ Content-Encoding: gzip
   Furthermore:
 </t>
 <t>
+  Add status code 308 (previously defined in <xref target="RFC7538"/>)
+  so that it's defined closer to status codes 301, 302, and 307.
+  (<xref target="status.308"/>)
+</t>
+<t>
   Add status code 422 (previously defined in <xref target="RFC4918" x:fmt="of" x:sec="11.2"/>)
   because of it's general applicability.
   (<xref target="status.422"/>)
@@ -10848,6 +10885,12 @@ Content-Encoding: gzip
 </section>
 
 <section title="Changes from RFC 7235" anchor="changes.from.rfc.7235">
+<t>
+   None yet.
+</t>
+</section>
+
+<section title="Changes from RFC 7538" anchor="changes.from.rfc.7538">
 <t>
    None yet.
 </t>
@@ -10940,6 +10983,7 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-03" anchor="changes.since.03">
 <ul>
+  <li>In <xref target="status.308"/>, include status code 308 from RFC 7538 (<eref target="https://github.com/httpwg/http-core/issues/3"/>)</li>
   <li>Rework <xref target="operation"/> to be more version-independent (<eref target="https://github.com/httpwg/http-core/issues/142"/>)</li>
 </ul>
 </section>
