@@ -1501,7 +1501,27 @@
         <xsl:with-param name="msg">ol/@group not supported</xsl:with-param>
       </xsl:call-template>
     </xsl:if>
-    <list style="numbers">
+    <xsl:variable name="style">
+      <xsl:choose>
+        <xsl:when test="not(@type) or @type='1'">numbers</xsl:when>
+        <xsl:when test="@type='a'">letters</xsl:when>
+        <xsl:when test="@type='A'">
+          <xsl:call-template name="error">
+            <xsl:with-param name="inline">no</xsl:with-param>
+            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to 'a')</xsl:with-param>
+          </xsl:call-template>
+          <xsl:text>letters</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:call-template name="error">
+            <xsl:with-param name="inline">no</xsl:with-param>
+            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to '1')</xsl:with-param>
+          </xsl:call-template>
+          <xsl:text>numbers</xsl:text>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <list style="{$style}">
       <xsl:apply-templates mode="cleanup"/>
     </list>
   </t>
