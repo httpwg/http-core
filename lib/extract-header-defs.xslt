@@ -15,7 +15,6 @@
   <xsl:variable name="table">
     <texttable align="left" suppress-title="true" anchor="iana.header.registration.table">
       <ttcol>Header Field Name</ttcol>
-      <ttcol>Protocol</ttcol>
       <ttcol>Status</ttcol>
       <ttcol>Reference</ttcol>
       <xsl:text>&#10;</xsl:text>
@@ -88,7 +87,6 @@
   <xsl:variable name="t" select="iref[contains(@item,'header field')]/@item"/>
   <xsl:text>&#10;</xsl:text>
   <c><xsl:value-of select="substring-before($t,' header field')"/></c>
-  <c>http</c>
   <c><xsl:value-of select="$status"/></c>
   <c><xref target="{@anchor}"/></c>
 </xsl:template>
