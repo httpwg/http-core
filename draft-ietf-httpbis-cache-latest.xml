@@ -317,6 +317,13 @@
    secondary key for the values of the original request's selecting header
    fields (<xref target="caching.negotiated.responses"/>).
 </t>
+<t>
+   A cache is <x:dfn>disconnected</x:dfn> when it cannot contact the origin
+   server or otherwise find a forward path for a given request. A
+   disconnected cache can serve stale responses in some circumstances (<xref
+   target="serving.stale.responses"/>).
+</t>
+
 </section>
 
 <section title="Storing Responses in Caches" anchor="response.cacheability">
@@ -330,8 +337,8 @@
   target="associating.response.to.request"/>), and</t></li>
   <li><t>the response status code is understood by the cache, and</t></li>
   <li><t>the "no-store" cache directive (see <xref
-  target="header.cache-control" />) does not appear in request or response
-  header fields, and</t></li>
+  target="header.cache-control" />) does not appear in the response, 
+  and</t></li>
   <li><t>the "private" response directive (see <xref
   target="cache-response-directive.private" />) does not appear in the
   response, if the cache is shared, and</t></li>
@@ -405,8 +412,8 @@
 <t>
    A shared cache &MUST-NOT; use a cached response to a request with an
    <x:ref>Authorization</x:ref> header field (<xref target="header.authorization"/>) to
-   satisfy any subsequent request unless a cache directive that allows such
-   responses to be stored is present in the response.
+   satisfy any subsequent request unless a response directive that allows such
+   responses to be stored is present.
 </t>
 <t>
    In this specification, the following <x:ref>Cache-Control</x:ref> response
@@ -449,10 +456,6 @@
    <li><t>selecting header fields nominated by the stored response (if any)
    match those presented (see <xref target="caching.negotiated.responses"
    />), and</t></li>
-   <li><t>the presented request does not contain the no-cache pragma (<xref
-   target="header.pragma"/>), nor the no-cache cache directive (<xref
-   target="cache-request-directive"/>), unless the stored response is
-   successfully validated (<xref target="validation.model"/>), and</t></li>
    <li><t>the stored response does not contain the no-cache cache directive
    (<xref target="cache-response-directive.no-cache"/>), unless it is
    successfully validated (<xref target="validation.model"/>), and</t></li>
@@ -622,9 +625,10 @@
    <xref target="age.calculations" />.
 </t>
 <t>
-   Clients can send the max-age or min-fresh cache directives in a request to
-   constrain or relax freshness calculations for the corresponding response
-   (<xref target="cache-request-directive" />). 
+   Clients can send the max-age or min-fresh request directives (<xref
+   target="cache-request-directive" />) to constrain or relax freshness
+   calculations for the corresponding response. However, caches are not
+   required to honor them.
 </t>
 <t>
    When calculating freshness, to avoid common problems in date parsing:
@@ -819,8 +823,7 @@
 </t>
 <t>
    A cache &MUST-NOT; generate a stale response unless it is disconnected
-   (i.e., it cannot contact the origin server or otherwise find a forward
-   path) or doing so is explicitly permitted by the client or origin server
+   or doing so is explicitly permitted by the client or origin server
    (e.g., by the max-stale request directive in <xref
    target="cache-request-directive" />, by extension directives such as those
    defined in <xref target="RFC5861"/>, or by configuration in accordance
@@ -1142,7 +1145,7 @@
    </c>
    <c>Pragma</c>
    <c>http</c>
-   <c>obsoleted</c>
+   <c>standard</c>
    <c>
       <xref target="header.pragma"/>
    </c>
@@ -1194,10 +1197,8 @@
    same directive is present in the response, or to be repeated in it.
 </t>
 <t>
-   A cache &MUST; obey the requirements of the Cache-Control
-   directives defined in this section. See <xref
-   target="cache.control.extensions"/> for information about how Cache-Control
-   directives defined elsewhere are handled.
+   See <xref target="cache.control.extensions"/> for information about how
+   Cache-Control directives defined elsewhere are handled.
 </t>
 <aside>
    <t>
@@ -1306,6 +1307,12 @@
 
 <section title="Request Cache-Control Directives" anchor="cache-request-directive">
 
+<t>
+   This section defines cache request directives. They are advisory; caches
+   &MAY; implement them, but are not required to.
+</t>
+
+
 <section title="max-age" anchor="cache-request-directive.max-age">
    <iref item="max-age (cache directive)" primary="true" />
 <t>
@@ -1317,10 +1324,10 @@
    </list>
 </t>
 <t>
-   The "max-age" request directive indicates that the client is unwilling
-   to accept a response whose age is greater than the specified number of
-   seconds. Unless the max-stale request directive is also present, the client
-   is not willing to accept a stale response.
+   The "max-age" request directive indicates that the client prefers a
+   response whose age is less than or equal to the specified number of
+   seconds. Unless the max-stale request directive is also present, the
+   client does not wish to receive a stale response.
 </t>
 <t>
    This directive uses the token form of the argument syntax:
@@ -1340,12 +1347,12 @@
    </list>
 </t>
 <t>
-   The "max-stale" request directive indicates that the client is willing
-   to accept a response that has exceeded its freshness lifetime. If max-stale
-   is assigned a value, then the client is willing to accept a response
-   that has exceeded its freshness lifetime by no more than the specified
-   number of seconds. If no value is assigned to max-stale, then the client
-   is willing to accept a stale response of any age.
+   The "max-stale" request directive indicates that the client is willing to
+   accept a response that has exceeded its freshness lifetime. If a value is
+   present, then the client is willing to accept a response that has exceeded
+   its freshness lifetime by no more than the specified number of seconds. If
+   no value is assigned to max-stale, then the client is willing to accept a
+   stale response of any age.
 </t>
 <t>
    This directive uses the token form of the argument syntax:
@@ -1365,11 +1372,10 @@
    </list>
 </t>
 <t>
-   The "min-fresh" request directive indicates that the client is willing
-   to accept a response whose freshness lifetime is no less than its
-   current age plus the specified time in seconds. That is, the client
-   wants a response that will still be fresh for at least the specified
-   number of seconds.
+   The "min-fresh" request directive indicates that the client prefers a
+   response whose freshness lifetime is no less than its current age plus the
+   specified time in seconds. That is, the client wants a response that will
+   still be fresh for at least the specified number of seconds.
 </t>
 <t>
    This directive uses the token form of the argument syntax:
@@ -1381,8 +1387,8 @@
 <section title="no-cache" anchor="cache-request-directive.no-cache">
    <iref item="no-cache (cache directive)" primary="true" />
 <t>
-   The "no-cache" request directive indicates that a cache &MUST-NOT; 
-   use a stored response to satisfy the request without successful 
+   The "no-cache" request directive indicates that the client prefers
+   stored response not be used to satisfy the request without successful
    validation on the origin server.
 </t>
 </section>
@@ -1414,28 +1420,32 @@
 <section title="no-transform" anchor="cache-request-directive.no-transform">
    <iref item="no-transform (cache directive)" primary="true" />
 <t>
-   The "no-transform" request directive indicates that an intermediary
-   (whether or not it implements a cache) &MUST-NOT; transform the payload,
-   as defined in <xref target="message.transformations"/>.
+   The "no-transform" request directive indicates that the client is asking
+   for intermediares (whether or not they implement a cache) to avoid
+   transforming the payload, as defined in <xref
+   target="message.transformations"/>.
 </t>
 </section>
 
 <section title="only-if-cached" anchor="cache-request-directive.only-if-cached">
    <iref item="only-if-cached (cache directive)" primary="true" />
 <t>
-   The "only-if-cached" request directive indicates that the client only wishes
-   to obtain a stored response. If it receives this directive, a cache &SHOULD;
-   either respond using a stored response that is consistent with the other
-   constraints of the request, or respond with a <x:ref>504 (Gateway
-   Timeout)</x:ref> status code. If a group of caches is being operated as a
-   unified system with good internal connectivity, a member cache &MAY;
-   forward such a request within that group of caches.
+   The "only-if-cached" request directive indicates that the client only
+   wishes to obtain a stored response. Caches that honor this request
+   directive &SHOULD;, upon receiving it, either respond using a stored
+   response that is consistent with the other constraints of the request, or
+   respond with a <x:ref>504 (Gateway Timeout)</x:ref> status code.
 </t>
 </section>
 </section>
 
 <section title="Response Cache-Control Directives" anchor="cache-response-directive">
    <x:anchor-alias value="cache-response-directive" />
+
+<t>
+   This section defines cache response directives. A cache &MUST; obey the
+   requirements of the Cache-Control directives defined in this section.
+</t>
 
 <section title="must-revalidate" anchor="cache-response-directive.must-revalidate">
    <iref item="must-revalidate (cache directive)" primary="true" />
@@ -1446,11 +1456,10 @@
    see <xref target="validation.model"/>.
 </t>
 <t>
-   The must-revalidate directive is necessary to support reliable
-   operation for certain protocol features. In all circumstances a
-   cache &MUST; obey the must-revalidate directive; in particular,
-   if a cache cannot reach the origin server for any reason, it &MUST;
-   generate a <x:ref>504 (Gateway Timeout)</x:ref> response.
+   The must-revalidate directive is necessary to support reliable operation
+   for certain protocol features. In all circumstances a cache &MUST; obey
+   the must-revalidate directive; in particular, if a cache is disconnected,
+   it &MUST; generate a <x:ref>504 (Gateway Timeout)</x:ref> response.
 </t>
 <t>
    The must-revalidate directive ought to be used by servers if and only
@@ -2180,19 +2189,13 @@
 
 <x:ref>OWS</x:ref> = &lt;OWS, see <xref target="Semantics" x:fmt="," x:sec="4.3"/>&gt;
 
-<x:ref>Pragma</x:ref> = *( "," OWS ) pragma-directive *( OWS "," [ OWS
- pragma-directive ] )
-
 <x:ref>cache-directive</x:ref> = token [ "=" ( token / quoted-string ) ]
 
 <x:ref>delta-seconds</x:ref> = 1*DIGIT
 
-<x:ref>extension-pragma</x:ref> = token [ "=" ( token / quoted-string ) ]
-
 <x:ref>field-name</x:ref> = &lt;field-name, see <xref target="Semantics" x:fmt="," x:sec="4.2"/>&gt;
 
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
-<x:ref>pragma-directive</x:ref> = "no-cache" / extension-pragma
 <x:ref>pseudonym</x:ref> = &lt;pseudonym, see <xref target="Semantics" x:fmt="," x:sec="5.5.1"/>&gt;
 
 <x:ref>quoted-string</x:ref> = &lt;quoted-string, see <xref target="Semantics" x:fmt="," x:sec="4.2.3"/>&gt;
@@ -2265,9 +2268,11 @@
 <section title="Since draft-ietf-httpbis-cache-03" anchor="changes.since.03">
 <ul>
    <li>In <xref target="constructing.responses.from.caches"/>, clarify language around how to select a response when more than one matches (<eref target="https://github.com/httpwg/http-core/issues/23"/>)</li>
+   <li>Remove requirements around cache request directives (<eref target="https://github.com/httpwg/http-core/issues/129"/>)</li>
    <li>Deprecate Pragma (<eref target="https://github.com/httpwg/http-core/issues/140"/>)</li>
    <li>In <xref target="cache-response-directive"/>, note effect of some directives on authenticated requests (<eref target="https://github.com/httpwg/http-core/issues/161"/>)</li>
    <li>in <xref target="serving.stale.content"/>, mention stale-while-revalidate and stale-if-error (<eref target="https://github.com/httpwg/http-core/issues/122"/>)</li>
+   <li>In <xref target="caching.overview"/>, define what a disconnected cache is (<eref target="https://github.com/httpwg/http-core/issues/5"/>)</li>
 </ul>
 </section>
 </section>
