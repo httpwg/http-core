@@ -49,7 +49,7 @@
                 exclude-result-prefixes="date ed exslt fo msxsl myns rdf saxon saxon-old svg x xi xhtml"
                 >
 
-<xsl:strip-space elements="abstract address author back figure front list middle note postal reference references rfc section table tbody thead tr texttable"/>
+<xsl:strip-space elements="abstract address author back dl figure front list middle note ol postal reference references rfc section table tbody thead tr texttable ul"/>
 
 <xsl:output method="html" encoding="utf-8" doctype-system="about:legacy-compat" indent="no"/>
 
@@ -2393,7 +2393,7 @@
 </xsl:template>
 
 <xsl:template match="dl">
-  <xsl:variable name="hang" select="@hanging"/>
+  <xsl:variable name="hang" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
   <xsl:variable name="class">
     <xsl:if test="$spac='compact'">compact </xsl:if>
@@ -2428,6 +2428,10 @@
 
 <xsl:template match="dd">
   <dd>
+    <xsl:variable name="indent" select="../@indent"/>
+    <xsl:if test="number($indent)=$indent">
+      <xsl:attribute name="style">margin-left: <xsl:value-of select="$indent div 2"/>em</xsl:attribute>
+    </xsl:if>
     <xsl:variable name="block-level-children" select="t | dl"/>
     <xsl:choose>
       <xsl:when test="$block-level-children">
@@ -9805,10 +9809,20 @@ dd, li, p {
 <!-- table formatting -->
 
 <xsl:template match="table">
-  <div>
+  <div class="{$css-tt}">
     <xsl:call-template name="copy-anchor"/>
     <xsl:apply-templates select="iref"/>
-    <table>
+    <xsl:variable name="style">
+      <xsl:value-of select="$css-tt"/>
+      <xsl:choose>
+        <xsl:when test="@align='left'"><xsl:text> </xsl:text><xsl:value-of select="$css-tleft"/></xsl:when>
+        <xsl:when test="@align='right'"><xsl:text> </xsl:text><xsl:value-of select="$css-tright"/></xsl:when>
+        <xsl:when test="@align='center' or not(@align) or @align=''"><xsl:text> </xsl:text><xsl:value-of select="$css-tcenter"/></xsl:when>
+        <xsl:otherwise/>
+      </xsl:choose>
+    </xsl:variable>
+
+    <table class="{$style}">
       <xsl:if test="name or @anchor!=''">
         <xsl:variable name="n"><xsl:call-template name="get-table-number"/></xsl:variable>
         <caption>
@@ -9890,10 +9904,6 @@ dd, li, p {
     <xsl:copy-of select="@colspan|@rowspan"/>
     <xsl:apply-templates select="node()"/>
   </th>
-</xsl:template>
-
-<xsl:template match="td/br|th/br">
-  <br/>
 </xsl:template>
 
 <xsl:template match="texttable">
@@ -10240,11 +10250,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1044 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1044 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1050 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1050 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/09/19 07:58:59 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/09/19 07:58:59 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2018/11/17 16:08:25 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/11/17 16:08:25 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>

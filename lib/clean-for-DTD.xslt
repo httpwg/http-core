@@ -324,6 +324,30 @@
   </t>
 </xsl:template>
 
+<xsl:template match="li/blockquote" mode="cleanup">
+  <list style="empty">
+    <xsl:choose>
+      <xsl:when test="t|ul|ol|dl|artwork|figure|sourcecode">
+        <xsl:apply-templates mode="cleanup" />
+      </xsl:when>
+      <xsl:otherwise>
+        <t>
+          <xsl:apply-templates mode="cleanup" />
+        </t>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:if test="@quotedFrom">
+      <t>
+        <xsl:text>&#8212; </xsl:text>
+        <xsl:choose>
+          <xsl:when test="@cite"><eref target="{@cite}"><xsl:value-of select="@quotedFrom"/></eref></xsl:when>
+          <xsl:otherwise><xsl:value-of select="@quotedFrom"/></xsl:otherwise>
+        </xsl:choose>
+      </t>
+    </xsl:if>
+  </list>
+</xsl:template>
+
 <xsl:template match="x:h" mode="cleanup">
   <xsl:apply-templates mode="cleanup" />
 </xsl:template>
@@ -1370,7 +1394,7 @@
 </xsl:template>
 
 <xsl:template name="process-dl">
-  <xsl:variable name="hang" select="@hanging"/>
+  <xsl:variable name="hang" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
   <xsl:processing-instruction name="rfc">
     <xsl:choose>
@@ -1379,6 +1403,10 @@
     </xsl:choose>
   </xsl:processing-instruction>
   <list style="hanging">
+    <xsl:variable name="indent" select="@indent"/>
+    <xsl:if test="number($indent)=$indent">
+      <xsl:attribute name="hangIndent"><xsl:value-of select="$indent"/></xsl:attribute>
+    </xsl:if>
     <xsl:for-each select="dt">
       <xsl:variable name="txt">
         <xsl:apply-templates select="." mode="cleanup"/>
@@ -1473,7 +1501,27 @@
         <xsl:with-param name="msg">ol/@group not supported</xsl:with-param>
       </xsl:call-template>
     </xsl:if>
-    <list style="numbers">
+    <xsl:variable name="style">
+      <xsl:choose>
+        <xsl:when test="not(@type) or @type='1'">numbers</xsl:when>
+        <xsl:when test="@type='a'">letters</xsl:when>
+        <xsl:when test="@type='A'">
+          <xsl:call-template name="error">
+            <xsl:with-param name="inline">no</xsl:with-param>
+            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to 'a')</xsl:with-param>
+          </xsl:call-template>
+          <xsl:text>letters</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:call-template name="error">
+            <xsl:with-param name="inline">no</xsl:with-param>
+            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to '1')</xsl:with-param>
+          </xsl:call-template>
+          <xsl:text>numbers</xsl:text>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <list style="{$style}">
       <xsl:apply-templates mode="cleanup"/>
     </list>
   </t>
@@ -1548,7 +1596,7 @@
 <!-- Tables -->
 <xsl:template match="table" mode="cleanup">
   <texttable>
-    <xsl:apply-templates select="@anchor" mode="cleanup"/>
+    <xsl:apply-templates select="@anchor|@align" mode="cleanup"/>
     <xsl:variable name="title">
       <xsl:choose>
         <xsl:when test="name">
@@ -1614,10 +1662,6 @@
       </xsl:call-template>
     </xsl:if>
   </texttable>
-</xsl:template>
-
-<xsl:template match="td/br|th/br" mode="cleanup">
-  <xsl:text> </xsl:text>
 </xsl:template>
 
 <!-- date formats -->

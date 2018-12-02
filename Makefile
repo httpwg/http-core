@@ -44,7 +44,6 @@ TARGETS = $(TARGETS_HTML) \
           $(bd)/$(SEMANTICS).iana-methods	\
           $(bd)/$(SEMANTICS).iana-status-codes \
           $(bd)/$(CACHE).iana-headers \
-          $(bd)/$(CACHE).iana-warn-codes \
           $(bd)/$(CACHE).cache-directives \
           httpbis-errata-status.html \
           httpbis.abnf
@@ -105,9 +104,6 @@ $(bd)/%.iana-methods: %.xml lib/extract-method-defs.xslt
 
 $(bd)/%.iana-status-codes: %.xml lib/extract-status-code-defs.xslt
 	$(saxon) $< lib/extract-status-code-defs.xslt > $@
-
-$(bd)/%.iana-warn-codes: %.xml lib/extract-warn-code-defs.xslt
-	$(saxon) $< lib/extract-warn-code-defs.xslt > $@
 
 $(bd)/%.cache-directives: %.xml lib/extract-cache-directives.xslt
 	$(saxon) $< lib/extract-cache-directives.xslt > $@
