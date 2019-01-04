@@ -1,7 +1,7 @@
 <!--
     Strip rfc2629.xslt extensions, generating XML input for "official" xml2rfc
 
-    Copyright (c) 2006-2018, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2019, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -1394,7 +1394,7 @@
 </xsl:template>
 
 <xsl:template name="process-dl">
-  <xsl:variable name="hang" select="@newline"/>
+  <xsl:variable name="newl" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
   <xsl:processing-instruction name="rfc">
     <xsl:choose>
@@ -1416,7 +1416,7 @@
       <xsl:variable name="block-level-children" select="$desc/t | $desc/dl | $desc/ol | $desc/ul"/>
       <t hangText="{normalize-space($txt)}">
         <xsl:copy-of select="@anchor"/>
-        <xsl:if test="$hang='false'">
+        <xsl:if test="$newl='true'">
           <xsl:choose>
             <xsl:when test="$block-level-children">
               <vspace blankLines="1"/>
