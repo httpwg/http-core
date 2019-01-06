@@ -1396,12 +1396,15 @@
 <xsl:template name="process-dl">
   <xsl:variable name="newl" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
-  <xsl:processing-instruction name="rfc">
-    <xsl:choose>
-      <xsl:when test="not($spac='compact')">subcompact='no'</xsl:when>
-      <xsl:otherwise>subcompact='yes'</xsl:otherwise>
-    </xsl:choose>
-  </xsl:processing-instruction>
+  <xsl:if test="parent::section">
+    <!-- avoid adding PIs into nested lists due to xml2rfc bug -->
+    <xsl:processing-instruction name="rfc">
+      <xsl:choose>
+        <xsl:when test="not($spac='compact')">subcompact='no'</xsl:when>
+        <xsl:otherwise>subcompact='yes'</xsl:otherwise>
+      </xsl:choose>
+    </xsl:processing-instruction>
+  </xsl:if>
   <list style="hanging">
     <xsl:variable name="indent" select="@indent"/>
     <xsl:if test="number($indent)=$indent">
