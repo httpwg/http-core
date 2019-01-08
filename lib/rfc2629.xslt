@@ -1,7 +1,7 @@
 <!--
     XSLT transformation from RFC2629 XML format to HTML
 
-    Copyright (c) 2006-2018, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2019, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -2268,15 +2268,15 @@
 </xsl:template>
 
 <xsl:template name="list-letters">
-  <xsl:variable name="style">
+  <xsl:variable name="type">
     <xsl:choose>
       <!-- lowercase for even-numbered nesting levels -->
-      <xsl:when test="0=(count(ancestor::list[@style='letters']) mod 2)">la</xsl:when>
+      <xsl:when test="0=(count(ancestor::list[@style='letters']) mod 2)">a</xsl:when>
       <!-- uppercase otherwise -->
-      <xsl:otherwise>ua</xsl:otherwise>
+      <xsl:otherwise>A</xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
-  <ol class="{$style}">
+  <ol type="{$type}">
     <xsl:call-template name="copy-anchor"/>
     <xsl:call-template name="insertInsDelClass"/>
     <xsl:apply-templates />
@@ -2393,11 +2393,11 @@
 </xsl:template>
 
 <xsl:template match="dl">
-  <xsl:variable name="hang" select="@newline"/>
+  <xsl:variable name="newl" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
   <xsl:variable name="class">
     <xsl:if test="$spac='compact'">compact </xsl:if>
-    <xsl:if test="$hang='false'">nohang </xsl:if>
+    <xsl:if test="$newl='true'">nohang </xsl:if>
   </xsl:variable>
   <xsl:variable name="p">
     <xsl:call-template name="get-paragraph-number" />
@@ -6601,12 +6601,6 @@ ol {
 li ol {
   margin-left: 0em;
 }
-ol.la {
-  list-style-type: lower-alpha;
-}
-ol.ua {
-  list-style-type: upper-alpha;
-}
 ol p {
   margin-left: 0em;
 }<xsl:if test="//xhtml:q">
@@ -10250,11 +10244,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1050 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1050 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1052 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1052 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2018/11/17 16:08:25 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2018/11/17 16:08:25 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/01/04 11:24:28 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/01/04 11:24:28 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>

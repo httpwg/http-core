@@ -12,7 +12,7 @@ echo ""
 
 for i in "$@"
 do
-  $bap/bap -i $bap/core.abnf -n "$i" 
+  $bap/bap -i $bap/core.abnf  -X rfc7405 -n "$i" 
 done | \
 	fgrep -v ", defined in [Part" | \
 	fgrep -v ", defined in [Messaging" | \
@@ -30,4 +30,4 @@ done | \
 	fgrep -v ", see [Caching" | \
 	fgrep -v ", see [AUTHFRM" | \
 	LC_COLLATE=C sort | uniq | \
-	$bap/bap -k -i $bap/core.abnf
+	$bap/bap -k -i $bap/core.abnf -X rfc7405
