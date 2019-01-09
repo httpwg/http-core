@@ -1497,10 +1497,13 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    duplicate header fields that would impact request processing.
 </t>
 <t>
-   A sender &MUST-NOT; generate multiple header fields with the same field
-   name in a message unless either the entire field value for that
-   header field is defined as a comma-separated list [i.e., #(values)]
-   or the header field is a well-known exception (as noted below).
+   Aside from the well-known exception noted below, a sender &MUST-NOT;
+   generate multiple header fields with the same field name in a message, or
+   append a header field when a field of the same name already exists in the
+   message, unless that field's definition allows multiple field values to be
+   recombined as a comma-separated list [i.e., at least one alternative of
+   the field's definition allows a comma-separated list, such as an ABNF rule
+   of #(values)].
 </t>
 <t>
    A recipient &MAY; combine multiple header fields with the same field name
@@ -5154,6 +5157,38 @@ Expect: 100-continue
   <c>Accept-Language</c> <c><xref target="header.accept-language"/></c>
 </texttable>
 
+<t>
+   For each of these header fields, a request that does not contain it
+   implies that the user agent has no preference on that axis of negotiation.
+   If the header field is present in a request and none of the available
+   representations for the response can be considered acceptable according to
+   it, the origin server can either honor the header field by sending a
+   <x:ref>406 (Not Acceptable)</x:ref> response or disregard the header field
+   by treating the response as if it is not subject to content negotiation
+   for that request header field. This does not imply, however, that the
+   client will be able to use the representation.
+</t>
+<t>
+   &Note; Sending these header fields makes it easier for a server to
+   identify an individual by virtue of the user agent's request
+   characteristics (<xref target="fingerprinting"/>).
+</t>
+<t>
+   Each of these header fields defines a wildcard value (often, "*") to
+   select unspecified values. If no wildcard is present, all values not
+   explicitly mentioned in the field are considered "not acceptable" to the
+   client.
+</t>
+<t>
+   &Note; In practice, using wildcards in content negotiation has limited
+   practical value, because it is seldom useful to say, for example, "I
+   prefer image/* more or less than (some other specific value)". Clients can
+   explicitly request a <x:ref>406 (Not Acceptable)</x:ref> response if a
+   more preferred format is not available by sending Accept: */*;q=0, but
+   they still need to be able to handle a different response, since the
+   server is allowed to ignore their preference.
+</t>
+
 <section title="Quality Values" anchor="quality.values">
   <x:anchor-alias value="weight"/>
   <x:anchor-alias value="qvalue"/>
@@ -5191,10 +5226,11 @@ Expect: 100-continue
   <x:anchor-alias value="accept-params"/>
   <x:anchor-alias value="media-range"/>
 <t>
-   The "Accept" header field can be used by user agents to specify
-   response media types that are acceptable. Accept header fields can be used to
-   indicate that the request is specifically limited to a small set of desired
-   types, as in the case of a request for an in-line image.
+   The "Accept" header field can be used by user agents to specify their
+   preferences regarding response media types. For example, Accept header
+   fields can be used to indicate that the request is specifically limited to
+   a small set of desired types, as in the case of a request for an in-line
+   image.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept"/><iref primary="true" item="Grammar" subitem="media-range"/><iref primary="true" item="Grammar" subitem="accept-params"/><iref primary="true" item="Grammar" subitem="accept-ext"/>
   <x:ref>Accept</x:ref> = #( <x:ref>media-range</x:ref> [ <x:ref>accept-params</x:ref> ] )
@@ -5240,15 +5276,6 @@ Expect: 100-continue
 <t>
    is interpreted as "I prefer audio/basic, but send me any audio
    type if it is the best available after an 80% markdown in quality".
-</t>
-<t>
-   A request without any Accept header field implies that the user agent
-   will accept any media type in response. If the header field is present in a
-   request and none of the available representations for the response have a
-   media type that is listed as acceptable, the origin server can either honor
-   the header field by sending a <x:ref>406 (Not Acceptable)</x:ref> response
-   or disregard the header field by treating the response as if it is not
-   subject to content negotiation.
 </t>
 <t>
    A more elaborate example is
@@ -5316,9 +5343,9 @@ Expect: 100-continue
   <iref primary="true" item="Accept-Charset header field" x:for-anchor=""/>
   <x:anchor-alias value="Accept-Charset"/>
 <t>
-   The "Accept-Charset" header field can be sent by a user agent to
-   indicate what charsets are acceptable in textual response content.
-   This field allows user agents capable of understanding more comprehensive
+   The "Accept-Charset" header field can be sent by a user agent to indicate
+   its preferences for charsets in textual response content. For example,
+   this field allows user agents capable of understanding more comprehensive
    or special-purpose charsets to signal that capability to an origin server
    that is capable of representing information in those charsets.
 </t>
@@ -5337,20 +5364,7 @@ Expect: 100-continue
 <t>
    The special value "*", if present in the Accept-Charset field,
    matches every charset that is not mentioned elsewhere in the
-   Accept-Charset field. If no "*" is present in an Accept-Charset field,
-   then any charsets not explicitly mentioned in the field are
-   considered "not acceptable" to the client.
-</t>
-<t>
-   A request without any Accept-Charset header field implies that the user
-   agent will accept any charset in response.
-</t>
-<t>
-   If an Accept-Charset header field is present in a request and none of the
-   available representations for the response has a charset that is listed as
-   acceptable, the origin server can either honor the header field, by sending a
-   <x:ref>406 (Not Acceptable)</x:ref> response, or disregard the header field by
-   treating the resource as if it is not subject to content negotiation.
+   Accept-Charset field.
 </t>
 <t>
    &Note; Most general-purpose user agents do not send Accept-Charset, unless
@@ -5367,10 +5381,10 @@ Expect: 100-continue
   <x:anchor-alias value="Accept-Encoding"/>
   <x:anchor-alias value="codings"/>
 <t>
-   The "Accept-Encoding" header field can be used by user agents to
-   indicate what response content-codings (<xref target="content.codings"/>)
-   are acceptable in the response.  An "identity" token is used as a synonym
-   for "no encoding" in order to communicate when no encoding is preferred.
+   The "Accept-Encoding" header field can be used by user agents to indicate
+   their preferences regarding response content-codings (<xref
+   target="content.codings"/>). An "identity" token is used as a synonym for
+   "no encoding" in order to communicate when no encoding is preferred.
 </t>
 <figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Encoding"/><iref primary="true" item="Grammar" subitem="codings"/>
   <x:ref>Accept-Encoding</x:ref>  = #( <x:ref>codings</x:ref> [ <x:ref>weight</x:ref> ] )
@@ -5392,12 +5406,6 @@ Expect: 100-continue
   Accept-Encoding: compress;q=0.5, gzip;q=1.0
   Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0
 </artwork></figure>
-<t>
-   A request without an Accept-Encoding header field implies that the user
-   agent has no preferences regarding content-codings. Although this allows
-   the server to use any content-coding in a response, it does not imply that
-   the user agent will be able to correctly process all encodings.
-</t>
 <t>
    A server tests whether a content-coding for a given representation is
    acceptable using these rules:
@@ -5458,17 +5466,6 @@ Expect: 100-continue
 <t>
    would mean: "I prefer Danish, but will accept British English and
    other types of English".
-</t>
-<t>
-   A request without any Accept-Language header field implies that the user
-   agent will accept any language in response. If the header field is present
-   in a request and none of the available representations for the response have
-   a matching language tag, the origin server can either disregard the header
-   field by treating the response as if it is not subject to content
-   negotiation or honor the header field by sending a <x:ref>406 (Not Acceptable)</x:ref>
-   response. However, the latter is not encouraged, as doing so can prevent
-   users from accessing content that they might be able to use (with
-   translation software, for example). 
 </t>
 <t>
    Note that some recipients treat the order in which language tags are listed
@@ -10997,6 +10994,8 @@ Content-Encoding: gzip
 <ul>
   <li>In <xref target="status.308"/>, include status code 308 from RFC 7538 (<eref target="https://github.com/httpwg/http-core/issues/3"/>)</li>
   <li>Define a separate registry for HTTP header field names (<eref target="https://github.com/httpwg/http-core/issues/42"/>)</li>
+  <li>In <xref target="request.conneg"/>, refactor and clarify description of wildcard ("*") handling (<eref target="https://github.com/httpwg/http-core/issues/46"/>)</li>
+  <li>In <xref target="field.order"/>, clarify when header field combination is allowed (<eref target="https://github.com/httpwg/http-core/issues/74"/>)</li>
   <li>Use RFC 7405 ABNF notation for case-sensitive string constants (<eref target="https://github.com/httpwg/http-core/issues/133"/>)</li>
   <li>Rework <xref target="operation"/> to be more version-independent (<eref target="https://github.com/httpwg/http-core/issues/142"/>)</li>
 </ul>
