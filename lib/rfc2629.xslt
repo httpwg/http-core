@@ -500,10 +500,10 @@
 
 <xsl:variable name="includeDirectives">
   <xsl:call-template name="getIncludes">
-    <xsl:with-param name="nodes" select="/rfc/back/references/processing-instruction('rfc')"/>
+    <xsl:with-param name="nodes" select="/rfc/back/references/processing-instruction('rfc')|/rfc/back/references/referencegroup/processing-instruction('rfc')"/>
   </xsl:call-template>
   <xsl:call-template name="getXIncludes">
-    <xsl:with-param name="nodes" select="/rfc/back/references/xi:include"/>
+    <xsl:with-param name="nodes" select="/rfc/back/references/xi:include|/rfc/back/references/referencegroup/xi:include"/>
   </xsl:call-template>
 </xsl:variable>
 
@@ -3329,22 +3329,6 @@
 
   <xsl:call-template name="check-anchor"/>
 
-  <xsl:variable name="target">
-    <xsl:call-template name="link-ref-title-to"/>
-  </xsl:variable>
-
-  <xsl:variable name="front" select="front[1]|document(x:source/@href)/rfc/front[1]"/>
-  <xsl:if test="count($front)=0">
-    <xsl:call-template name="error">
-      <xsl:with-param name="msg">&lt;front> element missing for '<xsl:value-of select="@anchor"/>'</xsl:with-param>
-    </xsl:call-template>
-  </xsl:if>
-  <xsl:if test="count($front)>1">
-    <xsl:call-template name="warning">
-      <xsl:with-param name="msg">&lt;front> can be omitted when &lt;x:source> is specified (for '<xsl:value-of select="@anchor"/>')</xsl:with-param>
-    </xsl:call-template>
-  </xsl:if>
-  
   <dt id="{@anchor}">
     <xsl:call-template name="insertInsDelClass"/>
     <xsl:variable name="del-node" select="ancestor::ed:del"/>
@@ -3358,8 +3342,35 @@
     <xsl:call-template name="reference-name"/>
   </dt>
 
+  <xsl:call-template name="insert-reference-body"/>
+
+</xsl:template>
+
+<xsl:template name="insert-reference-body">
+  <xsl:param name="in-reference-group" select="false()"/>
+
+  <xsl:variable name="front" select="front[1]|document(x:source/@href)/rfc/front[1]"/>
+  <xsl:if test="count($front)=0">
+    <xsl:call-template name="error">
+      <xsl:with-param name="msg">&lt;front> element missing for '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+  <xsl:if test="count($front)>1">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">&lt;front> can be omitted when &lt;x:source> is specified (for '<xsl:value-of select="@anchor"/>')</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+  
+  <xsl:variable name="target">
+    <xsl:call-template name="link-ref-title-to"/>
+  </xsl:variable>
+
   <dd>
     <xsl:call-template name="insertInsDelClass"/>
+    <xsl:if test="$in-reference-group">
+      <xsl:call-template name="copy-anchor"/>
+    </xsl:if>
+    
     <xsl:for-each select="$front[1]/author">
       <xsl:choose>
         <xsl:when test="@surname and @surname!=''">
@@ -3518,14 +3529,16 @@
       <xsl:otherwise/>
     </xsl:choose>
 
-    
     <xsl:choose>
       <xsl:when test="string-length(normalize-space(@target)) &gt; 0">
-        <xsl:text>, &lt;</xsl:text>
-        <a href="{normalize-space(@target)}"><xsl:value-of select="normalize-space(@target)"/></a>
-        <xsl:text>&gt;</xsl:text>
+        <!-- hack: suppress specified target in reference group when it appears to be an info link to the RFC editor page -->
+        <xsl:if test="not($in-reference-group) or not(contains(@target,'www.rfc-editor.org/info/rfc'))">
+          <xsl:text>, &lt;</xsl:text>
+          <a href="{normalize-space(@target)}"><xsl:value-of select="normalize-space(@target)"/></a>
+          <xsl:text>&gt;</xsl:text>
+        </xsl:if>
       </xsl:when>
-      <xsl:when test="$xml2rfc-ext-link-rfc-to-info-page='yes' and $si[@name='BCP'] and starts-with(@anchor, 'BCP')">
+      <xsl:when test="not($in-reference-group) and $xml2rfc-ext-link-rfc-to-info-page='yes' and $si[@name='BCP'] and starts-with(@anchor, 'BCP')">
         <xsl:text>, &lt;</xsl:text>
         <xsl:variable name="uri">
           <xsl:call-template name="compute-rfc-info-uri">
@@ -3536,7 +3549,7 @@
         <a href="{$uri}"><xsl:value-of select="$uri"/></a>
         <xsl:text>&gt;</xsl:text>
       </xsl:when>
-      <xsl:when test="$xml2rfc-ext-link-rfc-to-info-page='yes' and $si[@name='RFC']">
+      <xsl:when test="not($in-reference-group) and $xml2rfc-ext-link-rfc-to-info-page='yes' and $si[@name='RFC']">
         <xsl:text>, &lt;</xsl:text>
         <xsl:variable name="uri">
           <xsl:call-template name="compute-rfc-info-uri">
@@ -3556,9 +3569,70 @@
       <br />
       <xsl:apply-templates />
     </xsl:for-each>
-
   </dd>
+</xsl:template>
 
+<xsl:template match="referencegroup">
+  <xsl:call-template name="check-no-text-content"/>
+
+  <!-- check for reference to reference -->
+  <xsl:variable name="anchor" select="@anchor"/>
+  <xsl:choose>
+    <xsl:when test="not(@anchor)">
+      <xsl:call-template name="warning">
+        <xsl:with-param name="msg">missing anchor on reference: <xsl:value-of select="."/></xsl:with-param>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:when test="not(ancestor::ed:del) and (ancestor::rfc and not(key('xref-item',$anchor)))">
+      <xsl:call-template name="warning">
+        <xsl:with-param name="msg">unused reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:when test="not(ancestor::ed:del) and (not(ancestor::rfc) and not($src//xref[@target=$anchor]))">
+      <xsl:call-template name="warning">
+        <xsl:with-param name="msg">unused (included) reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise/>
+  </xsl:choose>
+
+  <xsl:call-template name="check-anchor"/>
+
+  <dt id="{@anchor}">
+    <xsl:call-template name="insertInsDelClass"/>
+    <xsl:variable name="del-node" select="ancestor::ed:del"/>
+    <xsl:variable name="rep-node" select="ancestor::ed:replace"/>
+    <xsl:variable name="deleted" select="$del-node and ($rep-node/ed:ins)"/>
+    <xsl:for-each select="../..">
+      <xsl:call-template name="insert-issue-pointer">
+        <xsl:with-param name="deleted-anchor" select="$deleted"/>
+      </xsl:call-template>
+    </xsl:for-each>
+    <xsl:call-template name="reference-name"/>
+  </dt>
+
+  <xsl:variable name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/reference"/>
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-sortrefs='yes' and $xml2rfc-symrefs!='no'">
+      <xsl:for-each select="reference|$included">
+        <xsl:sort select="concat(/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor,.//ed:ins//reference/@anchor)" />
+        <xsl:call-template name="insert-reference-body">
+          <xsl:with-param name="in-reference-group" select="true()"/>
+        </xsl:call-template>
+      </xsl:for-each>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:for-each select="reference|$included">
+        <xsl:call-template name="insert-reference-body">
+          <xsl:with-param name="in-reference-group" select="true()"/>
+        </xsl:call-template>
+      </xsl:for-each>
+    </xsl:otherwise>
+  </xsl:choose>
+
+  <xsl:if test="@target">
+    <dd>&lt;<a href="{@target}"><xsl:value-of select="@target"/></a>></dd>
+  </xsl:if>
 </xsl:template>
 
 <xsl:template match="references">
@@ -3691,9 +3765,9 @@
 
 <xsl:template match="xi:include">
   <xsl:choose>
-    <xsl:when test="not(parent::references)">
+    <xsl:when test="not(parent::references) and not(parent::referencegroup)">
       <xsl:call-template name="error">
-        <xsl:with-param name="msg" select="'Support for x:include is restricted to child elements of &lt;references>'"/>
+        <xsl:with-param name="msg" select="'Support for x:include is restricted to child elements of &lt;references> and &lt;referencegroup>'"/>
       </xsl:call-template>
     </xsl:when>
     <xsl:otherwise>
@@ -5146,7 +5220,14 @@
             <xsl:value-of select="substring($val,2,string-length($val)-2)"/>
           </xsl:when>
           <xsl:when test="$is-xref and $from/@format='title'">
-            <xsl:value-of select="$front[1]/title"/>
+            <xsl:choose>
+              <xsl:when test="$to/self::referencegroup">
+                <xsl:value-of select="$val"/>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:value-of select="$front[1]/title"/>
+              </xsl:otherwise>
+            </xsl:choose>
           </xsl:when>
           <xsl:otherwise>
             <xsl:if test="not($is-xref) and $from/@format">
@@ -5268,7 +5349,7 @@
       </xsl:when>
 
       <!-- Reference links -->
-      <xsl:when test="$node/self::reference">
+      <xsl:when test="$node/self::reference or $node/self::referencegroup">
         <xsl:call-template name="xref-to-reference">
           <xsl:with-param name="from" select="$xref"/>
           <xsl:with-param name="to" select="$node"/>
@@ -10244,11 +10325,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1052 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1052 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1060 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1060 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/01/04 11:24:28 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/01/04 11:24:28 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/02/13 14:53:54 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/13 14:53:54 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -11130,7 +11211,7 @@ prev: <xsl:value-of select="$prev"/>
 </xsl:template>
 
 <!-- figure element -->
-<xsl:template match="figure/artwork | figure/ed:replace/ed:*/artwork" mode="validate" priority="9">
+<xsl:template match="figure/artwork | figure/ed:replace/ed:*/artwork | section/artwork" mode="validate" priority="9">
   <xsl:apply-templates select="@*|*" mode="validate"/>
 </xsl:template>
 <xsl:template match="artwork" mode="validate">
