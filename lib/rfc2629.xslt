@@ -2171,7 +2171,7 @@
     <xsl:when test="parent::figure">
       <div id="{$anchor}"/>
     </xsl:when>
-    <xsl:when test="ancestor::t or ancestor::artwork or ancestor::preamble or ancestor::postamble">
+    <xsl:when test="ancestor::t or ancestor::artwork or ancestor::sourcecode or ancestor::preamble or ancestor::postamble">
       <span id="{$anchor}"/>
     </xsl:when>
     <xsl:otherwise>
@@ -5017,7 +5017,7 @@
       <xsl:call-template name="get-section-xref-format">
         <xsl:with-param name="default">
           <xsl:choose>
-            <xsl:when test="ancestor::artwork">comma</xsl:when>
+            <xsl:when test="ancestor::artwork or ancestor::sourcecode">comma</xsl:when>
             <xsl:otherwise>of</xsl:otherwise>
           </xsl:choose>
         </xsl:with-param>
@@ -10288,11 +10288,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1068 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1068 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1069 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1069 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/02/14 17:47:40 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/14 17:47:40 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/02/15 13:57:56 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/15 13:57:56 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
