@@ -1449,39 +1449,35 @@
       </xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
-  <xsl:choose>
-    <xsl:when test="@align='right'">
-      <div style="display:table; margin-left: auto; margin-right: 0em;">
-        <xsl:call-template name="insert-begin-code"/>
-        <pre style="margin-left: 0em;">
-          <xsl:call-template name="add-artwork-class"/>
-          <xsl:call-template name="insertInsDelClass"/>
-          <xsl:copy-of select="$display"/>
-        </pre>
-        <xsl:call-template name="insert-end-code"/>
-      </div>
-    </xsl:when>
-    <xsl:when test="@align='center'">
-      <div style="display:table; margin-left: auto; margin-right: auto;">
-        <xsl:call-template name="insert-begin-code"/>
-        <pre style="margin-left: 0em;">
-          <xsl:call-template name="add-artwork-class"/>
-          <xsl:call-template name="insertInsDelClass"/>
-          <xsl:copy-of select="$display"/>
-        </pre>
-        <xsl:call-template name="insert-end-code"/>
-      </div>
-    </xsl:when>
-    <xsl:otherwise>
-      <xsl:call-template name="insert-begin-code"/>
-      <pre>
-        <xsl:call-template name="add-artwork-class"/>
-        <xsl:call-template name="insertInsDelClass"/>
-        <xsl:copy-of select="$display"/>
-      </pre>
-      <xsl:call-template name="insert-end-code"/>
-    </xsl:otherwise>
-  </xsl:choose>
+  <xsl:variable name="divstyle">
+    <xsl:choose>
+      <xsl:when test="self::artwork and @align='right'">display:table; margin-left: auto; margin-right: 0em;</xsl:when>
+      <xsl:when test="self::artwork and @align='center'">display:table; margin-left: auto; margin-right: auto;</xsl:when>
+      <xsl:otherwise/>
+    </xsl:choose>
+  </xsl:variable>
+  <xsl:variable name="prestyle">
+    <xsl:choose>
+      <xsl:when test="self::artwork and (@align='right' or @align='center')">margin-left: 0em;</xsl:when>
+      <xsl:otherwise/>
+    </xsl:choose>
+  </xsl:variable>
+  <div>
+    <xsl:call-template name="attach-paragraph-number-as-id"/>
+    <xsl:if test="$divstyle!=''">
+      <xsl:attribute name="style"><xsl:value-of select="$divstyle"/></xsl:attribute>
+    </xsl:if>
+    <xsl:call-template name="insert-begin-code"/>
+    <pre>
+      <xsl:if test="$prestyle!=''">
+        <xsl:attribute name="style"><xsl:value-of select="$prestyle"/></xsl:attribute>
+      </xsl:if>
+      <xsl:call-template name="add-artwork-class"/>
+      <xsl:call-template name="insertInsDelClass"/>
+      <xsl:copy-of select="$display"/>
+    </pre>
+    <xsl:call-template name="insert-end-code"/>
+  </div>
   <xsl:call-template name="check-artwork-width">
     <xsl:with-param name="content"><xsl:apply-templates/></xsl:with-param>
     <xsl:with-param name="indent"><xsl:value-of select="string-length(@x:indent-with)"/></xsl:with-param>
@@ -2330,9 +2326,6 @@
 <!-- v3 lists -->
 
 <xsl:template match="ol[string-length(@type)>1]">
-  <xsl:variable name="p">
-    <xsl:call-template name="get-paragraph-number" />
-  </xsl:variable>
   <xsl:variable name="start">
     <xsl:choose>
       <xsl:when test="@group">
@@ -2346,50 +2339,27 @@
       <xsl:otherwise>1</xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
-  <xsl:choose>
-    <xsl:when test="$p!='' and not(ancestor::list) and not(ancestor::ed:del) and not(ancestor::ed:ins)">
-      <div id="{$anchor-pref}section.{$p}">
-        <dl>
+  <div>
+    <xsl:call-template name="attach-paragraph-number-as-id"/>
+    <dl>
+      <xsl:call-template name="copy-anchor"/>
+      <xsl:for-each select="li">
+        <xsl:variable name="label">
+          <xsl:call-template name="expand-format-percent">
+            <xsl:with-param name="format" select="../@type"/>
+            <xsl:with-param name="pos" select="$start - 1 + position()"/>
+          </xsl:call-template>
+        </xsl:variable>
+        <dt>
           <xsl:call-template name="copy-anchor"/>
-          <xsl:for-each select="li">
-            <xsl:variable name="label">
-              <xsl:call-template name="expand-format-percent">
-                <xsl:with-param name="format" select="../@type"/>
-                <xsl:with-param name="pos" select="$start - 1 + position()"/>
-              </xsl:call-template>
-            </xsl:variable>
-            <dt>
-              <xsl:call-template name="copy-anchor"/>
-              <xsl:value-of select="$label"/>
-            </dt>
-            <dd>
-              <xsl:apply-templates/>
-            </dd>
-          </xsl:for-each>
-        </dl>
-      </div>
-    </xsl:when>
-    <xsl:otherwise>
-      <dl>
-        <xsl:call-template name="copy-anchor"/>
-        <xsl:for-each select="li">
-          <xsl:variable name="label">
-            <xsl:call-template name="expand-format-percent">
-              <xsl:with-param name="format" select="../@type"/>
-              <xsl:with-param name="pos" select="$start - 1 + position()"/>
-            </xsl:call-template>
-          </xsl:variable>
-          <dt>
-            <xsl:call-template name="copy-anchor"/>
-            <xsl:value-of select="$label"/>
-          </dt>
-          <dd>
-            <xsl:apply-templates/>
-          </dd>
-        </xsl:for-each>
-      </dl>
-    </xsl:otherwise>
-  </xsl:choose>
+          <xsl:value-of select="$label"/>
+        </dt>
+        <dd>
+          <xsl:apply-templates/>
+        </dd>
+      </xsl:for-each>
+    </dl>
+  </div>
 </xsl:template>
 
 <xsl:template match="dl">
@@ -2399,12 +2369,9 @@
     <xsl:if test="$spac='compact'">compact </xsl:if>
     <xsl:if test="$newl='true'">nohang </xsl:if>
   </xsl:variable>
-  <xsl:variable name="p">
-    <xsl:call-template name="get-paragraph-number" />
-  </xsl:variable>
   <div>
-    <xsl:if test="$p!='' and not(ancestor::list) and not(ancestor::ed:del) and not(ancestor::ed:ins)">
-      <xsl:attribute name="id"><xsl:value-of select="concat($anchor-pref,'section.',$p)"/></xsl:attribute>
+    <xsl:if test="not(ancestor::list)">
+      <xsl:call-template name="attach-paragraph-number-as-id"/>
     </xsl:if>
     <dl>
       <xsl:call-template name="copy-anchor"/>
@@ -2507,9 +2474,6 @@
 <xsl:template match="ol[not(@type) or string-length(@type)=1]">
   <xsl:call-template name="check-no-text-content"/>
 
-  <xsl:variable name="p">
-    <xsl:call-template name="get-paragraph-number" />
-  </xsl:variable>
   <xsl:variable name="start">
     <xsl:choose>
       <xsl:when test="@group">
@@ -2524,8 +2488,8 @@
     </xsl:choose>
   </xsl:variable>
   <div>
-    <xsl:if test="$p!='' and not(ancestor::list) and not(ancestor::ul) and not(ancestor::dl) and not(ancestor::ol) and not(ancestor::ed:del) and not(ancestor::ed:ins)">
-      <xsl:attribute name="id"><xsl:value-of select="concat($anchor-pref,'section.',$p)"/></xsl:attribute>
+    <xsl:if test="not(ancestor::list)">
+      <xsl:call-template name="attach-paragraph-number-as-id"/>
     </xsl:if>
     <ol>
       <xsl:if test="$start!=''">
@@ -2540,13 +2504,10 @@
 </xsl:template>
 
 <xsl:template match="ul">
-  <xsl:variable name="p">
-    <xsl:call-template name="get-paragraph-number" />
-  </xsl:variable>
   <div>
     <xsl:call-template name="insertInsDelClass"/>
-    <xsl:if test="$p!='' and not(ancestor::list) and not(ancestor::ul) and not(ancestor::dl) and not(ancestor::ol) and not(ancestor::ed:del) and not(ancestor::ed:ins)">
-      <xsl:attribute name="id"><xsl:value-of select="concat($anchor-pref,'section.',$p)"/></xsl:attribute>
+    <xsl:if test="not(ancestor::list)">
+      <xsl:call-template name="attach-paragraph-number-as-id"/>
     </xsl:if>
     <ul>
       <xsl:call-template name="copy-anchor"/>
@@ -3966,10 +3927,6 @@
   <xsl:variable name="endswith" select="substring($textcontent,string-length($textcontent))"/>
   <xsl:variable name="keepwithnext" select="$endswith=':'"/>
 
-  <xsl:variable name="p">
-    <xsl:call-template name="get-paragraph-number" />
-  </xsl:variable>
-
   <xsl:variable name="stype">
     <xsl:choose>
       <xsl:when test="ancestor::abstract">abstract</xsl:when>
@@ -3987,8 +3944,8 @@
   </xsl:if>
 
   <div>
-    <xsl:if test="$p!='' and not(ancestor::list) and not(ancestor::ol) and not(ancestor::ul) and not(ancestor::ed:del) and not(ancestor::ed:ins)">
-      <xsl:attribute name="id"><xsl:value-of select="concat($anchor-pref,$stype,'.',$p)"/></xsl:attribute>
+    <xsl:if test="not(ancestor::list)">
+      <xsl:call-template name="attach-paragraph-number-as-id"/>
     </xsl:if>
     <xsl:if test="$keepwithnext">
       <xsl:attribute name="class">avoidbreakafter</xsl:attribute>
@@ -4046,7 +4003,7 @@
             </xsl:choose>
           </xsl:variable>
           <xsl:variable name="anch">
-            <xsl:if test="$p!='' and not(ancestor::ed:del) and not(ancestor::ed:ins) and not(ancestor::li) and not(ancestor::x:lt) and not(preceding-sibling::node())">
+            <xsl:if test="$p!='' and not(ancestor::li) and not(ancestor::x:lt) and not(preceding-sibling::node())">
               <xsl:value-of select="concat($anchor-pref,$stype,'.',$p)"/>
             </xsl:if>
           </xsl:variable>
@@ -8785,54 +8742,70 @@ dd, li, p {
 </xsl:template>
 
 <xsl:template name="get-paragraph-number">
-  <!-- no paragraph numbers in certain containers -->
-  <xsl:if test="not(ancestor::ul) and not(ancestor::dl) and not(ancestor::ol)">
+  <xsl:choose>
+    <!-- no numbering inside certain containers -->
+    <xsl:when test="ancestor::dl or ancestor::figure or ancestor::ol or ancestor::ul or ancestor::ed:del or ancestor::ed:ins"/>
   
-    <xsl:choose>
-      <xsl:when test="parent::blockquote or parent::x:blockquote">
-        <!-- boilerplate -->
-        <xsl:for-each select="parent::blockquote|parent::x:blockquote"><xsl:call-template name="get-paragraph-number" />.</xsl:for-each>
-        <xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol"/>
-      </xsl:when>
-  
-      <xsl:when test="parent::aside or parent::x:note">
-        <!-- boilerplate -->
-        <xsl:for-each select="parent::aside|parent::x:note"><xsl:call-template name="get-paragraph-number" />.</xsl:for-each>
-        <xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol"/>
-      </xsl:when>
+    <xsl:when test="parent::blockquote or parent::x:blockquote">
+      <!-- boilerplate -->
+      <xsl:for-each select="parent::blockquote|parent::x:blockquote"><xsl:call-template name="get-paragraph-number" />.</xsl:for-each>
+      <xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol|artwork|sourcecode"/>
+    </xsl:when>
 
-      <xsl:when test="ancestor::section">
-        <!-- get section number of ancestor section element, then add t number -->
-        <xsl:for-each select="ancestor::section[1]"><xsl:call-template name="get-section-number" />.p.</xsl:for-each>
-        <xsl:variable name="b"><xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol"/></xsl:variable>
-        <xsl:choose>
-          <xsl:when test="parent::section and ../@removeInRFC='true' and ../t[1]!=$section-removeInRFC">
-            <xsl:value-of select="1 + $b"/>
-          </xsl:when>
-          <xsl:otherwise><xsl:value-of select="$b"/></xsl:otherwise>
-        </xsl:choose>
-      </xsl:when>
-  
-      <xsl:when test="ancestor::note">
-        <!-- or get section number of ancestor note element, then add t number -->
-        <xsl:for-each select="ancestor::note[1]"><xsl:call-template name="get-section-number" />.p.</xsl:for-each>
-        <xsl:variable name="b"><xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol"/></xsl:variable>
-        <xsl:choose>
-          <xsl:when test="parent::note and ../@removeInRFC='true' and ../t[1]!=$note-removeInRFC">
-            <xsl:value-of select="1 + $b"/>
-          </xsl:when>
-          <xsl:otherwise><xsl:value-of select="$b"/></xsl:otherwise>
-        </xsl:choose>
-      </xsl:when>
-  
-      <!-- abstract -->
-      <xsl:when test="ancestor::abstract">
-        <xsl:text>p.</xsl:text>
-        <xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol"/>
-      </xsl:when>
-  
-      <xsl:otherwise/>
-    </xsl:choose>  
+    <xsl:when test="parent::aside or parent::x:note">
+      <!-- boilerplate -->
+      <xsl:for-each select="parent::aside|parent::x:note"><xsl:call-template name="get-paragraph-number" />.</xsl:for-each>
+      <xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol|artwork|sourcecode"/>
+    </xsl:when>
+
+    <xsl:when test="ancestor::section">
+      <!-- get section number of ancestor section element, then add t number -->
+      <xsl:for-each select="ancestor::section[1]"><xsl:call-template name="get-section-number" />.p.</xsl:for-each>
+      <xsl:variable name="b"><xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol|artwork|sourcecode"/></xsl:variable>
+      <xsl:choose>
+        <xsl:when test="parent::section and ../@removeInRFC='true' and ../t[1]!=$section-removeInRFC">
+          <xsl:value-of select="1 + $b"/>
+        </xsl:when>
+        <xsl:otherwise><xsl:value-of select="$b"/></xsl:otherwise>
+      </xsl:choose>
+    </xsl:when>
+
+    <xsl:when test="ancestor::note">
+      <!-- or get section number of ancestor note element, then add t number -->
+      <xsl:for-each select="ancestor::note[1]"><xsl:call-template name="get-section-number" />.p.</xsl:for-each>
+      <xsl:variable name="b"><xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol|artwork|sourcecode"/></xsl:variable>
+      <xsl:choose>
+        <xsl:when test="parent::note and ../@removeInRFC='true' and ../t[1]!=$note-removeInRFC">
+          <xsl:value-of select="1 + $b"/>
+        </xsl:when>
+        <xsl:otherwise><xsl:value-of select="$b"/></xsl:otherwise>
+      </xsl:choose>
+    </xsl:when>
+
+    <!-- abstract -->
+    <xsl:when test="ancestor::abstract">
+      <xsl:text>p.</xsl:text>
+      <xsl:number count="t|x:blockquote|blockquote|x:note|aside|ul|dl|ol|artwork|sourcecode"/>
+    </xsl:when>
+
+    <xsl:otherwise/>
+  </xsl:choose>  
+</xsl:template>
+
+<xsl:template name="attach-paragraph-number-as-id">
+  <xsl:variable name="p">
+    <xsl:call-template name="get-paragraph-number"/>
+  </xsl:variable>
+  <xsl:variable name="container">
+    <xsl:choose>
+      <xsl:when test="ancestor::abstract">abstract</xsl:when>
+      <xsl:when test="ancestor::note">note</xsl:when>
+      <xsl:when test="ancestor::boilerplate">boilerplate</xsl:when>
+      <xsl:otherwise>section</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  <xsl:if test="$p!='' and not(ancestor::list)">
+    <xsl:attribute name="id"><xsl:value-of select="concat($anchor-pref,$container,'.',$p)"/></xsl:attribute>
   </xsl:if>
 </xsl:template>
 
@@ -8954,14 +8927,9 @@ dd, li, p {
 <!-- Notes -->
 <xsl:template match="x:note|aside">
   <xsl:call-template name="check-no-text-content"/>
-  <xsl:variable name="p">
-    <xsl:call-template name="get-paragraph-number" />
-  </xsl:variable>
 
   <div>
-    <xsl:if test="$p!='' and not(ancestor::ed:del) and not(ancestor::ed:ins)">
-      <xsl:attribute name="id"><xsl:value-of select="$anchor-pref"/>section.<xsl:value-of select="$p"/></xsl:attribute>
-    </xsl:if>
+    <xsl:call-template name="attach-paragraph-number-as-id"/>
     <aside>
       <xsl:call-template name="copy-anchor"/>
       <xsl:apply-templates select="*"/>
@@ -8998,15 +8966,10 @@ dd, li, p {
 </xsl:template>
 
 <xsl:template match="x:blockquote|blockquote">
-  <xsl:variable name="p">
-    <xsl:call-template name="get-paragraph-number" />
-  </xsl:variable>
   <div>
     <xsl:call-template name="insertInsDelClass"/>
     <xsl:call-template name="editingMark" />
-    <xsl:if test="string-length($p) &gt; 0 and not(ancestor::ed:del) and not(ancestor::ed:ins)">
-      <xsl:attribute name="id"><xsl:value-of select="$anchor-pref"/>section.<xsl:value-of select="$p"/></xsl:attribute>
-    </xsl:if>
+    <xsl:call-template name="attach-paragraph-number-as-id"/>
     <blockquote>
       <xsl:call-template name="copy-anchor"/>
       <xsl:copy-of select="@cite"/>
@@ -10325,11 +10288,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1060 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1060 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1068 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1068 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/02/13 14:53:54 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/13 14:53:54 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/02/14 17:47:40 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/14 17:47:40 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
