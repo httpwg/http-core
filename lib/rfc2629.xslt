@@ -1435,7 +1435,7 @@
   </xsl:if>
   <xsl:if test="contains(.,'&#9;')">
     <xsl:call-template name="error">
-      <xsl:with-param name="msg" select="'artwork contains HTAB character'"/>
+      <xsl:with-param name="msg" select="'artwork or sourcecode contains HTAB character'"/>
       <xsl:with-param name="inline" select="'no'"/>
     </xsl:call-template>
   </xsl:if>
@@ -1484,8 +1484,8 @@
   </xsl:call-template>
 </xsl:template>
 
-<!-- special case for first text node in artwork -->
-<xsl:template match="artwork/text()[1]">
+<!-- special case for first text node in artwork or sourcecode -->
+<xsl:template match="artwork/text()[1]|sourcecode/text()[1]">
   <xsl:choose>
     <xsl:when test="starts-with(.,'&#10;')">
       <!-- reduce leading whitespace -->
@@ -10288,11 +10288,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1071 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1071 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1072 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1072 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/02/16 12:16:02 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/16 12:16:02 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/02/16 13:15:25 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/16 13:15:25 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
