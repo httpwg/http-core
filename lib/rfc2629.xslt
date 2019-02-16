@@ -7389,7 +7389,7 @@ dd, li, p {
       <xsl:variable name="extrefs3" select="key('extref-item',$irefs3[@x:for-anchor='']/../@anchor) | key('extref-item',$irefs3/@x:for-anchor)"/>
 
       <xsl:call-template name="insert-index-item">
-        <xsl:with-param name="in-artwork" select="key('index-item',@item)[@primary='true' and ancestor::artwork]"/>
+        <xsl:with-param name="in-artwork" select="key('index-item',@item)[@primary='true' and (ancestor::artwork or ancestor::sourcecode)]"/>
         <xsl:with-param name="irefs" select="$irefs3"/>
         <xsl:with-param name="xrefs" select="$xrefs3"/>
         <xsl:with-param name="extrefs" select="$extrefs3"/>
@@ -7408,7 +7408,7 @@ dd, li, p {
                 <xsl:variable name="extrefs4" select="key('extref-item',$irefs4[@x:for-anchor='']/../@anchor) | key('extref-item',$irefs4/@x:for-anchor)"/>
 
               <xsl:call-template name="insert-index-subitem">
-                <xsl:with-param name="in-artwork" select="key('index-item-subitem',concat(@item,'..',@subitem))[@primary='true' and ancestor::artwork]"/>
+                <xsl:with-param name="in-artwork" select="key('index-item-subitem',concat(@item,'..',@subitem))[@primary='true' and (ancestor::artwork or ancestor::sourcecode)]"/>
                 <xsl:with-param name="irefs" select="$irefs4"/>
                 <xsl:with-param name="xrefs" select="$xrefs4"/>
                 <xsl:with-param name="extrefs" select="$extrefs4"/>
@@ -10288,11 +10288,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1070 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1070 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1071 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1071 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/02/15 19:01:23 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/15 19:01:23 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/02/16 12:16:02 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/16 12:16:02 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -11173,11 +11173,14 @@ prev: <xsl:value-of select="$prev"/>
   </xsl:call-template>
 </xsl:template>
 
-<!-- figure element -->
+<!-- artwork/sourcecode element -->
 <xsl:template match="figure/artwork | figure/ed:replace/ed:*/artwork | section/artwork" mode="validate" priority="9">
   <xsl:apply-templates select="@*|*" mode="validate"/>
 </xsl:template>
-<xsl:template match="artwork" mode="validate">
+<xsl:template match="figure/sourcecode | figure/ed:replace/ed:*/sourcecode | section/sourcecode" mode="validate" priority="9">
+  <xsl:apply-templates select="@*|*" mode="validate"/>
+</xsl:template>
+<xsl:template match="artwork|sourcecode" mode="validate">
   <xsl:call-template name="warninvalid"/>
   <xsl:apply-templates select="@*|*" mode="validate"/>
 </xsl:template>
