@@ -6483,7 +6483,7 @@ function anchorRewrite() {
 window.addEventListener('hashchange', anchorRewrite);
 window.addEventListener('DOMContentLoaded', anchorRewrite);
 </script><xsl:if test="$prettyprint-script!=''">
-<script src="{$prettyprint-script}"/></xsl:if><xsl:if test="contains($prettyprint-script,'prettify') and //artwork[contains(@type,'abnf')]">
+<script src="{$prettyprint-script}"/></xsl:if><xsl:if test="contains($prettyprint-script,'prettify') and (//artwork[contains(@type,'abnf')] or //sourcecode[contains(@type,'abnf')])">
 <script><![CDATA[try {
 PR['registerLangHandler'](
     PR['createSimpleLexer'](
@@ -10288,11 +10288,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1069 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1069 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1070 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1070 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/02/15 13:57:56 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/15 13:57:56 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/02/15 19:01:23 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/15 19:01:23 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
