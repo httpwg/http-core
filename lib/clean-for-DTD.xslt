@@ -574,7 +574,7 @@
     <xsl:call-template name="get-section-xref-format">
       <xsl:with-param name="default">
         <xsl:choose>
-          <xsl:when test="ancestor::artwork">comma</xsl:when>
+          <xsl:when test="ancestor::artwork or ancestor::sourcecode">comma</xsl:when>
           <xsl:otherwise>of</xsl:otherwise>
         </xsl:choose>
       </xsl:with-param>
@@ -652,7 +652,7 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[node() and @format='none' and @target=//artwork//@anchor]" mode="cleanup">
+<xsl:template match="xref[node() and @format='none' and (@target=//artwork//@anchor or @target=//sourcecode//@anchor)]" mode="cleanup">
   <!-- remove the link -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
@@ -930,7 +930,7 @@
     <xsl:if test="$title!=''">
       <xsl:attribute name="title"><xsl:value-of select="$title"/></xsl:attribute>
     </xsl:if>
-    <xsl:apply-templates select=".//artwork//iref" mode="cleanup"/>
+    <xsl:apply-templates select=".//artwork//iref|.//sourcecode//iref" mode="cleanup"/>
     <xsl:apply-templates select="iref|preamble|artwork|sourcecode|postamble|ed:replace|ed:ins|ed:del" mode="cleanup" />
   </figure>
 </xsl:template>
@@ -1626,6 +1626,7 @@
     </xsl:when>
     <xsl:otherwise>
       <figure>
+        <xsl:apply-templates select=".//iref" mode="cleanup"/>
         <artwork>
           <xsl:copy-of select="@anchor|@type"/>
           <xsl:if test="starts-with(.,'&#10;')">
