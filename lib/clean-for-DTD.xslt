@@ -211,6 +211,8 @@
   </xsl:choose>
 </xsl:template>
 
+<xsl:template match="t/@keepWithNext|t/@keepWithPrevious" mode="cleanup"/>
+
 <xsl:template match="refcontent" mode="cleanup">
   <xsl:variable name="text">
     <xsl:apply-templates mode="cleanup"/>

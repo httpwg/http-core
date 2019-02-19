@@ -3925,7 +3925,8 @@
 
   <xsl:variable name="textcontent" select="normalize-space(.)"/>
   <xsl:variable name="endswith" select="substring($textcontent,string-length($textcontent))"/>
-  <xsl:variable name="keepwithnext" select="$endswith=':'"/>
+  <xsl:variable name="keepwithnext" select="$endswith=':' or @keepWithNext='true'"/>
+  <xsl:variable name="keepwithprevious" select="@keepWithPrevious='true'"/>
 
   <xsl:variable name="stype">
     <xsl:choose>
@@ -3942,13 +3943,19 @@
       <xsl:with-param name="msg2"><xsl:value-of select="."/></xsl:with-param>
     </xsl:call-template>
   </xsl:if>
+  
+  <xsl:variable name="class">
+    <xsl:if test="$keepwithnext">avoidbreakafter</xsl:if>
+    <xsl:text> </xsl:text>
+    <xsl:if test="$keepwithprevious">avoidbreakbefore</xsl:if>
+  </xsl:variable>
 
   <div>
     <xsl:if test="not(ancestor::list)">
       <xsl:call-template name="attach-paragraph-number-as-id"/>
     </xsl:if>
-    <xsl:if test="$keepwithnext">
-      <xsl:attribute name="class">avoidbreakafter</xsl:attribute>
+    <xsl:if test="normalize-space($class)!=''">
+      <xsl:attribute name="class"><xsl:value-of select="normalize-space($class)"/></xsl:attribute>
     </xsl:if>
     <xsl:apply-templates mode="t-content" select="node()[1]">
       <xsl:with-param name="inherited-self-link" select="$inherited-self-link"/>
@@ -6870,7 +6877,7 @@ ul.ind li li {
   font-weight: normal;
   line-height: 150%;
   margin-left: 0em;
-}<xsl:if test="//svg:svg">
+}</xsl:if><xsl:if test="//svg:svg">
 @namespace svg url(http://www.w3.org/2000/svg);
 svg|svg {
   margin-left: 3em;
@@ -6883,6 +6890,9 @@ svg {
 }
 .avoidbreakafter {
   page-break-after: avoid;
+}
+<xsl:if test="//t/@keepWithPrevious">.avoidbreakbefore {
+  page-break-before: avoid;
 }
 </xsl:if><xsl:if test="//*[@removeInRFC='true']">section.rfcEditorRemove > div:first-of-type {
   font-style: italic;
@@ -10288,11 +10298,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1073 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1073 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1075 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1075 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/02/17 14:32:12 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/17 14:32:12 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/02/19 10:14:05 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/19 10:14:05 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
