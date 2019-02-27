@@ -85,7 +85,7 @@ $(bd)/%.redxml: %.xml $(reduction)
 	$(xml2rfc) $< -o $@
 
 $(bd)/%.abnf: %.xml lib/extract-artwork.xslt
-	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf2616" >$@
+	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf7230" >$@
 
 $(bd)/%.parsed-abnf: $(bd)/%.abnf
 	$(bap)/bap -i $(bap)/core.abnf -X rfc7405 < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -X rfc7405 -l 69 >$@
