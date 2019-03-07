@@ -1394,13 +1394,13 @@
 </xsl:template>
 
 <xsl:template name="insert-begin-code">
-  <xsl:if test="@x:is-code-component='yes'">
+  <xsl:if test="(self::artwork and @x:is-code-component='yes') or (self::sourcecode and @markers='true')">
     <pre class="ccmarker cct"><span>&lt;CODE BEGINS></span></pre>
   </xsl:if>
 </xsl:template>
 
 <xsl:template name="insert-end-code">
-  <xsl:if test="@x:is-code-component='yes'">
+  <xsl:if test="(self::artwork and @x:is-code-component='yes') or (self::sourcecode and @markers='true')">
     <pre class="ccmarker ccb"><span>&lt;CODE ENDS></span></pre>
   </xsl:if>
 </xsl:template>
@@ -3333,6 +3333,12 @@
     </xsl:if>
     
     <xsl:for-each select="$front[1]/author">
+      <xsl:if test="@fullname and not(@surname) and (not(organization) or organization='')">
+        <xsl:call-template name="error">
+          <xsl:with-param name="msg">Missing @surname for author '<xsl:value-of select="@fullname"/>' - will ignore</xsl:with-param>
+        </xsl:call-template>
+      </xsl:if>
+
       <xsl:choose>
         <xsl:when test="@surname and @surname!=''">
           <xsl:variable name="displayname">
@@ -4181,6 +4187,7 @@
         <a href="#{$anchor-pref}section.{$sectionNumber}">
           <xsl:call-template name="emit-section-number">
             <xsl:with-param name="no" select="$sectionNumber"/>
+            <xsl:with-param name="appendixPrefix" select="true()"/>
           </xsl:call-template>
         </a>
         <xsl:text>&#0160;</xsl:text>
@@ -6661,7 +6668,7 @@ pre {
   background-color: lightyellow;
   padding: .25em;
   page-break-inside: avoid;
-}<xsl:if test="//artwork[@x:is-code-component='yes']"><!-- support "<CODE BEGINS>" and "<CODE ENDS>" markers-->
+}<xsl:if test="//artwork[@x:is-code-component='yes']|//sourcecode[@markers='true']"><!-- support "<CODE BEGINS>" and "<CODE ENDS>" markers-->
 pre.ccmarker {
   background-color: white;
   color: gray;
@@ -10298,11 +10305,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1075 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1075 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1078 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1078 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/02/19 10:14:05 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/02/19 10:14:05 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/03/07 11:04:01 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/03/07 11:04:01 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -10416,6 +10423,8 @@ dd, li, p {
 
 <xsl:template name="emit-section-number">
   <xsl:param name="no"/>
+  <xsl:param name="appendixPrefix" select="false()"/>
+  <xsl:if test="$appendixPrefix and translate($no,$ucase,'')=''">Appendix </xsl:if>
   <xsl:value-of select="$no"/><xsl:if test="not(contains($no,'.')) or $xml2rfc-ext-sec-no-trailing-dots!='no'">.</xsl:if>
 </xsl:template>
 
