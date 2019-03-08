@@ -44,7 +44,6 @@ TARGETS = $(TARGETS_HTML) \
           $(bd)/$(SEMANTICS).iana-methods	\
           $(bd)/$(SEMANTICS).iana-status-codes \
           $(bd)/$(CACHE).iana-headers \
-          $(bd)/$(CACHE).iana-warn-codes \
           $(bd)/$(CACHE).cache-directives \
           httpbis-errata-status.html \
           httpbis.abnf
@@ -86,10 +85,10 @@ $(bd)/%.redxml: %.xml $(reduction)
 	$(xml2rfc) $< -o $@
 
 $(bd)/%.abnf: %.xml lib/extract-artwork.xslt
-	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf2616" >$@
+	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf7230" >$@
 
 $(bd)/%.parsed-abnf: $(bd)/%.abnf
-	$(bap)/bap -i $(bap)/core.abnf < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -l 69 >$@
+	$(bap)/bap -i $(bap)/core.abnf -X rfc7405 < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -X rfc7405 -l 69 >$@
 
 $(bd)/%.abnf-appendix: $(bd)/%.parsed-abnf
 	$(saxon) $*.xml lib/abnf2xml2rfc.xslt abnf="../$<" >$@
@@ -105,9 +104,6 @@ $(bd)/%.iana-methods: %.xml lib/extract-method-defs.xslt
 
 $(bd)/%.iana-status-codes: %.xml lib/extract-status-code-defs.xslt
 	$(saxon) $< lib/extract-status-code-defs.xslt > $@
-
-$(bd)/%.iana-warn-codes: %.xml lib/extract-warn-code-defs.xslt
-	$(saxon) $< lib/extract-warn-code-defs.xslt > $@
 
 $(bd)/%.cache-directives: %.xml lib/extract-cache-directives.xslt
 	$(saxon) $< lib/extract-cache-directives.xslt > $@
