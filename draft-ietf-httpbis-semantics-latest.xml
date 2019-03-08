@@ -31,7 +31,7 @@
 <?rfc-ext html-pretty-print="prettyprint https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"?>
 <?rfc-ext include-references-in-index="yes" ?>
 
-<rfc obsoletes="7230,7231,7232,7233,7235,7615"
+<rfc obsoletes="7230,7231,7232,7233,7235,7538,7615"
      category="std" x:maturity-level="proposed"
      ipr="pre5378Trust200902" docName="draft-ietf-httpbis-semantics-&ID-VERSION;"
      xmlns:x='http://purl.org/net/xml2rfc/ext'
@@ -101,7 +101,7 @@
 </t>
 <t>
    This document obsoletes RFC 7231, RFC 7232, RFC 7233,
-   RFC 7235, RFC 7615, and portions of RFC 7230.
+   RFC 7235, RFC 7538, RFC 7615, and portions of RFC 7230.
 </t>
 </abstract>
 
@@ -117,7 +117,7 @@
     <eref target="https://github.com/httpwg/http-core"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.02"/>.
+    The changes in this draft are summarized in <xref target="changes.since.03"/>.
   </t>
 </note>
 </front>
@@ -216,9 +216,11 @@
    <xref target="RFC7232" x:fmt="none">RFC 7232</xref>
    (see <xref target="changes.from.rfc.7232"/>),
    <xref target="RFC7233" x:fmt="none">RFC 7233</xref>
-   (see <xref target="changes.from.rfc.7233"/>), and
+   (see <xref target="changes.from.rfc.7233"/>),
    <xref target="RFC7233" x:fmt="none">RFC 7235</xref>
-   (see <xref target="changes.from.rfc.7235"/>), and
+   (see <xref target="changes.from.rfc.7235"/>),
+   <xref target="RFC7233" x:fmt="none">RFC 7538</xref>
+   (see <xref target="changes.from.rfc.7538"/>), and
    <xref target="RFC7615" x:fmt="none">RFC 7615</xref>
    (see <xref target="changes.from.rfc.7615"/>).
 </t>
@@ -250,11 +252,14 @@
 <iref primary="true" item="Grammar" subitem="VCHAR"/>
 <t>
    This specification uses the Augmented Backus-Naur Form (ABNF) notation of
-   <xref target="RFC5234"/> with a list extension, defined in
-   <xref target="abnf.extension"/>, that allows for compact definition of
-   comma-separated lists using a '#' operator (similar to how the '*' operator
-   indicates repetition).
-   <xref target="collected.abnf"/> shows the collected grammar with all list
+   <xref target="RFC5234"/>, extended with the notation for case-sensitivity
+   in strings defined in <xref target="RFC7405"/>.
+</t>
+<t>   
+   It also uses a list extension, defined in <xref target="abnf.extension"/>,
+   that allows for compact definition of comma-separated lists using a '#'
+   operator (similar to how the '*' operator indicates repetition). <xref
+   target="collected.abnf"/> shows the collected grammar with all list
    operators expanded to standard ABNF notation.
 </t>
 <t>
@@ -289,12 +294,12 @@
   <x:anchor-alias value="request-target"/>
   The rules below are defined in <xref target="Messaging"/>:
 </t>
-<figure><artwork type="abnf2616">
+<sourcecode type="abnf7230">
   <x:ref>obs-fold</x:ref>         = &lt;obs-fold, see <xref target="line.folding"/>&gt;
   <x:ref>protocol-name</x:ref>    = &lt;protocol-name, see <xref target="header.upgrade"/>&gt;
   <x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="header.upgrade"/>&gt;
   <x:ref>request-target</x:ref>   = &lt;request-target, see <xref target="request.target"/>&gt;
-</artwork></figure>
+</sourcecode>
 <t>
    This specification uses the terms
    "character",
@@ -367,49 +372,51 @@
 <iref primary="true" item="request"/>
 <iref primary="true" item="response"/>
 <t>
-   A client sends an HTTP request to a server in the form of a <x:dfn>request</x:dfn>
-   message, beginning with a request-line that includes a method, URI, and
-   protocol version (<xref target="request.line"/>),
-   followed by header fields containing
-   request modifiers, client information, and representation metadata
-   (<xref target="header.fields"/>),
-   an empty line to indicate the end of the header section, and finally
-   a message body containing the payload body (if any,
-   <xref target="message.body"/>).
+   A client sends an HTTP request to a server in the form of a
+   <x:dfn>request</x:dfn> message, beginning with a method (<xref
+   target="methods"/>) and URI, followed by header fields containing request
+   modifiers, client information, and representation metadata (<xref
+   target="header.fields"/>), and finally a message body containing the
+   payload body (if any, <xref target="message.body"/>).
 </t>
 <t>
    A server responds to a client's request by sending one or more HTTP
-   <x:dfn>response</x:dfn>
-   messages, each beginning with a status line that
-   includes the protocol version, a success or error code, and textual
-   reason phrase (<xref target="status.line"/>),
-   possibly followed by header fields containing server
-   information, resource metadata, and representation metadata
-   (<xref target="header.fields"/>),
-   an empty line to indicate the end of the header section, and finally
-   a message body containing the payload body (if any,
-   <xref target="message.body"/>).
+   <x:dfn>response</x:dfn> messages, each beginning with a success or error
+   code (<xref target="status.codes"/>), possibly followed by header fields
+   containing server information, resource metadata, and representation
+   metadata (<xref target="header.fields"/>), and finally a message body
+   containing the payload body (if any, <xref target="message.body"/>).
 </t>
 <t>
-   A connection might be used for multiple request/response exchanges,
-   as defined in <xref target="persistent.connections"/>.
+   A connection might be used for multiple request/response exchanges. The
+   mechanism used to correlate between request and response messages is
+   version dependent; some versions of HTTP use implicit ordering of
+   messages, while others use an explicit identifier.
+</t>
+<t>
+   Responses (both final and non-final) can be sent at any time after a
+   request is received, even if it is not yet complete. However, clients
+   (including intermediaries) might abandon a request if the response is not
+   forthcoming within a reasonable period of time.
 </t>
 <t>
    The following example illustrates a typical message exchange for a
    GET request (<xref target="GET"/>) on the URI "http://www.example.com/hello.txt":
 </t>
-<figure><preamble>
+<t>
 Client request:
-</preamble><artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 GET /hello.txt HTTP/1.1
 User-Agent: curl/7.16.3 libcurl/7.16.3 OpenSSL/0.9.7l zlib/1.2.3
 Host: www.example.com
 Accept-Language: en, mi
 
-</artwork></figure>
-<figure><preamble>
+</artwork>
+<t>
 Server response:
-</preamble><artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
 HTTP/1.1 200 OK
 Date: Mon, 27 Jul 2009 12:28:53 GMT
 Server: Apache
@@ -422,7 +429,6 @@ Content-Type: text/plain
 
 <x:span anchor="exbody">Hello World! My payload includes a trailing CRLF.
 </x:span></artwork>
-</figure>
 </section>
 
 <section title="Intermediaries" anchor="intermediaries">
@@ -604,13 +610,12 @@ Content-Type: text/plain
   <x:anchor-alias value="path-abempty"/>
   <x:anchor-alias value="segment"/>
   <x:anchor-alias value="query"/>
-  <x:anchor-alias value="fragment"/>
   <x:anchor-alias value="absolute-path"/>
   <x:anchor-alias value="partial-URI"/>
 <t>
    The definitions of "URI-reference",
    "absolute-URI", "relative-part", "authority", "port", "host",
-   "path-abempty", "segment", "query", and "fragment" are adopted from the
+   "path-abempty", "segment", and "query" are adopted from the
    URI generic syntax.
    An "absolute-path" rule is defined for protocol elements that can contain a
    non-empty path component. (This rule differs slightly from the path-abempty
@@ -619,7 +624,7 @@ Content-Type: text/plain
    A "partial-URI" rule is defined for protocol elements
    that can contain a relative URI but not a fragment component.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="URI-reference"><!--exported production--></iref><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="absolute-path"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="fragment"/><iref primary="true" item="Grammar" subitem="segment"/><iref primary="true" item="Grammar" subitem="uri-host"/><iref primary="true" item="Grammar" subitem="partial-URI"><!--exported production--></iref>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="URI-reference"><!--exported production--></iref><iref primary="true" item="Grammar" subitem="absolute-URI"/><iref primary="true" item="Grammar" subitem="authority"/><iref primary="true" item="Grammar" subitem="absolute-path"/><iref primary="true" item="Grammar" subitem="port"/><iref primary="true" item="Grammar" subitem="query"/><iref primary="true" item="Grammar" subitem="segment"/><iref primary="true" item="Grammar" subitem="uri-host"/><iref primary="true" item="Grammar" subitem="partial-URI"><!--exported production--></iref>
   <x:ref>URI-reference</x:ref> = &lt;URI-reference, see <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
   <x:ref>absolute-URI</x:ref>  = &lt;absolute-URI, see <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
   <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
@@ -629,11 +634,10 @@ Content-Type: text/plain
   <x:ref>path-abempty</x:ref>  = &lt;path-abempty, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
   <x:ref>segment</x:ref>       = &lt;segment, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
   <x:ref>query</x:ref>         = &lt;query, see <xref target="RFC3986" x:fmt="," x:sec="3.4"/>&gt;
-  <x:ref>fragment</x:ref>      = &lt;fragment, see <xref target="RFC3986" x:fmt="," x:sec="3.5"/>&gt;
   
   <x:ref>absolute-path</x:ref> = 1*( "/" segment )
   <x:ref>partial-URI</x:ref>   = relative-part [ "?" query ]
-</artwork></figure>
+</sourcecode>
 <t>
    Each protocol element in HTTP that allows a URI reference will indicate
    in its ABNF production whether the element allows any form of reference
@@ -692,19 +696,16 @@ Content-Type: text/plain
    namespace governed by a potential HTTP origin server listening for
    TCP (<xref target="RFC0793"/>) connections on a given port.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="http-URI"><!--terminal production--></iref>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="http-URI"><!--terminal production--></iref>
   <x:ref>http-URI</x:ref> = "http:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
-             [ "#" <x:ref>fragment</x:ref> ]
-</artwork></figure>
+</sourcecode>
 <t>
    The origin server for an "http" URI is identified by the 
    <x:ref>authority</x:ref> component, which includes a host identifier
    and optional TCP port (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
    The hierarchical path component and optional query component serve as an
    identifier for a potential target resource within that origin server's name
-   space. The optional fragment component allows for indirect identification
-   of a secondary resource, independent of the URI scheme, as defined in
-   <xref target="RFC3986" x:fmt="of" x:sec="3.5"/>.
+   space.
 </t>
 <t>
    A sender &MUST-NOT; generate an "http" URI with an empty host identifier.
@@ -788,10 +789,9 @@ Content-Type: text/plain
    server is secured through the use of strong encryption, end-to-end,
    prior to sending the first HTTP request.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
   <x:ref>https-URI</x:ref> = "https:" "//" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
-              [ "#" <x:ref>fragment</x:ref> ]
-</artwork></figure>
+</sourcecode>
 <t>
    Note that the "https" URI scheme depends on both TLS and TCP for
    establishing authority.
@@ -809,6 +809,28 @@ Content-Type: text/plain
    The process for authoritative access to an "https" identified
    resource is defined in <xref target="RFC2818"/>.
 </t>
+</section>
+
+<section title="Fragment Identifiers on http(s) URI References" anchor="uri.fragment.identifiers">
+  <iref item="Fragment Identifiers"/>
+<t>
+   Fragment identifiers allow for indirect identification
+   of a secondary resource, independent of the URI scheme, as defined in
+   <xref target="RFC3986" x:fmt="of" x:sec="3.5"/>.
+   Some protocol elements that refer to a URI allow inclusion of a fragment,
+   while others do not. They are distinguished by use of the ABNF rule for
+   elements where fragment is allowed; otherwise, a specific rule that excludes
+   fragments is used (see <xref target="target.resource"/>).
+</t>
+<aside>
+  <t>
+    &Note; the fragment identifier component is not part of the actual scheme
+    definition for a URI scheme (see <xref target="RFC3986" x:fmt="of" x:sec="4.3"/>),
+    thus does not appear in the ABNF definitions for the "http" and "https"
+    URI schemes above.
+  </t>
+</aside>      
+  
 </section>
 
 <section title="http and https URI Normalization and Comparison" anchor="uri.comparison">
@@ -834,11 +856,11 @@ Content-Type: text/plain
 <t>
    For example, the following three URIs are equivalent:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
    http://example.com:80/~smith/home.html
    http://EXAMPLE.com/%7Esmith/home.html
    http://EXAMPLE.com:/%7esmith/home.html
-</artwork></figure>
+</artwork>
 </section>
 </section>
 </section>
@@ -1043,7 +1065,7 @@ Content-Type: text/plain
    for message fields as field-name and field-value pairs.
 </t>
 
-<section title="Field Names" anchor="field.names">
+<section title="Header Field Names" anchor="field.names">
   <x:anchor-alias value="field-name"/>
 <t>
    Header fields are key:value pairs that can be used to communicate data about
@@ -1060,9 +1082,9 @@ Content-Type: text/plain
    header field is defined in <xref target="header.date"/> as containing the origination
    timestamp for the message in which it appears.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="field-name"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-name"/>
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    The interpretation of a header field does not change between minor
    versions of the same major HTTP version, though the default behavior of a
@@ -1087,240 +1109,200 @@ Content-Type: text/plain
            suppress-title="true"
            anchor="iana.header.registration.table">
    <ttcol>Header Field Name</ttcol>
-   <ttcol>Protocol</ttcol>
    <ttcol>Status</ttcol>
    <ttcol>Reference</ttcol>
 
    <c>Accept</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.accept"/>
    </c>
    <c>Accept-Charset</c>
-   <c>http</c>
-   <c>standard</c>
+   <c>deprecated</c>
    <c>
       <xref target="header.accept-charset"/>
    </c>
    <c>Accept-Encoding</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.accept-encoding"/>
    </c>
    <c>Accept-Language</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.accept-language"/>
    </c>
    <c>Accept-Ranges</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.accept-ranges"/>
    </c>
    <c>Allow</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.allow"/>
    </c>
    <c>Authentication-Info</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.authentication-info"/>
    </c>
    <c>Authorization</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.authorization"/>
    </c>
    <c>Content-Encoding</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.content-encoding"/>
    </c>
    <c>Content-Language</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.content-language"/>
    </c>
    <c>Content-Length</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.content-length"/>
    </c>
    <c>Content-Location</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.content-location"/>
    </c>
    <c>Content-Range</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.content-range"/>
    </c>
    <c>Content-Type</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.content-type"/>
    </c>
    <c>Date</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.date"/>
    </c>
    <c>ETag</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.etag"/>
    </c>
    <c>Expect</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.expect"/>
    </c>
    <c>From</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.from"/>
    </c>
    <c>Host</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.host"/>
    </c>
    <c>If-Match</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.if-match"/>
    </c>
    <c>If-Modified-Since</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.if-modified-since"/>
    </c>
    <c>If-None-Match</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.if-none-match"/>
    </c>
    <c>If-Range</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.if-range"/>
    </c>
    <c>If-Unmodified-Since</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.if-unmodified-since"/>
    </c>
    <c>Last-Modified</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.last-modified"/>
    </c>
    <c>Location</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.location"/>
    </c>
    <c>Max-Forwards</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.max-forwards"/>
    </c>
    <c>Proxy-Authenticate</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.proxy-authenticate"/>
    </c>
    <c>Proxy-Authentication-Info</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.proxy-authentication-info"/>
    </c>
    <c>Proxy-Authorization</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.proxy-authorization"/>
    </c>
    <c>Range</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.range"/>
    </c>
    <c>Referer</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.referer"/>
    </c>
    <c>Retry-After</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.retry-after"/>
    </c>
    <c>Server</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.server"/>
    </c>
    <c>Trailer</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.trailer"/>
    </c>
    <c>User-Agent</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.user-agent"/>
    </c>
    <c>Vary</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.vary"/>
    </c>
    <c>Via</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.via"/>
    </c>
    <c>WWW-Authenticate</c>
-   <c>http</c>
    <c>standard</c>
    <c>
       <xref target="header.www-authenticate"/>
@@ -1330,15 +1312,60 @@ Content-Type: text/plain
 
 <?ENDINC build/draft-ietf-httpbis-semantics-latest.iana-headers ?>
 
-<section title="Field Name Registry" anchor="field.name.registry">
-<t>
-   HTTP header fields are registered within the "Message Headers" registry
-   located at <eref target="https://www.iana.org/assignments/message-headers"/>,
-   as defined by <xref target="BCP90"/>, with the protocol "http".
-</t>
+<section title="Header Field Name Registry" anchor="field.name.registry">
+
+<t>The "Hypertext Transfer Protocol (HTTP) Header Field Registry" defines the
+namespace for HTTP header field names.</t>
+
+<t>Any party can request registration of a HTTP header field. See <xref
+target="considerations.for.new.header.fields"/> for considerations to take
+into account when creating a new HTTP header field.</t>
+
+<t>The "HTTP Header Field Name" registry is located at
+"https://www.iana.org/assignments/http-headers/". Registration requests can
+be made by following the instructions located there or by sending an email to
+the "ietf-http-wg@ietf.org" mailing list.</t>
+
+<t>Header field names are registered on the advice of a Designated Expert
+(appointed by the IESG or their delegate). Header fields with the status
+'permanent' are Specification Required (using terminology from
+<xref target="RFC8126"/>).</t>
+
+<t>Registration requests consist of at least the following information:</t>
+
+<ul>
+   <li><t>Header field name: The requested field name. It MUST conform to the
+   field-name syntax defined in <xref target="field.names"/>, and SHOULD be
+   restricted to just letters, digits, hyphen ('-') and underscore ('_')
+   characters, with the first character being a letter.</t></li>
+
+   <li><t>Status: "permanent" or "provisional"</t></li>
+
+   <li><t>Specification document(s): Reference to the document that specifies
+   the header field, preferably including a URI that can be used to retrieve
+   a copy of the document. An indication of the relevant section(s) can also
+   be included, but is not required.</t></li>
+</ul>
+
+<t>The Expert(s) can define additional fields to be collected in the
+registry, in consultation with the community.</t>
+
+<t>Standards-defined names have a status of "permanent". Other names can also
+be registered as permanent, if the Expert(s) find that they are in use, in
+consultation with the community. Other names should be registered as
+"provisional".</t>
+
+<t>Provisional entries can be removed by the Expert(s) if -- in consultation
+with the community -- the Expert(s) find that they are not in use. The
+Experts can change a provisional entry's status to permanent at any time.</t>
+
+<t>Note that names can be registered by third parties (including the
+Expert(s)), if the Expert(s) determines that an unregistered name is widely
+deployed and not likely to be registered in a timely manner otherwise.</t>
+
 </section>
 
-<section title="Field Extensibility" anchor="field.extensibility">
+<section title="Header Field Extensibility" anchor="field.extensibility">
 <t>
    Header fields are fully extensible: there is no limit on the
    introduction of new field names, each presumably defining new semantics,
@@ -1363,11 +1390,11 @@ Content-Type: text/plain
 </t>
 <t>
    All defined header fields ought to be registered with IANA in the
-   "Message Headers" registry.
+   "HTTP Header Field Name" registry.
 </t>
 </section>
 
-<section title="Considerations for New Fields" anchor="considerations.for.new.header.fields">
+<section title="Considerations for New Header Fields" anchor="considerations.for.new.header.fields">
 <t>   
    Authors of specifications defining new fields are
    advised to keep the name as short as practical and not to prefix the name
@@ -1422,7 +1449,7 @@ Content-Type: text/plain
 </section>
 </section>
 
-<section title="Field Values" anchor="field.values">
+<section title="Header Field Values" anchor="field.values">
   <x:anchor-alias value="field-value"/>
   <x:anchor-alias value="field-content"/>
   <x:anchor-alias value="field-vchar"/>
@@ -1434,11 +1461,11 @@ Content-Type: text/plain
    that field's corresponding field values (i.e., after the field-value
    has been extracted by a generic field parser).
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
   <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
   <x:ref>field-content</x:ref>  = <x:ref>field-vchar</x:ref> [ 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> ) <x:ref>field-vchar</x:ref> ]
   <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Historically, HTTP header field values could be extended over multiple
    lines by preceding each extra line with at least one space or horizontal
@@ -1458,7 +1485,7 @@ Content-Type: text/plain
    opaque data.
 </t>
 
-<section title="Field Order" anchor="field.order">
+<section title="Header Field Order" anchor="field.order">
 <t>
    The order in which header fields with differing field names are
    received is not significant. However, it is good practice to send
@@ -1471,10 +1498,13 @@ Content-Type: text/plain
    duplicate header fields that would impact request processing.
 </t>
 <t>
-   A sender &MUST-NOT; generate multiple header fields with the same field
-   name in a message unless either the entire field value for that
-   header field is defined as a comma-separated list [i.e., #(values)]
-   or the header field is a well-known exception (as noted below).
+   Aside from the well-known exception noted below, a sender &MUST-NOT;
+   generate multiple header fields with the same field name in a message, or
+   append a header field when a field of the same name already exists in the
+   message, unless that field's definition allows multiple field values to be
+   recombined as a comma-separated list [i.e., at least one alternative of
+   the field's definition allows a comma-separated list, such as an ABNF rule
+   of #(values)].
 </t>
 <t>
    A recipient &MAY; combine multiple header fields with the same field name
@@ -1498,7 +1528,7 @@ Content-Type: text/plain
 </aside>
 </section>
 
-<section title="Field Limits" anchor="field.limits">
+<section title="Header Field Limits" anchor="field.limits">
 <t>
    HTTP does not place a predefined limit on the length of each header field
    or on the length of the header section as a whole, as described in
@@ -1521,7 +1551,7 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Field Value Components" anchor="field.components">
+<section title="Header Field Value Components" anchor="field.components">
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
@@ -1532,7 +1562,7 @@ Content-Type: text/plain
    visual characters not allowed in a <x:ref>token</x:ref>
    (DQUOTE and "(),/:;&lt;=>?@[\]{}").
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
   <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
 <!--
   NOTE: the definition of tchar and the prose above about special characters need to match!
@@ -1541,7 +1571,7 @@ Content-Type: text/plain
                  / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
                  / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
                  ; any <x:ref>VCHAR</x:ref>, except delimiters
-</artwork></figure>
+</sourcecode>
 <t anchor="rule.quoted-string">
   <x:anchor-alias value="quoted-string"/>
   <x:anchor-alias value="qdtext"/>
@@ -1549,11 +1579,11 @@ Content-Type: text/plain
    A string of text is parsed as a single value if it is quoted using
    double-quote marks.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
   <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
   <x:ref>qdtext</x:ref>         = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
   <x:ref>obs-text</x:ref>       = %x80-FF
-</artwork></figure>
+</sourcecode>
 <t anchor="rule.comment">
   <x:anchor-alias value="comment"/>
   <x:anchor-alias value="ctext"/>
@@ -1561,10 +1591,10 @@ Content-Type: text/plain
    the comment text with parentheses. Comments are only allowed in
    fields containing "comment" as part of their field value definition.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
   <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
   <x:ref>ctext</x:ref>          = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-</artwork></figure>
+</sourcecode>
 <t anchor="rule.quoted-pair">
   <x:anchor-alias value="quoted-pair"/>
    The backslash octet ("\") can be used as a single-octet
@@ -1572,9 +1602,9 @@ Content-Type: text/plain
    Recipients that process the value of a quoted-string &MUST; handle a
    quoted-pair as if it were replaced by the octet following the backslash.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
   <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
-</artwork></figure>
+</sourcecode>
 <t>
    A sender &SHOULD-NOT; generate a quoted-pair in a quoted-string except
    where necessary to quote DQUOTE and backslash octets occurring within that
@@ -1585,7 +1615,7 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Designing New Field Values" anchor="new.field.values">
+<section title="Designing New Header Field Values" anchor="new.field.values">
 <t>
    New header field values typically have their syntax defined using ABNF
    (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
@@ -1609,11 +1639,11 @@ Content-Type: text/plain
    For example, a textual date and a URI (either of which might contain a comma)
    could be safely carried in field-values like these:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Example-URI-Field: "http://example.com/a.html,foo",
                      "http://without-a-comma.example.com/"
   Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
-</artwork></figure>
+</artwork>
 <t>
    Note that double-quote delimiters almost always are used with the
    quoted-string production; using a different syntax inside double-quotes
@@ -1659,14 +1689,14 @@ Content-Type: text/plain
    A recipient &MUST; parse for such bad whitespace and remove it before
    interpreting the protocol element.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
   <x:ref>OWS</x:ref>            = *( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
                  ; optional whitespace
   <x:ref>RWS</x:ref>            = 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
                  ; required whitespace
   <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
                  ; "bad" whitespace
-</artwork></figure>
+</sourcecode>
 </section>
 
 <section title="Trailer" anchor="header.trailer">
@@ -1679,9 +1709,9 @@ Content-Type: text/plain
    be dynamically generated while the data is sent, such as a message
    integrity check, digital signature, or post-processing status.
 </cref></t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
   <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
-</artwork></figure>
+</sourcecode>
 <t><cref>
    How, where, and when trailer fields might be sent depends on both the
    protocol in use (HTTP version and/or transfer coding) and the semantics
@@ -1806,9 +1836,9 @@ Content-Type: text/plain
    server to distinguish among resources while servicing requests
    for multiple host names on a single IP address.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Host"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Host"/>
   <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="uri"/>
-</artwork></figure>
+</sourcecode>
 <t>
    A client &MUST; send a Host header field in all HTTP/1.1 request messages.
    If the target URI includes an authority component, then a client &MUST;
@@ -1863,25 +1893,6 @@ Host: www.example.org
 </t>
 </section>
 
-<section title="Associating a Response to a Request" anchor="associating.response.to.request">
-<t>
-   HTTP does not include a request identifier for associating a given
-   request message with its corresponding one or more response messages.
-   Hence, it relies on the order of response arrival to correspond exactly
-   to the order in which requests are made on the same connection.
-   More than one response message per request only occurs when one or more
-   informational responses (<x:ref>1xx</x:ref>, see <xref target="status.1xx"/>) precede a
-   final response to the same request.
-</t>
-<t>
-   A client that has more than one outstanding request on a connection &MUST;
-   maintain a list of outstanding requests in the order sent and &MUST;
-   associate each received response message on that connection to the highest
-   ordered request that has not yet received a final (non-<x:ref>1xx</x:ref>)
-   response.
-</t>
-</section>
-
 <section title="Message Forwarding" anchor="message.forwarding">
 <t>
    As described in <xref target="intermediaries"/>, intermediaries can serve
@@ -1928,14 +1939,14 @@ Host: www.example.org
    avoiding request loops, and identifying the protocol capabilities of
    senders along the request/response chain.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
   <x:ref>Via</x:ref> = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
 
   <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
                       ; see <xref target="header.upgrade"/>
   <x:ref>received-by</x:ref>       = ( <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ) / <x:ref>pseudonym</x:ref>
   <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Multiple Via field values represent each proxy or gateway that has
    forwarded the message. Each intermediary appends its own information
@@ -1983,9 +1994,9 @@ Host: www.example.org
    The request received by www.example.com would then have the following
    Via header field:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Via: 1.0 fred, 1.1 p.example.net
-</artwork></figure>
+</artwork>
 <t>
    An intermediary used as a portal through a network firewall
    &SHOULD-NOT; forward the names and ports of hosts within the firewall
@@ -1998,15 +2009,15 @@ Host: www.example.org
    field entries into a single such entry if the entries have identical
    received-protocol values. For example,
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
-</artwork></figure>
+</artwork>
 <t>
   could be collapsed to
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
-</artwork></figure>
+</artwork>
 <t>
    A sender &SHOULD-NOT; combine multiple entries unless they are all
    under the same organizational control and the hosts have already been
@@ -2058,16 +2069,13 @@ Host: www.example.org
 </t>
 <t>
    A proxy &MUST-NOT; transform the payload (<xref target="payload"/>) of a message that
-   contains a no-transform cache-control directive (<xref target="header.cache-control"/>).
+   contains a no-transform cache-control response directive (<xref target="header.cache-control"/>).
 </t>
 <t>
    A proxy &MAY; transform the payload of a message
    that does not contain a no-transform cache-control directive.
-   A proxy that transforms a payload &MUST; add a <x:ref>Warning</x:ref>
-   header field with the warn-code of 214 ("Transformation Applied")
-   if one is not already in the message (see <xref target="header.warning"/>).
    A proxy that transforms the payload of a <x:ref>200 (OK)</x:ref> response
-   can further inform downstream recipients that a transformation has been
+   can inform downstream recipients that a transformation has been
    applied by changing the response status code to
    <x:ref>203 (Non-Authoritative Information)</x:ref> (<xref target="status.203"/>).
 </t>
@@ -2129,9 +2137,9 @@ Host: www.example.org
    <x:ref>Content-Type</x:ref> and <x:ref>Content-Encoding</x:ref>.
    These define a two-layer, ordered encoding model:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   representation-data := Content-Encoding( Content-Type( bits ) )
-</artwork></figure>
+</artwork>
 
 <section title="Media Type" anchor="media.type">
   <x:anchor-alias value="media-type"/>
@@ -2146,19 +2154,19 @@ Host: www.example.org
    how to process that data in accordance with each context in which it
    is received.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
   <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
   <x:ref>type</x:ref>       = <x:ref>token</x:ref>
   <x:ref>subtype</x:ref>    = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 <t anchor="rule.parameter">
   <x:anchor-alias value="parameter"/>
    The type/subtype &MAY; be followed by parameters in the form of
    name=value pairs.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="parameter"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameter"/>
   <x:ref>parameter</x:ref>      = <x:ref>token</x:ref> "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
-</artwork></figure>
+</sourcecode>
 <t>
    The type, subtype, and parameter name tokens are case-insensitive.
    Parameter values might or might not be case-sensitive, depending on the
@@ -2169,14 +2177,23 @@ Host: www.example.org
 <t>
    A parameter value that matches the <x:ref>token</x:ref> production can be
    transmitted either as a token or within a quoted-string. The quoted and
-   unquoted values are equivalent. For example, the following examples are
-   all equivalent, but the first is preferred for consistency:
+   unquoted values are equivalent.
+</t>
+<t>
+   For example, the following examples are all equivalent, but the first is
+   preferred for consistency:
 </t>
 <figure><artwork type="example">
   text/html;charset=utf-8
-  text/html;charset=UTF-8
   Text/HTML;Charset="utf-8"
   text/html; charset="utf-8"
+</artwork></figure>
+<t>
+   Furthermore, the example below is equivalent as well, as the "charset"
+   parameter value is defined as case-insensitive (<xref target="RFC2046" x:fmt="," x:sec="4.1.2"/>):
+</t>
+<figure><artwork type="example">
+  text/html;charset=UTF-8
 </artwork></figure>
 <t>
    Media types ought to be registered with IANA according to the
@@ -2198,14 +2215,24 @@ Host: www.example.org
    <xref target="RFC6365"/>.
    A charset is identified by a case-insensitive token.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="charset"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="charset"/>
   <x:ref>charset</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Charset names ought to be registered in the IANA "Character Sets" registry
    (<eref target="https://www.iana.org/assignments/character-sets"/>)
-   according to the procedures defined in <xref target="RFC2978"/>.
+   according to the procedures defined in <xref target="RFC2978" x:fmt="of" x:sec="2"/>.
 </t>
+<aside>
+  <t>
+    &Note; in practice, charset names are furthermore restricted by the
+    "mime-charset" ABNF rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/>
+    (as corrected in <xref target="Err1912"/>). However, that rule
+    allows two characters not included in "token" ("{" and "}"), but
+    at the time of this writing no character set using
+    these was registered (see <xref target="Err5433"/>).
+  </t>
+</aside>
 </section>
 
 <section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
@@ -2279,9 +2306,9 @@ Host: www.example.org
    and without loss of information. Frequently, the representation is stored
    in coded form, transmitted directly, and only decoded by the final recipient.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="content-coding"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="content-coding"/>
   <x:ref>content-coding</x:ref>   = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Content-coding values are used in the
    <x:ref>Accept-Encoding</x:ref> (<xref target="header.accept-encoding"/>)
@@ -2380,12 +2407,12 @@ Host: www.example.org
 </t>
 <t>
    Content coding registrations &MUST; include the following fields:
-   <list style="symbols">
-     <t>Name</t>
-     <t>Description</t>
-     <t>Pointer to specification text</t>
-   </list>
 </t>
+<ul>
+  <li>Name</li>
+  <li>Description</li>
+  <li>Pointer to specification text</li>
+</ul>
 <t>
    Names of content codings &MUST-NOT; overlap with names of transfer codings
    (<xref target="transfer.codings"/>), unless the encoding transformation is identical (as
@@ -2418,9 +2445,9 @@ Host: www.example.org
    <x:ref>Content-Language</x:ref> uses the language-tag production defined
    below.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="language-tag"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="language-tag"/>
   <x:ref>language-tag</x:ref> = &lt;Language-Tag, see <xref target="RFC5646" x:sec="2.1"/>&gt;
-</artwork></figure>
+</sourcecode>
 <t>
    A language tag is a sequence of one or more case-insensitive subtags, each
    separated by a hyphen character ("-", %x2D).  In most cases, a language tag
@@ -2431,9 +2458,9 @@ Host: www.example.org
    Whitespace is not allowed within a language tag.
    Example tags include:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
-</artwork></figure>
+</artwork>
 <t>
    See <xref target="RFC5646"/> for further information. 
 </t>
@@ -2454,9 +2481,9 @@ Host: www.example.org
    payload header field to describe which part of a representation is being
    transferred.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="range-unit"/><iref item="Grammar" subitem="bytes-unit"/><iref item="Grammar" subitem="other-range-unit"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="range-unit"/><iref item="Grammar" subitem="bytes-unit"/><iref item="Grammar" subitem="other-range-unit"/>
   <x:ref>range-unit</x:ref>       = <x:ref>bytes-unit</x:ref> / <x:ref>other-range-unit</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
   The following range unit names are defined by this document:
 </t>
@@ -2482,9 +2509,9 @@ Host: www.example.org
    transferable over HTTP (<xref target="representations"/>). The "bytes" range unit is
    defined for expressing subranges of the data's octet sequence.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="bytes-unit"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="bytes-unit"/>
   <x:ref>bytes-unit</x:ref>       = "bytes"
-</artwork></figure>
+</sourcecode>
 <t anchor="rule.ranges-specifier">
   <x:anchor-alias value="byte-range-set"/>
   <x:anchor-alias value="byte-range-spec"/>
@@ -2497,13 +2524,13 @@ Host: www.example.org
    A byte-range request can specify a single range of bytes or a set
    of ranges within a single representation.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-range-set"/><iref primary="true" item="Grammar" subitem="byte-range-spec"/><iref primary="true" item="Grammar" subitem="first-byte-pos"/><iref primary="true" item="Grammar" subitem="last-byte-pos"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-range-set"/><iref primary="true" item="Grammar" subitem="byte-range-spec"/><iref primary="true" item="Grammar" subitem="first-byte-pos"/><iref primary="true" item="Grammar" subitem="last-byte-pos"/>
   <x:ref>byte-ranges-specifier</x:ref> = <x:ref>bytes-unit</x:ref> "=" <x:ref>byte-range-set</x:ref>
   <x:ref>byte-range-set</x:ref>  = 1#( <x:ref>byte-range-spec</x:ref> / <x:ref>suffix-byte-range-spec</x:ref> )
   <x:ref>byte-range-spec</x:ref> = <x:ref>first-byte-pos</x:ref> "-" [ <x:ref>last-byte-pos</x:ref> ]
   <x:ref>first-byte-pos</x:ref>  = 1*<x:ref>DIGIT</x:ref>
   <x:ref>last-byte-pos</x:ref>   = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    The <x:ref>first-byte-pos</x:ref> value in a <x:ref>byte-range-spec</x:ref>
    gives the byte-offset of the first byte in a range.
@@ -2513,19 +2540,19 @@ Host: www.example.org
 </t>
 <t>
    Examples of <x:ref>byte-ranges-specifier</x:ref> values:
-  <list style="symbols">
-     <t>The first 500 bytes (byte offsets 0-499, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=0-499
-</artwork></figure>
-    </t>
-     <t>The second 500 bytes (byte offsets 500-999, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=500-999
-</artwork></figure>
-    </t>
-  </list>
 </t>
+<ul>
+   <li><t>The first 500 bytes (byte offsets 0-499, inclusive):</t>
+<artwork type="example" x:indent-with="     ">
+bytes=0-499
+</artwork>
+   </li>
+   <li><t>The second 500 bytes (byte offsets 500-999, inclusive):</t>
+<artwork type="example" x:indent-with="     ">
+bytes=500-999
+</artwork>
+  </li>
+</ul>
 <t>
    A <x:ref>byte-range-spec</x:ref> is invalid if the
    <x:ref>last-byte-pos</x:ref> value is present and less than the
@@ -2544,40 +2571,40 @@ Host: www.example.org
    A client can request the last N bytes of the selected representation using
    a <x:ref>suffix-byte-range-spec</x:ref>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="suffix-byte-range-spec"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="suffix-byte-range-spec"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
   <x:ref>suffix-byte-range-spec</x:ref> = "-" <x:ref>suffix-length</x:ref>
   <x:ref>suffix-length</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    If the selected representation is shorter than the specified
    <x:ref>suffix-length</x:ref>, the entire representation is used.
 </t>
 <t>
    Additional examples, assuming a representation of length 10000:
-  <list style="symbols">
-     <t>The final 500 bytes (byte offsets 9500-9999, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=-500
-</artwork></figure>
-    Or:
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=9500-
-</artwork></figure>
-    </t>
-     <t>The first and last bytes only (bytes 0 and 9999):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=0-0,-1
-</artwork></figure>
-     </t>
-     <t>Other valid (but not canonical) specifications of the second 500
-        bytes (byte offsets 500-999, inclusive):
-<figure><artwork type="example" x:indent-with="   ">
-  bytes=500-600,601-999
-  bytes=500-700,601-999
-</artwork></figure>
-     </t>
-  </list>
 </t>
+<ul>
+   <li><t>The final 500 bytes (byte offsets 9500-9999, inclusive):</t>
+<artwork type="example" x:indent-with="     ">
+bytes=-500
+</artwork>
+  <t>Or:</t>
+<artwork type="example" x:indent-with="     ">
+bytes=9500-
+</artwork>
+   </li>
+   <li><t>The first and last bytes only (bytes 0 and 9999):</t>
+<artwork type="example" x:indent-with="     ">
+bytes=0-0,-1
+</artwork>
+   </li>
+   <li><t>Other valid (but not canonical) specifications of the second 500
+      bytes (byte offsets 500-999, inclusive):</t>
+<artwork type="example" x:indent-with="     ">
+bytes=500-600,601-999
+bytes=500-700,601-999
+</artwork>
+   </li>
+</ul>
 <t>
    If a valid <x:ref>byte-range-set</x:ref> includes at least one
    <x:ref>byte-range-spec</x:ref> with a <x:ref>first-byte-pos</x:ref> that is
@@ -2602,9 +2629,9 @@ Host: www.example.org
   Range units are intended to be extensible.  New range units ought to be
   registered with IANA, as defined in <xref target="range.unit.registry"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="other-range-unit"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="other-range-unit"/>
   <x:ref>other-range-unit</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 </section>
 
 <section title="Range Unit Registry" anchor="range.unit.registry">
@@ -2616,12 +2643,12 @@ Host: www.example.org
 </t>
 <t>
    Registration of an HTTP Range Unit &MUST; include the following fields:
-   <list style="symbols">
-     <t>Name</t>
-     <t>Description</t>
-     <t>Pointer to specification text</t>
-   </list>
 </t>
+<ul>
+  <li>Name</li>
+  <li>Description</li>
+  <li>Pointer to specification text</li>
+</ul>
 <t>
   Values to be added to this namespace require IETF Review
   (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
@@ -2666,16 +2693,16 @@ Host: www.example.org
    scope of the received message semantics, after any content codings
    indicated by <x:ref>Content-Encoding</x:ref> are decoded.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Type"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Type"/>
   <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Media types are defined in <xref target="media.type"/>. An example of the
    field is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Type: text/html; charset=ISO-8859-4
-</artwork></figure>
+</artwork>
 <t>
    A sender that generates a message containing a payload body &SHOULD;
    generate a Content-Type header field in that message unless the intended
@@ -2711,15 +2738,15 @@ Host: www.example.org
    Content-Encoding is primarily used to allow a representation's data to be
    compressed without losing the identity of its underlying media type.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
   <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    An example of its use is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Encoding: gzip
-</artwork></figure>
+</artwork>
 <t>
    If one or more encodings have been applied to a representation, the sender
    that applied the encodings &MUST; generate a Content-Encoding header field
@@ -2763,9 +2790,9 @@ Host: www.example.org
    language(s) of the intended audience for the representation. Note that this might
    not be equivalent to all the languages used within the representation.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Language"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Language"/>
   <x:ref>Content-Language</x:ref> = 1#<x:ref>language-tag</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Language tags are defined in <xref target="language.tags"/>. The primary purpose of
    Content-Language is to allow a user to identify and differentiate
@@ -2773,9 +2800,9 @@ Host: www.example.org
    content is intended only for a Danish-literate audience, the
    appropriate field is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Language: da
-</artwork></figure>
+</artwork>
 <t>
    If no Content-Language is specified, the default is that the content
    is intended for all language audiences. This might mean that the
@@ -2788,9 +2815,9 @@ Host: www.example.org
    Waitangi", presented simultaneously in the original Maori and English
    versions, would call for
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Language: mi, en
-</artwork></figure>
+</artwork>
 <t>
    However, just because multiple languages are present within a representation
    does not mean that it is intended for multiple linguistic audiences.
@@ -2813,15 +2840,15 @@ Host: www.example.org
    (body length) for the representation. In some cases, Content-Length is
    used to define or estimate message framing.
 </cref></t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Length"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Length"/>
   <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    An example is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Length: 3495
-</artwork></figure>
+</artwork>
 <t>
    A sender &MUST-NOT; send a Content-Length header field in any message that
    contains a <x:ref>Transfer-Encoding</x:ref> header field.
@@ -2896,9 +2923,9 @@ Host: www.example.org
    of this message's generation, then a <x:ref>200 (OK)</x:ref> response would
    contain the same representation that is enclosed as payload in this message.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Location"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Location"/>
   <x:ref>Content-Location</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    The Content-Location value is not a replacement for the effective
    Request URI (<xref target="effective.request.uri"/>).  It is representation metadata.
@@ -2932,24 +2959,24 @@ Host: www.example.org
    representation. Such a claim can only be trusted if both identifiers share
    the same resource owner, which cannot be programmatically determined via
    HTTP.
-   <list style="symbols">
-    <t>For a response to a GET or HEAD request, this is an indication that the
-       effective request URI refers to a resource that is subject to content
-       negotiation and the Content-Location field-value is a more specific
-       identifier for the <x:ref>selected representation</x:ref>.</t>
-    <t>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
-       a Content-Location field-value that is identical to the
-       <x:ref>Location</x:ref> field-value indicates that this payload is a
-       current representation of the newly created resource.</t>
-    <t>Otherwise, such a Content-Location indicates that this payload is a
-       representation reporting on the requested action's status and that the
-       same report is available (for future access with GET) at the given URI.
-       For example, a purchase transaction made via a POST request might
-       include a receipt document as the payload of the <x:ref>200 (OK)</x:ref>
-       response; the Content-Location field-value provides an identifier for
-       retrieving a copy of that same receipt in the future.</t>
-   </list>
 </t>
+<ul>
+  <li>For a response to a GET or HEAD request, this is an indication that the
+     effective request URI refers to a resource that is subject to content
+     negotiation and the Content-Location field-value is a more specific
+     identifier for the <x:ref>selected representation</x:ref>.</li>
+  <li>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
+     a Content-Location field-value that is identical to the
+     <x:ref>Location</x:ref> field-value indicates that this payload is a
+     current representation of the newly created resource.</li>
+  <li>Otherwise, such a Content-Location indicates that this payload is a
+     representation reporting on the requested action's status and that the
+     same report is available (for future access with GET) at the given URI.
+     For example, a purchase transaction made via a POST request might
+     include a receipt document as the payload of the <x:ref>200 (OK)</x:ref>
+     response; the Content-Location field-value provides an identifier for
+     retrieving a copy of that same receipt in the future.</li>
+</ul>
 <t>
    A user agent that sends Content-Location in a request message is stating
    that its value refers to where the user agent originally obtained the
@@ -3037,44 +3064,44 @@ Host: www.example.org
 </t>
 <t>
    For a request message:
-   <list style="symbols">
-      <t>If the request has a <x:ref>Content-Location</x:ref> header field,
-         then the sender asserts that the payload is a representation of the
-         resource identified by the Content-Location field-value. However,
-         such an assertion cannot be trusted unless it can be verified by
-         other means (not defined by this specification). The information
-         might still be useful for revision history links.</t>
-      <t>Otherwise, the payload is unidentified.</t>
-   </list>
 </t>
+<ul>
+   <li>If the request has a <x:ref>Content-Location</x:ref> header field,
+       then the sender asserts that the payload is a representation of the
+       resource identified by the Content-Location field-value. However,
+       such an assertion cannot be trusted unless it can be verified by
+       other means (not defined by this specification). The information
+       might still be useful for revision history links.</li>
+   <li>Otherwise, the payload is unidentified.</li>
+</ul>
 <t>
    For a response message, the following rules are applied in order until a
    match is found:
-   <list style="numbers">
-      <t>If the request method is GET or HEAD and the response status code is
-         <x:ref>200 (OK)</x:ref>, 
-         <x:ref>204 (No Content)</x:ref>,
-         <x:ref>206 (Partial Content)</x:ref>, or
-         <x:ref>304 (Not Modified)</x:ref>,
-         the payload is a representation of the resource identified by the
-         effective request URI (<xref target="effective.request.uri"/>).</t>
-      <t>If the request method is GET or HEAD and the response status code is
-         <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
-         a potentially modified or enhanced representation of the
-         <x:ref>target resource</x:ref> as provided by an intermediary.</t>
-      <t>If the response has a <x:ref>Content-Location</x:ref> header field
-         and its field-value is a reference to the same URI as the effective
-         request URI, the payload is a representation of the resource
-         identified by the effective request URI.</t>
-      <t>If the response has a <x:ref>Content-Location</x:ref> header field
-         and its field-value is a reference to a URI different from the
-         effective request URI, then the sender asserts that the payload is a
-         representation of the resource identified by the Content-Location
-         field-value. However, such an assertion cannot be trusted unless
-         it can be verified by other means (not defined by this specification).</t>
-      <t>Otherwise, the payload is unidentified.</t>
-   </list>
 </t>
+<ol>
+   <li>If the request method is GET or HEAD and the response status code is
+       <x:ref>200 (OK)</x:ref>, 
+       <x:ref>204 (No Content)</x:ref>,
+       <x:ref>206 (Partial Content)</x:ref>, or
+       <x:ref>304 (Not Modified)</x:ref>,
+       the payload is a representation of the resource identified by the
+       effective request URI (<xref target="effective.request.uri"/>).</li>
+   <li>If the request method is GET or HEAD and the response status code is
+       <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
+       a potentially modified or enhanced representation of the
+       <x:ref>target resource</x:ref> as provided by an intermediary.</li>
+   <li>If the response has a <x:ref>Content-Location</x:ref> header field
+       and its field-value is a reference to the same URI as the effective
+       request URI, the payload is a representation of the resource
+       identified by the effective request URI.</li>
+   <li>If the response has a <x:ref>Content-Location</x:ref> header field
+       and its field-value is a reference to a URI different from the
+       effective request URI, then the sender asserts that the payload is a
+       representation of the resource identified by the Content-Location
+       field-value. However, such an assertion cannot be trusted unless
+       it can be verified by other means (not defined by this specification).</li>
+   <li>Otherwise, the payload is unidentified.</li>
+</ol>
 </section>
 
 <section title="Content-Range" anchor="header.content-range">
@@ -3095,7 +3122,7 @@ Host: www.example.org
    each body part, and sent in <x:ref>416 (Range Not Satisfiable)</x:ref>
    responses to provide information about the selected representation.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="byte-content-range"/><iref primary="true" item="Grammar" subitem="byte-range-resp"/><iref primary="true" item="Grammar" subitem="byte-range"/><iref primary="true" item="Grammar" subitem="unsatisfied-range"/><iref primary="true" item="Grammar" subitem="other-content-range"/><iref primary="true" item="Grammar" subitem="other-range-resp"/><iref primary="true" item="Grammar" subitem="complete-length"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="byte-content-range"/><iref primary="true" item="Grammar" subitem="byte-range-resp"/><iref primary="true" item="Grammar" subitem="byte-range"/><iref primary="true" item="Grammar" subitem="unsatisfied-range"/><iref primary="true" item="Grammar" subitem="other-content-range"/><iref primary="true" item="Grammar" subitem="other-range-resp"/><iref primary="true" item="Grammar" subitem="complete-length"/>
   <x:ref>Content-Range</x:ref>       = <x:ref>byte-content-range</x:ref>
                       / <x:ref>other-content-range</x:ref>
 
@@ -3110,7 +3137,7 @@ Host: www.example.org
 
   <x:ref>other-content-range</x:ref> = <x:ref>other-range-unit</x:ref> <x:ref>SP</x:ref> <x:ref>other-range-resp</x:ref>
   <x:ref>other-range-resp</x:ref>    = *<x:ref>VCHAR</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    If a <x:ref>206 (Partial Content)</x:ref> response contains a
    <x:ref>Content-Range</x:ref> header field with a <x:ref>range unit</x:ref>
@@ -3129,15 +3156,15 @@ Host: www.example.org
    The following example illustrates when the complete length of the selected
    representation is known by the sender to be 1234 bytes:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Range: bytes 42-1233/1234
-</artwork></figure>
+</artwork>
 <t>
    and this second example illustrates when the complete length is unknown:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Range: bytes 42-1233/*
-</artwork></figure>
+</artwork>
 <t>
    A Content-Range field value is invalid if it contains a
    <x:ref>byte-range-resp</x:ref> that has a <x:ref>last-byte-pos</x:ref>
@@ -3152,9 +3179,9 @@ Host: www.example.org
    to a byte-range request &SHOULD; send a Content-Range header field with an
    <x:ref>unsatisfied-range</x:ref> value, as in the following example:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Content-Range: bytes */1234
-</artwork></figure>
+</artwork>
 <t>
    The complete-length in a 416 response indicates the current length of the
    selected representation.
@@ -3169,33 +3196,29 @@ Host: www.example.org
 <t>
    The following are examples of Content-Range values in which the
    selected representation contains a total of 1234 bytes:
-   <list style="symbols">
-      <t>
-        The first 500 bytes:
-<figure><artwork type="example" x:indent-with="   ">
-  Content-Range: bytes 0-499/1234
-</artwork></figure>
-      </t>
-      <t>
-        The second 500 bytes:
-<figure><artwork type="example" x:indent-with="   ">
-  Content-Range: bytes 500-999/1234
-</artwork></figure>
-      </t>
-      <t>
-        All except for the first 500 bytes:
-<figure><artwork type="example" x:indent-with="   ">
-  Content-Range: bytes 500-1233/1234
-</artwork></figure>
-      </t>
-      <t>
-        The last 500 bytes:
-<figure><artwork type="example" x:indent-with="   ">
-  Content-Range: bytes 734-1233/1234
-</artwork></figure>
-      </t>
-   </list>
 </t>
+<ul>
+   <li><t>The first 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 0-499/1234
+</artwork>
+   </li>
+   <li><t>The second 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 500-999/1234
+</artwork>
+   </li>
+   <li><t>All except for the first 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 500-1233/1234
+</artwork>
+   </li>
+   <li><t>The last 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 734-1233/1234
+</artwork>
+   </li>
+</ul>
 </section>
 
 <section title="Media Type multipart/byteranges" anchor="multipart.byteranges">
@@ -3215,19 +3238,17 @@ Host: www.example.org
 </t>
 <t>
   Implementation Notes:
-  <list style="numbers">
-      <t>Additional CRLFs might precede the first boundary string in the body.</t>
-
-      <t>Although <xref target="RFC2046"/> permits the boundary string to be
-         quoted, some existing implementations handle a quoted boundary
-         string incorrectly.</t>
-
-      <t>A number of clients and servers were coded to an early draft
-         of the byteranges specification that used a media type of
-         multipart/x-byteranges<iref item="multipart/x-byteranges Media Type"/><iref item="Media Type" subitem="multipart/x-byteranges"/>,
-         which is almost (but not quite) compatible with this type.</t>
-  </list>
 </t>
+<ol>
+  <li>Additional CRLFs might precede the first boundary string in the body.</li>
+  <li>Although <xref target="RFC2046"/> permits the boundary string to be
+      quoted, some existing implementations handle a quoted boundary
+      string incorrectly.</li>
+  <li>A number of clients and servers were coded to an early draft
+      of the byteranges specification that used a media type of
+      multipart/x-byteranges<iref item="multipart/x-byteranges Media Type"/><iref item="Media Type" subitem="multipart/x-byteranges"/>,
+      which is almost (but not quite) compatible with this type.</li>
+</ol>
 <t>
    Despite the name, the "multipart/byteranges" media type is not limited to
    byte ranges. The following example uses an "exampleunit" range unit:
@@ -3256,63 +3277,51 @@ Content-Range: exampleunit 11.2-14.3/25
   The following information serves as the registration form for the
   multipart/byteranges media type.
 </t>
-<t>
-  <list style="hanging" x:indent="12em">
-    <t hangText="Type name:">
-      multipart
-    </t>
-    <t hangText="Subtype name:">
-      byteranges
-    </t>
-    <t hangText="Required parameters:">
-      boundary
-    </t>
-    <t hangText="Optional parameters:">
-      N/A
-    </t>
-    <t hangText="Encoding considerations:">
-      only "7bit", "8bit", or "binary" are permitted
-    </t>
-    <t hangText="Security considerations:">
-      see <xref target="security.considerations"/>
-    </t>
-    <t hangText="Interoperability considerations:">
-      N/A
-    </t>
-    <t hangText="Published specification:">
-      This specification (see <xref target="multipart.byteranges"/>).
-    </t>
-    <t hangText="Applications that use this media type:">
-      HTTP components supporting multiple ranges in a single request.
-    </t>
-    <t hangText="Fragment identifier considerations:">
-      N/A
-    </t>
-    <t hangText="Additional information:">
-      <list style="hanging">
-        <t hangText="Deprecated alias names for this type:">N/A</t>
-        <t hangText="Magic number(s):">N/A</t>
-        <t hangText="File extension(s):">N/A</t>
-        <t hangText="Macintosh file type code(s):">N/A</t>
-      </list>
-    </t>
-    <t hangText="Person and email address to contact for further information:">
-      See Authors' Addresses section.
-    </t>
-    <t hangText="Intended usage:">
-      COMMON
-    </t>
-    <t hangText="Restrictions on usage:">
-      N/A
-    </t>
-    <t hangText="Author:">
-      See Authors' Addresses section.
-    </t>
-    <t hangText="Change controller:">
-      IESG
-    </t>
-  </list>
-</t>
+<dl>
+  <dt>Type name:</dt>
+  <dd>multipart</dd>
+  <dt>Subtype name:</dt>
+  <dd>byteranges</dd>
+  <dt>Required parameters:</dt>
+  <dd>boundary</dd>
+  <dt>Optional parameters:</dt>
+  <dd>N/A</dd>
+  <dt>Encoding considerations:</dt>
+  <dd>only "7bit", "8bit", or "binary" are permitted</dd>
+  <dt>Security considerations:</dt>
+  <dd>see <xref target="security.considerations"/></dd>
+  <dt>Interoperability considerations:</dt>
+  <dd>N/A</dd>
+  <dt>Published specification:</dt>
+  <dd>This specification (see <xref target="multipart.byteranges"/>).</dd>
+  <dt>Applications that use this media type:</dt>
+  <dd>HTTP components supporting multiple ranges in a single request.</dd>
+  <dt>Fragment identifier considerations:</dt>
+  <dd>N/A</dd>
+  <dt>Additional information:</dt>
+  <dd>
+    <dl>
+      <dt>Deprecated alias names for this type:</dt>
+      <dd>N/A</dd>
+      <dt>Magic number(s):</dt>
+      <dd>N/A</dd>
+      <dt>File extension(s):</dt>
+      <dd>N/A</dd>
+      <dt>Macintosh file type code(s):</dt>
+      <dd>N/A</dd>
+    </dl>
+  </dd>
+  <dt>Person and email address to contact for further information:</dt>
+  <dd>See Authors' Addresses section.</dd>
+  <dt>Intended usage:</dt>
+  <dd>COMMON</dd>
+  <dt>Restrictions on usage:</dt>
+  <dd>N/A</dd>
+  <dt>Author:</dt>
+  <dd>See Authors' Addresses section.</dd>
+  <dt>Change controller:</dt>
+  <dd>IESG</dd>
+</dl>
 </section>
 </section>
 
@@ -3380,29 +3389,29 @@ Content-Range: exampleunit 11.2-14.3/25
 </t>
 <t>
    Proactive negotiation has serious disadvantages:
-  <list style="symbols">
-    <t>
-         It is impossible for the server to accurately determine what
-         might be "best" for any given user, since that would require
-         complete knowledge of both the capabilities of the user agent
-         and the intended use for the response (e.g., does the user want
-         to view it on screen or print it on paper?);
-    </t>
-    <t>
-         Having the user agent describe its capabilities in every
-         request can be both very inefficient (given that only a small
-         percentage of responses have multiple representations) and a
-         potential risk to the user's privacy;
-    </t>
-    <t>
-         It complicates the implementation of an origin server and the
-         algorithms for generating responses to a request; and,
-    </t>
-    <t>
-         It limits the reusability of responses for shared caching.
-    </t>
-  </list>
 </t>
+<ul>
+   <li>
+    It is impossible for the server to accurately determine what
+    might be "best" for any given user, since that would require
+    complete knowledge of both the capabilities of the user agent
+    and the intended use for the response (e.g., does the user want
+    to view it on screen or print it on paper?);
+   </li>
+   <li>
+    Having the user agent describe its capabilities in every
+    request can be both very inefficient (given that only a small
+    percentage of responses have multiple representations) and a
+    potential risk to the user's privacy;
+   </li>
+   <li>
+    It complicates the implementation of an origin server and the
+    algorithms for generating responses to a request; and,
+   </li>
+   <li>
+    It limits the reusability of responses for shared caching.
+   </li>
+</ul>
 <t>
    A user agent cannot rely on proactive negotiation preferences being
    consistently honored, since the origin server might not implement proactive
@@ -3489,16 +3498,19 @@ Content-Range: exampleunit 11.2-14.3/25
    (<xref target="preconditions"/>) to make the requested
    action conditional on the current state of the target resource.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="method"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="method"/>
   <x:ref>method</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    HTTP was originally designed to be usable as an interface to distributed
-   object systems.  The request method was envisioned as applying
-   semantics to a <x:ref>target resource</x:ref> in much the same way as invoking a defined
-   method on an identified object would apply semantics. The method token
-   is case-sensitive because it might be used as a gateway to object-based
-   systems with case-sensitive method names.
+   object systems. The request method was envisioned as applying semantics to
+   a <x:ref>target resource</x:ref> in much the same way as invoking a
+   defined method on an identified object would apply semantics.
+</t>
+<t>
+   The method token is case-sensitive because it might be used as a gateway
+   to object-based systems with case-sensitive method names. By convention,
+   standardized methods are defined in all-uppercase US-ASCII letters.
 </t>
 <t>
    Unlike distributed objects, the standardized request methods in HTTP are
@@ -3510,8 +3522,7 @@ Content-Range: exampleunit 11.2-14.3/25
 </t>
 <t>
    This specification defines a number of standardized methods that are
-   commonly used in HTTP, as outlined by the following table. By convention,
-   standardized methods are defined in all-uppercase US-ASCII letters.
+   commonly used in HTTP, as outlined by the following table.
 </t>
 <texttable align="left" suppress-title="true" anchor="table.of.methods">
    <ttcol>Method</ttcol>
@@ -3807,16 +3818,16 @@ Content-Range: exampleunit 11.2-14.3/25
    the representation enclosed in the request according to the resource's own
    specific semantics. For example, POST is used for the following functions
    (among others):
-  <list style="symbols">
-    <t>Providing a block of data, such as the fields entered into an HTML
-       form, to a data-handling process;</t>
-    <t>Posting a message to a bulletin board, newsgroup, mailing list, blog,
-       or similar group of articles;</t>
-    <t>Creating a new resource that has yet to be identified by the origin
-       server; and</t>
-    <t>Appending data to a resource's existing representation(s).</t>
-  </list>
 </t>
+<ul>
+   <li>Providing a block of data, such as the fields entered into an HTML
+      form, to a data-handling process;</li>
+   <li>Posting a message to a bulletin board, newsgroup, mailing list, blog,
+      or similar group of articles;</li>
+   <li>Creating a new resource that has yet to be identified by the origin
+      server; and</li>
+   <li>Appending data to a resource's existing representation(s).</li>
+</ul>
 <t>
    An origin server indicates response semantics by choosing an appropriate
    status code depending on the result of processing the POST request;
@@ -3834,13 +3845,14 @@ Content-Range: exampleunit 11.2-14.3/25
 </t>
 <t>
    Responses to POST requests are only cacheable when they include explicit
-   freshness information (see <xref target="calculating.freshness.lifetime"/>). However, POST caching is not
-   widely implemented. For cases where an origin server wishes the client to
-   be able to cache the result of a POST in a way that can be reused by a
-   later GET, the origin server &MAY; send a <x:ref>200 (OK)</x:ref> response
-   containing the result and a <x:ref>Content-Location</x:ref> header field
-   that has the same value as the POST's effective request URI
-   (<xref target="header.content-location"/>).
+   freshness information (see <xref
+   target="calculating.freshness.lifetime"/>) and a
+   <x:ref>Content-Location</x:ref> header field that has the same value as
+   the POST's effective request URI (<xref
+   target="header.content-location"/>). A cached POST response can be reused
+   to satisfy a later GET or HEAD request, but not a POST request, since POST
+   is required to be written through to the origin server, because it is
+   unsafe; see <xref target="constructing.responses.from.caches"/>.
 </t>
 <t>
    If the result of processing a POST would be equivalent to a representation
@@ -3906,16 +3918,16 @@ Content-Range: exampleunit 11.2-14.3/25
    For example, if the target resource is configured to always have a
    <x:ref>Content-Type</x:ref> of "text/html" and the representation being PUT
    has a Content-Type of "image/jpeg", the origin server ought to do one of:
-   <list style="letters">
-      <t>reconfigure the target resource to reflect the new media type;</t>
-      <t>transform the PUT representation to a format consistent with that
-         of the resource before saving it as the new resource state; or,</t>
-      <t>reject the request with a <x:ref>415 (Unsupported Media Type)</x:ref>
-         response indicating that the target resource is limited to "text/html",
-         perhaps including a link to a different resource that would be a
-         suitable target for the new representation.</t>
-   </list>
 </t>
+<ol type="a">
+   <li>reconfigure the target resource to reflect the new media type;</li>
+   <li>transform the PUT representation to a format consistent with that
+       of the resource before saving it as the new resource state; or,</li>
+   <li>reject the request with a <x:ref>415 (Unsupported Media Type)</x:ref>
+       response indicating that the target resource is limited to "text/html",
+       perhaps including a link to a different resource that would be a
+       suitable target for the new representation.</li>
+</ol>
 <t>
    HTTP does not define exactly how a PUT method affects the state
    of an origin server beyond what can be expressed by the intent of
@@ -4047,9 +4059,9 @@ Content-Range: exampleunit 11.2-14.3/25
    implementations to reject the request.
 </t>
 <t>
-   Responses to the DELETE method are not cacheable. If a DELETE request 
-   passes through a cache that has one or more stored responses for the 
-   effective request URI, those stored responses will be invalidated (see
+   Responses to the DELETE method are not cacheable. If a successful DELETE
+   request passes through a cache that has one or more stored responses for
+   the effective request URI, those stored responses will be invalidated (see
    <xref target="invalidation"/>).
 </t>
 </section>
@@ -4253,13 +4265,13 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </t>
 <t>
   HTTP method registrations &MUST; include the following fields:
-  <list style="symbols">
-    <t>Method Name (see <xref target="methods"/>)</t>
-    <t>Safe ("yes" or "no", see <xref target="safe.methods"/>)</t>
-    <t>Idempotent ("yes" or "no", see <xref target="idempotent.methods"/>)</t>
-    <t>Pointer to specification text</t>
-  </list>
 </t>
+<ul>
+  <li>Method Name (see <xref target="methods"/>)</li>
+  <li>Safe ("yes" or "no", see <xref target="safe.methods"/>)</li>
+  <li>Idempotent ("yes" or "no", see <xref target="idempotent.methods"/>)</li>
+  <li>Pointer to specification text</li>
+</ul>
 <t>
   Values to be added to this namespace require IETF Review
   (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
@@ -4348,9 +4360,9 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    order to properly handle this request. The only such expectation defined
    by this specification is <x:ref>100-continue</x:ref>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Expect"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Expect"/>
   <x:ref>Expect</x:ref>  = "100-continue"
-</artwork></figure>
+</sourcecode>
 <t>
    The Expect field-value is case-insensitive.
 </t>
@@ -4391,59 +4403,59 @@ Expect: 100-continue
 </t>
 <t>
    Requirements for clients:
-  <list style="symbols">
-    <t>
-     A client &MUST-NOT; generate a 100-continue expectation in a request that
-     does not include a message body.
-    </t>
-    <t>
-     A client that will wait for a <x:ref>100 (Continue)</x:ref> response
-     before sending the request message body &MUST; send an
-     <x:ref>Expect</x:ref> header field containing a 100-continue expectation.
-    </t>
-    <t>
-     A client that sends a 100-continue expectation is not required to wait
-     for any specific length of time; such a client &MAY; proceed to send the
-     message body even if it has not yet received a response. Furthermore,
-     since <x:ref>100 (Continue)</x:ref> responses cannot be sent through an
-     HTTP/1.0 intermediary, such a client &SHOULD-NOT; wait for an indefinite
-     period before sending the message body.
-    </t>
-    <t>
-     A client that receives a <x:ref>417 (Expectation Failed)</x:ref> status
-     code in response to a request containing a 100-continue expectation
-     &SHOULD; repeat that request without a 100-continue expectation, since
-     the 417 response merely indicates that the response chain does not
-     support expectations (e.g., it passes through an HTTP/1.0 server).
-    </t>
-  </list>
 </t>
+<ul>
+   <li>
+    A client &MUST-NOT; generate a 100-continue expectation in a request that
+    does not include a message body.
+   </li>
+   <li>
+    A client that will wait for a <x:ref>100 (Continue)</x:ref> response
+    before sending the request message body &MUST; send an
+    <x:ref>Expect</x:ref> header field containing a 100-continue expectation.
+   </li>
+   <li>
+    A client that sends a 100-continue expectation is not required to wait
+    for any specific length of time; such a client &MAY; proceed to send the
+    message body even if it has not yet received a response. Furthermore,
+    since <x:ref>100 (Continue)</x:ref> responses cannot be sent through an
+    HTTP/1.0 intermediary, such a client &SHOULD-NOT; wait for an indefinite
+    period before sending the message body.
+   </li>
+   <li>
+    A client that receives a <x:ref>417 (Expectation Failed)</x:ref> status
+    code in response to a request containing a 100-continue expectation
+    &SHOULD; repeat that request without a 100-continue expectation, since
+    the 417 response merely indicates that the response chain does not
+    support expectations (e.g., it passes through an HTTP/1.0 server).
+   </li>
+</ul>
 <t>
    Requirements for servers:
-  <list style="symbols">
-    <t>
-     A server that receives a 100-continue expectation in an HTTP/1.0 request
-     &MUST; ignore that expectation.
-    </t>
-    <t>
-     A server &MAY; omit sending a <x:ref>100 (Continue)</x:ref> response if
-     it has already received some or all of the message body for the
-     corresponding request, or if the framing indicates that there is no
-     message body.
-    </t>
-    <t>
-     A server that sends a <x:ref>100 (Continue)</x:ref> response &MUST;
-     ultimately send a final status code, once the message body is received
-     and processed, unless the connection is closed prematurely.
-    </t>
-    <t>
-     A server that responds with a final status code before reading
-     the entire message body &SHOULD; indicate in that response whether it
-     intends to close the connection or continue reading and discarding the
-     request message (see <xref target="persistent.tear-down"/>).
-    </t>
-  </list>
 </t>
+<ul>
+   <li>
+    A server that receives a 100-continue expectation in an HTTP/1.0 request
+    &MUST; ignore that expectation.
+   </li>
+   <li>
+    A server &MAY; omit sending a <x:ref>100 (Continue)</x:ref> response if
+    it has already received some or all of the message body for the
+    corresponding request, or if the framing indicates that there is no
+    message body.
+   </li>
+   <li>
+    A server that sends a <x:ref>100 (Continue)</x:ref> response &MUST;
+    ultimately send a final status code, once the message body is received
+    and processed, unless the connection is closed prematurely.
+   </li>
+   <li>
+    A server that responds with a final status code before reading the
+    entire request payload body &SHOULD; indicate whether it intends to
+    close the connection (see <xref target="persistent.tear-down"/>) or
+    continue reading the payload body.
+   </li>
+</ul>
 <t>
    An origin server &MUST;, upon receiving an HTTP/1.1 (or later) request-line
    and a complete header section that contains a 100-continue expectation and
@@ -4491,9 +4503,9 @@ Expect: 100-continue
    proxies. This can be useful when the client is attempting to
    trace a request that appears to be failing or looping mid-chain.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Max-Forwards"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Max-Forwards"/>
   <x:ref>Max-Forwards</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    The Max-Forwards value is a decimal integer indicating the remaining
    number of times this request message can be forwarded.
@@ -4594,6 +4606,12 @@ Expect: 100-continue
    <x:ref>selected representation</x:ref>, such as CONNECT, OPTIONS, or TRACE.
 </t>
 <t>
+   Note that protocol extensions can modify the conditions under which
+   revalidation is triggered. For example, the "immutable" cache directive
+   (defined by <xref target="RFC8246"/>) instructs caches to forgo
+   revalidation of fresh responses even when requested by the client.
+</t>
+<t>
    Conditional request header fields that are defined by extensions to HTTP
    might place conditions on all recipients, on the state of the target
    resource in general, or on a group of resources. For instance, the "If"
@@ -4624,62 +4642,62 @@ Expect: 100-continue
 <t>
    A recipient cache or origin server &MUST; evaluate the request
    preconditions defined by this specification in the following order:
-   <list style="numbers">
-     <t anchor="precedence1">When recipient is the origin server and
-       <x:ref>If-Match</x:ref> is present,
-       evaluate the <x:ref>If-Match</x:ref> precondition:
-       <list style="symbols">
-         <t>if true, continue to step <xref target="precedence3" format="counter"/></t>
-         <t>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
-            it can be determined that the state-changing request has already
-            succeeded (see <xref target="header.if-match"/>)</t>
-       </list>
-     </t>
-     <t anchor="precedence2">When recipient is the origin server,
-       <x:ref>If-Match</x:ref> is not present, and
-       <x:ref>If-Unmodified-Since</x:ref> is present,
-       evaluate the <x:ref>If-Unmodified-Since</x:ref> precondition:
-       <list style="symbols">
-         <t>if true, continue to step <xref target="precedence3" format="counter"/></t>
-         <t>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
-            it can be determined that the state-changing request has already
-            succeeded (see <xref target="header.if-unmodified-since"/>)</t>
-       </list>
-     </t>
-     <t anchor="precedence3">When <x:ref>If-None-Match</x:ref> is present,
-       evaluate the <x:ref>If-None-Match</x:ref> precondition:
-       <list style="symbols">
-         <t>if true, continue to step <xref target="precedence5" format="counter"/></t>
-         <t>if false for GET/HEAD, respond <x:ref>304 (Not Modified)</x:ref></t>
-         <t>if false for other methods, respond <x:ref>412 (Precondition Failed)</x:ref></t>
-       </list>
-     </t>
-     <t anchor="precedence4">When the method is GET or HEAD,
-       <x:ref>If-None-Match</x:ref> is not present, and
-       <x:ref>If-Modified-Since</x:ref> is present,
-       evaluate the <x:ref>If-Modified-Since</x:ref> precondition:
-       <list style="symbols">
-         <t>if true, continue to step <xref target="precedence5" format="counter"/></t>
-         <t>if false, respond <x:ref>304 (Not Modified)</x:ref></t>
-       </list>
-     </t>
-     <t anchor="precedence5">When the method is GET and both
-       <x:ref>Range</x:ref> and <x:ref>If-Range</x:ref> are present,
-       evaluate the <x:ref>If-Range</x:ref> precondition:
-       <list style="symbols">
-         <t>if the validator matches and the Range specification is
-            applicable to the selected representation, respond
-            <x:ref>206 (Partial Content)</x:ref></t>
-       </list>
-     </t>
-     <t anchor="precedencelast">Otherwise,
-       <list style="symbols">
-         <t>all conditions are met, so perform the requested action and
-            respond according to its success or failure.</t>
-       </list>
-     </t>
-   </list>
 </t>
+<ol>
+   <li anchor="precedence1"><t>When recipient is the origin server and
+     <x:ref>If-Match</x:ref> is present,
+     evaluate the <x:ref>If-Match</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence3" format="counter"/></li>
+       <li>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
+           it can be determined that the state-changing request has already
+           succeeded (see <xref target="header.if-match"/>)</li>
+     </ul>
+   </li>
+   <li anchor="precedence2"><t>When recipient is the origin server,
+     <x:ref>If-Match</x:ref> is not present, and
+     <x:ref>If-Unmodified-Since</x:ref> is present,
+     evaluate the <x:ref>If-Unmodified-Since</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence3" format="counter"/></li>
+       <li>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
+           it can be determined that the state-changing request has already
+           succeeded (see <xref target="header.if-unmodified-since"/>)</li>
+     </ul>
+   </li>
+   <li anchor="precedence3"><t>When <x:ref>If-None-Match</x:ref> is present,
+     evaluate the <x:ref>If-None-Match</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence5" format="counter"/></li>
+       <li>if false for GET/HEAD, respond <x:ref>304 (Not Modified)</x:ref></li>
+       <li>if false for other methods, respond <x:ref>412 (Precondition Failed)</x:ref></li>
+     </ul>
+   </li>
+   <li anchor="precedence4"><t>When the method is GET or HEAD,
+     <x:ref>If-None-Match</x:ref> is not present, and
+     <x:ref>If-Modified-Since</x:ref> is present,
+     evaluate the <x:ref>If-Modified-Since</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence5" format="counter"/></li>
+       <li>if false, respond <x:ref>304 (Not Modified)</x:ref></li>
+     </ul>
+   </li>
+   <li anchor="precedence5"><t>When the method is GET and both
+     <x:ref>Range</x:ref> and <x:ref>If-Range</x:ref> are present,
+     evaluate the <x:ref>If-Range</x:ref> precondition:</t>
+     <ul>
+       <li>if the validator matches and the Range specification is
+           applicable to the selected representation, respond
+           <x:ref>206 (Partial Content)</x:ref></li>
+     </ul>
+   </li>
+   <li anchor="precedencelast"><t>Otherwise,</t>
+     <ul>
+       <li>all conditions are met, so perform the requested action and
+           respond according to its success or failure.</li>
+     </ul>
+   </li>
+</ol>
 <t>
    Any extension to HTTP/1.1 that defines additional conditional request
    header fields ought to define its own expectations regarding the order
@@ -4705,17 +4723,17 @@ Expect: 100-continue
    the client intends this precondition to prevent the method from being
    applied if there have been any changes to the representation data.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Match"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-Match"/>
   <x:ref>If-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Examples:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   If-Match: "xyzzy"
   If-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
   If-Match: *
-</artwork></figure>
+</artwork>
 <t>
    If-Match is most often used with state-changing methods (e.g., POST, PUT,
    DELETE) to prevent accidental overwrites when multiple user agents might be
@@ -4769,19 +4787,19 @@ Expect: 100-continue
    since weak entity-tags can be used for cache validation even if there have
    been changes to the representation data.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-None-Match"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-None-Match"/>
   <x:ref>If-None-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Examples:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   If-None-Match: "xyzzy"
   If-None-Match: W/"xyzzy"
   If-None-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
   If-None-Match: W/"xyzzy", W/"r2d2xxxx", W/"c3piozzzz"
   If-None-Match: *
-</artwork></figure>
+</artwork>
 <t>
    If-None-Match is primarily used in conditional GET requests to enable
    efficient updates of cached information with a minimum amount of
@@ -4832,15 +4850,15 @@ Expect: 100-continue
    recent than the date provided in the field-value. Transfer of the selected
    representation's data is avoided if that data has not changed.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Modified-Since"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-Modified-Since"/>
   <x:ref>If-Modified-Since</x:ref> = <x:ref>HTTP-date</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    An example of the field is:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   If-Modified-Since: Sat, 29 Oct 1994 19:43:31 GMT
-</artwork></figure>
+</artwork>
 <t>
    A recipient &MUST; ignore If-Modified-Since if the request contains an
    <x:ref>If-None-Match</x:ref> header field; the condition in
@@ -4913,15 +4931,15 @@ Expect: 100-continue
    same purpose as <x:ref>If-Match</x:ref> for cases where the user agent does
    not have an entity-tag for the representation.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Unmodified-Since"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-Unmodified-Since"/>
   <x:ref>If-Unmodified-Since</x:ref> = <x:ref>HTTP-date</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    An example of the field is:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT
-</artwork></figure>
+</artwork>
 <t>
    A recipient &MUST; ignore If-Unmodified-Since if the request contains an
    <x:ref>If-Match</x:ref> header field; the condition in
@@ -4997,9 +5015,9 @@ Expect: 100-continue
    send me the part(s) that I am requesting in Range; otherwise, send me the
    entire representation.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="If-Range"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-Range"/>
   <x:ref>If-Range</x:ref> = <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    A client &MUST-NOT; generate an If-Range header field in a request that
    does not contain a <x:ref>Range</x:ref> header field.
@@ -5049,11 +5067,11 @@ Expect: 100-continue
    request transfer of only one or more subranges of the selected
    representation data, rather than the entire selected representation data.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Range"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Range"/>
   <x:ref>Range</x:ref> = <x:ref>byte-ranges-specifier</x:ref> / <x:ref>other-ranges-specifier</x:ref>
   <x:ref>other-ranges-specifier</x:ref> = <x:ref>other-range-unit</x:ref> "=" <x:ref>other-range-set</x:ref>
   <x:ref>other-range-set</x:ref> = 1*<x:ref>VCHAR</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Clients often encounter interrupted data
    transfers as a result of canceled requests or dropped connections. When a
@@ -5155,6 +5173,38 @@ Expect: 100-continue
   <c>Accept-Language</c> <c><xref target="header.accept-language"/></c>
 </texttable>
 
+<t>
+   For each of these header fields, a request that does not contain it
+   implies that the user agent has no preference on that axis of negotiation.
+   If the header field is present in a request and none of the available
+   representations for the response can be considered acceptable according to
+   it, the origin server can either honor the header field by sending a
+   <x:ref>406 (Not Acceptable)</x:ref> response or disregard the header field
+   by treating the response as if it is not subject to content negotiation
+   for that request header field. This does not imply, however, that the
+   client will be able to use the representation.
+</t>
+<t>
+   &Note; Sending these header fields makes it easier for a server to
+   identify an individual by virtue of the user agent's request
+   characteristics (<xref target="fingerprinting"/>).
+</t>
+<t>
+   Each of these header fields defines a wildcard value (often, "*") to
+   select unspecified values. If no wildcard is present, all values not
+   explicitly mentioned in the field are considered "not acceptable" to the
+   client.
+</t>
+<t>
+   &Note; In practice, using wildcards in content negotiation has limited
+   practical value, because it is seldom useful to say, for example, "I
+   prefer image/* more or less than (some other specific value)". Clients can
+   explicitly request a <x:ref>406 (Not Acceptable)</x:ref> response if a
+   more preferred format is not available by sending Accept: */*;q=0, but
+   they still need to be able to handle a different response, since the
+   server is allowed to ignore their preference.
+</t>
+
 <section title="Quality Values" anchor="quality.values">
   <x:anchor-alias value="weight"/>
   <x:anchor-alias value="qvalue"/>
@@ -5173,11 +5223,11 @@ Expect: 100-continue
    a value of 0 means "not acceptable". If no "q" parameter is present,
    the default weight is 1.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
   <x:ref>weight</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref>
   <x:ref>qvalue</x:ref> = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
          / ( "1" [ "." 0*3("0") ] )
-</artwork></figure>
+</sourcecode>
 <t>
    A sender of qvalue &MUST-NOT; generate more than three digits after the
    decimal point. User configuration of these values ought to be limited in
@@ -5192,12 +5242,13 @@ Expect: 100-continue
   <x:anchor-alias value="accept-params"/>
   <x:anchor-alias value="media-range"/>
 <t>
-   The "Accept" header field can be used by user agents to specify
-   response media types that are acceptable. Accept header fields can be used to
-   indicate that the request is specifically limited to a small set of desired
-   types, as in the case of a request for an in-line image.
+   The "Accept" header field can be used by user agents to specify their
+   preferences regarding response media types. For example, Accept header
+   fields can be used to indicate that the request is specifically limited to
+   a small set of desired types, as in the case of a request for an in-line
+   image.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept"/><iref primary="true" item="Grammar" subitem="media-range"/><iref primary="true" item="Grammar" subitem="accept-params"/><iref primary="true" item="Grammar" subitem="accept-ext"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept"/><iref primary="true" item="Grammar" subitem="media-range"/><iref primary="true" item="Grammar" subitem="accept-params"/><iref primary="true" item="Grammar" subitem="accept-ext"/>
   <x:ref>Accept</x:ref> = #( <x:ref>media-range</x:ref> [ <x:ref>accept-params</x:ref> ] )
   
   <x:ref>media-range</x:ref>    = ( "*/*"
@@ -5206,7 +5257,7 @@ Expect: 100-continue
                    ) *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
   <x:ref>accept-params</x:ref>  = <x:ref>weight</x:ref> *( <x:ref>accept-ext</x:ref> )
   <x:ref>accept-ext</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) ]
-</artwork></figure>
+</sourcecode>
 <t>
    The asterisk "*" character is used to group media types into ranges,
    with "*/*" indicating all media types and "type/*" indicating all
@@ -5235,29 +5286,20 @@ Expect: 100-continue
 <t>
    The example
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept: audio/*; q=0.2, audio/basic
-</artwork></figure>
+</artwork>
 <t>
    is interpreted as "I prefer audio/basic, but send me any audio
    type if it is the best available after an 80% markdown in quality".
 </t>
 <t>
-   A request without any Accept header field implies that the user agent
-   will accept any media type in response. If the header field is present in a
-   request and none of the available representations for the response have a
-   media type that is listed as acceptable, the origin server can either honor
-   the header field by sending a <x:ref>406 (Not Acceptable)</x:ref> response
-   or disregard the header field by treating the response as if it is not
-   subject to content negotiation.
-</t>
-<t>
    A more elaborate example is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept: text/plain; q=0.5, text/html,
           text/x-dvi; q=0.8, text/x-c
-</artwork></figure>
+</artwork>
 <t>
    Verbally, this would be interpreted as "text/html and text/x-c are
    the equally preferred media types, but if they do not exist, then send the
@@ -5269,27 +5311,27 @@ Expect: 100-continue
    specific media types. If more than one media range applies to a given
    type, the most specific reference has precedence. For example,
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept: text/*, text/plain, text/plain;format=flowed, */*
-</artwork></figure>
+</artwork>
 <t>
    have the following precedence:
-   <list style="numbers">
-    <t>text/plain;format=flowed</t>
-    <t>text/plain</t>
-    <t>text/*</t>
-    <t>*/*</t>
-   </list>
 </t>
+<ol>
+   <li>text/plain;format=flowed</li>
+   <li>text/plain</li>
+   <li>text/*</li>
+   <li>*/*</li>
+</ol>
 <t>
    The media type quality factor associated with a given type is
    determined by finding the media range with the highest precedence
    that matches the type. For example,
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept: text/*;q=0.3, text/html;q=0.7, text/html;level=1,
           text/html;level=2;q=0.4, */*;q=0.5
-</artwork></figure>
+</artwork>
 <t>
    would cause the following values to be associated:
 </t>
@@ -5311,48 +5353,41 @@ Expect: 100-continue
 </section>
 
 <section title="Accept-Charset" anchor="header.accept-charset">
+   <rdf:Description>
+     <status xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">deprecated</status>
+   </rdf:Description>
   <iref primary="true" item="Accept-Charset header field" x:for-anchor=""/>
   <x:anchor-alias value="Accept-Charset"/>
 <t>
-   The "Accept-Charset" header field can be sent by a user agent to
-   indicate what charsets are acceptable in textual response content.
-   This field allows user agents capable of understanding more comprehensive
+   The "Accept-Charset" header field can be sent by a user agent to indicate
+   its preferences for charsets in textual response content. For example,
+   this field allows user agents capable of understanding more comprehensive
    or special-purpose charsets to signal that capability to an origin server
    that is capable of representing information in those charsets.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Charset"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept-Charset"/>
   <x:ref>Accept-Charset</x:ref> = 1#( ( <x:ref>charset</x:ref> / "*" ) [ <x:ref>weight</x:ref> ] )
-</artwork></figure>
+</sourcecode>
 <t>
    Charset names are defined in <xref target="charset"/>.
    A user agent &MAY; associate a quality value with each charset to indicate
    the user's relative preference for that charset, as defined in <xref target="quality.values"/>.
    An example is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept-Charset: iso-8859-5, unicode-1-1;q=0.8
-</artwork></figure>
+</artwork>
 <t>
    The special value "*", if present in the Accept-Charset field,
    matches every charset that is not mentioned elsewhere in the
-   Accept-Charset field. If no "*" is present in an Accept-Charset field,
-   then any charsets not explicitly mentioned in the field are
-   considered "not acceptable" to the client.
+   Accept-Charset field.
 </t>
 <t>
-   A request without any Accept-Charset header field implies that the user
-   agent will accept any charset in response. Most general-purpose user agents
-   do not send Accept-Charset, unless specifically configured to do so, because
-   a detailed list of supported charsets makes it easier for a server to
-   identify an individual by virtue of the user agent's request characteristics
-   (<xref target="fingerprinting"/>).
-</t>
-<t>
-   If an Accept-Charset header field is present in a request and none of the
-   available representations for the response has a charset that is listed as
-   acceptable, the origin server can either honor the header field, by sending a
-   <x:ref>406 (Not Acceptable)</x:ref> response, or disregard the header field by
-   treating the resource as if it is not subject to content negotiation.
+   &Note; Accept-Charset is deprecated because UTF-8 has become nearly
+   ubiquitous and sending a detailed list of user-preferred charsets wastes
+   bandwidth, increases latency, and makes passive fingerprinting far too
+   easy (<xref target="fingerprinting"/>). Most general-purpose user agents
+   do not send Accept-Charset, unless specifically configured to do so.
 </t>
 </section>
 
@@ -5361,15 +5396,15 @@ Expect: 100-continue
   <x:anchor-alias value="Accept-Encoding"/>
   <x:anchor-alias value="codings"/>
 <t>
-   The "Accept-Encoding" header field can be used by user agents to
-   indicate what response content-codings (<xref target="content.codings"/>)
-   are acceptable in the response.  An "identity" token is used as a synonym
-   for "no encoding" in order to communicate when no encoding is preferred.
+   The "Accept-Encoding" header field can be used by user agents to indicate
+   their preferences regarding response content-codings (<xref
+   target="content.codings"/>). An "identity" token is used as a synonym for
+   "no encoding" in order to communicate when no encoding is preferred.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Encoding"/><iref primary="true" item="Grammar" subitem="codings"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept-Encoding"/><iref primary="true" item="Grammar" subitem="codings"/>
   <x:ref>Accept-Encoding</x:ref>  = #( <x:ref>codings</x:ref> [ <x:ref>weight</x:ref> ] )
   <x:ref>codings</x:ref>          = <x:ref>content-coding</x:ref> / "identity" / "*"
-</artwork></figure>
+</sourcecode>
 <t>
    Each codings value &MAY; be given an associated quality value
    representing the preference for that encoding, as defined in <xref target="quality.values"/>.
@@ -5379,40 +5414,31 @@ Expect: 100-continue
 <t>
    For example,
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept-Encoding: compress, gzip
   Accept-Encoding:
   Accept-Encoding: *
   Accept-Encoding: compress;q=0.5, gzip;q=1.0
   Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0
-</artwork></figure>
-<t>
-   A request without an Accept-Encoding header field implies that the user
-   agent has no preferences regarding content-codings. Although this allows
-   the server to use any content-coding in a response, it does not imply that
-   the user agent will be able to correctly process all encodings.
-</t>
+</artwork>
 <t>
    A server tests whether a content-coding for a given representation is
    acceptable using these rules:
-  <list style="numbers">
-      <t>If no Accept-Encoding field is in the request, any content-coding is
-         considered acceptable by the user agent.</t>
-
-      <t>If the representation has no content-coding, then it is acceptable
-         by default unless specifically excluded by the Accept-Encoding field
-         stating either "identity;q=0" or "*;q=0" without a more specific
-         entry for "identity".</t>
-
-      <t>If the representation's content-coding is one of the content-codings
-         listed in the Accept-Encoding field, then it is acceptable unless
-         it is accompanied by a qvalue of 0. (As defined in <xref target="quality.values"/>, a
-         qvalue of 0 means "not acceptable".)</t>
-
-      <t>If multiple content-codings are acceptable, then the acceptable
-         content-coding with the highest non-zero qvalue is preferred.</t>
-  </list>
 </t>
+<ol>
+   <li>If no Accept-Encoding field is in the request, any content-coding is
+       considered acceptable by the user agent.</li>
+   <li>If the representation has no content-coding, then it is acceptable
+       by default unless specifically excluded by the Accept-Encoding field
+       stating either "identity;q=0" or "*;q=0" without a more specific
+       entry for "identity".</li>
+   <li>If the representation's content-coding is one of the content-codings
+       listed in the Accept-Encoding field, then it is acceptable unless
+       it is accompanied by a qvalue of 0. (As defined in <xref target="quality.values"/>, a
+       qvalue of 0 means "not acceptable".)</li>
+   <li>If multiple content-codings are acceptable, then the acceptable
+       content-coding with the highest non-zero qvalue is preferred.</li>
+</ol>
 <t>
    An Accept-Encoding header field with a combined field-value that is empty
    implies that the user agent does not want any content-coding in response.
@@ -5439,33 +5465,22 @@ Expect: 100-continue
    indicate the set of natural languages that are preferred in the response.
    Language tags are defined in <xref target="language.tags"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Language"/><iref primary="true" item="Grammar" subitem="language-range"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept-Language"/><iref primary="true" item="Grammar" subitem="language-range"/>
   <x:ref>Accept-Language</x:ref> = 1#( <x:ref>language-range</x:ref> [ <x:ref>weight</x:ref> ] )
   <x:ref>language-range</x:ref>  = 
             &lt;language-range, see <xref target="RFC4647" x:fmt="," x:sec="2.1"/>&gt;
-</artwork></figure>
+</sourcecode>
 <t>
    Each language-range can be given an associated quality value
    representing an estimate of the user's preference for the languages
    specified by that range, as defined in <xref target="quality.values"/>. For example,
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept-Language: da, en-gb;q=0.8, en;q=0.7
-</artwork></figure>
+</artwork>
 <t>
    would mean: "I prefer Danish, but will accept British English and
    other types of English".
-</t>
-<t>
-   A request without any Accept-Language header field implies that the user
-   agent will accept any language in response. If the header field is present
-   in a request and none of the available representations for the response have
-   a matching language tag, the origin server can either disregard the header
-   field by treating the response as if it is not subject to content
-   negotiation or honor the header field by sending a <x:ref>406 (Not Acceptable)</x:ref>
-   response. However, the latter is not encouraged, as doing so can prevent
-   users from accessing content that they might be able to use (with
-   translation software, for example). 
 </t>
 <t>
    Note that some recipients treat the order in which language tags are listed
@@ -5553,14 +5568,14 @@ Expect: 100-continue
    matched case-insensitively,
    and each parameter name &MUST; only occur once per challenge.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="auth-scheme"/><iref primary="true" item="Grammar" subitem="auth-param"/><iref primary="true" item="Grammar" subitem="token68"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="auth-scheme"/><iref primary="true" item="Grammar" subitem="auth-param"/><iref primary="true" item="Grammar" subitem="token68"/>
   auth-scheme    = <x:ref>token</x:ref>
 
   auth-param     = <x:ref>token</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
 
   token68        = 1*( <x:ref>ALPHA</x:ref> / <x:ref>DIGIT</x:ref> /
                        "-" / "." / "_" / "~" / "+" / "/" ) *"="
-</artwork></figure>
+</sourcecode>
 <t>
    The token68 syntax allows the 66 unreserved URI characters
    (<xref target="RFC3986"/>), plus a few others, so that it can hold a
@@ -5580,9 +5595,9 @@ Expect: 100-continue
    <x:ref>Proxy-Authenticate</x:ref> header field containing at least one
    challenge applicable to the proxy for the requested resource.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="challenge"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="challenge"/>
   <x:ref>challenge</x:ref>   = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>token68</x:ref> / #<x:ref>auth-param</x:ref> ) ]
-</artwork></figure>
+</sourcecode>
 <aside>
   <t>
      &Note; Many clients fail to parse a challenge that contains an unknown
@@ -5616,9 +5631,9 @@ Expect: 100-continue
    connection, as described in
    <xref target="confidentiality.of.credentials"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="credentials"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="credentials"/>
   <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>token68</x:ref> / #<x:ref>auth-param</x:ref> ) ]
-</artwork></figure>
+</sourcecode>
 <t>
    Upon receipt of a request for a protected resource that omits credentials,
    contains invalid credentials (e.g., a bad password) or partial credentials
@@ -5698,9 +5713,9 @@ Expect: 100-continue
    credentials containing the authentication information of the user agent for
    the realm of the resource being requested.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Authorization"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Authorization"/>
   <x:ref>Authorization</x:ref> = <x:ref>credentials</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    If a request is authenticated and a realm specified, the same credentials
    are presumed to be valid for all other requests within this realm (assuming
@@ -5726,9 +5741,9 @@ Expect: 100-continue
    authentication information of the client for the proxy and/or realm of the
    resource being requested.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Proxy-Authorization"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authorization"/>
   <x:ref>Proxy-Authorization</x:ref> = <x:ref>credentials</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Unlike <x:ref>Authorization</x:ref>, the Proxy-Authorization header field
    applies only to the next inbound proxy that demanded authentication using
@@ -5761,12 +5776,12 @@ Expect: 100-continue
 </t>
 <t>
   Registrations &MUST; include the following fields:
-  <list style="symbols">
-    <t>Authentication Scheme Name</t>
-    <t>Pointer to specification text</t>
-    <t>Notes (optional)</t>
-  </list>
 </t>
+<ul>
+  <li>Authentication Scheme Name</li>
+  <li>Pointer to specification text</li>
+  <li>Notes (optional)</li>
+</ul>
 <t>
   Values to be added to this namespace require IETF Review
   (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
@@ -5849,8 +5864,7 @@ Expect: 100-continue
       Therefore, new authentication schemes that choose not to carry
       credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
       header field) will need to explicitly disallow caching, by mandating the use of
-      either Cache-Control request directives (e.g., "no-store",
-      <xref target="cache-request-directive.no-store"/>) or response directives (e.g., "private").
+      Cache-Control response directives (e.g., "private").
     </t>
   </li>
   <li>
@@ -5891,17 +5905,17 @@ Expect: 100-continue
    machine-usable, as defined by "mailbox"
    in <xref x:sec="3.4" x:fmt="of" target="RFC5322"/>:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="From"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="From"/>
   <x:ref>From</x:ref>    = <x:ref>mailbox</x:ref>
   
   <x:ref>mailbox</x:ref> = &lt;mailbox, see <xref x:sec="3.4" x:fmt="," target="RFC5322"/>&gt;
-</artwork></figure>
+</sourcecode>
 <t>
    An example is:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   From: webmaster@example.org
-</artwork></figure>
+</artwork>
 <t>
    The From header field is rarely sent by non-robotic user agents.
    A user agent &SHOULD-NOT; send a From header field without explicit
@@ -5932,9 +5946,9 @@ Expect: 100-continue
    of the URI reference <xref target="RFC3986"/>, if any, when generating the
    Referer field value.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Referer"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Referer"/>
   <x:ref>Referer</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    The Referer header field allows servers to generate back-links to other
    resources for simple analytics, logging, optimized caching, etc. It also
@@ -5946,9 +5960,9 @@ Expect: 100-continue
 <t>
    Example:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Referer: http://www.example.org/hypertext/Overview.html
-</artwork></figure>
+</artwork>
 <t>
    If the target URI was obtained from a source that does not have its own
    URI (e.g., input from the user keyboard, or an entry within the user's
@@ -5995,9 +6009,9 @@ Expect: 100-continue
    a User-Agent field in each request unless specifically configured not
    to do so.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="User-Agent"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="User-Agent"/>
   <x:ref>User-Agent</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
-</artwork></figure>
+</sourcecode>
 <t>
    The User-Agent field-value consists of one or more product identifiers,
    each followed by zero or more comments (<xref target="header.fields"/>), which together
@@ -6006,10 +6020,10 @@ Expect: 100-continue
    their significance for identifying the user agent software. Each product
    identifier consists of a name and optional version.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
   <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
   <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    A sender &SHOULD; limit generated product identifiers to what is necessary
    to identify the product; a sender &MUST-NOT; generate advertising or other
@@ -6022,9 +6036,9 @@ Expect: 100-continue
 <t>
    Example:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   User-Agent: CERN-LineMode/2.15 libwww/2.17b3
-</artwork></figure>
+</artwork>
 <t>
    A user agent &SHOULD-NOT; generate a User-Agent field containing needlessly
    fine-grained detail and &SHOULD; limit the addition of subproducts by third
@@ -6068,29 +6082,29 @@ Expect: 100-continue
    The first digit of the status code defines the class of response. The
    last two digits do not have any categorization role. There are five
    values for the first digit:
-  <list style="symbols">
-    <t>
-      <x:ref>1xx (Informational)</x:ref>: The request was received, continuing
-      process
-    </t>
-    <t>
-      <x:ref>2xx (Successful)</x:ref>: The request was successfully received,
-      understood, and accepted
-    </t>
-    <t>
-      <x:ref>3xx (Redirection)</x:ref>: Further action needs to be taken in order to
-      complete the request
-    </t>
-    <t>
-      <x:ref>4xx (Client Error)</x:ref>: The request contains bad syntax or cannot
-      be fulfilled
-    </t>
-    <t>
-      <x:ref>5xx (Server Error)</x:ref>: The server failed to fulfill an apparently
-      valid request
-    </t>
-  </list>
 </t>
+<ul>
+   <li>
+    <x:ref>1xx (Informational)</x:ref>: The request was received, continuing
+    process
+   </li>
+   <li>
+    <x:ref>2xx (Successful)</x:ref>: The request was successfully received,
+    understood, and accepted
+   </li>
+   <li>
+    <x:ref>3xx (Redirection)</x:ref>: Further action needs to be taken in order to
+    complete the request
+   </li>
+   <li>
+    <x:ref>4xx (Client Error)</x:ref>: The request contains bad syntax or cannot
+    be fulfilled
+   </li>
+   <li>
+    <x:ref>5xx (Server Error)</x:ref>: The server failed to fulfill an apparently
+    valid request
+   </li>
+</ul>
 
 <section title="Overview of Status Codes" anchor="overview.of.status.codes">
 <t>  
@@ -6198,6 +6212,11 @@ Expect: 100-continue
    <c>
       <xref target="status.307"/>
    </c>
+   <c>308</c>
+   <c>Permanent Redirect</c>
+   <c>
+      <xref target="status.308"/>
+   </c>
    <c>400</c>
    <c>Bad Request</c>
    <c>
@@ -6287,6 +6306,11 @@ Expect: 100-continue
    <c>Expectation Failed</c>
    <c>
       <xref target="status.417"/>
+   </c>
+   <c>418</c>
+   <c>(Unused)</c>
+   <c>
+      <xref target="status.418"/>
    </c>
    <c>422</c>
    <c>Unprocessable Entity</c>
@@ -6429,28 +6453,34 @@ Expect: 100-continue
    succeeded. The payload sent in a 200 response depends on the request
    method. For the methods defined by this specification, the intended meaning
    of the payload can be summarized as:
-  <list style="hanging">
-    <t hangText="GET">
-      a representation of the <x:ref>target resource</x:ref>;
-    </t>
-    <t hangText="HEAD">
-      the same representation as GET, but without the representation data;
-    </t>
-    <t hangText="POST">
-      a representation of the status of, or results obtained from, the action;
-    </t>
-    <t hangText="PUT, DELETE">
-      a representation of the status of the action;
-    </t>
-    <t hangText="OPTIONS">
-      a representation of the communications options;
-    </t>
-    <t hangText="TRACE">
-      a representation of the request message as received by the
-      end server.
-    </t>
-  </list>
 </t>
+<dl>
+  <dt>GET</dt>
+  <dd>
+    a representation of the <x:ref>target resource</x:ref>;
+  </dd>
+  <dt>HEAD</dt>
+  <dd>
+    the same representation as GET, but without the representation data;
+  </dd>
+  <dt>POST</dt>
+  <dd>
+    a representation of the status of, or results obtained from, the action;
+  </dd>
+  <dt>PUT, DELETE</dt>
+  <dd>
+    a representation of the status of the action;
+  </dd>
+  <dt>OPTIONS</dt>
+  <dd>
+    a representation of the communications options;
+  </dd>
+  <dt>TRACE</dt>
+  <dd>
+    a representation of the request message as received by the
+    end server.
+  </dd>
+</dl>
 <t>
    Aside from responses to CONNECT, a 200 response always has a payload,
    though an origin server &MAY; generate a payload body of zero length.
@@ -6802,8 +6832,8 @@ Content-Range: bytes 7000-7999/8000
       Redirects that indicate the resource might be available at a
       different URI, as provided by the <x:ref>Location</x:ref> field,
       as in the status codes <x:ref>301 (Moved Permanently)</x:ref>,
-      <x:ref>302 (Found)</x:ref>, and
-      <x:ref>307 (Temporary Redirect)</x:ref>.
+      <x:ref>302 (Found)</x:ref>, <x:ref>307 (Temporary Redirect)</x:ref>, and
+      <x:ref>308 (Permanent Redirect)</x:ref>.
     </t>
   </li>
   <li>
@@ -6841,10 +6871,12 @@ Content-Range: bytes 7000-7999/8000
     prevailing practice gradually converged on the latter semantics for
     <x:ref>301</x:ref> and <x:ref>302</x:ref> as well. The first revision of
     HTTP/1.1 added <x:ref>307 (Temporary Redirect)</x:ref> to indicate the
-    former semantics without being impacted by divergent practice.
+    former semantics of <x:ref>302</x:ref> without being impacted by divergent practice.
+    For the same reason, <x:ref>308 (Permanent Redirect)</x:ref> was later on
+    added in <xref target="RFC7538"/> to match <x:ref>301</x:ref>.
     Over 10 years later, most user agents still do method rewriting for
-    <x:ref>301</x:ref> and <x:ref>302</x:ref>; therefore, this specification
-    makes that behavior conformant when the original request is POST.
+    <x:ref>301</x:ref> and <x:ref>302</x:ref>; therefore, <xref target="RFC7231"/>
+    made that behavior conformant when the original request is POST.
   </t>
 </aside>
 <t>
@@ -6932,7 +6964,7 @@ Content-Range: bytes 7000-7999/8000
   <t>
     &Note; For historical reasons, a user agent &MAY; change the
     request method from POST to GET for the subsequent request. If this
-    behavior is undesired, the <x:ref>307 (Temporary Redirect)</x:ref>
+    behavior is undesired, the <x:ref>308 (Permanent Redirect)</x:ref>
     status code can be used instead.
   </t>
 </aside>
@@ -7093,13 +7125,36 @@ Content-Range: bytes 7000-7999/8000
    The server's response payload usually contains a short hypertext note with
    a hyperlink to the different URI(s).
 </t>
+</section>
+
+<section title="308 Permanent Redirect" anchor="status.308">
+  <iref primary="true" item="308 Permanent Redirect (status code)" x:for-anchor=""/>
+  <x:anchor-alias value="308"/>
+  <x:anchor-alias value="308 (Permanent Redirect)"/>
+<t>
+   The <x:dfn>308 (Permanent Redirect)</x:dfn> status code indicates that the
+   <x:ref>target resource</x:ref> has been assigned a new permanent URI and
+   any future references to this resource ought to use one of the enclosed
+   URIs. Clients with link editing capabilities ought to automatically re-link
+   references to the effective request URI
+   to one or more of the new references sent by the server, where possible.
+</t>
+<t>
+   The server &SHOULD; generate a <x:ref>Location</x:ref> header field in the
+   response containing a preferred URI reference for the new permanent URI.
+   The user agent &MAY; use the Location field value for automatic redirection.
+   The server's response payload usually contains a short hypertext note with
+   a hyperlink to the new URI(s).
+</t>
+<t>
+   A 308 response is cacheable by default; i.e., unless otherwise indicated by
+   the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
+</t>
 <aside>
   <t>
-    &Note; This status code is similar to <x:ref>302 (Found)</x:ref>, except
-    that it does not allow changing the request method from POST to GET. This
-    specification defines no equivalent counterpart for <x:ref>301 (Moved
-    Permanently)</x:ref> (<xref target="RFC7538"/>,
-    however, defines the status code 308 (Permanent Redirect) for this purpose). 
+    &Note; This status code is much younger (June 2014) than its sibling codes, and thus
+    might not be recognized everywhere. See <xref target="RFC7538" x:fmt="of" x:sec="4"/>
+    for deployment considerations.
   </t>
 </aside>
 </section>
@@ -7415,19 +7470,20 @@ Content-Range: bytes 7000-7999/8000
 <t>
    For byte ranges, failing to overlap the current extent means that the
    <x:ref>first-byte-pos</x:ref> of all of the <x:ref>byte-range-spec</x:ref>
-   values were greater than the current length of the selected representation.
+   values were greater than or equal to the current length of the selected representation.
    When this status code is generated in response to a byte-range request, the
    sender &SHOULD; generate a <x:ref>Content-Range</x:ref> header field
    specifying the current length of the selected representation
    (<xref target="header.content-range"/>).
 </t>
-<figure>
-<preamble>For example:</preamble>
+<t>
+   For example:
+</t>
 <artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
 HTTP/1.1 416 Range Not Satisfiable
 Date: Fri, 20 Jan 2012 15:41:54 GMT
 Content-Range: bytes */47022
-</artwork></figure>
+</artwork>
 <aside>
   <t>
     &Note; Because servers are free to ignore <x:ref>Range</x:ref>, many
@@ -7451,6 +7507,24 @@ Content-Range: bytes */47022
    expectation given in the request's <x:ref>Expect</x:ref> header field
    (<xref target="header.expect"/>) could not be met by at least one of the
    inbound servers.
+</t>
+</section>
+
+<section title="418 (Unused)" anchor="status.418">
+   <iref primary="true" item="418 (Unused) (status code)" x:for-anchor=""/>
+   <x:anchor-alias value="418 (Unused)"/>
+<t>
+   <xref target="RFC2324"/> was an April 1 RFC that lampooned the various
+   ways HTTP was abused; one such abuse was the definition of an
+   application-specific 418 status code. In the intervening years, this
+   status code has been widely implemented as an "Easter Egg", and therefore
+   is effectively consumed by this use.
+</t>
+<t>
+   Therefore, the 418 status code is reserved in the IANA HTTP Status Code
+   registry. This indicates that the status code cannot be assigned to other
+   applications currently. If future circumstances require its use (e.g.,
+   exhaustion of 4NN status codes), it can be re-assigned to another use.
 </t>
 </section>
 
@@ -7478,8 +7552,9 @@ Content-Range: bytes */47022
    The server &MUST; send an <x:ref>Upgrade</x:ref> header field in a 426
    response to indicate the required protocol(s) (<xref target="header.upgrade"/>).
 </t>
-<figure>
-<preamble>Example:</preamble>
+<t>
+   Example:
+</t>
 <artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
 HTTP/1.1 426 Upgrade Required
 Upgrade: HTTP/3.0
@@ -7488,7 +7563,7 @@ Content-Length: <x:length-of target="s426body"/>
 Content-Type: text/plain
 
 <x:span anchor="s426body">This service requires use of the HTTP/3.0 protocol.
-</x:span></artwork></figure>
+</x:span></artwork>
 </section>
 </section>
 
@@ -7606,12 +7681,12 @@ Content-Type: text/plain
 </t>
 <t>
    A registration &MUST; include the following fields:
-   <list style="symbols">
-      <t>Status Code (3 digits)</t>
-      <t>Short Description</t>
-      <t>Pointer to specification text</t>
-   </list>
 </t>
+<ul>
+  <li>Status Code (3 digits)</li>
+  <li>Short Description</li>
+  <li>Pointer to specification text</li>
+</ul>
 <t>
    Values to be added to the HTTP status code namespace require IETF Review
    (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
@@ -7709,16 +7784,22 @@ Content-Type: text/plain
    single-zone subset of the date and time specification used by the
    Internet Message Format <xref target="RFC5322"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
   <x:ref>HTTP-date</x:ref>    = <x:ref>IMF-fixdate</x:ref> / <x:ref>obs-date</x:ref>
-</artwork></figure>
-<figure><preamble>An example of the preferred format is</preamble><artwork type="example" x:indent-with="  ">
+</sourcecode>
+<t>
+   An example of the preferred format is
+</t>
+<artwork type="example" x:indent-with="  ">
 Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate
-</artwork></figure>
-<figure><preamble>Examples of the two obsolete formats are</preamble><artwork type="example" x:indent-with="  ">
+</artwork>
+<t>
+   Examples of the two obsolete formats are
+</t>
+<artwork type="example" x:indent-with="  ">
 Sunday, 06-Nov-94 08:49:37 GMT   ; obsolete RFC 850 format
 Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
-</artwork></figure>
+</artwork>
 <t>
    A recipient that parses a timestamp value in an HTTP header field &MUST;
    accept all three HTTP-date formats. When a sender generates a header field
@@ -7747,38 +7828,24 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   <x:anchor-alias value="GMT"/>
   Preferred format:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="IMF-fixdate"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="IMF-fixdate"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
   <x:ref>IMF-fixdate</x:ref>  = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
   ; fixed length/zone/capitalization subset of the format
   ; see <xref target="RFC5322" x:fmt="of" x:sec="3.3"/>
   
-  <x:ref>day-name</x:ref>     = <x:abnf-char-sequence>"Mon"</x:abnf-char-sequence> ; "Mon", case-sensitive
-               / <x:abnf-char-sequence>"Tue"</x:abnf-char-sequence> ; "Tue", case-sensitive
-               / <x:abnf-char-sequence>"Wed"</x:abnf-char-sequence> ; "Wed", case-sensitive
-               / <x:abnf-char-sequence>"Thu"</x:abnf-char-sequence> ; "Thu", case-sensitive
-               / <x:abnf-char-sequence>"Fri"</x:abnf-char-sequence> ; "Fri", case-sensitive
-               / <x:abnf-char-sequence>"Sat"</x:abnf-char-sequence> ; "Sat", case-sensitive
-               / <x:abnf-char-sequence>"Sun"</x:abnf-char-sequence> ; "Sun", case-sensitive
+  <x:ref>day-name</x:ref>     = %s"Mon" / %s"Tue" / %s"Wed"
+               / %s"Thu" / %s"Fri" / %s"Sat" / %s"Sun"
                
   <x:ref>date1</x:ref>        = <x:ref>day</x:ref> <x:ref>SP</x:ref> <x:ref>month</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
                ; e.g., 02 Jun 1982
 
   <x:ref>day</x:ref>          = 2<x:ref>DIGIT</x:ref>
-  <x:ref>month</x:ref>        = <x:abnf-char-sequence>"Jan"</x:abnf-char-sequence> ; "Jan", case-sensitive
-               / <x:abnf-char-sequence>"Feb"</x:abnf-char-sequence> ; "Feb", case-sensitive
-               / <x:abnf-char-sequence>"Mar"</x:abnf-char-sequence> ; "Mar", case-sensitive
-               / <x:abnf-char-sequence>"Apr"</x:abnf-char-sequence> ; "Apr", case-sensitive
-               / <x:abnf-char-sequence>"May"</x:abnf-char-sequence> ; "May", case-sensitive
-               / <x:abnf-char-sequence>"Jun"</x:abnf-char-sequence> ; "Jun", case-sensitive
-               / <x:abnf-char-sequence>"Jul"</x:abnf-char-sequence> ; "Jul", case-sensitive
-               / <x:abnf-char-sequence>"Aug"</x:abnf-char-sequence> ; "Aug", case-sensitive
-               / <x:abnf-char-sequence>"Sep"</x:abnf-char-sequence> ; "Sep", case-sensitive
-               / <x:abnf-char-sequence>"Oct"</x:abnf-char-sequence> ; "Oct", case-sensitive
-               / <x:abnf-char-sequence>"Nov"</x:abnf-char-sequence> ; "Nov", case-sensitive
-               / <x:abnf-char-sequence>"Dec"</x:abnf-char-sequence> ; "Dec", case-sensitive
+  <x:ref>month</x:ref>        = %s"Jan" / %s"Feb" / %s"Mar" / %s"Apr"
+               / %s"May" / %s"Jun" / %s"Jul" / %s"Aug"
+               / %s"Sep" / %s"Oct" / %s"Nov" / %s"Dec"
   <x:ref>year</x:ref>         = 4<x:ref>DIGIT</x:ref>
 
-  <x:ref>GMT</x:ref>          = <x:abnf-char-sequence>"GMT"</x:abnf-char-sequence> ; "GMT", case-sensitive
+  <x:ref>GMT</x:ref>          = %s"GMT"
 
   <x:ref>time-of-day</x:ref>  = <x:ref>hour</x:ref> ":" <x:ref>minute</x:ref> ":" <x:ref>second</x:ref>
                ; 00:00:00 - 23:59:60 (leap second)
@@ -7786,7 +7853,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   <x:ref>hour</x:ref>         = 2<x:ref>DIGIT</x:ref>               
   <x:ref>minute</x:ref>       = 2<x:ref>DIGIT</x:ref>               
   <x:ref>second</x:ref>       = 2<x:ref>DIGIT</x:ref>               
-</artwork></figure>
+</sourcecode>
 <t anchor="obsolete.date.formats">
   <x:anchor-alias value="obs-date"/>
   <x:anchor-alias value="rfc850-date"/>
@@ -7797,27 +7864,22 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   <x:anchor-alias value="day-name-l"/>
   Obsolete formats:
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="obs-date"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="obs-date"/>
   <x:ref>obs-date</x:ref>     = <x:ref>rfc850-date</x:ref> / <x:ref>asctime-date</x:ref> 
-</artwork></figure>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
+</sourcecode>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
   <x:ref>rfc850-date</x:ref>  = <x:ref>day-name-l</x:ref> "," <x:ref>SP</x:ref> <x:ref>date2</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
   <x:ref>date2</x:ref>        = <x:ref>day</x:ref> "-" <x:ref>month</x:ref> "-" 2<x:ref>DIGIT</x:ref>
                ; e.g., 02-Jun-82
 
-  <x:ref>day-name-l</x:ref>   = <x:abnf-char-sequence>"Monday"</x:abnf-char-sequence>    ; "Monday", case-sensitive
-         / <x:abnf-char-sequence>"Tuesday"</x:abnf-char-sequence>       ; "Tuesday", case-sensitive
-         / <x:abnf-char-sequence>"Wednesday"</x:abnf-char-sequence> ; "Wednesday", case-sensitive
-         / <x:abnf-char-sequence>"Thursday"</x:abnf-char-sequence>    ; "Thursday", case-sensitive
-         / <x:abnf-char-sequence>"Friday"</x:abnf-char-sequence>          ; "Friday", case-sensitive
-         / <x:abnf-char-sequence>"Saturday"</x:abnf-char-sequence>    ; "Saturday", case-sensitive
-         / <x:abnf-char-sequence>"Sunday"</x:abnf-char-sequence>          ; "Sunday", case-sensitive
-</artwork></figure>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="asctime-date"/>
+  <x:ref>day-name-l</x:ref>   = %s"Monday" / %s"Tuesday" / %s"Wednesday"
+         / %s"Thursday" / %s"Friday" / %s"Saturday" / %s"Sunday"
+</sourcecode>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="asctime-date"/>
   <x:ref>asctime-date</x:ref> = <x:ref>day-name</x:ref> <x:ref>SP</x:ref> <x:ref>date3</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
   <x:ref>date3</x:ref>        = <x:ref>month</x:ref> <x:ref>SP</x:ref> ( 2<x:ref>DIGIT</x:ref> / ( <x:ref>SP</x:ref> 1<x:ref>DIGIT</x:ref> ))
                ; e.g., Jun  2
-</artwork></figure>
+</sourcecode>
 <t>
    HTTP-date is case sensitive.
    A sender &MUST-NOT; generate additional whitespace in an HTTP-date beyond
@@ -7859,15 +7921,15 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
    The field value is an HTTP-date, as defined in <xref target="http.date"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Date"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Date"/>
   <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    An example is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Date: Tue, 15 Nov 1994 08:12:31 GMT
-</artwork></figure>
+</artwork>
 <t>
    When a Date header field is generated, the sender &SHOULD; generate its
    field value as the best available approximation of the date and time of
@@ -7908,9 +7970,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    specific resource in relation to the response. The type of relationship is
    defined by the combination of request method and status code semantics.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Location"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Location"/>
   <x:ref>Location</x:ref> = <x:ref>URI-reference</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    The field value consists of a single URI-reference. When it has the form
    of a relative reference (<xref target="RFC3986" x:fmt="," x:sec="4.2"/>),
@@ -7930,28 +7992,32 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    reference used to generate the request target (i.e., the redirection
    inherits the original reference's fragment, if any).
 </t>
-<figure>
-<preamble>For example, a GET request generated for the URI reference
+<t>
+   For example, a GET request generated for the URI reference
    "http://www.example.org/~tim" might result in a
-   <x:ref>303 (See Other)</x:ref> response containing the header field:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
+   <x:ref>303 (See Other)</x:ref> response containing the header field:
+</t>
 <artwork type="example">
   Location: /People.html#tim
 </artwork>
-<postamble>which suggests that the user agent redirect to
-   "http://www.example.org/People.html#tim"</postamble>
-</figure>
-<figure>
-<preamble>Likewise, a GET request generated for the URI reference
+<t>
+   which suggests that the user agent redirect to
+   "http://www.example.org/People.html#tim"
+</t>
+<t>
+   Likewise, a GET request generated for the URI reference
    "http://www.example.org/index.html#larry" might result in a
    <x:ref>301 (Moved Permanently)</x:ref> response containing the header
-   field:</preamble><!--DO NOT DARE changing the vertical spacing below, it's necessary this way for xml2rfc-->
+   field:
+</t>
 <artwork type="example">
   Location: http://www.example.net/index.html
 </artwork>
-<postamble>which suggests that the user agent redirect to
+<t>
+   which suggests that the user agent redirect to
    "http://www.example.net/index.html#larry", preserving the original fragment
-   identifier.</postamble>
-</figure>
+   identifier.
+</t>
 <t>
    There are circumstances in which a fragment identifier in a Location
    value would not be appropriate. For example, the Location header field in a
@@ -7992,24 +8058,24 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    The value of this field can be either an HTTP-date or a number
    of seconds to delay after the response is received.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Retry-After"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Retry-After"/>
   <x:ref>Retry-After</x:ref> = <x:ref>HTTP-date</x:ref> / <x:ref>delay-seconds</x:ref>
-</artwork></figure>
+</sourcecode>
 <t anchor="rule.delay-seconds">
   <x:anchor-alias value="delay-seconds"/>
    A delay-seconds value is a non-negative decimal integer, representing time
    in seconds.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="delay-seconds"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="delay-seconds"/>
   <x:ref>delay-seconds</x:ref>  = 1*<x:ref>DIGIT</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Two examples of its use are
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Retry-After: Fri, 31 Dec 1999 23:59:59 GMT
   Retry-After: 120
-</artwork></figure>
+</artwork>
 <t>
    In the latter example, the delay is 2 minutes.
 </t>
@@ -8025,9 +8091,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    this response. The value consists of either a single asterisk ("*") or a
    list of header field names (case-insensitive).
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Vary"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Vary"/>
   <x:ref>Vary</x:ref> = "*" / 1#<x:ref>field-name</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    A Vary field value of "*" signals that anything about the request might
    play a role in selecting the response representation, possibly including
@@ -8042,13 +8108,18 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    might have a role in selecting the representation. The potential selecting
    header fields are not limited to those defined by this specification.
 </t>
-<figure><preamble>For example, a response that contains</preamble><artwork type="example">
+<t>
+  For example, a response that contains
+</t>
+<artwork type="example">
   Vary: accept-encoding, accept-language
-</artwork><postamble>indicates that the origin server might have used the
+</artwork>
+<t>
+   indicates that the origin server might have used the
    request's <x:ref>Accept-Encoding</x:ref> and <x:ref>Accept-Language</x:ref>
    fields (or lack thereof) as determining factors while choosing the content
    for this response.
-</postamble></figure>
+</t>
 <t>
    An origin server might send Vary with a list of fields for two purposes:
 </t>
@@ -8080,7 +8151,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    cache transparency. For example, there is no need to send the Authorization
    field name in Vary because reuse across users is constrained by the field
    definition (<xref target="header.authorization"/>). Likewise, an origin server might use
-   Cache-Control directives (<xref target="header.cache-control"/>) to supplant Vary if it
+   Cache-Control response directives (<xref target="header.cache-control"/>) to supplant Vary if it
    considers the variance less significant than the performance cost of Vary's
    impact on caching.
 </t>
@@ -8235,15 +8306,15 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    selected representation was last modified, as determined at the conclusion
    of handling the request.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
   <x:ref>Last-Modified</x:ref> = <x:ref>HTTP-date</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    An example of its use is
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
-</artwork></figure>
+</artwork>
 
 <section title="Generation" anchor="lastmod.generation">
 <t>
@@ -8293,38 +8364,38 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    A Last-Modified time, when used as a validator in a request, is
    implicitly weak unless it is possible to deduce that it is strong,
    using the following rules:
-  <list style="symbols">
-     <t>The validator is being compared by an origin server to the
-        actual current validator for the representation and,</t>
-     <t>That origin server reliably knows that the associated representation did
-        not change twice during the second covered by the presented
-        validator.</t>
-  </list>
 </t>
+<ul>
+   <li>The validator is being compared by an origin server to the
+       actual current validator for the representation and,</li>
+   <li>That origin server reliably knows that the associated representation did
+       not change twice during the second covered by the presented
+       validator.</li>
+</ul>
 <t>
    or
-  <list style="symbols">
-     <t>The validator is about to be used by a client in an <x:ref>If-Modified-Since</x:ref>,
-        <x:ref>If-Unmodified-Since</x:ref>, or <x:ref>If-Range</x:ref> header
-        field, because the client has a cache entry for the associated
-        representation, and</t>
-     <t>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
-        time when the origin server sent the original response, and</t>
-     <t>The presented Last-Modified time is at least 60 seconds before
-        the Date value.</t>
-  </list>
 </t>
+<ul>
+   <li>The validator is about to be used by a client in an <x:ref>If-Modified-Since</x:ref>,
+       <x:ref>If-Unmodified-Since</x:ref>, or <x:ref>If-Range</x:ref> header
+       field, because the client has a cache entry for the associated
+       representation, and</li>
+   <li>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
+       time when the origin server sent the original response, and</li>
+   <li>The presented Last-Modified time is at least 60 seconds before
+       the Date value.</li>
+</ul>
 <t>
    or
-  <list style="symbols">
-     <t>The validator is being compared by an intermediate cache to the
-        validator stored in its cache entry for the representation, and</t>
-     <t>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
-        time when the origin server sent the original response, and</t>
-     <t>The presented Last-Modified time is at least 60 seconds before
-        the Date value.</t>
-  </list>
 </t>
+<ul>
+   <li>The validator is being compared by an intermediate cache to the
+       validator stored in its cache entry for the representation, and</li>
+   <li>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
+       time when the origin server sent the original response, and</li>
+   <li>The presented Last-Modified time is at least 60 seconds before
+       the Date value.</li>
+</ul>
 <t>
    This method relies on the fact that if two different responses were
    sent by the origin server during the same second, but both had the
@@ -8357,15 +8428,15 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    valid at the same time, or both. An entity-tag consists of an opaque
    quoted string, possibly prefixed by a weakness indicator.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/><iref primary="true" item="Grammar" subitem="etagc"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/><iref primary="true" item="Grammar" subitem="etagc"/>
   <x:ref>ETag</x:ref>       = <x:ref>entity-tag</x:ref>
 
   <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
-  <x:ref>weak</x:ref>       = <x:abnf-char-sequence>"W/"</x:abnf-char-sequence> ; "W/", case-sensitive
+  <x:ref>weak</x:ref>       = %s"W/"
   <x:ref>opaque-tag</x:ref> = <x:ref>DQUOTE</x:ref> *<x:ref>etagc</x:ref> <x:ref>DQUOTE</x:ref>
   <x:ref>etagc</x:ref>      = %x21 / %x23-7E / <x:ref>obs-text</x:ref>
              ; <x:ref>VCHAR</x:ref> except double quotes, plus obs-text
-</artwork></figure>
+</sourcecode>
 <aside>
   <t>
     &Note; Previously, opaque-tag was defined to be a quoted-string
@@ -8380,14 +8451,14 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    dates, where the one-second resolution of HTTP date values is not
    sufficient, or where modification dates are not consistently maintained.
 </t>
-<figure><preamble>
+<t>
   Examples:
-</preamble>
+</t>
 <artwork type="example">
   ETag: "xyzzy"
   ETag: W/"xyzzy"
   ETag: ""
-</artwork></figure>
+</artwork>
 <t>
    An entity-tag can be either a weak or strong validator, with
    strong being the default.  If an origin server provides an entity-tag
@@ -8433,14 +8504,14 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    There are two entity-tag comparison functions, depending on whether or not
    the comparison context allows the use of weak validators:
-  <list style="symbols">
-     <t><x:dfn>Strong comparison</x:dfn>: two entity-tags are equivalent if both
-        are not weak and their opaque-tags match character-by-character.</t>
-     <t><x:dfn>Weak comparison</x:dfn>: two entity-tags are equivalent if their opaque-tags
-        match character-by-character, regardless of either or both
-        being tagged as "weak".</t>
-  </list>
 </t>
+<ul>
+   <li><x:dfn>Strong comparison</x:dfn>: two entity-tags are equivalent if both
+       are not weak and their opaque-tags match character-by-character.</li>
+   <li><x:dfn>Weak comparison</x:dfn>: two entity-tags are equivalent if their opaque-tags
+       match character-by-character, regardless of either or both
+       being tagged as "weak".</li>
+</ul>
 <t>
    The example below shows the results for a set of entity-tag pairs and both
    the weak and strong comparison function results:
@@ -8480,17 +8551,23 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    a GET request vary based on the <x:ref>Accept-Encoding</x:ref> request
    header field (<xref target="header.accept-encoding"/>):
 </t>
-<figure><preamble>>> Request:</preamble><artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
+<t>
+   >> Request:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
 GET /index HTTP/1.1
 Host: www.example.com
 Accept-Encoding: gzip
 
-</artwork></figure>
+</artwork>
 <t>
    In this case, the response might or might not use the gzip content coding.
    If it does not, the response might look like:
 </t>
-<figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+<t>
+   >> Response:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
 HTTP/1.1 200 OK
 Date: Fri, 26 Mar 2010 00:05:00 GMT
 ETag: "123-a"
@@ -8503,11 +8580,14 @@ Hello World!
 Hello World!
 Hello World!
 Hello World!
-</x:span></artwork></figure>
+</x:span></artwork>
 <t>
    An alternative representation that does use gzip content coding would be:
 </t>
-<figure><preamble>>> Response:</preamble><artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+<t>
+   >> Response:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
 HTTP/1.1 200 OK
 Date: Fri, 26 Mar 2010 00:05:00 GMT
 ETag: "123-b"
@@ -8516,7 +8596,7 @@ Vary: Accept-Encoding
 Content-Type: text/plain
 Content-Encoding: gzip
 
-<spanx>...binary data...</spanx></artwork></figure>
+<spanx>...binary data...</spanx></artwork>
 <aside>
   <t>
     &Note; Content codings are a property of the representation data,
@@ -8533,18 +8613,16 @@ Content-Encoding: gzip
 <section title="When to Use Entity-Tags and Last-Modified Dates" anchor="when.to.use.entity.tags.and.last-modified.dates">
 <t>
    In <x:ref>200 (OK)</x:ref> responses to GET or HEAD, an origin server:
-  <list style="symbols">
-     <t>&SHOULD; send an entity-tag validator unless it is not feasible to
-        generate one.</t>
-
-     <t>&MAY; send a weak entity-tag instead of a strong entity-tag, if
-        performance considerations support the use of weak entity-tags,
-        or if it is unfeasible to send a strong entity-tag.</t>
-
-     <t>&SHOULD; send a <x:ref>Last-Modified</x:ref> value if it is feasible to
-        send one.</t>
-  </list>
 </t>
+<ul>
+   <li>&SHOULD; send an entity-tag validator unless it is not feasible to
+       generate one.</li>
+   <li>&MAY; send a weak entity-tag instead of a strong entity-tag, if
+       performance considerations support the use of weak entity-tags,
+       or if it is unfeasible to send a strong entity-tag.</li>
+   <li>&SHOULD; send a <x:ref>Last-Modified</x:ref> value if it is feasible to
+       send one.</li>
+</ul>
 <t>
    In other words, the preferred behavior for an origin server
    is to send both a strong entity-tag and a <x:ref>Last-Modified</x:ref>
@@ -8552,27 +8630,24 @@ Content-Encoding: gzip
 </t>
 <t>
    A client:
-  <list style="symbols">
-     <t>&MUST; send that entity-tag in any cache validation request (using
-        <x:ref>If-Match</x:ref> or <x:ref>If-None-Match</x:ref>) if an
-        entity-tag has been provided by the origin server.</t>
-
-     <t>&SHOULD; send the <x:ref>Last-Modified</x:ref> value in non-subrange
-        cache validation requests (using <x:ref>If-Modified-Since</x:ref>)
-        if only a Last-Modified value has been provided by the origin server.</t>
-
-     <t>&MAY; send the <x:ref>Last-Modified</x:ref> value in subrange
-        cache validation requests (using <x:ref>If-Unmodified-Since</x:ref>)
-        if only a Last-Modified value has been provided by an HTTP/1.0 origin
-        server. The user agent &SHOULD; provide a way to disable this, in case
-        of difficulty.</t>
-
-     <t>&SHOULD; send both validators in cache validation requests if both an
-        entity-tag and a <x:ref>Last-Modified</x:ref> value have been provided
-        by the origin server. This allows both HTTP/1.0 and HTTP/1.1 caches to
-        respond appropriately.</t>
-  </list>
 </t>
+<ul>
+   <li>&MUST; send that entity-tag in any cache validation request (using
+       <x:ref>If-Match</x:ref> or <x:ref>If-None-Match</x:ref>) if an
+       entity-tag has been provided by the origin server.</li>
+   <li>&SHOULD; send the <x:ref>Last-Modified</x:ref> value in non-subrange
+       cache validation requests (using <x:ref>If-Modified-Since</x:ref>)
+       if only a Last-Modified value has been provided by the origin server.</li>
+   <li>&MAY; send the <x:ref>Last-Modified</x:ref> value in subrange
+       cache validation requests (using <x:ref>If-Unmodified-Since</x:ref>)
+       if only a Last-Modified value has been provided by an HTTP/1.0 origin
+       server. The user agent &SHOULD; provide a way to disable this, in case
+       of difficulty.</li>
+   <li>&SHOULD; send both validators in cache validation requests if both an
+       entity-tag and a <x:ref>Last-Modified</x:ref> value have been provided
+       by the origin server. This allows both HTTP/1.0 and HTTP/1.1 caches to
+       respond appropriately.</li>
+</ul>
 </section>
 </section>
 
@@ -8609,9 +8684,9 @@ Content-Encoding: gzip
    The "WWW-Authenticate" header field indicates the authentication scheme(s)
    and parameters applicable to the target resource.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="WWW-Authenticate"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="WWW-Authenticate"/>
   <x:ref>WWW-Authenticate</x:ref> = 1#<x:ref>challenge</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    A server generating a <x:ref>401 (Unauthorized)</x:ref> response
    &MUST; send a WWW-Authenticate header field containing at least one
@@ -8629,18 +8704,19 @@ Content-Encoding: gzip
    comma-separated list of authentication parameters. Furthermore, the header
    field itself can occur multiple times.
 </t>
-<figure>
-  <preamble>For instance:</preamble>
-  <artwork type="example">
+<t>
+  For instance:
+</t>
+<artwork type="example">
   WWW-Authenticate: Newauth realm="apps", type=1,
                     title="Login to \"apps\"", Basic realm="simple"
 </artwork>
-  <postamble>
+<t>
   This header field contains two challenges; one for the "Newauth" scheme
   with a realm value of "apps", and two additional parameters "type" and
   "title", and another one for the "Basic" scheme with a realm value of
   "simple".
-</postamble></figure>
+</t>
 <aside>
   <t>
     &Note; The challenge grammar production uses the list syntax as
@@ -8665,9 +8741,9 @@ Content-Encoding: gzip
    each <x:ref>407 (Proxy Authentication Required)</x:ref> response that it
    generates.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Proxy-Authenticate"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authenticate"/>
   <x:ref>Proxy-Authenticate</x:ref> = 1#<x:ref>challenge</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Unlike <x:ref>WWW-Authenticate</x:ref>, the Proxy-Authenticate header field
    applies only to the next outbound client on the response chain.
@@ -8704,9 +8780,9 @@ Content-Encoding: gzip
    Authentication Scheme, for instance, defines multiple parameters in
    <xref target="RFC7616" x:sec="3.5"/>.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Authentication-Info"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Authentication-Info"/>
   <x:ref>Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    The Authentication-Info header field can be used in any HTTP response,
    independently of request method and status code. Its semantics are defined
@@ -8752,11 +8828,9 @@ Content-Encoding: gzip
    (<xref target="header.proxy-authorization"/>)
    of the corresponding request:
 </t>
-<t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Proxy-Authentication-Info"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authentication-Info"/>
   <x:ref>Proxy-Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
-</artwork></figure>
-</t>
+</sourcecode>
 <t>
    However, unlike <x:ref>Authentication-Info</x:ref>, the Proxy-Authentication-Info header
    field applies only to the next outbound client on the response chain. This is
@@ -8794,17 +8868,17 @@ Content-Encoding: gzip
    The "Accept-Ranges" header field allows a server to indicate that it
    supports range requests for the target resource.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Accept-Ranges"/><iref primary="true" item="Grammar" subitem="acceptable-ranges"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept-Ranges"/><iref primary="true" item="Grammar" subitem="acceptable-ranges"/>
   <x:ref>Accept-Ranges</x:ref>     = <x:ref>acceptable-ranges</x:ref>
   <x:ref>acceptable-ranges</x:ref> = 1#<x:ref>range-unit</x:ref> / "none"
-</artwork></figure>
+</sourcecode>
 <t>
    An origin server that supports byte-range requests for a given target
    resource &MAY; send
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept-Ranges: bytes
-</artwork></figure>
+</artwork>
 <t>
    to indicate what range units are supported. A client &MAY; generate range
    requests without having received this header field for the resource
@@ -8814,9 +8888,9 @@ Content-Encoding: gzip
    A server that does not support any kind of range request for the target
    resource &MAY; send
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Accept-Ranges: none
-</artwork></figure>
+</artwork>
 <t>
    to advise the client not to attempt a range request.
 </t>
@@ -8831,15 +8905,15 @@ Content-Encoding: gzip
    is strictly to inform the recipient of valid request methods associated
    with the resource.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Allow"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Allow"/>
   <x:ref>Allow</x:ref> = #<x:ref>method</x:ref>
-</artwork></figure>
+</sourcecode>
 <t>
    Example of use:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Allow: GET, HEAD, PUT
-</artwork></figure>
+</artwork>
 <t>
    The actual set of allowed methods is defined by the origin server at the
    time of each request. An origin server &MUST; generate an Allow field in a
@@ -8866,9 +8940,9 @@ Content-Encoding: gzip
    limitations, and for analytics regarding server or operating system use.
    An origin server &MAY; generate a Server field in its responses.
 </t>
-<figure><artwork type="abnf2616"><iref primary="true" item="Grammar" subitem="Server"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Server"/>
   <x:ref>Server</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
-</artwork></figure>
+</sourcecode>
 <t>
    The Server field-value consists of one or more product identifiers, each
    followed by zero or more comments (<xref target="header.fields"/>), which together
@@ -8881,9 +8955,9 @@ Content-Encoding: gzip
 <t>
    Example:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   Server: CERN/3.0 libwww/2.17
-</artwork></figure>
+</artwork>
 <t>
    An origin server &SHOULD-NOT; generate a Server field containing needlessly
    fine-grained detail and &SHOULD; limit the addition of subproducts by third
@@ -8907,23 +8981,26 @@ Content-Encoding: gzip
    at least &lt;n&gt; and at most &lt;m&gt; elements, each separated by a single
    comma (",") and optional whitespace (OWS).   
 </t>
-<figure><preamble>
+<t>
    In any production that uses the list construct, a sender &MUST-NOT;
    generate empty list elements. In other words, a sender &MUST; generate
    lists that satisfy the following syntax:
-</preamble><artwork type="example">
+</t>
+<artwork type="example">
   1#element =&gt; element *( OWS "," OWS element )
-</artwork></figure>
-<figure><preamble>
+</artwork>
+<t>
    and:
-</preamble><artwork type="example">
+</t>
+<artwork type="example">
   #element =&gt; [ 1#element ]
-</artwork></figure>
-<figure><preamble>
+</artwork>
+<t>
    and for n &gt;= 1 and m &gt; 1:
-</preamble><artwork type="example">
+</t>
+<artwork type="example">
   &lt;n&gt;#&lt;m&gt;element =&gt; element &lt;n-1&gt;*&lt;m-1&gt;( OWS "," OWS element )
-</artwork></figure>
+</artwork>
 <t>
    For compatibility with legacy list rules, a recipient &MUST; parse and ignore
    a reasonable number of empty list elements: enough to handle common mistakes
@@ -8931,37 +9008,37 @@ Content-Encoding: gzip
    denial-of-service mechanism. In other words, a recipient &MUST; accept lists
    that satisfy the following syntax:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   #element =&gt; [ ( "," / element ) *( OWS "," [ OWS element ] ) ]
   
   1#element =&gt; *( "," OWS ) element *( OWS "," [ OWS element ] )
-</artwork></figure>
+</artwork>
 <t>
    Empty elements do not contribute to the count of elements present.
    For example, given these ABNF productions: 
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   example-list      = 1#example-list-elmt
   example-list-elmt = token ; see <xref target="field.components"/> 
-</artwork></figure>
+</artwork>
 <t>
    Then the following are valid values for example-list (not including the
    double quotes, which are present for delimitation only):
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   "foo,bar"
   "foo ,bar,"
   "foo , ,bar,charlie"
-</artwork></figure>
+</artwork>
 <t>
    In contrast, the following values would be invalid, since at least one
    non-empty element is required by the example-list production:
 </t>
-<figure><artwork type="example">
+<artwork type="example">
   ""
   ","
   ",   ,"
-</artwork></figure>
+</artwork>
 <t>
    <xref target="collected.abnf"/> shows the collected ABNF for recipients
    after the list constructs have been expanded.
@@ -9401,17 +9478,16 @@ Content-Encoding: gzip
 <t>
    Circumstances under which credential caching can interfere with the
    application's security model include but are not limited to:
-  <list style="symbols">
-     <t>Clients that have been idle for an extended period, following
-        which the server might wish to cause the client to re-prompt the
-        user for credentials.</t>
-
-     <t>Applications that include a session termination indication
-        (such as a "logout" or "commit" button on a page) after which
-        the server side of the application "knows" that there is no
-        further reason for the client to retain the credentials.</t>
-  </list>
 </t>
+<ul>
+   <li>Clients that have been idle for an extended period, following
+       which the server might wish to cause the client to re-prompt the
+       user for credentials.</li>
+   <li>Applications that include a session termination indication
+       (such as a "logout" or "commit" button on a page) after which
+       the server side of the application "knows" that there is no
+       further reason for the client to retain the credentials.</li>
+</ul>
 <t>
    User agents that cache credentials are encouraged to provide a readily
    accessible mechanism for discarding cached credentials under user control.
@@ -9483,14 +9559,61 @@ Content-Encoding: gzip
    status code values summarized in the table of
    <xref target="overview.of.status.codes"/>.
 </t>
+<t>
+   Additionally, please update the following entry in the Hypertext Transfer
+   Protocol (HTTP) Status Code Registry:
+</t>
+<dl>
+  <dt>Value:</dt>
+  <dd>418</dd>
+  <dt>Description:</dt>
+  <dd>(Unused)</dd>
+  <dt>Reference</dt>
+  <dd><xref target="status.418"/></dd>
+</dl>
 </section>
 
 <section title="Header Field Registration" anchor="header.field.registration">
+<t>      
+   Please create a new registry as outlined in <xref
+   target="field.name.registry"/>.
+</t>
 <t>
-   Please update the "Message Headers" registry of
-   "Permanent Message Header Field Names" at
-   <eref target="https://www.iana.org/assignments/message-headers"/> with the
+   After creating the registry, all entries in the Permanent and Provisional
+   Message Header Registries with the protocol 'http' are to be moved to it,
+   with the following changes applied:
+</t>
+
+<ol>
+   <li>The 'Applicable Protocol' field is to be omitted.</li>
+   <li>Entries with a status of 'standard', 'experimental', or
+   'informational' are to have a status of 'permanent'.</li>
+   <li>Entries with a status of 'deprecated' are to have a status of
+   'obsoleted'.</li>
+   <li>Provisional entries without a status are to have a status of
+   'provisional'.</li>
+   <li>Permanent entries without a status (after confirmation that the
+   registration document did not define one) will have a status of
+   'provisional'. The Expert(s) can choose to update their status if there is
+   evidence that another is more appropriate.</li>
+</ol>
+<t>
+   Please annotate the Permanent and Provisional Message Header registries to
+   indicate that HTTP header field registrations have moved, with an
+   appropriate link.
+</t>
+<t>
+   After that is complete, please update the new registry with the
    header field names listed in the table of <xref target="field.names"/>.
+</t>
+<t>
+   <iref primary="true" item="Content-MD5 header field"/>
+   Finally, please update the "Content-MD5" entry in the new registry to have
+   a status of 'obsoleted' with references to 
+   <xref target="RFC2616" x:fmt="of" x:sec="14.15"/> (for the definition
+   of the header field) and 
+   <xref target="RFC7231" x:fmt="of" x:sec="B"/> (which removed the field
+   definition from the updated specification).
 </t>
 </section>
 
@@ -9570,7 +9693,7 @@ Content-Encoding: gzip
 
 <reference anchor="Caching">
   <x:source href="draft-ietf-httpbis-cache-latest.xml" basename="draft-ietf-httpbis-cache-latest">
-    <x:has anchor="cache-request-directive.no-store"/>
+    <x:has anchor="constructing.responses.from.caches"/>
     <x:has anchor="cache-response-directive.private"/>
     <x:has anchor="caching.authenticated.responses"/>
     <x:has anchor="caching.negotiated.responses"/>
@@ -9752,6 +9875,19 @@ Content-Encoding: gzip
   <seriesInfo name='RFC' value='6365' />
 </reference>
 
+<reference anchor="RFC7405">
+  <front>
+    <title>Case-Sensitive String Support in ABNF</title>
+    <author initials="P." surname="Kyzivat" fullname="Dave Kyzivat">
+      <address>
+        <email>pkyzivat@alum.mit.edu</email>
+      </address>
+    </author>
+    <date month="December" year="2014"/>
+  </front>
+  <seriesInfo name="RFC" value="7405"/>
+</reference>
+
 <reference anchor="USASCII">
   <front>
     <title>Coded Character Set -- 7-bit American Standard Code for Information Interchange</title>
@@ -9825,6 +9961,26 @@ Content-Encoding: gzip
 </references>
 
 <references title="Informative References">
+
+<reference anchor="Err1912" target="https://www.rfc-editor.org/errata/eid1912" quoteTitle="false">
+  <front>
+    <title>Erratum ID 1912, RFC 2978</title>
+    <author>
+      <organization>RFC Errata</organization>
+    </author>
+    <date/>
+  </front>
+</reference>
+
+<reference anchor="Err5433" target="https://www.rfc-editor.org/errata/eid5433" quoteTitle="false">
+  <front>
+    <title>Erratum ID 5433, RFC 2978</title>
+    <author>
+      <organization>RFC Errata</organization>
+    </author>
+    <date/>
+  </front>
+</reference>
 
 <reference anchor="Georgiev" target="http://doi.acm.org/10.1145/2382196.2382204">
   <front>
@@ -9985,6 +10141,15 @@ Content-Encoding: gzip
     <date year='1998' month='March'/>
   </front>
   <seriesInfo name='RFC' value='2295'/>
+</reference>
+
+<reference anchor="RFC2324">
+  <front>
+    <title>Hyper Text Coffee Pot Control Protocol (HTCPCP/1.0)</title>
+    <author initials="L." surname="Masinter" fullname="L. Masinter"/>
+    <date year="1998" month="April"/>
+  </front>
+  <seriesInfo name="RFC" value="2324"/>
 </reference>
 
 <reference anchor="RFC2557">
@@ -10486,6 +10651,15 @@ Content-Encoding: gzip
   <seriesInfo name="RFC" value="8187"/>
 </reference>
 
+<reference anchor="RFC8246">
+  <front>
+    <title>HTTP Immutable Responses</title>
+    <author initials="P." surname="McManus" fullname="P. McManus"/>
+    <date year="2017" month="September" />
+  </front>
+  <seriesInfo name="RFC" value="8246"/>
+</reference>
+
 <reference anchor="RFC8288">
   <front>
     <title>Web Linking</title>
@@ -10653,13 +10827,10 @@ Content-Encoding: gzip
 <x:ref>field-value</x:ref> = *( field-content / obs-fold )
 <x:ref>field-vchar</x:ref> = VCHAR / obs-text
 <x:ref>first-byte-pos</x:ref> = 1*DIGIT
-<x:ref>fragment</x:ref> = &lt;fragment, see <xref target="RFC3986" x:fmt="," x:sec="3.5"/>&gt;
 
 <x:ref>hour</x:ref> = 2DIGIT
-<x:ref>http-URI</x:ref> = "http://" authority path-abempty [ "?" query ] [ "#"
- fragment ]
-<x:ref>https-URI</x:ref> = "https://" authority path-abempty [ "?" query ] [ "#"
- fragment ]
+<x:ref>http-URI</x:ref> = "http://" authority path-abempty [ "?" query ]
+<x:ref>https-URI</x:ref> = "https://" authority path-abempty [ "?" query ]
 
 <x:ref>language-range</x:ref> = &lt;language-range, see <xref target="RFC4647" x:fmt="," x:sec="2.1"/>&gt;
 <x:ref>language-tag</x:ref> = &lt;Language-Tag, see <xref target="RFC5646" x:fmt="," x:sec="2.1"/>&gt;
@@ -10700,8 +10871,8 @@ Content-Encoding: gzip
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
 <x:ref>product</x:ref> = token [ "/" product-version ]
 <x:ref>product-version</x:ref> = token
-<x:ref>protocol-name</x:ref> = &lt;protocol-name, see <xref target="Messaging" x:fmt="," x:sec="9.7"/>&gt;
-<x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="Messaging" x:fmt="," x:sec="9.7"/>&gt;
+<x:ref>protocol-name</x:ref> = &lt;protocol-name, see <xref target="Messaging" x:fmt="," x:sec="9.8"/>&gt;
+<x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="Messaging" x:fmt="," x:sec="9.8"/>&gt;
 <x:ref>pseudonym</x:ref> = token
 
 <x:ref>qdtext</x:ref> = HTAB / SP / "!" / %x23-5B ; '#'-'['
@@ -10754,6 +10925,11 @@ Content-Encoding: gzip
   Furthermore:
 </t>
 <t>
+  Add status code 308 (previously defined in <xref target="RFC7538"/>)
+  so that it's defined closer to status codes 301, 302, and 307.
+  (<xref target="status.308"/>)
+</t>
+<t>
   Add status code 422 (previously defined in <xref target="RFC4918" x:fmt="of" x:sec="11.2"/>)
   because of it's general applicability.
   (<xref target="status.422"/>)
@@ -10779,6 +10955,12 @@ Content-Encoding: gzip
 </section>
 
 <section title="Changes from RFC 7235" anchor="changes.from.rfc.7235">
+<t>
+   None yet.
+</t>
+</section>
+
+<section title="Changes from RFC 7538" anchor="changes.from.rfc.7538">
 <t>
    None yet.
 </t>
@@ -10855,8 +11037,33 @@ Content-Encoding: gzip
 <section title="Since draft-ietf-httpbis-semantics-02" anchor="changes.since.02">
 <ul>
   <li>Included (Proxy-)Auth-Info header field definition from RFC 7615 (<eref target="https://github.com/httpwg/http-core/issues/9"/>)</li>
+  <li>In <xref target="media.type"/>, clarify that the charset parameter value is case-insensitive due to the definition in RFC 2046 (<eref target="https://github.com/httpwg/http-core/issues/13"/>)</li>
+  <li>In <xref target="POST"/>, clarify POST caching (<eref target="https://github.com/httpwg/http-core/issues/17"/>)</li>
+  <li>Add <xref target="status.418"/> to reserve the 418 status code (<eref target="https://github.com/httpwg/http-core/issues/43"/>)</li>
+  <li>In <xref target="operation"/> and <xref target="header.expect"/>, clarified when a response can be sent (<eref target="https://github.com/httpwg/http-core/issues/82"/>)</li>
+  <li>In <xref target="charset"/>, explain the difference between the "token" production, the RFC 2978 ABNF for charset names, and the actual registration practice (<eref target="https://github.com/httpwg/http-core/issues/100"/>, <eref target="https://www.rfc-editor.org/errata/eid4689"/>)</li>
+  <li>In <xref target="resources"/>, removed the fragment component in the URI scheme definitions as per <xref target="RFC3986" x:fmt="of" x:sec="4.3"/>,
+  furthermore moved fragment discussion into a separate section
+  (<eref target="https://github.com/httpwg/http-core/issues/103"/>, <eref target="https://www.rfc-editor.org/errata/eid4251"/>, <eref target="https://www.rfc-editor.org/errata/eid4252"/>)</li>
   <li>In <xref target="protocol.version"/>, add language about minor HTTP version number defaulting (<eref target="https://github.com/httpwg/http-core/issues/115"/>)</li>
   <li>Added <xref target="status.422"/> for status code 422, previously defined in <xref target="RFC4918" x:fmt="of" x:sec="11.2"/> (<eref target="https://github.com/httpwg/http-core/issues/123"/>)</li>
+  <li>In <xref target="status.416"/>, fixed prose about byte range comparison (<eref target="https://github.com/httpwg/http-core/issues/135"/>,  <eref target="https://www.rfc-editor.org/errata/eid5474"/>)</li>
+  <li>In <xref target="operation"/>, explain that request/response correlation is version specific (<eref target="https://github.com/httpwg/http-core/issues/145"/>)</li>
+</ul>
+</section>
+
+<section title="Since draft-ietf-httpbis-semantics-03" anchor="changes.since.03">
+<ul>
+  <li>In <xref target="status.308"/>, include status code 308 from RFC 7538 (<eref target="https://github.com/httpwg/http-core/issues/3"/>)</li>
+  <li>Define a separate registry for HTTP header field names (<eref target="https://github.com/httpwg/http-core/issues/42"/>)</li>
+  <li>In <xref target="request.conneg"/>, refactor and clarify description of wildcard ("*") handling (<eref target="https://github.com/httpwg/http-core/issues/46"/>)</li>
+  <li>Deprecate Accept-Charset (<eref target="https://github.com/httpwg/http-core/issues/61"/>)</li>
+  <li>In <xref target="evaluation"/>, mention Cache-Control: immutable (<eref target="https://github.com/httpwg/http-core/issues/69"/>)</li>
+  <li>In <xref target="field.order"/>, clarify when header field combination is allowed (<eref target="https://github.com/httpwg/http-core/issues/74"/>)</li>
+  <li>In <xref target="header.field.registration"/>, instruct IANA to mark Content-MD5 as obsolete (<eref target="https://github.com/httpwg/http-core/issues/93"/>)</li>
+  <li>Use RFC 7405 ABNF notation for case-sensitive string constants (<eref target="https://github.com/httpwg/http-core/issues/133"/>)</li>
+  <li>Rework <xref target="operation"/> to be more version-independent (<eref target="https://github.com/httpwg/http-core/issues/142"/>)</li>
+  <li>In <xref target="DELETE"/>, clarify that DELETE needs to be successful to invalidate cache (<eref target="https://github.com/httpwg/http-core/issues/167"/>, <eref target="https://www.rfc-editor.org/errata/eid5541"/>)</li>
 </ul>
 </section>
 </section>

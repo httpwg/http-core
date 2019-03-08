@@ -1,7 +1,7 @@
 <!--
-    Extract named artwork elements.
+    Extract named artwork or sourcecode elements.
 
-    Copyright (c) 2006-2009, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2018, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,7 @@
   
   <xsl:choose>
     <xsl:when test="$name!=''">
-      <xsl:variable name="artwork" select="//artwork[@name=$name]"/>
+      <xsl:variable name="artwork" select="//artwork[@name=$name]|//sourcecode[@name=$name]"/>
       
       <xsl:choose>
         <xsl:when test="$artwork">
@@ -61,7 +61,7 @@
       </xsl:choose>
     </xsl:when>
     <xsl:when test="$type!=''">
-      <xsl:variable name="artwork" select="//artwork[@type=$type]"/>
+      <xsl:variable name="artwork" select="//artwork[@type=$type]|//sourcecode[@type=$type]"/>
       
       <xsl:choose>
         <xsl:when test="$artwork">

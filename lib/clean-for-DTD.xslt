@@ -1,7 +1,7 @@
 <!--
     Strip rfc2629.xslt extensions, generating XML input for "official" xml2rfc
 
-    Copyright (c) 2006-2018, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2019, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -211,6 +211,8 @@
   </xsl:choose>
 </xsl:template>
 
+<xsl:template match="t/@keepWithNext|t/@keepWithPrevious" mode="cleanup"/>
+
 <xsl:template match="refcontent" mode="cleanup">
   <xsl:variable name="text">
     <xsl:apply-templates mode="cleanup"/>
@@ -322,6 +324,30 @@
     </xsl:if>
   </list>
   </t>
+</xsl:template>
+
+<xsl:template match="li/blockquote" mode="cleanup">
+  <list style="empty">
+    <xsl:choose>
+      <xsl:when test="t|ul|ol|dl|artwork|figure|sourcecode">
+        <xsl:apply-templates mode="cleanup" />
+      </xsl:when>
+      <xsl:otherwise>
+        <t>
+          <xsl:apply-templates mode="cleanup" />
+        </t>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:if test="@quotedFrom">
+      <t>
+        <xsl:text>&#8212; </xsl:text>
+        <xsl:choose>
+          <xsl:when test="@cite"><eref target="{@cite}"><xsl:value-of select="@quotedFrom"/></eref></xsl:when>
+          <xsl:otherwise><xsl:value-of select="@quotedFrom"/></xsl:otherwise>
+        </xsl:choose>
+      </t>
+    </xsl:if>
+  </list>
 </xsl:template>
 
 <xsl:template match="x:h" mode="cleanup">
@@ -550,7 +576,7 @@
     <xsl:call-template name="get-section-xref-format">
       <xsl:with-param name="default">
         <xsl:choose>
-          <xsl:when test="ancestor::artwork">comma</xsl:when>
+          <xsl:when test="ancestor::artwork or ancestor::sourcecode">comma</xsl:when>
           <xsl:otherwise>of</xsl:otherwise>
         </xsl:choose>
       </xsl:with-param>
@@ -628,7 +654,7 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[node() and @format='none' and @target=//artwork//@anchor]" mode="cleanup">
+<xsl:template match="xref[node() and @format='none' and (@target=//artwork//@anchor or @target=//sourcecode//@anchor)]" mode="cleanup">
   <!-- remove the link -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
@@ -906,7 +932,7 @@
     <xsl:if test="$title!=''">
       <xsl:attribute name="title"><xsl:value-of select="$title"/></xsl:attribute>
     </xsl:if>
-    <xsl:apply-templates select=".//artwork//iref" mode="cleanup"/>
+    <xsl:apply-templates select=".//artwork//iref|.//sourcecode//iref" mode="cleanup"/>
     <xsl:apply-templates select="iref|preamble|artwork|sourcecode|postamble|ed:replace|ed:ins|ed:del" mode="cleanup" />
   </figure>
 </xsl:template>
@@ -924,6 +950,22 @@
 </xsl:template>
 
 <xsl:template match="artwork" mode="cleanup">
+  <xsl:call-template name="insert-markup"/>
+</xsl:template>
+
+<xsl:template match="artwork[not(ancestor::figure)]" mode="cleanup">
+  <figure>
+    <!-- move irefs up -->
+    <xsl:for-each select="iref">
+      <iref>
+        <xsl:copy-of select="@*"/>
+      </iref>
+    </xsl:for-each>
+    <xsl:call-template name="insert-markup"/>
+  </figure>
+</xsl:template>
+
+<xsl:template name="insert-markup">
   <xsl:variable name="content2"><xsl:apply-templates select="node()"/></xsl:variable>
   <xsl:variable name="content" select="translate($content2,'&#160;&#x2500;&#x2502;&#x2508;&#x250c;&#x2510;&#x2514;&#x2518;&#x251c;&#x2524;',' -|+++++++')"/>
   <artwork>
@@ -1154,6 +1196,33 @@
 
 <xsl:template match="reference/front/abstract" mode="cleanup"/>
 
+<xsl:template match="referencegroup" mode="cleanup">
+  <reference anchor="{@anchor}">
+    <xsl:copy-of select="@target"/>
+    <xsl:if test="$xml2rfc-ext-xml2rfc-backend >= 201706">
+      <xsl:attribute name="quote-title">false</xsl:attribute>
+    </xsl:if>
+    <xsl:comment>...expanded &lt;referencegroup>...</xsl:comment>
+    <front>
+      <title>
+        <xsl:text>Consisting of: </xsl:text>
+        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/reference"/>
+        <xsl:for-each select="reference|$included">
+          <xsl:value-of select="concat('[',@anchor,']')"/>
+          <xsl:choose>
+            <xsl:when test="position() &lt; last() - 1">, </xsl:when>
+            <xsl:when test="position() = last() - 1">, and </xsl:when>
+            <xsl:otherwise/>
+          </xsl:choose>
+        </xsl:for-each>
+      </title>
+      <author/>
+      <date/>
+    </front>
+  </reference>
+  <xsl:apply-templates mode="cleanup"/>
+</xsl:template>
+
 <xsl:template match="reference" mode="cleanup">
   <reference>
     <xsl:apply-templates select="@anchor|@target|@quoteTitle" mode="cleanup"/>
@@ -1370,15 +1439,22 @@
 </xsl:template>
 
 <xsl:template name="process-dl">
-  <xsl:variable name="hang" select="@hanging"/>
+  <xsl:variable name="newl" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
-  <xsl:processing-instruction name="rfc">
-    <xsl:choose>
-      <xsl:when test="not($spac='compact')">subcompact='no'</xsl:when>
-      <xsl:otherwise>subcompact='yes'</xsl:otherwise>
-    </xsl:choose>
-  </xsl:processing-instruction>
+  <xsl:if test="parent::section">
+    <!-- avoid adding PIs into nested lists due to xml2rfc bug -->
+    <xsl:processing-instruction name="rfc">
+      <xsl:choose>
+        <xsl:when test="not($spac='compact')">subcompact='no'</xsl:when>
+        <xsl:otherwise>subcompact='yes'</xsl:otherwise>
+      </xsl:choose>
+    </xsl:processing-instruction>
+  </xsl:if>
   <list style="hanging">
+    <xsl:variable name="indent" select="@indent"/>
+    <xsl:if test="number($indent)=$indent">
+      <xsl:attribute name="hangIndent"><xsl:value-of select="$indent"/></xsl:attribute>
+    </xsl:if>
     <xsl:for-each select="dt">
       <xsl:variable name="txt">
         <xsl:apply-templates select="." mode="cleanup"/>
@@ -1388,7 +1464,7 @@
       <xsl:variable name="block-level-children" select="$desc/t | $desc/dl | $desc/ol | $desc/ul"/>
       <t hangText="{normalize-space($txt)}">
         <xsl:copy-of select="@anchor"/>
-        <xsl:if test="$hang='false'">
+        <xsl:if test="$newl='true'">
           <xsl:choose>
             <xsl:when test="$block-level-children">
               <vspace blankLines="1"/>
@@ -1473,7 +1549,27 @@
         <xsl:with-param name="msg">ol/@group not supported</xsl:with-param>
       </xsl:call-template>
     </xsl:if>
-    <list style="numbers">
+    <xsl:variable name="style">
+      <xsl:choose>
+        <xsl:when test="not(@type) or @type='1'">numbers</xsl:when>
+        <xsl:when test="@type='a'">letters</xsl:when>
+        <xsl:when test="@type='A'">
+          <xsl:call-template name="error">
+            <xsl:with-param name="inline">no</xsl:with-param>
+            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to 'a')</xsl:with-param>
+          </xsl:call-template>
+          <xsl:text>letters</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:call-template name="error">
+            <xsl:with-param name="inline">no</xsl:with-param>
+            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to '1')</xsl:with-param>
+          </xsl:call-template>
+          <xsl:text>numbers</xsl:text>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <list style="{$style}">
       <xsl:apply-templates mode="cleanup"/>
     </list>
   </t>
@@ -1523,22 +1619,27 @@
     <xsl:when test="parent::figure">
       <artwork>
         <xsl:copy-of select="@anchor|@type"/>
+        <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
         <xsl:if test="starts-with(.,'&#10;')">
           <xsl:text>&#10;</xsl:text>
           <xsl:value-of select="@x:indent-with"/>
         </xsl:if>
         <xsl:value-of select="$content"/>
+        <xsl:if test="@markers='true'">&#10;&lt;CODE ENDS></xsl:if>
       </artwork>
     </xsl:when>
     <xsl:otherwise>
       <figure>
+        <xsl:apply-templates select=".//iref" mode="cleanup"/>
         <artwork>
           <xsl:copy-of select="@anchor|@type"/>
+          <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
           <xsl:if test="starts-with(.,'&#10;')">
             <xsl:text>&#10;</xsl:text>
             <xsl:value-of select="@x:indent-with"/>
           </xsl:if>
           <xsl:value-of select="$content"/>
+          <xsl:if test="@markers='true'">&#10;&#10;&lt;CODE ENDS></xsl:if>
         </artwork>
       </figure>
     </xsl:otherwise>
@@ -1548,7 +1649,7 @@
 <!-- Tables -->
 <xsl:template match="table" mode="cleanup">
   <texttable>
-    <xsl:apply-templates select="@anchor" mode="cleanup"/>
+    <xsl:apply-templates select="@anchor|@align" mode="cleanup"/>
     <xsl:variable name="title">
       <xsl:choose>
         <xsl:when test="name">
@@ -1616,10 +1717,6 @@
   </texttable>
 </xsl:template>
 
-<xsl:template match="td/br|th/br" mode="cleanup">
-  <xsl:text> </xsl:text>
-</xsl:template>
-
 <!-- date formats -->
 <xsl:template match="/rfc/front/date/@month" mode="cleanup">
   <xsl:attribute name="month">
@@ -1656,7 +1753,7 @@
 </xsl:template>
 
 <!-- x:include -->
-<xsl:template match="/rfc/back/references/xi:include" mode="cleanup">
+<xsl:template match="/rfc/back/references/xi:include|/rfc/back/references/referencegroup/xi:include" mode="cleanup">
   <xsl:copy-of select="document(@href)"/>
 </xsl:template>
 
