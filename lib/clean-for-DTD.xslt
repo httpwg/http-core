@@ -1619,11 +1619,13 @@
     <xsl:when test="parent::figure">
       <artwork>
         <xsl:copy-of select="@anchor|@type"/>
+        <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
         <xsl:if test="starts-with(.,'&#10;')">
           <xsl:text>&#10;</xsl:text>
           <xsl:value-of select="@x:indent-with"/>
         </xsl:if>
         <xsl:value-of select="$content"/>
+        <xsl:if test="@markers='true'">&#10;&lt;CODE ENDS></xsl:if>
       </artwork>
     </xsl:when>
     <xsl:otherwise>
@@ -1631,11 +1633,13 @@
         <xsl:apply-templates select=".//iref" mode="cleanup"/>
         <artwork>
           <xsl:copy-of select="@anchor|@type"/>
+          <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
           <xsl:if test="starts-with(.,'&#10;')">
             <xsl:text>&#10;</xsl:text>
             <xsl:value-of select="@x:indent-with"/>
           </xsl:if>
           <xsl:value-of select="$content"/>
+          <xsl:if test="@markers='true'">&#10;&#10;&lt;CODE ENDS></xsl:if>
         </artwork>
       </figure>
     </xsl:otherwise>
