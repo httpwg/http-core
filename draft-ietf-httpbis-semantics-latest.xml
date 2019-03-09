@@ -1632,9 +1632,10 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 <t anchor="rule.parameter">
    <x:anchor-alias value="parameter-name"/>
    <x:anchor-alias value="parameter-value"/>
-   A parameter is a name/value pair.
+   A parameter is a name=value pair that is often defined within header field
+   values as a common syntax for appending auxiliary information to an item.
+   Each parameter is usually delimited by an immediately preceding semicolon.
 </t>
-
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="parameter-name"/><iref primary="true" item="Grammar" subitem="parameter-value"/>
   <x:ref>parameter</x:ref>       = <x:ref>parameter-name</x:ref> "=" <x:ref>parameter-value</x:ref>
   <x:ref>parameter-name</x:ref>  = <x:ref>token</x:ref>
@@ -1643,24 +1644,19 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 <t>
    Parameter names are case-insensitive. Parameter values might or might
    not be case-sensitive, depending on the semantics of the parameter
-   name.
+   name. Examples of parameters and some equivalent forms can be seen in
+   media types (<xref target="media.type"/>) and the Accept header field
+   (<xref target="header.accept"/>).
 </t>
 <t>
    A parameter value that matches the <x:ref>token</x:ref> production can be
    transmitted either as a token or within a quoted-string. The quoted and
-   unquoted values are equivalent. For example, the following examples are
-   all equivalent, but the first is preferred for consistency:
+   unquoted values are equivalent.
 </t>
-<figure><artwork type="example">
-  charset=utf-8
-  Charset="utf-8"
-  charset="utf-8"
-</artwork></figure>
 <aside>
   <t>
-    &Note; Unlike some similar constructs in other header fields,
-    parameters do not allow whitespace (even "bad" whitespace) around the
-    "=" character.
+    &Note; Parameters do not allow whitespace (not even "bad" whitespace)
+    around the "=" character.
   </t>
 </aside>
 </section>
@@ -1701,14 +1697,13 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    will likely cause unnecessary confusion.
 </t>
 <t>
-   Many header fields use a format including (case-insensitively) named
-   parameters (for instance, <x:ref>Content-Type</x:ref>, defined in
-   <xref target="header.content-type"/>). Allowing both unquoted (token) and quoted
-   (quoted-string) syntax for the parameter value enables recipients to use
-   existing parser components. When allowing both forms, the meaning of a
-   parameter value ought to be independent of the syntax used for it (for an
-   example, see the notes on parameter handling for media types in
-   <xref target="media.type"/>).
+   Many header fields (including <x:ref>Content-Type</x:ref>, defined in
+   <xref target="header.content-type"/>) use a common syntax for parameters
+   that allows both unquoted (token) and quoted (quoted-string) syntax for
+   a parameter value (<xref target="parameter"/>). Use of common syntax
+   allows recipients to reuse existing parser components. When allowing both
+   forms, the meaning of a parameter value ought to be the same whether it
+   was received as a token or a quoted string.
 </t>
 </section>
 </section>
@@ -2214,13 +2209,26 @@ Host: www.example.org
    The type and subtype tokens are case-insensitive.
 </t>
 <t>
-   The type/subtype &MAY; be followed by parameters (as defined in <xref
-   target="parameter"/> in the form of name=value pairs. The presence or
-   absence of a parameter might be significant to the processing of a
-   media-type, depending on its definition within the media type registry.
+   The type/subtype &MAY; be followed by semicolon-delimited parameters
+   (<xref target="parameter"/>) in the form of name=value pairs.
+   The presence or absence of a parameter might be significant to the
+   processing of a media type, depending on its definition within the media
+   type registry.
    Parameter values might or might not be case-sensitive, depending on the
    semantics of the parameter name.
 </t>
+<t>
+   For example, the following media types are equivalent in describing HTML
+   text data encoded in the UTF-8 character encoding scheme, but the first is
+   preferred for consistency (the "charset" parameter value is defined as
+   being case-insensitive in <xref target="RFC2046" x:fmt="," x:sec="4.1.2"/>):
+</t>
+<figure><artwork type="example">
+  text/html;charset=utf-8
+  Text/HTML;Charset="utf-8"
+  text/html; charset="utf-8"
+  text/html;charset=UTF-8
+</artwork></figure>
 <t>
    Media types ought to be registered with IANA according to the
    procedures defined in <xref target="BCP13"/>.
@@ -2237,18 +2245,6 @@ Host: www.example.org
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="charset"/>
   <x:ref>charset</x:ref> = <x:ref>token</x:ref>
 </sourcecode>
-
-<t>
-   For example, all of these charset parameters are considered equivalent:
-</t>
-<figure><artwork type="example">
-  charset=utf-8
-  charset=UTF-8
-  charset=Utf-8
-  Charset=utf-8
-  CHARSET=UTF-8
-</artwork></figure>
-
 <t>
    Charset names ought to be registered in the IANA "Character Sets" registry
    (<eref target="https://www.iana.org/assignments/character-sets"/>)
@@ -2256,12 +2252,12 @@ Host: www.example.org
 </t>
 <aside>
   <t>
-    &Note; in practice, charset names are furthermore restricted by the
-    "mime-charset" ABNF rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/>
-    (as corrected in <xref target="Err1912"/>). However, that rule
-    allows two characters not included in "token" ("{" and "}"), but
-    at the time of this writing no character set using
-    these was registered (see <xref target="Err5433"/>).
+    &Note; In theory, charset names are defined by the "mime-charset" ABNF
+    rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/> (as
+    corrected in <xref target="Err1912"/>). That rule allows two characters
+    that are not included in "token" ("{" and "}"), but no charset name
+    registered at the time of this writing includes braces
+    (see <xref target="Err5433"/>).
   </t>
 </aside>
 </section>
@@ -10896,7 +10892,9 @@ Content-Encoding: gzip
 <x:ref>other-range-unit</x:ref> = token
 <x:ref>other-ranges-specifier</x:ref> = other-range-unit "=" other-range-set
 
-<x:ref>parameter</x:ref> = token "=" ( token / quoted-string )
+<x:ref>parameter</x:ref> = parameter-name "=" parameter-value
+<x:ref>parameter-name</x:ref> = token
+<x:ref>parameter-value</x:ref> = ( token / quoted-string )
 <x:ref>partial-URI</x:ref> = relative-part [ "?" query ]
 <x:ref>path-abempty</x:ref> = &lt;path-abempty, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
