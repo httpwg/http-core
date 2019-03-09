@@ -211,6 +211,8 @@
   </xsl:choose>
 </xsl:template>
 
+<xsl:template match="t/@keepWithNext|t/@keepWithPrevious" mode="cleanup"/>
+
 <xsl:template match="refcontent" mode="cleanup">
   <xsl:variable name="text">
     <xsl:apply-templates mode="cleanup"/>
@@ -574,7 +576,7 @@
     <xsl:call-template name="get-section-xref-format">
       <xsl:with-param name="default">
         <xsl:choose>
-          <xsl:when test="ancestor::artwork">comma</xsl:when>
+          <xsl:when test="ancestor::artwork or ancestor::sourcecode">comma</xsl:when>
           <xsl:otherwise>of</xsl:otherwise>
         </xsl:choose>
       </xsl:with-param>
@@ -652,7 +654,7 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[node() and @format='none' and @target=//artwork//@anchor]" mode="cleanup">
+<xsl:template match="xref[node() and @format='none' and (@target=//artwork//@anchor or @target=//sourcecode//@anchor)]" mode="cleanup">
   <!-- remove the link -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
@@ -930,7 +932,7 @@
     <xsl:if test="$title!=''">
       <xsl:attribute name="title"><xsl:value-of select="$title"/></xsl:attribute>
     </xsl:if>
-    <xsl:apply-templates select=".//artwork//iref" mode="cleanup"/>
+    <xsl:apply-templates select=".//artwork//iref|.//sourcecode//iref" mode="cleanup"/>
     <xsl:apply-templates select="iref|preamble|artwork|sourcecode|postamble|ed:replace|ed:ins|ed:del" mode="cleanup" />
   </figure>
 </xsl:template>
@@ -948,6 +950,22 @@
 </xsl:template>
 
 <xsl:template match="artwork" mode="cleanup">
+  <xsl:call-template name="insert-markup"/>
+</xsl:template>
+
+<xsl:template match="artwork[not(ancestor::figure)]" mode="cleanup">
+  <figure>
+    <!-- move irefs up -->
+    <xsl:for-each select="iref">
+      <iref>
+        <xsl:copy-of select="@*"/>
+      </iref>
+    </xsl:for-each>
+    <xsl:call-template name="insert-markup"/>
+  </figure>
+</xsl:template>
+
+<xsl:template name="insert-markup">
   <xsl:variable name="content2"><xsl:apply-templates select="node()"/></xsl:variable>
   <xsl:variable name="content" select="translate($content2,'&#160;&#x2500;&#x2502;&#x2508;&#x250c;&#x2510;&#x2514;&#x2518;&#x251c;&#x2524;',' -|+++++++')"/>
   <artwork>
@@ -1177,6 +1195,33 @@
 </xsl:template>
 
 <xsl:template match="reference/front/abstract" mode="cleanup"/>
+
+<xsl:template match="referencegroup" mode="cleanup">
+  <reference anchor="{@anchor}">
+    <xsl:copy-of select="@target"/>
+    <xsl:if test="$xml2rfc-ext-xml2rfc-backend >= 201706">
+      <xsl:attribute name="quote-title">false</xsl:attribute>
+    </xsl:if>
+    <xsl:comment>...expanded &lt;referencegroup>...</xsl:comment>
+    <front>
+      <title>
+        <xsl:text>Consisting of: </xsl:text>
+        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/reference"/>
+        <xsl:for-each select="reference|$included">
+          <xsl:value-of select="concat('[',@anchor,']')"/>
+          <xsl:choose>
+            <xsl:when test="position() &lt; last() - 1">, </xsl:when>
+            <xsl:when test="position() = last() - 1">, and </xsl:when>
+            <xsl:otherwise/>
+          </xsl:choose>
+        </xsl:for-each>
+      </title>
+      <author/>
+      <date/>
+    </front>
+  </reference>
+  <xsl:apply-templates mode="cleanup"/>
+</xsl:template>
 
 <xsl:template match="reference" mode="cleanup">
   <reference>
@@ -1574,22 +1619,27 @@
     <xsl:when test="parent::figure">
       <artwork>
         <xsl:copy-of select="@anchor|@type"/>
+        <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
         <xsl:if test="starts-with(.,'&#10;')">
           <xsl:text>&#10;</xsl:text>
           <xsl:value-of select="@x:indent-with"/>
         </xsl:if>
         <xsl:value-of select="$content"/>
+        <xsl:if test="@markers='true'">&#10;&lt;CODE ENDS></xsl:if>
       </artwork>
     </xsl:when>
     <xsl:otherwise>
       <figure>
+        <xsl:apply-templates select=".//iref" mode="cleanup"/>
         <artwork>
           <xsl:copy-of select="@anchor|@type"/>
+          <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
           <xsl:if test="starts-with(.,'&#10;')">
             <xsl:text>&#10;</xsl:text>
             <xsl:value-of select="@x:indent-with"/>
           </xsl:if>
           <xsl:value-of select="$content"/>
+          <xsl:if test="@markers='true'">&#10;&#10;&lt;CODE ENDS></xsl:if>
         </artwork>
       </figure>
     </xsl:otherwise>
@@ -1703,7 +1753,7 @@
 </xsl:template>
 
 <!-- x:include -->
-<xsl:template match="/rfc/back/references/xi:include" mode="cleanup">
+<xsl:template match="/rfc/back/references/xi:include|/rfc/back/references/referencegroup/xi:include" mode="cleanup">
   <xsl:copy-of select="document(@href)"/>
 </xsl:template>
 
