@@ -287,6 +287,10 @@
   OCTET (any 8-bit sequence of data), SP (space), and
   VCHAR (any visible US-ASCII character).
 </t>
+<t>
+   <xref target="field.components"/> defines some generic syntactic
+   components for header field values.
+</t>
 <t anchor="imported.rules">
   <x:anchor-alias value="obs-fold"/>
   <x:anchor-alias value="protocol-name"/>
@@ -1552,15 +1556,21 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </section>
 
 <section title="Header Field Value Components" anchor="field.components">
+
+<t anchor="delimiters">
+   <iref item="Delimiters"/>
+   Many HTTP header field values are defined using common syntax
+   components, separated by whitespace or specific delimiting characters.
+   Delimiters are chosen from the set of US-ASCII visual characters not
+   allowed in a <x:ref>token</x:ref> (DQUOTE and "(),/:;&lt;=>?@[\]{}").
+</t>
+
+<section title="Tokens" anchor="tokens">
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
-  <iref item="Delimiters"/>
-   Most HTTP header field values are defined using common syntax components
-   (token, quoted-string, and comment) separated by whitespace or specific
-   delimiting characters. Delimiters are chosen from the set of US-ASCII
-   visual characters not allowed in a <x:ref>token</x:ref>
-   (DQUOTE and "(),/:;&lt;=>?@[\]{}").
+  Tokens are short textual identifiers that do not include whitespace or
+  delimiters.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
   <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
@@ -1572,6 +1582,9 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
                  / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
                  ; any <x:ref>VCHAR</x:ref>, except delimiters
 </sourcecode>
+</section>
+
+<section title="Quoted Strings" anchor="quoted.strings">
 <t anchor="rule.quoted-string">
   <x:anchor-alias value="quoted-string"/>
   <x:anchor-alias value="qdtext"/>
@@ -1583,17 +1596,6 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
   <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
   <x:ref>qdtext</x:ref>         = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
   <x:ref>obs-text</x:ref>       = %x80-FF
-</sourcecode>
-<t anchor="rule.comment">
-  <x:anchor-alias value="comment"/>
-  <x:anchor-alias value="ctext"/>
-   Comments can be included in some HTTP header fields by surrounding
-   the comment text with parentheses. Comments are only allowed in
-   fields containing "comment" as part of their field value definition.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
-  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
-  <x:ref>ctext</x:ref>          = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
 </sourcecode>
 <t anchor="rule.quoted-pair">
   <x:anchor-alias value="quoted-pair"/>
@@ -1613,6 +1615,53 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    where necessary to quote parentheses ["(" and ")"] and backslash octets
    occurring within that comment.
 </t>
+</section>
+<section title="Comments" anchor="comments">
+<t anchor="rule.comment">
+  <x:anchor-alias value="comment"/>
+  <x:anchor-alias value="ctext"/>
+   Comments can be included in some HTTP header fields by surrounding
+   the comment text with parentheses. Comments are only allowed in
+   fields containing "comment" as part of their field value definition.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
+  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
+  <x:ref>ctext</x:ref>          = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
+</sourcecode>
+</section>
+
+<section title="Parameters" anchor="parameter">
+<t anchor="rule.parameter">
+   <x:anchor-alias value="parameter-name"/>
+   <x:anchor-alias value="parameter-value"/>
+   A parameter is a name=value pair that is often defined within header field
+   values as a common syntax for appending auxiliary information to an item.
+   Each parameter is usually delimited by an immediately preceding semicolon.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="parameter-name"/><iref primary="true" item="Grammar" subitem="parameter-value"/>
+  <x:ref>parameter</x:ref>       = <x:ref>parameter-name</x:ref> "=" <x:ref>parameter-value</x:ref>
+  <x:ref>parameter-name</x:ref>  = <x:ref>token</x:ref>
+  <x:ref>parameter-value</x:ref> = ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
+</sourcecode>
+<t>
+   Parameter names are case-insensitive. Parameter values might or might
+   not be case-sensitive, depending on the semantics of the parameter
+   name. Examples of parameters and some equivalent forms can be seen in
+   media types (<xref target="media.type"/>) and the Accept header field
+   (<xref target="header.accept"/>).
+</t>
+<t>
+   A parameter value that matches the <x:ref>token</x:ref> production can be
+   transmitted either as a token or within a quoted-string. The quoted and
+   unquoted values are equivalent.
+</t>
+<aside>
+  <t>
+    &Note; Parameters do not allow whitespace (not even "bad" whitespace)
+    around the "=" character.
+  </t>
+</aside>
+</section>
 </section>
 
 <section title="Designing New Header Field Values" anchor="new.field.values">
@@ -1650,14 +1699,13 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    will likely cause unnecessary confusion.
 </t>
 <t>
-   Many header fields use a format including (case-insensitively) named
-   parameters (for instance, <x:ref>Content-Type</x:ref>, defined in
-   <xref target="header.content-type"/>). Allowing both unquoted (token) and quoted
-   (quoted-string) syntax for the parameter value enables recipients to use
-   existing parser components. When allowing both forms, the meaning of a
-   parameter value ought to be independent of the syntax used for it (for an
-   example, see the notes on parameter handling for media types in
-   <xref target="media.type"/>).
+   Many header fields (such as <x:ref>Content-Type</x:ref>, defined in
+   <xref target="header.content-type"/>) use a common syntax for parameters
+   that allows both unquoted (token) and quoted (quoted-string) syntax for
+   a parameter value (<xref target="parameter"/>). Use of common syntax
+   allows recipients to reuse existing parser components. When allowing both
+   forms, the meaning of a parameter value ought to be the same whether it
+   was received as a token or a quoted string.
 </t>
 </section>
 </section>
@@ -2159,53 +2207,34 @@ Host: www.example.org
   <x:ref>type</x:ref>       = <x:ref>token</x:ref>
   <x:ref>subtype</x:ref>    = <x:ref>token</x:ref>
 </sourcecode>
-<t anchor="rule.parameter">
-  <x:anchor-alias value="parameter"/>
-   The type/subtype &MAY; be followed by parameters in the form of
-   name=value pairs.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameter"/>
-  <x:ref>parameter</x:ref>      = <x:ref>token</x:ref> "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
-</sourcecode>
 <t>
-   The type, subtype, and parameter name tokens are case-insensitive.
+   The type and subtype tokens are case-insensitive.
+</t>
+<t>
+   The type/subtype &MAY; be followed by semicolon-delimited parameters
+   (<xref target="parameter"/>) in the form of name=value pairs.
+   The presence or absence of a parameter might be significant to the
+   processing of a media type, depending on its definition within the media
+   type registry.
    Parameter values might or might not be case-sensitive, depending on the
-   semantics of the parameter name.  The presence or absence of a parameter might
-   be significant to the processing of a media-type, depending on its
-   definition within the media type registry.
+   semantics of the parameter name.
 </t>
 <t>
-   A parameter value that matches the <x:ref>token</x:ref> production can be
-   transmitted either as a token or within a quoted-string. The quoted and
-   unquoted values are equivalent.
-</t>
-<t>
-   For example, the following examples are all equivalent, but the first is
-   preferred for consistency:
+   For example, the following media types are equivalent in describing HTML
+   text data encoded in the UTF-8 character encoding scheme, but the first is
+   preferred for consistency (the "charset" parameter value is defined as
+   being case-insensitive in <xref target="RFC2046" x:fmt="," x:sec="4.1.2"/>):
 </t>
 <figure><artwork type="example">
   text/html;charset=utf-8
   Text/HTML;Charset="utf-8"
   text/html; charset="utf-8"
-</artwork></figure>
-<t>
-   Furthermore, the example below is equivalent as well, as the "charset"
-   parameter value is defined as case-insensitive (<xref target="RFC2046" x:fmt="," x:sec="4.1.2"/>):
-</t>
-<figure><artwork type="example">
   text/html;charset=UTF-8
 </artwork></figure>
 <t>
    Media types ought to be registered with IANA according to the
    procedures defined in <xref target="BCP13"/>.
 </t>
-<aside>
-  <t>
-    &Note; Unlike some similar constructs in other header fields, media type
-    parameters do not allow whitespace (even "bad" whitespace) around the "="
-    character.
-  </t>
-</aside>
 
 <section title="Charset" anchor="charset">
   <x:anchor-alias value="rule.charset"/>
@@ -2225,12 +2254,12 @@ Host: www.example.org
 </t>
 <aside>
   <t>
-    &Note; in practice, charset names are furthermore restricted by the
-    "mime-charset" ABNF rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/>
-    (as corrected in <xref target="Err1912"/>). However, that rule
-    allows two characters not included in "token" ("{" and "}"), but
-    at the time of this writing no character set using
-    these was registered (see <xref target="Err5433"/>).
+    &Note; In theory, charset names are defined by the "mime-charset" ABNF
+    rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/> (as
+    corrected in <xref target="Err1912"/>). That rule allows two characters
+    that are not included in "token" ("{" and "}"), but no charset name
+    registered at the time of this writing includes braces
+    (see <xref target="Err5433"/>).
   </t>
 </aside>
 </section>
@@ -10875,7 +10904,9 @@ Content-Encoding: gzip
 <x:ref>other-range-unit</x:ref> = token
 <x:ref>other-ranges-specifier</x:ref> = other-range-unit "=" other-range-set
 
-<x:ref>parameter</x:ref> = token "=" ( token / quoted-string )
+<x:ref>parameter</x:ref> = parameter-name "=" parameter-value
+<x:ref>parameter-name</x:ref> = token
+<x:ref>parameter-value</x:ref> = ( token / quoted-string )
 <x:ref>partial-URI</x:ref> = relative-part [ "?" query ]
 <x:ref>path-abempty</x:ref> = &lt;path-abempty, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
@@ -11079,6 +11110,7 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-04" anchor="changes.since.04">
 <ul>
+  <li>Move <xref target="parameter"/> into its own section (<eref target="https://github.com/httpwg/http-core/issues/45"/>)</li>
   <li>In <xref target="header.content-type"/>, reference MIME Sniffing (<eref target="https://github.com/httpwg/http-core/issues/51"/>)</li>
 </ul>
 </section>

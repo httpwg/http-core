@@ -500,10 +500,10 @@
 
 <xsl:variable name="includeDirectives">
   <xsl:call-template name="getIncludes">
-    <xsl:with-param name="nodes" select="/rfc/back/references/processing-instruction('rfc')|/rfc/back/references/referencegroup/processing-instruction('rfc')"/>
+    <xsl:with-param name="nodes" select="/rfc/back//references/processing-instruction('rfc')|/rfc/back//references/referencegroup/processing-instruction('rfc')"/>
   </xsl:call-template>
   <xsl:call-template name="getXIncludes">
-    <xsl:with-param name="nodes" select="/rfc/back/references/xi:include|/rfc/back/references/referencegroup/xi:include"/>
+    <xsl:with-param name="nodes" select="/rfc/back//references/xi:include|/rfc/back//references/referencegroup/xi:include"/>
   </xsl:call-template>
 </xsl:variable>
 
@@ -2399,7 +2399,7 @@
     <xsl:if test="number($indent)=$indent">
       <xsl:attribute name="style">margin-left: <xsl:value-of select="$indent div 2"/>em</xsl:attribute>
     </xsl:if>
-    <xsl:variable name="block-level-children" select="t | dl"/>
+    <xsl:variable name="block-level-children" select="artwork|dl|sourcecode|t"/>
     <xsl:choose>
       <xsl:when test="$block-level-children">
         <!-- TODO: improve error handling-->
@@ -3486,7 +3486,19 @@
           </xsl:call-template>
         </xsl:if>
         <xsl:text>, </xsl:text>
-        <xsl:if test="$front[1]/date/@month!=''"><xsl:value-of select="$front[1]/date/@month" />&#0160;</xsl:if>
+        <xsl:if test="$front[1]/date/@month!=''">
+          <xsl:choose>
+            <xsl:when test="not(local-name($front[1]/..)='reference') and ($front[1]/date/@month=number($front[1]/date/@month))">
+              <xsl:call-template name="get-month-as-name">
+                <xsl:with-param name="month" select="number($front[1]/date/@month)"/>
+              </xsl:call-template>
+              <xsl:text>&#160;</xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:value-of select="$front[1]/date/@month" /><xsl:text>&#160;</xsl:text>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:if>
         <xsl:value-of select="$front[1]/date/@year" />
       </xsl:when>
       <xsl:when test="document(x:source/@href)/rfc/front">
@@ -3608,6 +3620,8 @@
   <xsl:variable name="refseccount" select="count(/rfc/back/references)+count(/rfc/back/ed:replace/ed:ins/references)"/>
 
   <xsl:choose>
+    <!-- handled in make-references -->
+    <xsl:when test="ancestor::references"/>
     <!-- insert pseudo section when needed -->
     <xsl:when test="not(preceding::references) and $refseccount!=1">
       <xsl:call-template name="insert-conditional-hrule"/>
@@ -3661,6 +3675,7 @@
 
   <xsl:variable name="elemtype">
     <xsl:choose>
+      <xsl:when test="$nested and count(ancestor::references)&gt;=2">h4</xsl:when>
       <xsl:when test="$nested">h3</xsl:when>
       <xsl:otherwise>h2</xsl:otherwise>
     </xsl:choose>
@@ -3714,18 +3729,36 @@
       </xsl:if>
  
       <xsl:variable name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/reference"/>
-      <dl class="{$css-reference}">
-        <xsl:choose>
-          <xsl:when test="$xml2rfc-sortrefs='yes' and $xml2rfc-symrefs!='no'">
-            <xsl:apply-templates select="*|$included">
-              <xsl:sort select="concat(/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor,.//ed:ins//reference/@anchor)" />
-            </xsl:apply-templates>
-          </xsl:when>
-          <xsl:otherwise>
-            <xsl:apply-templates select="*|$included"/>
-          </xsl:otherwise>
-        </xsl:choose>
-      </dl>
+      <xsl:variable name="refs" select="reference|referencegroup|ed:del|ed:ins|ed:replace|$included"/>
+      <xsl:choose>
+        <xsl:when test="references">
+          <xsl:for-each select="references">
+            <xsl:call-template name="make-references">
+              <xsl:with-param name="nested" select="true()"/>
+            </xsl:call-template>
+          </xsl:for-each>
+          <xsl:if test="$refs">
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">Cannot mix &lt;references> elements with other child nodes such as <xsl:value-of select="local-name($refs[1])"/> (these will be ignored)</xsl:with-param>
+            </xsl:call-template>
+          </xsl:if>
+        </xsl:when>
+        <xsl:when test="$refs">
+          <dl class="{$css-reference}">
+            <xsl:choose>
+              <xsl:when test="$xml2rfc-sortrefs='yes' and $xml2rfc-symrefs!='no'">
+                <xsl:apply-templates select="$refs">
+                  <xsl:sort select="concat(/rfc/back/displayreference[@target=current()/@anchor]/@to,@anchor,.//ed:ins//reference/@anchor)" />
+                </xsl:apply-templates>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:apply-templates select="$refs"/>
+              </xsl:otherwise>
+            </xsl:choose>
+          </dl>
+        </xsl:when>
+        <xsl:otherwise/>
+      </xsl:choose>
     </div>
   </section>
 </xsl:template>
@@ -5541,23 +5574,102 @@
   </xsl:if>
 </xsl:template>
 
+<!-- author name handling -->
+
+<xsl:template name="get-surname-from-fullname">
+  <xsl:param name="s"/>
+  <xsl:variable name="n" select="normalize-space($s)"/>
+  <xsl:choose>
+    <xsl:when test="contains($n,' ')">
+      <xsl:call-template name="get-surname-from-fullname">
+        <xsl:with-param name="s" select="substring-after($n,' ')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="$n"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<xsl:template name="get-author-surname">
+  <xsl:variable name="s" select="normalize-space(@surname)"/>
+  <xsl:choose>
+    <xsl:when test="$s='' and normalize-space(@fullname)!=''">
+      <xsl:variable name="computed">
+        <xsl:call-template name="get-surname-from-fullname">
+          <xsl:with-param name="s" select="@fullname"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:call-template name="info">
+        <xsl:with-param name="msg">author/@surname is missing for author with fullname '<xsl:value-of select="@fullname"/>', extracted as '<xsl:value-of select="normalize-space($computed)"/>'</xsl:with-param>
+      </xsl:call-template>
+      <xsl:value-of select="normalize-space($computed)"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="$s"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<xsl:template name="get-initials-from-fullname">
+  <xsl:param name="s"/>
+  <xsl:variable name="n" select="normalize-space($s)"/>
+  <xsl:choose>
+    <xsl:when test="contains($n,' ')">
+      <xsl:value-of select="substring($n,1,1)"/><xsl:text>. </xsl:text>
+      <xsl:call-template name="get-initials-from-fullname">
+        <xsl:with-param name="s" select="substring-after($n,' ')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise/>
+  </xsl:choose>
+</xsl:template>
+
+<xsl:template name="get-author-initials">
+  <xsl:variable name="s" select="normalize-space(@initials)"/>
+  <xsl:choose>
+    <xsl:when test="$s='' and normalize-space(@fullname)!='' and normalize-space(@surname)=''">
+      <xsl:variable name="computed">
+        <xsl:call-template name="get-initials-from-fullname">
+          <xsl:with-param name="s" select="@fullname"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:call-template name="info">
+        <xsl:with-param name="msg">author/@initials is missing for author with fullname '<xsl:value-of select="@fullname"/>', extracted as '<xsl:value-of select="normalize-space($computed)"/>'</xsl:with-param>
+      </xsl:call-template>
+      <xsl:value-of select="normalize-space($computed)"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="$s"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <xsl:template name="collectRightHeaderColumn">
   <xsl:for-each select="author">
+    <xsl:variable name="surname">
+      <xsl:call-template name="get-author-surname"/>
+    </xsl:variable>
+    <xsl:variable name="rawinitials">
+      <xsl:call-template name="get-author-initials"/>
+    </xsl:variable>
     <xsl:variable name="initials">
-      <xsl:call-template name="format-initials"/>
+      <xsl:call-template name="format-initials">
+        <xsl:with-param name="initials" select="$rawinitials"/>
+      </xsl:call-template>
     </xsl:variable>
     <xsl:variable name="truncated-initials">
       <xsl:call-template name="truncate-initials">
         <xsl:with-param name="initials" select="$initials"/>
       </xsl:call-template>
     </xsl:variable>
-    <xsl:if test="@surname">
+    <xsl:if test="$surname!=''">
       <myns:item>
         <xsl:value-of select="$truncated-initials"/>
         <xsl:if test="$truncated-initials!=''">
           <xsl:text> </xsl:text>
         </xsl:if>
-        <xsl:value-of select="@surname" />
+        <xsl:value-of select="$surname" />
         <xsl:if test="@asciiInitials!='' or @asciiSurname!=''">
           <xsl:text> (</xsl:text>
             <xsl:value-of select="@asciiInitials"/>
@@ -5579,12 +5691,14 @@
     </xsl:if>
     <xsl:variable name="org">
       <xsl:choose>
-        <xsl:when test="organization/@abbrev"><xsl:value-of select="organization/@abbrev" /></xsl:when>
-        <xsl:otherwise><xsl:value-of select="organization" /></xsl:otherwise>
+        <xsl:when test="organization/@showOnFrontPage='false'"/>
+        <xsl:when test="organization/@abbrev"><xsl:value-of select="organization/@abbrev"/></xsl:when>
+        <xsl:otherwise><xsl:value-of select="organization"/></xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
     <xsl:variable name="orgOfFollowing">
       <xsl:choose>
+        <xsl:when test="following-sibling::*[1]/organization/@showOnFrontPage='false'"/>
         <xsl:when test="following-sibling::*[1]/organization/@abbrev"><xsl:value-of select="following-sibling::*[1]/organization/@abbrev" /></xsl:when>
         <xsl:otherwise><xsl:value-of select="following-sibling::*/organization" /></xsl:otherwise>
       </xsl:choose>
@@ -8356,6 +8470,14 @@ dd, li, p {
             <xsl:with-param name="title" select="$title"/>
             <xsl:with-param name="name" select="name"/>
           </xsl:call-template>
+
+          <xsl:if test="references">
+            <ul>
+              <xsl:for-each select="references">
+                <xsl:call-template name="references-toc-entry"/>
+              </xsl:for-each>
+            </ul>
+          </xsl:if>
         </li>
       </xsl:for-each>
     </xsl:when>
@@ -8373,34 +8495,46 @@ dd, li, p {
         <ul>
           <!-- ...with subsections... -->
           <xsl:for-each select="$refsecs">
-            <xsl:variable name="title">
-              <xsl:choose>
-                <xsl:when test="@title!=''"><xsl:value-of select="@title" /></xsl:when>
-                <xsl:otherwise><xsl:value-of select="$xml2rfc-refparent"/></xsl:otherwise>
-              </xsl:choose>
-            </xsl:variable>
-
-            <xsl:variable name="sectionNumber">
-              <xsl:call-template name="get-section-number" />
-            </xsl:variable>
-
-            <xsl:variable name="num">
-              <xsl:number level="any"/>
-            </xsl:variable>
-
-            <li>
-              <xsl:call-template name="insert-toc-line">
-                <xsl:with-param name="number" select="$sectionNumber"/>
-                <xsl:with-param name="target" select="concat($anchor-pref,'references','.',$num)"/>
-                <xsl:with-param name="title" select="$title"/>
-                <xsl:with-param name="name" select="name"/>
-              </xsl:call-template>
-            </li>
+            <xsl:call-template name="references-toc-entry"/>
           </xsl:for-each>
         </ul>
       </li>
     </xsl:otherwise>
   </xsl:choose>
+</xsl:template>
+
+<xsl:template name="references-toc-entry">
+  <xsl:variable name="title">
+    <xsl:choose>
+      <xsl:when test="@title!=''"><xsl:value-of select="@title" /></xsl:when>
+      <xsl:otherwise><xsl:value-of select="$xml2rfc-refparent"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+
+  <xsl:variable name="sectionNumber">
+    <xsl:call-template name="get-section-number" />
+  </xsl:variable>
+
+  <xsl:variable name="num">
+    <xsl:number level="any"/>
+  </xsl:variable>
+
+  <li>
+    <xsl:call-template name="insert-toc-line">
+      <xsl:with-param name="number" select="$sectionNumber"/>
+      <xsl:with-param name="target" select="concat($anchor-pref,'references','.',$num)"/>
+      <xsl:with-param name="title" select="$title"/>
+      <xsl:with-param name="name" select="name"/>
+    </xsl:call-template>
+
+    <xsl:if test="references">
+      <ul>
+        <xsl:for-each select="references">
+          <xsl:call-template name="references-toc-entry"/>
+        </xsl:for-each>
+      </ul>
+    </xsl:if>
+  </li>
 </xsl:template>
 
 <xsl:template match="section|appendix" mode="toc">
@@ -9928,20 +10062,18 @@ dd, li, p {
 </xsl:template>
 
 <xsl:template name="t-alignment">
-  <xsl:if test="@align and @align!=''">
-    <xsl:attribute name="class">
-      <xsl:choose>
-        <xsl:when test="@align='left'"><xsl:value-of select="$css-left"/></xsl:when>
-        <xsl:when test="@align='right'"><xsl:value-of select="$css-right"/></xsl:when>
-        <xsl:when test="@align='center'">center</xsl:when>
-        <xsl:otherwise>
-          <xsl:call-template name="warning">
-            <xsl:with-param name="msg">Unknown align attribute: <xsl:value-of select="@align"/></xsl:with-param>
-          </xsl:call-template>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:attribute>
-  </xsl:if>
+  <xsl:attribute name="class">
+    <xsl:choose>
+      <xsl:when test="@align='left' or not(@align) or @align=''"><xsl:value-of select="$css-left"/></xsl:when>
+      <xsl:when test="@align='right'"><xsl:value-of select="$css-right"/></xsl:when>
+      <xsl:when test="@align='center'"><xsl:value-of select="$css-center"/></xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">Unknown align attribute: <xsl:value-of select="@align"/></xsl:with-param>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:attribute>
 </xsl:template>
 
 <xsl:template match="td">
@@ -10306,11 +10438,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1079 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1079 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1091 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1091 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/03/07 18:45:18 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/03/07 18:45:18 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/03/22 08:50:21 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/03/22 08:50:21 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -10382,7 +10514,7 @@ dd, li, p {
     </xsl:when>
     <xsl:otherwise>
       <xsl:choose>
-        <xsl:when test="self::references">
+        <xsl:when test="self::references and not(parent::references)">
           <xsl:choose>
             <xsl:when test="count(/*/back/references)=1">
               <xsl:call-template name="get-references-section-number"/>
@@ -10391,6 +10523,9 @@ dd, li, p {
               <xsl:call-template name="get-references-section-number"/>.<xsl:number count="references"/>
             </xsl:otherwise>
           </xsl:choose>
+        </xsl:when>
+        <xsl:when test="self::references and parent::references">
+          <xsl:for-each select=".."><xsl:call-template name="get-section-number"/></xsl:for-each>.<xsl:number count="references"/>
         </xsl:when>
         <xsl:when test="self::reference">
           <xsl:for-each select="parent::references">
@@ -10474,7 +10609,8 @@ dd, li, p {
 
 <!-- reformat contents of author/@initials -->
 <xsl:template name="format-initials">
-  <xsl:variable name="normalized" select="normalize-space(@initials)"/>
+  <xsl:param name="initials" select="@initials"/>
+  <xsl:variable name="normalized" select="normalize-space($initials)"/>
 
   <xsl:choose>
     <xsl:when test="$normalized=''">
@@ -11194,10 +11330,10 @@ prev: <xsl:value-of select="$prev"/>
 </xsl:template>
 
 <!-- artwork/sourcecode element -->
-<xsl:template match="figure/artwork | figure/ed:replace/ed:*/artwork | section/artwork | li/artwork" mode="validate" priority="9">
+<xsl:template match="figure/artwork | figure/ed:replace/ed:*/artwork | section/artwork | li/artwork | dd/artwork" mode="validate" priority="9">
   <xsl:apply-templates select="@*|*" mode="validate"/>
 </xsl:template>
-<xsl:template match="figure/sourcecode | figure/ed:replace/ed:*/sourcecode | section/sourcecode | li/sourcecode" mode="validate" priority="9">
+<xsl:template match="figure/sourcecode | figure/ed:replace/ed:*/sourcecode | section/sourcecode | li/sourcecode | dd/sourcecode | td/sourcecode" mode="validate" priority="9">
   <xsl:apply-templates select="@*|*" mode="validate"/>
 </xsl:template>
 <xsl:template match="artwork|sourcecode" mode="validate">
