@@ -1091,6 +1091,9 @@
 <!-- title extensions -->
 <xsl:template match="title/@x:quotes" mode="cleanup"/>
 
+<!-- organization extensions -->
+<xsl:template match="organization/@showOnFrontPage" mode="cleanup"/>
+
 <!-- RDF info stripped -->
 <xsl:template match="rdf:*" mode="cleanup"/>
 
@@ -1461,7 +1464,7 @@
       </xsl:variable>
       <!-- TODO: check for more block-level elements -->
       <xsl:variable name="desc" select="following-sibling::dd[1]"/>
-      <xsl:variable name="block-level-children" select="$desc/t | $desc/dl | $desc/ol | $desc/ul"/>
+      <xsl:variable name="block-level-children" select="$desc/artwork | $desc/dl | $desc/ol | $desc/sourcecode | $desc/t | $desc/ul"/>
       <t hangText="{normalize-space($txt)}">
         <xsl:copy-of select="@anchor"/>
         <xsl:if test="$newl='true'">
