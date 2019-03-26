@@ -440,39 +440,18 @@ printobj_r(object *o, int parenttype, int tflag)
 	local_printf(" )");
       break;
     case T_RULE: /* identation to delimit the code change */
+//   #element =&gt; *( OWS "," ) *( [ OWS element ] OWS "," )
       if (tflag)
 	local_printf("{RULE}");
       if (o->u.e.islist) {
-	if (o->u.e.repetition.lo == 0) {
-	  local_printf("[ ( \",\" / ");
+	  local_printf("*( OWS \",\" ) *( [ OWS ");
 	  if (o->u.e.e.rule.rule) {
 	    local_printf("%s", o->u.e.e.rule.rule->name);
 	    o->u.e.e.rule.rule->used = 1;
 	  } else {
 	    local_printf("%s", o->u.e.e.rule.name);
 	  }
-	  local_printf(" ) *( OWS \",\" [ OWS ");
-	  local_printf("%s", (o->u.e.e.rule.rule) ? 
-		 o->u.e.e.rule.rule->name : 
-		 o->u.e.e.rule.name);
-	  local_printf(" ] ) ]");
-	} else if (o->u.e.repetition.lo == 1) {
-	  local_printf(" *( \",\" OWS ) ");
-	  if (o->u.e.e.rule.rule) {
-	    local_printf("%s", o->u.e.e.rule.rule->name);
-	    o->u.e.e.rule.rule->used = 1;
-	  } else {
-	    local_printf("%s", o->u.e.e.rule.name);
-	  }
-	  local_printf(" *( OWS \",\" [ OWS ");
-	  local_printf("%s", (o->u.e.e.rule.rule) ? 
-		 o->u.e.e.rule.rule->name : 
-		 o->u.e.e.rule.name);
-	  local_printf(" ] )");
-	}
-	else {
-	  local_printf("TODO: something is wrong");
-	} 
+	  local_printf(" ] OWS \",\" )");
       } else {
 	printrep(&o->u.e.repetition);
 	if (o->u.e.e.rule.rule) {
