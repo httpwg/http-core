@@ -1653,6 +1653,9 @@
 <xsl:template match="table" mode="cleanup">
   <texttable>
     <xsl:apply-templates select="@anchor|@align" mode="cleanup"/>
+    <xsl:if test="not(@align)">
+      <xsl:attribute name="align">left</xsl:attribute>
+    </xsl:if>
     <xsl:variable name="title">
       <xsl:choose>
         <xsl:when test="name">
@@ -1677,7 +1680,7 @@
         <xsl:choose>
           <xsl:when test="tbody/tr[1]/*[1] and tbody/tr[1]/*[1]/@align"><xsl:value-of select="tbody/tr[1]/*[1]/@align"/></xsl:when>
           <xsl:when test="@align"><xsl:value-of select="@align"/></xsl:when>
-          <xsl:otherwise>center</xsl:otherwise>
+          <xsl:otherwise>left</xsl:otherwise>
         </xsl:choose>
       </xsl:variable>
       <ttcol align="{$align}">
