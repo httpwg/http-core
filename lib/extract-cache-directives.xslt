@@ -9,7 +9,7 @@
 
 <xsl:template match="/">
   <xsl:variable name="table">
-    <table anchor="iana.cache.directive.registration.table">
+    <table align="left" anchor="iana.cache.directive.registration.table">
       <thead>
         <tr>
           <th>Cache Directive</th>
