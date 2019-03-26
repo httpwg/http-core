@@ -7,18 +7,22 @@
 
 <xsl:output indent="yes" omit-xml-declaration="yes"/>
 
-<xsl:output indent="yes" omit-xml-declaration="yes"/>
-
 <xsl:template match="/">
   <xsl:variable name="table">
-    <texttable align="left" suppress-title="true" anchor="iana.status.code.registration.table">
-      <ttcol>Value</ttcol>
-      <ttcol>Description</ttcol>
-      <ttcol>Reference</ttcol>
-      <xsl:apply-templates select="//section[iref[contains(@item,' (status code)') and @primary='true']]">
-        <xsl:sort select="iref[contains(@item,' (status code)') and @primary='true']/@item"/>
-      </xsl:apply-templates>
-    </texttable>
+    <table anchor="iana.status.code.registration.table">
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th>Description</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        <xsl:apply-templates select="//section[iref[contains(@item,' (status code)') and @primary='true']]">
+          <xsl:sort select="iref[contains(@item,' (status code)') and @primary='true']/@item"/>
+        </xsl:apply-templates>
+      </tbody>
+    </table>
     <xsl:text>&#10;</xsl:text>
   </xsl:variable>
 
@@ -71,8 +75,11 @@
   <xsl:value-of select="."/>
 </xsl:template>
 
-<xsl:template match="texttable/text()" mode="tostring"/>
-<xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
+<xsl:template match="table/text()" mode="tostring"/>
+<xsl:template match="tr/text()" mode="tostring"/>
+<xsl:template match="thead/text()" mode="tostring"/>
+<xsl:template match="tbody/text()" mode="tostring"/>
+<xsl:template match="td[xref]/text()" mode="tostring"/>
 
 <xsl:template match="section">
   <xsl:variable name="t" select="iref[contains(@item,'(status code)')]/@item"/>
@@ -81,9 +88,11 @@
 
   <xsl:if test="not($redirects-to-other-part)">
     <xsl:text>&#10;</xsl:text>
-    <c><xsl:value-of select="substring-before($text,' ')"/></c>
-    <c><xsl:value-of select="substring($text,2+string-length(substring-before($text,' ')))"/></c>
-    <c><xref target="{@anchor}"/></c>
+    <tr>
+      <td><xsl:value-of select="substring-before($text,' ')"/></td>
+      <td><xsl:value-of select="substring($text,2+string-length(substring-before($text,' ')))"/></td>
+      <td><xref target="{@anchor}"/></td>
+    </tr>
   </xsl:if>
 </xsl:template>
 
