@@ -9,14 +9,20 @@
 
 <xsl:template match="/">
   <xsl:variable name="table">
-    <texttable align="left" suppress-title="true" anchor="iana.cache.directive.registration.table">
-      <ttcol>Cache Directive</ttcol>
-      <ttcol>Reference</ttcol>
+    <table anchor="iana.cache.directive.registration.table">
+      <thead>
+        <tr>
+          <th>Cache Directive</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
       <xsl:text>&#10;</xsl:text>
-      <xsl:apply-templates select="//iref[contains(@item,' (cache directive)') and @primary='true']">
-        <xsl:sort select="@item"/>
-      </xsl:apply-templates>
-    </texttable>
+      <tbody>
+        <xsl:apply-templates select="//iref[contains(@item,' (cache directive)') and @primary='true']">
+          <xsl:sort select="@item"/>
+        </xsl:apply-templates>
+      </tbody>
+    </table>
     <xsl:text>&#10;</xsl:text>
   </xsl:variable>
 
@@ -69,23 +75,28 @@
   <xsl:value-of select="."/>
 </xsl:template>
 
-<xsl:template match="texttable/text()" mode="tostring"/>
-<xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
+<xsl:template match="table/text()" mode="tostring"/>
+<xsl:template match="tr/text()" mode="tostring"/>
+<xsl:template match="thead/text()" mode="tostring"/>
+<xsl:template match="tbody/text()" mode="tostring"/>
+<xsl:template match="td[xref]/text()" mode="tostring"/>
 
 <xsl:template match="iref">
   <xsl:variable name="t" select="@item"/>
   <xsl:variable name="dir" select="substring-before($t,' (cache directive)')"/>
   <xsl:if test="not(preceding::iref[@item=$t])">
     <xsl:text>&#10;</xsl:text>
-    <c><xsl:value-of select="$dir"/></c>
-    <c>
-      <xsl:for-each select="//*[iref[@item=$t]]">
-        <xsl:if test="position()!=1">
-          <xsl:text>, </xsl:text>
-        </xsl:if>
-        <xref target="{ancestor-or-self::*[@anchor][1]/@anchor}"/>
-      </xsl:for-each>
-    </c>
+    <tr>
+      <td><xsl:value-of select="$dir"/></td>
+      <td>
+        <xsl:for-each select="//*[iref[@item=$t]]">
+          <xsl:if test="position()!=1">
+            <xsl:text>, </xsl:text>
+          </xsl:if>
+          <xref target="{ancestor-or-self::*[@anchor][1]/@anchor}"/>
+        </xsl:for-each>
+      </td>
+    </tr>
   </xsl:if>
 </xsl:template>
 
