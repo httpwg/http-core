@@ -453,8 +453,8 @@ p_listrule_rfc7230(object *o)
     }
     local_printf(" *( OWS \",\" [ OWS ");
     local_printf("%s", (o->u.e.e.rule.rule) ?
-    o->u.e.e.rule.rule->name :
-    o->u.e.e.rule.name);
+      o->u.e.e.rule.rule->name :
+      o->u.e.e.rule.name);
     local_printf(" ] )");
   }
   else {
@@ -467,14 +467,18 @@ p_listrule_rfc7230(object *o)
 static void
 p_listrule_2019(object *o)
 {
-  local_printf("*( OWS \",\" ) *( [ OWS ");
+  local_printf("[ ");
   if (o->u.e.e.rule.rule) {
     local_printf("%s", o->u.e.e.rule.rule->name);
     o->u.e.e.rule.rule->used = 1;
   } else {
     local_printf("%s", o->u.e.e.rule.name);
   }
-  local_printf(" ] OWS \",\" )");
+  local_printf(" ] *( OWS \",\" OWS [ ");
+  local_printf("%s", (o->u.e.e.rule.rule) ?
+    o->u.e.e.rule.rule->name :
+    o->u.e.e.rule.name);
+  local_printf(" ] )");
 }
 
 static void
