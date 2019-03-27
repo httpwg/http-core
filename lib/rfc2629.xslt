@@ -3068,6 +3068,10 @@
 <xsl:template name="displayname-for-author">
   <xsl:param name="not-reversed"/>
 
+  <xsl:variable name="surname">
+    <xsl:call-template name="get-author-surname"/>
+  </xsl:variable>
+  
   <xsl:variable name="initials">
     <xsl:call-template name="format-initials"/>
   </xsl:variable>
@@ -3079,14 +3083,14 @@
 
   <!-- surname/initials is reversed for last author except when it's the only one -->
   <xsl:choose>
-    <xsl:when test="$truncated-initials='' and @surname">
-      <xsl:value-of select="@surname"/>
+    <xsl:when test="$truncated-initials='' and $surname">
+      <xsl:value-of select="$surname"/>
     </xsl:when>
-    <xsl:when test="position()=last() and position()!=1">
+    <xsl:when test="$not-reversed">
       <xsl:value-of select="concat($truncated-initials,' ',@surname)" />
     </xsl:when>
     <xsl:otherwise>
-      <xsl:value-of select="concat(@surname,', ',$truncated-initials)" />
+      <xsl:value-of select="concat($surname,', ',$truncated-initials)" />
     </xsl:otherwise>
   </xsl:choose>
   <xsl:if test="@asciiSurname!='' or @asciiInitials!=''">
@@ -3107,7 +3111,7 @@
           <xsl:value-of select="@asciiSurname"/>
         </xsl:when>
         <xsl:otherwise>
-          <xsl:value-of select="@surname"/>
+          <xsl:value-of select="$surname"/>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
@@ -3874,9 +3878,23 @@
         <!-- DC creator, see RFC2731 -->
         <xsl:for-each select="front/author">
           <xsl:variable name="initials">
-            <xsl:call-template name="format-initials"/>
+            <xsl:call-template name="get-author-initials"/>
           </xsl:variable>
-          <meta name="dcterms.creator" content="{concat(@surname,', ',$initials)}" />
+          <xsl:variable name="surname">
+            <xsl:call-template name="get-author-surname"/>
+          </xsl:variable>
+          <xsl:variable name="disp">
+            <xsl:if test="$surname!=''">
+              <xsl:value-of select="$surname"/>
+              <xsl:if test="$initials!=''">
+                <xsl:text>, </xsl:text>
+                <xsl:value-of select="$initials"/>
+              </xsl:if>
+            </xsl:if>
+          </xsl:variable>
+          <xsl:if test="normalize-space($disp)!=''">
+            <meta name="dcterms.creator" content="{normalize-space($disp)}" />
+          </xsl:if>
         </xsl:for-each>
 
         <xsl:if test="$xml2rfc-private=''">
@@ -6904,14 +6922,14 @@ caption.caption-top {
 }
 </xsl:if>
 <xsl:if test="//table">
-table:not([class]) tr {
+table.v3 tr {
     vertical-align: top;
 }
-table:not([class]) th {
+table.v3 th {
   background-color: #e9e9e9;
   vertical-align: top;
 }
-table:not([class]) tr:nth-child(2n) > td {
+table.v3 tr:nth-child(2n) > td {
   background-color: #f5f5f5;
   vertical-align: top;
 }
@@ -10003,11 +10021,11 @@ dd, li, p {
     <xsl:call-template name="copy-anchor"/>
     <xsl:apply-templates select="iref"/>
     <xsl:variable name="style">
-      <xsl:value-of select="$css-tt"/>
+      <xsl:text>v3 </xsl:text>
       <xsl:choose>
-        <xsl:when test="@align='left'"><xsl:text> </xsl:text><xsl:value-of select="$css-tleft"/></xsl:when>
-        <xsl:when test="@align='right'"><xsl:text> </xsl:text><xsl:value-of select="$css-tright"/></xsl:when>
-        <xsl:when test="@align='center' or not(@align) or @align=''"><xsl:text> </xsl:text><xsl:value-of select="$css-tcenter"/></xsl:when>
+        <xsl:when test="@align='left'"><xsl:value-of select="$css-tleft"/></xsl:when>
+        <xsl:when test="@align='right'"><xsl:value-of select="$css-tright"/></xsl:when>
+        <xsl:when test="@align='center' or not(@align) or @align=''"><xsl:value-of select="$css-tcenter"/></xsl:when>
         <xsl:otherwise/>
       </xsl:choose>
     </xsl:variable>
@@ -10438,11 +10456,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1091 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1091 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1095 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1095 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/03/22 08:50:21 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/03/22 08:50:21 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/03/26 15:14:09 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/03/26 15:14:09 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -10610,7 +10628,19 @@ dd, li, p {
 <!-- reformat contents of author/@initials -->
 <xsl:template name="format-initials">
   <xsl:param name="initials" select="@initials"/>
-  <xsl:variable name="normalized" select="normalize-space($initials)"/>
+
+  <xsl:variable name="computed-initials">
+    <xsl:choose>
+      <xsl:when test="normalize-space($initials)!=''">
+        <xsl:value-of select="$initials"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="get-author-initials"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+ 
+  <xsl:variable name="normalized" select="normalize-space($computed-initials)"/>
 
   <xsl:choose>
     <xsl:when test="$normalized=''">

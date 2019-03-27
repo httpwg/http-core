@@ -13,15 +13,21 @@
 
 <xsl:template match="/">
   <xsl:variable name="table">
-    <texttable align="left" suppress-title="true" anchor="iana.header.registration.table">
-      <ttcol>Header Field Name</ttcol>
-      <ttcol>Status</ttcol>
-      <ttcol>Reference</ttcol>
+    <table align="left" anchor="iana.header.registration.table">
+      <thead>
+        <tr>
+          <th>Header Field Name</th>
+          <th>Status</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
       <xsl:text>&#10;</xsl:text>
-      <xsl:apply-templates select="//section[iref[contains(@item,' header field') and @primary='true']]">
-        <xsl:sort select="translate(iref[contains(@item,' header field') and @primary='true']/@item,$ucase,$lcase)"/>
-      </xsl:apply-templates>
-    </texttable>
+      <tbody>
+        <xsl:apply-templates select="//section[iref[contains(@item,' header field') and @primary='true']]">
+          <xsl:sort select="translate(iref[contains(@item,' header field') and @primary='true']/@item,$ucase,$lcase)"/>
+        </xsl:apply-templates>
+      </tbody>
+    </table>
     <xsl:text>&#10;</xsl:text>
   </xsl:variable>
 
@@ -74,8 +80,11 @@
   <xsl:value-of select="."/>
 </xsl:template>
 
-<xsl:template match="texttable/text()" mode="tostring"/>
-<xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
+<xsl:template match="table/text()" mode="tostring"/>
+<xsl:template match="tr/text()" mode="tostring"/>
+<xsl:template match="thead/text()" mode="tostring"/>
+<xsl:template match="tbody/text()" mode="tostring"/>
+<xsl:template match="td[xref]/text()" mode="tostring"/>
 
 <xsl:template match="section">
   <xsl:variable name="status" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
@@ -86,9 +95,11 @@
   </xsl:variable>
   <xsl:variable name="t" select="iref[contains(@item,'header field')]/@item"/>
   <xsl:text>&#10;</xsl:text>
-  <c><xsl:value-of select="substring-before($t,' header field')"/></c>
-  <c><xsl:value-of select="$status"/></c>
-  <c><xref target="{@anchor}"/></c>
+  <tr>
+    <td><xsl:value-of select="substring-before($t,' header field')"/></td>
+    <td><xsl:value-of select="$status"/></td>
+    <td><xref target="{@anchor}"/></td>
+  </tr>  
 </xsl:template>
 
 </xsl:transform>
