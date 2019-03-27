@@ -114,6 +114,7 @@ int qflag = 0;		/* quiet */
 int canon = 1;		/* canonify */
 int asxml = 0;    /* output XML */
 int olenlimit = 0;   /* 0 for unlimited, might be any other value */
+int listrulex = 0;   /* 0 for RFC 7320-style, 1 for 2019 experimental */
 
 int yyparse(void);
 
@@ -122,7 +123,7 @@ usage(void)
 {
   fprintf(stderr, "Bill's ABNF Parser version %s\n", versionstring);
   fprintf(stderr, " (with extensions from <https://svn.tools.ietf.org/svn/wg/httpbis/abnfparser/bap/>)\n", versionstring);
-  fprintf(stderr, "usage: bap [-cknqtx][-i rules][-l num][-S name][-X ext][file]\n");
+  fprintf(stderr, "usage: bap [-cknqtx][-i rules][-l num][-L rtyp][-S name][-X ext][file]\n");
   fprintf(stderr, " parse ABNF grammar from file or stdin\n");
   fprintf(stderr, " Input options:\n");
   fprintf(stderr, "  -c       include rule definition line # in comment\n");
@@ -133,6 +134,7 @@ usage(void)
   fprintf(stderr, " Output options:\n");
   fprintf(stderr, "  -k       add comments for printable characters specified as %%x\n");
   fprintf(stderr, "  -l num   limit the length of each line to \"num\" characters\n");
+  fprintf(stderr, "  -L rtyp  how to expand #list production (0 == 2014, 1 == 2019)\n");
   fprintf(stderr, "  -n       don't \"canonify\" result\n");
   fprintf(stderr, "  -q       don't print parsed grammar\n");
   fprintf(stderr, "  -t       include type info in result\n");
@@ -155,7 +157,7 @@ main(int argc, char **argv)
 #endif
   hcreate(MAXRULE);
 
-  while ((ch = getopt(argc, argv, "cdi:kntqS:xl:X:")) != -1) {
+  while ((ch = getopt(argc, argv, "cdi:kntqS:xl:L:X:")) != -1) {
     switch (ch) {
     case 'c':
       cflag++;
@@ -222,6 +224,14 @@ main(int argc, char **argv)
 
     case 'l':
       olenlimit = atoi(optarg);
+      break;
+
+    case 'L':
+      listrulex = atoi(optarg);
+      if (listrulex != 0 && listrulex != 1) {
+        fprintf(stderr, "-L: illegal argument %d\n", listrulex);
+        exit(2);
+      }
       break;
 
     default:
@@ -416,6 +426,57 @@ printobjasxml(object *o, int indent)
  */
 #define NOBRACKET(o)	((o->next == NULL) && (o->u.e.repetition.lo == 0))
 
+// code to emit #rule (RFC 7230)
+static void
+p_listrule_rfc7230(object *o)
+{
+  if (o->u.e.repetition.lo == 0) {
+    local_printf("[ ( \",\" / ");
+    if (o->u.e.e.rule.rule) {
+      local_printf("%s", o->u.e.e.rule.rule->name);
+      o->u.e.e.rule.rule->used = 1;
+    } else {
+      local_printf("%s", o->u.e.e.rule.name);
+    }
+    local_printf(" ) *( OWS \",\" [ OWS ");
+    local_printf("%s", (o->u.e.e.rule.rule) ?
+      o->u.e.e.rule.rule->name :
+      o->u.e.e.rule.name);
+      local_printf(" ] ) ]");
+  } else if (o->u.e.repetition.lo == 1) {
+    local_printf(" *( \",\" OWS ) ");
+    if (o->u.e.e.rule.rule) {
+      local_printf("%s", o->u.e.e.rule.rule->name);
+      o->u.e.e.rule.rule->used = 1;
+    } else {
+      local_printf("%s", o->u.e.e.rule.name);
+    }
+    local_printf(" *( OWS \",\" [ OWS ");
+    local_printf("%s", (o->u.e.e.rule.rule) ?
+    o->u.e.e.rule.rule->name :
+    o->u.e.e.rule.name);
+    local_printf(" ] )");
+  }
+  else {
+    local_printf("TODO: something is wrong");
+  }
+}
+
+// code to emit #rule (2019)
+// #element =&gt; *( OWS "," ) *( [ OWS element ] OWS "," )
+static void
+p_listrule_2019(object *o)
+{
+  local_printf("*( OWS \",\" ) *( [ OWS ");
+  if (o->u.e.e.rule.rule) {
+    local_printf("%s", o->u.e.e.rule.rule->name);
+    o->u.e.e.rule.rule->used = 1;
+  } else {
+    local_printf("%s", o->u.e.e.rule.name);
+  }
+  local_printf(" ] OWS \",\" )");
+}
+
 static void
 printobj_r(object *o, int parenttype, int tflag)
 {
@@ -440,18 +501,14 @@ printobj_r(object *o, int parenttype, int tflag)
 	local_printf(" )");
       break;
     case T_RULE: /* identation to delimit the code change */
-//   #element =&gt; *( OWS "," ) *( [ OWS element ] OWS "," )
       if (tflag)
-	local_printf("{RULE}");
+      local_printf("{RULE}");
       if (o->u.e.islist) {
-	  local_printf("*( OWS \",\" ) *( [ OWS ");
-	  if (o->u.e.e.rule.rule) {
-	    local_printf("%s", o->u.e.e.rule.rule->name);
-	    o->u.e.e.rule.rule->used = 1;
-	  } else {
-	    local_printf("%s", o->u.e.e.rule.name);
-	  }
-	  local_printf(" ] OWS \",\" )");
+        if (listrulex == 0) {
+          p_listrule_rfc7230(o);
+        } else {
+          p_listrule_2019(o);
+        }
       } else {
 	printrep(&o->u.e.repetition);
 	if (o->u.e.e.rule.rule) {
