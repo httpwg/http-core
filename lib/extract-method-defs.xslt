@@ -9,15 +9,21 @@
 
 <xsl:template match="/">
   <xsl:variable name="table">
-    <texttable align="left" suppress-title="true" anchor="iana.method.registration.table">
-      <ttcol>Method</ttcol>
-      <ttcol>Safe</ttcol>
-      <ttcol>Idempotent</ttcol>
-      <ttcol>Reference</ttcol>
-      <xsl:apply-templates select="//section[iref[contains(@item,' method') and @primary='true']]">
-        <xsl:sort select="iref[contains(@item,' method') and @primary='true']/@item"/>
-      </xsl:apply-templates>
-    </texttable>
+    <table anchor="iana.method.registration.table">
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Safe</th>
+          <th>Idempotent</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        <xsl:apply-templates select="//section[iref[contains(@item,' method') and @primary='true']]">
+          <xsl:sort select="iref[contains(@item,' method') and @primary='true']/@item"/>
+        </xsl:apply-templates>
+      </tbody>
+    </table>
     <xsl:text>&#10;</xsl:text>
   </xsl:variable>
 
@@ -28,10 +34,10 @@
   <xsl:text>&#10;</xsl:text>
   
   <!-- check against current version -->
-  <xsl:variable name="oldtable" select="//texttable[@anchor='iana.method.registration.table']" />
+  <xsl:variable name="oldtable" select="//table[@anchor='iana.method.registration.table']" />
 
   <xsl:variable name="s">
-    <xsl:apply-templates select="$table//texttable" mode="tostring"/>
+    <xsl:apply-templates select="$table//table" mode="tostring"/>
   </xsl:variable>
   
   <xsl:variable name="s1">
@@ -70,8 +76,11 @@
   <xsl:value-of select="."/>
 </xsl:template>
 
-<xsl:template match="texttable/text()" mode="tostring"/>
-<xsl:template match="texttable/c[xref]/text()" mode="tostring"/>
+<xsl:template match="table/text()" mode="tostring"/>
+<xsl:template match="tr/text()" mode="tostring"/>
+<xsl:template match="thead/text()" mode="tostring"/>
+<xsl:template match="tbody/text()" mode="tostring"/>
+<xsl:template match="td[xref]/text()" mode="tostring"/>
 
 <xsl:template match="section">
   <xsl:variable name="t" select="iref[contains(@item,' method')]/@item"/>
@@ -92,10 +101,12 @@
   </xsl:variable>
 
   <xsl:text>&#10;</xsl:text>
-  <c><xsl:value-of select="$text"/></c>
-  <c><xsl:value-of select="$safe"/></c>
-  <c><xsl:value-of select="$idempotent"/></c>
-  <c><xref target="{@anchor}"/></c>
+  <tr>
+    <td><xsl:value-of select="$text"/></td>
+    <td><xsl:value-of select="$safe"/></td>
+    <td><xsl:value-of select="$idempotent"/></td>
+    <td><xref target="{@anchor}"/></td>
+  </tr>
 </xsl:template>
 
 </xsl:transform>
