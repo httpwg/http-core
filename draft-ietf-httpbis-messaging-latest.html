@@ -1336,10 +1336,9 @@ Host: www.example.org
          <h2 id="rfc.section.4"><a href="#rfc.section.4">4.</a>&nbsp;<a href="#status.line">Status Line</a></h2>
          <div id="rfc.section.4.p.1">
             <p>The first line of a response message is the status-line, consisting of the protocol
-               version, a space (SP), the status code, another space, a possibly empty textual phrase
-               describing the status code, and ending with CRLF.<a class="self" href="#rfc.section.4.p.1">¶</a></p>
+               version, a space (SP), the status code, another space, an <em class="bcp14">OPTIONAL</em> textual phrase describing the status code, and ending with CRLF.<a class="self" href="#rfc.section.4.p.1">¶</a></p>
          </div>
-         <div id="rfc.section.4.p.2"><pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.16"></span>  <a href="#status.line" class="smpl">status-line</a> = <a href="#http.version" class="smpl">HTTP-version</a> <a href="#core.rules" class="smpl">SP</a> <a href="#status.line" class="smpl">status-code</a> <a href="#core.rules" class="smpl">SP</a> <a href="#status.line" class="smpl">reason-phrase</a> <a href="#core.rules" class="smpl">CRLF</a>
+         <div id="rfc.section.4.p.2"><pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.16"></span>  <a href="#status.line" class="smpl">status-line</a> = <a href="#http.version" class="smpl">HTTP-version</a> <a href="#core.rules" class="smpl">SP</a> <a href="#status.line" class="smpl">status-code</a> <a href="#core.rules" class="smpl">SP</a> [<a href="#status.line" class="smpl">reason-phrase</a>] <a href="#core.rules" class="smpl">CRLF</a>
 </pre></div>
          <div id="rfc.section.4.p.3">
             <p>Although the status-line grammar rule requires that each of the component elements
@@ -1365,13 +1364,14 @@ Host: www.example.org
                associated with the numeric status code, mostly out of deference to earlier Internet
                application protocols that were more frequently used with interactive text clients.<a class="self" href="#rfc.section.4.p.6">¶</a></p>
          </div>
-         <div id="rfc.section.4.p.7">
-            <p>A client <em class="bcp14">SHOULD</em> ignore the reason-phrase content because it is not a reliable channel for information
-               (it might be discarded or overwritten by intermediaries, and it is not transmitted
-               in other versions of HTTP).<a class="self" href="#rfc.section.4.p.7">¶</a></p>
-         </div>
-         <div id="rfc.section.4.p.8"><pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.18"></span>  <a href="#status.line" class="smpl">reason-phrase</a>  = *( <a href="#core.rules" class="smpl">HTAB</a> / <a href="#core.rules" class="smpl">SP</a> / <a href="#core.rules" class="smpl">VCHAR</a> / <a href="#imported.rules" class="smpl">obs-text</a> )
+         <div id="rfc.section.4.p.7"><pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.18"></span>  <a href="#status.line" class="smpl">reason-phrase</a>  = 1*( <a href="#core.rules" class="smpl">HTAB</a> / <a href="#core.rules" class="smpl">SP</a> / <a href="#core.rules" class="smpl">VCHAR</a> / <a href="#imported.rules" class="smpl">obs-text</a> )
 </pre></div>
+         <div id="rfc.section.4.p.8">
+            <p>A client <em class="bcp14">SHOULD</em> ignore the reason-phrase content because it is not a reliable channel for information
+               (it might be translated for a given locale, overwritten by intermediaries, or discarded
+               when the message is forwarded via other versions of HTTP). A server <em class="bcp14">MUST</em> send the space that separates status-code from the reason-phrase even when the reason-phrase
+               is absent (i.e., the status-line would end with the three octets SP CR LF).<a class="self" href="#rfc.section.4.p.8">¶</a></p>
+         </div>
       </section>
       <section id="header.fields">
          <h2 id="rfc.section.5"><a href="#rfc.section.5">5.</a>&nbsp;<a href="#header.fields">Header Fields</a></h2>
@@ -2968,14 +2968,14 @@ Upgrade: HTTP/2.0
 <a href="#imported.rules" class="smpl">quoted-string</a> = &lt;quoted-string, see <a href="#Semantics" id="rfc.xref.Semantics.63"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.4.2.3">Section 4.2.3</a>&gt;
 
 <a href="#header.te" class="smpl">rank</a> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
-<a href="#status.line" class="smpl">reason-phrase</a> = *( HTAB / SP / VCHAR / obs-text )
+<a href="#status.line" class="smpl">reason-phrase</a> = 1*( HTAB / SP / VCHAR / obs-text )
 <a href="#request.line" class="smpl">request-line</a> = method SP request-target SP HTTP-version CRLF
 <a href="#request.target" class="smpl">request-target</a> = origin-form / absolute-form / authority-form /
  asterisk-form
 
 <a href="#message.format" class="smpl">start-line</a> = request-line / status-line
 <a href="#status.line" class="smpl">status-code</a> = 3DIGIT
-<a href="#status.line" class="smpl">status-line</a> = HTTP-version SP status-code SP reason-phrase CRLF
+<a href="#status.line" class="smpl">status-line</a> = HTTP-version SP status-code SP [ reason-phrase ] CRLF
 
 <a href="#header.te" class="smpl">t-codings</a> = "trailers" / ( transfer-coding [ t-ranking ] )
 <a href="#header.te" class="smpl">t-ranking</a> = OWS ";" OWS "q=" rank
@@ -3294,6 +3294,8 @@ Upgrade: HTTP/2.0
             <div id="rfc.section.D.6.p.1">
                <ul>
                   <li>In <a href="#header.upgrade" id="rfc.xref.header.upgrade.2" title="Upgrade">Section&nbsp;9.8</a>, clarify that protocol-name is to be matched case-insensitively (&lt;<a href="https://github.com/httpwg/http-core/issues/8">https://github.com/httpwg/http-core/issues/8</a>&gt;)
+                  </li>
+                  <li>In <a href="#status.line" title="Status Line">Section&nbsp;4</a>, add clarifications about empty reason phrases (&lt;<a href="https://github.com/httpwg/http-core/issues/197">https://github.com/httpwg/http-core/issues/197</a>&gt;)
                   </li>
                </ul>
             </div>
