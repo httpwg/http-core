@@ -54,3 +54,6 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 * [Last Draft](https://datatracker.ietf.org/doc/draft-ietf-httpbis-auth/)
 * Merged into Semantics draft 01
 
+## Tests
+
+* [http-tests/cache-tests](https://github.com/http-tests/cache-tests)
