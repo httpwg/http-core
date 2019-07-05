@@ -1045,6 +1045,10 @@
       <xsl:apply-templates select="artwork[1]" mode="cleanup"/>
     </xsl:when>
     <xsl:when test="not(artwork) and parent::figure">
+      <xsl:call-template name="error">
+        <xsl:with-param name="inline">no</xsl:with-param>
+        <xsl:with-param name="msg">artset needs to contain at least one artwork child element</xsl:with-param>
+      </xsl:call-template>
       <artwork/>
     </xsl:when>
     <xsl:otherwise/>

@@ -1436,6 +1436,9 @@
       <xsl:apply-templates select="artwork[1]"/>
     </xsl:when>
     <xsl:otherwise>
+      <xsl:call-template name="error">
+        <xsl:with-param name="msg">artset needs to contain at least one artwork child element</xsl:with-param>
+      </xsl:call-template>
       <p>
         <xsl:call-template name="attach-paragraph-number-as-id"/>
         <xsl:if test="@anchor">
@@ -1704,11 +1707,24 @@
   <xsl:if test="address/postal">
     <xsl:choose>
       <xsl:when test="not(address/postal/postalLine)">
+        <xsl:if test="address/postal/extaddr">
+          <xsl:call-template name="emit-postal-line">
+            <xsl:with-param name="value">
+              <xsl:for-each select="address/postal/extaddr">
+                <xsl:call-template name="extract-normalized">
+                  <xsl:with-param name="name" select="'address/postal/extaddr'"/>
+                  <xsl:with-param name="ascii" select="$ascii"/>
+                </xsl:call-template>
+                <xsl:if test="position()!=last()">, </xsl:if>
+              </xsl:for-each>
+            </xsl:with-param>
+          </xsl:call-template>
+        </xsl:if>
         <xsl:for-each select="address/postal/street">
           <xsl:call-template name="emit-postal-line">
             <xsl:with-param name="value">
               <xsl:call-template name="extract-normalized">
-                <xsl:with-param name="name" select="'street'"/>
+                <xsl:with-param name="name" select="'address/postal/street'"/>
                 <xsl:with-param name="ascii" select="$ascii"/>
               </xsl:call-template>
             </xsl:with-param>
@@ -10605,11 +10621,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1122 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1122 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1124 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1124 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/05/13 03:27:21 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/05/13 03:27:21 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/05/16 05:56:11 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/05/16 05:56:11 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
