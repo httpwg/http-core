@@ -164,6 +164,11 @@
 <xsl:template match="rfc/@version" mode="cleanup"/>
 <xsl:template match="@pn" mode="cleanup"/>
 
+<xsl:template match="x:u-map" mode="cleanup"/>
+<xsl:template match="u" mode="cleanup">
+  <xsl:call-template name="emit-u"/>
+</xsl:template>
+
 <!-- extensions -->
 
 <xsl:template match="x:abnf-char-sequence" mode="cleanup">
@@ -649,7 +654,7 @@
   </xsl:choose>
 </xsl:template>
 
-<xsl:template match="xref[node() and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//name//@anchor or @target=//references/@anchor)]" mode="cleanup">
+<xsl:template match="xref[node() and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//name//@anchor or @target=//references/@anchor or @target=//artwork/@anchor or @target=//sourcecode/@anchor or @target=//artset/@anchor)]" mode="cleanup">
   <!-- remove the link -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
@@ -659,7 +664,7 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[not(node()) and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//references/@anchor)]" mode="cleanup">
+<xsl:template match="xref[not(node()) and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//references/@anchor or @target=//artwork/@anchor or @target=//sourcecode/@anchor or @target=//artset/@anchor)]" mode="cleanup">
   <xsl:variable name="content">
     <xsl:apply-templates select="."/>
   </xsl:variable>
@@ -916,6 +921,10 @@
   </xsl:for-each>
   <figure>
     <xsl:apply-templates select="@align|@alt|@anchor|@height|@src|@suppress-title|@width" mode="cleanup" />
+    <xsl:if test="not(@anchor) and artset/artwork/@anchor">
+      <!-- propagate anchor -->
+      <xsl:copy-of select="artset/artwork/@anchor[1]"/>
+    </xsl:if>
     <xsl:variable name="title">
       <xsl:choose>
         <xsl:when test="name">
@@ -933,7 +942,7 @@
       <xsl:attribute name="title"><xsl:value-of select="$title"/></xsl:attribute>
     </xsl:if>
     <xsl:apply-templates select=".//artwork//iref|.//sourcecode//iref" mode="cleanup"/>
-    <xsl:apply-templates select="iref|preamble|artwork|sourcecode|postamble|ed:replace|ed:ins|ed:del" mode="cleanup" />
+    <xsl:apply-templates select="iref|preamble|artwork|artset|sourcecode|postamble|ed:replace|ed:ins|ed:del" mode="cleanup" />
   </figure>
 </xsl:template>
 <xsl:template match="figure/name" mode="cleanup"/>
@@ -955,6 +964,10 @@
 
 <xsl:template match="artwork[not(ancestor::figure)]" mode="cleanup">
   <figure>
+    <!-- propagate anchor -->
+    <xsl:if test="parent::artset and not(../@anchor)">
+      <xsl:copy-of select="@anchor"/>
+    </xsl:if>
     <!-- move irefs up -->
     <xsl:for-each select="iref">
       <iref>
@@ -964,6 +977,8 @@
     <xsl:call-template name="insert-markup"/>
   </figure>
 </xsl:template>
+
+<xsl:template match="artwork/@anchor" mode="cleanup"/>
 
 <xsl:template name="insert-markup">
   <xsl:variable name="content2"><xsl:apply-templates select="node()"/></xsl:variable>
@@ -1018,6 +1033,26 @@
     </xsl:otherwise>
   </xsl:choose>
   
+</xsl:template>
+
+<xsl:template match="artset" mode="cleanup">
+  <!-- see https://tools.ietf.org/html/draft-levkowetz-xml2rfc-v3-implementation-notes-08#section-3.1.1 -->
+  <xsl:choose>
+    <xsl:when test="artwork[not(svg:svg or normalize-space(.)='' or @src!='')]">
+      <xsl:apply-templates select="artwork[not(svg:svg or normalize-space(.)='' or @src!='')][1]" mode="cleanup"/>
+    </xsl:when>
+    <xsl:when test="artwork">
+      <xsl:apply-templates select="artwork[1]" mode="cleanup"/>
+    </xsl:when>
+    <xsl:when test="not(artwork) and parent::figure">
+      <xsl:call-template name="error">
+        <xsl:with-param name="inline">no</xsl:with-param>
+        <xsl:with-param name="msg">artset needs to contain at least one artwork child element</xsl:with-param>
+      </xsl:call-template>
+      <artwork/>
+    </xsl:when>
+    <xsl:otherwise/>
+  </xsl:choose>
 </xsl:template>
 
 <!-- email repetitions -->
@@ -1597,20 +1632,29 @@
 
 <!-- Unordered Lists -->
 <xsl:template match="ul" mode="cleanup">
-  <t>
-    <xsl:choose>
-      <xsl:when test="@empty='true'">
-        <list style="empty">
-          <xsl:apply-templates mode="cleanup"/>
-        </list>
-      </xsl:when>
-      <xsl:otherwise>
-        <list style="symbols">
-          <xsl:apply-templates mode="cleanup"/>
-        </list>
-      </xsl:otherwise>
-    </xsl:choose>
-  </t>
+  <xsl:choose>
+    <xsl:when test="not(li) and @x:when-empty">
+      <t>
+        <xsl:value-of select="@x:when-empty"/>
+      </t>
+    </xsl:when>
+    <xsl:otherwise>
+      <t>
+        <xsl:choose>
+          <xsl:when test="@empty='true'">
+            <list style="empty">
+              <xsl:apply-templates mode="cleanup"/>
+            </list>
+          </xsl:when>
+          <xsl:otherwise>
+            <list style="symbols">
+              <xsl:apply-templates mode="cleanup"/>
+            </list>
+          </xsl:otherwise>
+        </xsl:choose>
+      </t>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <!-- Source Code -->
@@ -1635,7 +1679,7 @@
       <figure>
         <xsl:apply-templates select=".//iref" mode="cleanup"/>
         <artwork>
-          <xsl:copy-of select="@anchor|@type"/>
+          <xsl:copy-of select="@type"/>
           <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
           <xsl:if test="starts-with(.,'&#10;')">
             <xsl:text>&#10;</xsl:text>
@@ -1671,6 +1715,12 @@
     </xsl:variable>
     <xsl:if test="$title!=''">
       <xsl:attribute name="title"><xsl:value-of select="$title"/></xsl:attribute>
+    </xsl:if>
+    <xsl:if test="count(thead/tr) > 1">
+      <xsl:call-template name="error">
+        <xsl:with-param name="inline">no</xsl:with-param>
+        <xsl:with-param name="msg">Multiple table header lines not supported</xsl:with-param>
+      </xsl:call-template>
     </xsl:if>
     <xsl:for-each select="thead/tr/*">
       <xsl:variable name="p" select="position()"/>
