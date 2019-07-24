@@ -198,6 +198,7 @@
 <xsl:template match="x:link" mode="cleanup"/>
 <xsl:template match="x:source" mode="cleanup"/>
 <xsl:template match="x:feedback" mode="cleanup"/>
+<xsl:template match="date/@x:include-day" mode="cleanup"/>
 
 <xsl:template match="x:parse-xml" mode="cleanup">
   <xsl:apply-templates/>
@@ -1632,20 +1633,29 @@
 
 <!-- Unordered Lists -->
 <xsl:template match="ul" mode="cleanup">
-  <t>
-    <xsl:choose>
-      <xsl:when test="@empty='true'">
-        <list style="empty">
-          <xsl:apply-templates mode="cleanup"/>
-        </list>
-      </xsl:when>
-      <xsl:otherwise>
-        <list style="symbols">
-          <xsl:apply-templates mode="cleanup"/>
-        </list>
-      </xsl:otherwise>
-    </xsl:choose>
-  </t>
+  <xsl:choose>
+    <xsl:when test="not(li) and @x:when-empty">
+      <t>
+        <xsl:value-of select="@x:when-empty"/>
+      </t>
+    </xsl:when>
+    <xsl:otherwise>
+      <t>
+        <xsl:choose>
+          <xsl:when test="@empty='true'">
+            <list style="empty">
+              <xsl:apply-templates mode="cleanup"/>
+            </list>
+          </xsl:when>
+          <xsl:otherwise>
+            <list style="symbols">
+              <xsl:apply-templates mode="cleanup"/>
+            </list>
+          </xsl:otherwise>
+        </xsl:choose>
+      </t>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <!-- Source Code -->
