@@ -198,6 +198,7 @@
 <xsl:template match="x:link" mode="cleanup"/>
 <xsl:template match="x:source" mode="cleanup"/>
 <xsl:template match="x:feedback" mode="cleanup"/>
+<xsl:template match="date/@x:include-day" mode="cleanup"/>
 
 <xsl:template match="x:parse-xml" mode="cleanup">
   <xsl:apply-templates/>
