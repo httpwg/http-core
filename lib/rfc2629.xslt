@@ -3396,8 +3396,8 @@
   <xsl:variable name="anchor" select="@anchor"/>
   <xsl:choose>
     <xsl:when test="not(@anchor)">
-      <xsl:call-template name="warning">
-        <xsl:with-param name="msg">missing anchor on reference: <xsl:value-of select="."/></xsl:with-param>
+      <xsl:call-template name="error">
+        <xsl:with-param name="msg">missing anchor attribute on reference, containing the text: <xsl:value-of select="normalize-space(.)"/></xsl:with-param>
       </xsl:call-template>
     </xsl:when>
     <xsl:when test="not(ancestor::ed:del) and (ancestor::rfc and not(key('xref-item',$anchor)))">
@@ -3460,7 +3460,7 @@
     </xsl:call-template>
   </xsl:if>
   <xsl:if test="count($front)>1">
-    <xsl:call-template name="warning">
+    <xsl:call-template name="info">
       <xsl:with-param name="msg">&lt;front> can be omitted when &lt;x:source> is specified (for '<xsl:value-of select="@anchor"/>')</xsl:with-param>
     </xsl:call-template>
   </xsl:if>
@@ -8939,9 +8939,18 @@ dd, li, p {
     </xsl:when>
     <xsl:when test="string(number($name))=$name">
       <xsl:variable name="uri">
-        <xsl:call-template name="compute-rfc-uri">
-          <xsl:with-param name="rfc" select="$name"/>
-        </xsl:call-template>
+        <xsl:variable name="refs" select="exslt:node-set($includeDirectives)//reference|/rfc/back/references//reference"/>
+        <xsl:variable name="ref" select="$refs[not(starts-with(front/title,'Erratum ID')) and seriesInfo[@name='RFC' and @value=$name]]"/>
+        <xsl:choose>
+          <xsl:when test="$ref">
+            <xsl:value-of select="concat('#',$ref/@anchor)"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:call-template name="compute-rfc-uri">
+              <xsl:with-param name="rfc" select="$name"/>
+            </xsl:call-template>
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:variable>
       <a href="{$uri}"><xsl:value-of select="$name"/></a>
       <xsl:call-template name="check-front-matter-ref">
@@ -8981,16 +8990,18 @@ dd, li, p {
 
 <xsl:template name="check-front-matter-ref">
   <xsl:param name="name"/>
+  <xsl:variable name="refs" select="exslt:node-set($includeDirectives)//reference|/rfc/back/references//reference"/>
   <xsl:choose>
     <xsl:when test="starts-with($name,'draft-')">
-      <xsl:if test="not(//references//reference//seriesInfo[@name='Internet-Draft' and @value=$name])">
+      <xsl:if test="not($refs//seriesInfo[@name='Internet-Draft' and @value=$name])">
         <xsl:call-template name="warning">
           <xsl:with-param name="msg" select="concat('front matter mentions I-D ',$name,' for which there is no reference element')"/>
         </xsl:call-template>
       </xsl:if>
     </xsl:when>
     <xsl:otherwise>
-      <xsl:if test="not(//references//reference//seriesInfo[@name='RFC' and @value=$name])">
+      <xsl:variable name="ref" select="$refs[not(starts-with(front/title,'Erratum ID')) and seriesInfo[@name='RFC' and @value=$name]]"/>
+      <xsl:if test="not($ref)">
         <xsl:call-template name="warning">
           <xsl:with-param name="msg" select="concat('front matter mentions RFC ',$name,' for which there is no reference element')"/>
         </xsl:call-template>
@@ -10654,11 +10665,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1129 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1129 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1133 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1133 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/07/13 11:05:42 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/07/13 11:05:42 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/08/30 12:05:57 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/08/30 12:05:57 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
