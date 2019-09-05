@@ -249,7 +249,7 @@
 <iref item="headers"/>
 <iref item="header field"/>
 <t>
-   All HTTP/1.1 messages consist of a start-line followed by a CRLF and a
+   An HTTP/1.1 message consists of a start-line followed by a CRLF and a
    sequence of
    octets in a format similar to the Internet Message Format
    <xref target="RFC5322"/>: zero or more header fields (collectively
@@ -263,7 +263,7 @@
                    [ <x:ref>message-body</x:ref> ]
 </sourcecode>
 <t>
-   An HTTP message can be either a request from client to server or a
+   A message can be either a request from client to server or a
    response from server to client.  Syntactically, the two types of message
    differ only in the start-line, which is either a request-line (for requests)
    or a status-line (for responses), and in the algorithm for determining
@@ -278,6 +278,35 @@
    In practice, servers are implemented to only expect a request
    (a response is interpreted as an unknown or invalid request method)
    and clients are implemented to only expect a response.
+</t>
+<t>
+   Although HTTP makes use of some protocol elements similar to
+   the Multipurpose Internet Mail Extensions (MIME) <xref target="RFC2045"/>, 
+   see <xref target="differences.between.http.and.mime"/> for the differences
+   between HTTP and MIME messages.
+</t>
+</section>
+
+<section title="Message Parsing" anchor="message.parsing">
+<t>
+   The normal procedure for parsing an HTTP message is to read the
+   start-line into a structure, read each header field into a hash
+   table by field name until the empty line, and then use the parsed
+   data to determine if a message body is expected.  If a message body
+   has been indicated, then it is read as a stream until an amount
+   of octets equal to the message body length is read or the connection
+   is closed.
+</t>
+<t>
+   A recipient &MUST; parse an HTTP message as a sequence of octets in an
+   encoding that is a superset of US-ASCII <xref target="USASCII"/>.
+   Parsing an HTTP message as a stream of Unicode characters, without regard
+   for the specific encoding, creates security vulnerabilities due to the
+   varying ways that string processing libraries handle invalid multibyte
+   character sequences that contain the octet LF (%x0A).  String-based
+   parsers can only be safely used within protocol elements after the element
+   has been extracted from the message, such as within a header field-value
+   after message parsing has delineated the individual fields.
 </t>
 <t>
    Although the line terminator for the start-line and header
@@ -300,10 +329,30 @@
    received prior to the request-line.
 </t>
 <t>
-   Although HTTP makes use of some protocol elements similar to
-   the Multipurpose Internet Mail Extensions (MIME) <xref target="RFC2045"/>, 
-   see <xref target="differences.between.http.and.mime"/> for the differences
-   between HTTP and MIME messages.
+   A sender &MUST-NOT; send whitespace between the start-line and
+   the first header field.
+   A recipient that receives whitespace between the start-line and
+   the first header field &MUST; either reject the message as invalid or
+   consume each whitespace-preceded line without further processing of it
+   (i.e., ignore the entire line, along with any subsequent lines preceded
+   by whitespace, until a properly formed header field is received or the
+   header section is terminated).
+</t>
+<t>
+   The presence of such whitespace in a request
+   might be an attempt to trick a server into ignoring that field or
+   processing the line after it as a new request, either of which might
+   result in a security vulnerability if other implementations within
+   the request chain interpret the same message differently.
+   Likewise, the presence of such whitespace in a response might be
+   ignored by some clients or cause others to cease parsing.
+</t>
+<t>
+   When a server listening only for HTTP request messages, or processing
+   what appears from the start-line to be an HTTP request message,
+   receives a sequence of octets that does not match the HTTP-message
+   grammar aside from the robustness exceptions listed above, the
+   server &SHOULD; respond with a <x:ref>400 (Bad Request)</x:ref> response.
 </t>
 </section>
 
@@ -357,55 +406,6 @@
    performed unless triggered by specific client attributes, such as when
    one or more of the request header fields (e.g., <x:ref>User-Agent</x:ref>)
    uniquely match the values sent by a client known to be in error.
-</t>
-</section>
-
-<section title="Message Parsing" anchor="message.parsing">
-<t>
-   The normal procedure for parsing an HTTP message is to read the
-   start-line into a structure, read each header field into a hash
-   table by field name until the empty line, and then use the parsed
-   data to determine if a message body is expected.  If a message body
-   has been indicated, then it is read as a stream until an amount
-   of octets equal to the message body length is read or the connection
-   is closed.
-</t>
-<t>
-   A recipient &MUST; parse an HTTP message as a sequence of octets in an
-   encoding that is a superset of US-ASCII <xref target="USASCII"/>.
-   Parsing an HTTP message as a stream of Unicode characters, without regard
-   for the specific encoding, creates security vulnerabilities due to the
-   varying ways that string processing libraries handle invalid multibyte
-   character sequences that contain the octet LF (%x0A).  String-based
-   parsers can only be safely used within protocol elements after the element
-   has been extracted from the message, such as within a header field-value
-   after message parsing has delineated the individual fields.
-</t>
-<t>
-   A sender &MUST-NOT; send whitespace between the start-line and
-   the first header field.
-   A recipient that receives whitespace between the start-line and
-   the first header field &MUST; either reject the message as invalid or
-   consume each whitespace-preceded line without further processing of it
-   (i.e., ignore the entire line, along with any subsequent lines preceded
-   by whitespace, until a properly formed header field is received or the
-   header section is terminated).
-</t>
-<t>
-   The presence of such whitespace in a request
-   might be an attempt to trick a server into ignoring that field or
-   processing the line after it as a new request, either of which might
-   result in a security vulnerability if other implementations within
-   the request chain interpret the same message differently.
-   Likewise, the presence of such whitespace in a response might be
-   ignored by some clients or cause others to cease parsing.
-</t>
-<t>
-   When a server listening only for HTTP request messages, or processing
-   what appears from the start-line to be an HTTP request message,
-   receives a sequence of octets that does not match the HTTP-message
-   grammar aside from the robustness exceptions listed above, the
-   server &SHOULD; respond with a <x:ref>400 (Bad Request)</x:ref> response.
 </t>
 </section>
 </section>
