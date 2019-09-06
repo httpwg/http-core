@@ -997,6 +997,11 @@ Content-Type: text/plain
    whereas a systems control client might consider any form of error recovery
    to be dangerous.
 </t>
+<t>
+   Some requests can be automatically retried by a client in the event of
+   an underlying connection failure, as described in
+   <xref target="idempotent.methods"/>.
+</t>
 </section>
 
 <section title="Protocol Versioning" anchor="protocol.version">
@@ -2598,9 +2603,15 @@ Host: www.example.org
   <x:anchor-alias value="range-unit"/>
   <x:anchor-alias value="range unit"/>
 <t>
-   A representation can be partitioned into subranges according to various
-   structural units, depending on the structure inherent in the
-   representation's media type. This "<x:dfn>range unit</x:dfn>" is used
+   Representation data can be partitioned into subranges when there are
+   addressable structural units inherent to that data's content coding or
+   media type. For example, octet (a.k.a., byte) boundaries are a structural
+   unit common to all representation data, allowing partitions of the data to
+   be identified as a range of bytes at some offset from the start or end of
+   that data.
+</t>
+<t>
+   This general notion of a "<x:dfn>range unit</x:dfn>" is used
    in the <x:ref>Accept-Ranges</x:ref> (<xref target="header.accept-ranges"/>)
    response header field to advertise support for range requests, the
    <x:ref>Range</x:ref> (<xref target="header.range"/>) request header field
@@ -2609,11 +2620,11 @@ Host: www.example.org
    payload header field to describe which part of a representation is being
    transferred.
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="range-unit"/><iref item="Grammar" subitem="bytes-unit"/><iref item="Grammar" subitem="other-range-unit"/>
-  <x:ref>range-unit</x:ref>       = <x:ref>bytes-unit</x:ref> / <x:ref>other-range-unit</x:ref>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="range-unit"/>
+  <x:ref>range-unit</x:ref>       = <x:ref>token</x:ref>
 </sourcecode>
 <t>
-  The following range unit names are defined by this document:
+   The following range unit names are defined by this document:
 </t>
 <table align="left" anchor="iana.range.units.table">
   <thead>
@@ -2631,49 +2642,103 @@ Host: www.example.org
     </tr>
     <tr>
       <td>none</td>
-      <td>reserved as keyword, indicating no ranges are supported</td>
+      <td>reserved as keyword to indicate range requests are not supported</td>
       <td><xref target="header.accept-ranges"/></td>
     </tr>
   </tbody>
 </table>
 
+<section title="Range Specifiers" anchor="range.specifiers">
+<t>
+   Ranges are expressed in terms of a range unit paired with a set of range
+   specifiers. The range unit name determines what kinds of range-spec
+   are applicable to its own specifiers. Hence, the following gramar is
+   generic: each range unit is expected to specify requirements on when
+   <x:ref>int-range</x:ref>, <x:ref>suffix-range</x:ref>, and
+   <x:ref>other-range</x:ref> are allowed.
+</t>
+<t anchor="rule.ranges-specifier">
+  <x:anchor-alias value="ranges-specifier"/>
+  <x:anchor-alias value="range-set"/>
+  <x:anchor-alias value="range-spec"/>
+   A range request can specify a single range or a set
+   of ranges within a single representation.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="range-set"/><iref primary="true" item="Grammar" subitem="range-spec"/>
+  <x:ref>ranges-specifier</x:ref> = <x:ref>range-unit</x:ref> "=" <x:ref>range-set</x:ref>
+  <x:ref>range-set</x:ref>        = 1#<x:ref>range-spec</x:ref>
+  <x:ref>range-spec</x:ref>       = <x:ref>int-range</x:ref>
+                   / <x:ref>suffix-range</x:ref>
+                   / <x:ref>other-range</x:ref>
+</sourcecode>
+<t anchor="rule.int-range">
+  <x:anchor-alias value="int-range"/>
+  <x:anchor-alias value="first-pos"/>
+  <x:anchor-alias value="last-pos"/>
+   An <x:ref>int-range</x:ref> is a range expressed as two non-negative
+   integers or as one non-negative integer through to the end of the
+   representation data.
+   The range unit specifies what the integers mean (e.g., they might indicate
+   unit offsets from the beginning, inclusive numbered parts, etc.).
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="int-range"/><iref primary="true" item="Grammar" subitem="first-pos"/><iref primary="true" item="Grammar" subitem="last-pos"/>
+  <x:ref>int-range</x:ref>     = <x:ref>first-pos</x:ref> "-" [ <x:ref>last-pos</x:ref> ]
+  <x:ref>first-pos</x:ref>     = 1*<x:ref>DIGIT</x:ref>
+  <x:ref>last-pos</x:ref>      = 1*<x:ref>DIGIT</x:ref>
+</sourcecode>
+<t>
+   An <x:ref>int-range</x:ref> is invalid if the
+   <x:ref>last-pos</x:ref> value is present and less than the
+   <x:ref>first-pos</x:ref>.
+</t>
+<t anchor="rule.suffix-range">
+  <x:anchor-alias value="suffix-range"/>
+  <x:anchor-alias value="suffix-length"/>
+   A <x:ref>suffix-range</x:ref> is a range expressed as a suffix of the
+   representation data with the provided non-negative integer maximum length
+   (in range units). In other words, the last N units of the representation
+   data.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="suffix-range"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
+  <x:ref>suffix-range</x:ref>  = "-" <x:ref>suffix-length</x:ref>
+  <x:ref>suffix-length</x:ref> = 1*<x:ref>DIGIT</x:ref>
+</sourcecode>
+<t anchor="rule.other-range">
+  <x:anchor-alias value="other-range"/>
+   To provide for extensibility, the <x:ref>other-range</x:ref> rule is a
+   mostly unconstrained grammar that allows application-specific or future
+   range units to define additional range specifiers.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="other-range"/>
+  <x:ref>other-range</x:ref>   = 1*( %x21-2B / %x2D-7E )
+                ; 1*(VCHAR excluding comma)
+</sourcecode>
+</section>
+
 <section title="Byte Ranges" anchor="byte.ranges">
   <x:anchor-alias value="bytes-unit"/>
 <t>
-   Since representation data is transferred in payloads as a sequence of
-   octets, a byte range is a meaningful substructure for any representation
-   transferable over HTTP (<xref target="representations"/>). The "bytes" range unit is
-   defined for expressing subranges of the data's octet sequence.
+   The "bytes" range unit is used to express subranges of a representation
+   data's octet sequence.
+   Each byte range is expressed as an integer range at some offset, relative
+   to either the beginning (<x:ref>int-range</x:ref>) or end
+   (<x:ref>suffix-range</x:ref>) of the representation data.
+   Byte ranges do not use the <x:ref>other-range</x:ref> specifier.
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="bytes-unit"/>
-  <x:ref>bytes-unit</x:ref>       = "bytes"
-</sourcecode>
-<t anchor="rule.ranges-specifier">
-  <x:anchor-alias value="byte-range-set"/>
-  <x:anchor-alias value="byte-range-spec"/>
-  <x:anchor-alias value="byte-ranges-specifier"/>
-  <x:anchor-alias value="first-byte-pos"/>
-  <x:anchor-alias value="last-byte-pos"/>
-  <x:anchor-alias value="ranges-specifier"/>
-   A byte-range request can specify a single range of bytes or a set
-   of ranges within a single representation.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-ranges-specifier"/><iref primary="true" item="Grammar" subitem="byte-range-set"/><iref primary="true" item="Grammar" subitem="byte-range-spec"/><iref primary="true" item="Grammar" subitem="first-byte-pos"/><iref primary="true" item="Grammar" subitem="last-byte-pos"/>
-  <x:ref>byte-ranges-specifier</x:ref> = <x:ref>bytes-unit</x:ref> "=" <x:ref>byte-range-set</x:ref>
-  <x:ref>byte-range-set</x:ref>  = 1#( <x:ref>byte-range-spec</x:ref> / <x:ref>suffix-byte-range-spec</x:ref> )
-  <x:ref>byte-range-spec</x:ref> = <x:ref>first-byte-pos</x:ref> "-" [ <x:ref>last-byte-pos</x:ref> ]
-  <x:ref>first-byte-pos</x:ref>  = 1*<x:ref>DIGIT</x:ref>
-  <x:ref>last-byte-pos</x:ref>   = 1*<x:ref>DIGIT</x:ref>
-</sourcecode>
 <t>
-   The <x:ref>first-byte-pos</x:ref> value in a <x:ref>byte-range-spec</x:ref>
-   gives the byte-offset of the first byte in a range.
-   The <x:ref>last-byte-pos</x:ref> value gives the byte-offset of the last
+   The <x:ref>first-pos</x:ref> value in a bytes <x:ref>int-range</x:ref>
+   gives the offset of the first byte in a range.
+   The <x:ref>last-pos</x:ref> value gives the offset of the last
    byte in the range; that is, the byte positions specified are inclusive.
    Byte offsets start at zero.
 </t>
 <t>
-   Examples of <x:ref>byte-ranges-specifier</x:ref> values:
+   If the representation data has a content coding applied, each byte range is
+   calculated with respect to the encoded sequence of bytes, not the sequence
+   of underlying bytes that would be obtained after decoding.
+</t>
+<t>
+   Examples of bytes range specifiers:
 </t>
 <ul>
    <li><t>The first 500 bytes (byte offsets 0-499, inclusive):</t>
@@ -2688,30 +2753,17 @@ bytes=500-999
   </li>
 </ul>
 <t>
-   A <x:ref>byte-range-spec</x:ref> is invalid if the
-   <x:ref>last-byte-pos</x:ref> value is present and less than the
-   <x:ref>first-byte-pos</x:ref>.
-</t>
-<t>
    A client can limit the number of bytes requested without knowing the size
    of the selected representation.
-   If the <x:ref>last-byte-pos</x:ref> value is absent, or if the value is
+   If the <x:ref>last-pos</x:ref> value is absent, or if the value is
    greater than or equal to the current length of the representation data, the
    byte range is interpreted as the remainder of the representation (i.e., the
-   server replaces the value of <x:ref>last-byte-pos</x:ref> with a value that
+   server replaces the value of <x:ref>last-pos</x:ref> with a value that
    is one less than the current length of the selected representation).
 </t>
-<t anchor="rule.ranges-specifier.suffix">
-   <x:anchor-alias value="suffix-byte-range-spec"/>
-   <x:anchor-alias value="suffix-length"/>
-   A client can request the last N bytes of the selected representation using
-   a <x:ref>suffix-byte-range-spec</x:ref>.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="suffix-byte-range-spec"/><iref primary="true" item="Grammar" subitem="suffix-length"/>
-  <x:ref>suffix-byte-range-spec</x:ref> = "-" <x:ref>suffix-length</x:ref>
-  <x:ref>suffix-length</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</sourcecode>
 <t>
+   A client can request the last N bytes of the selected representation using
+   a <x:ref>suffix-range</x:ref>.
    If the selected representation is shorter than the specified
    <x:ref>suffix-length</x:ref>, the entire representation is used.
 </t>
@@ -2733,6 +2785,11 @@ bytes=9500-
 bytes=0-0,-1
 </artwork>
    </li>
+   <li><t>The first, middle, and last 1000 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+bytes= 0-999, 4500-5499, -1000
+</artwork>
+   </li>
    <li><t>Other valid (but not canonical) specifications of the second 500
       bytes (byte offsets 500-999, inclusive):</t>
 <artwork type="example" x:indent-with="     ">
@@ -2742,16 +2799,16 @@ bytes=500-700,601-999
    </li>
 </ul>
 <t>
-   If a valid <x:ref>byte-range-set</x:ref> includes at least one
-   <x:ref>byte-range-spec</x:ref> with a <x:ref>first-byte-pos</x:ref> that is
+   If a valid bytes <x:ref>range-set</x:ref> includes at least one
+   <x:ref>range-spec</x:ref> with a <x:ref>first-pos</x:ref> that is
    less than the current length of the representation, or at least one
-   <x:ref>suffix-byte-range-spec</x:ref> with a non-zero
-   <x:ref>suffix-length</x:ref>, then the <x:ref>byte-range-set</x:ref> is
-   satisfiable. Otherwise, the <x:ref>byte-range-set</x:ref> is unsatisfiable.
+   <x:ref>suffix-range</x:ref> with a non-zero
+   <x:ref>suffix-length</x:ref>, then the bytes <x:ref>range-set</x:ref> is
+   satisfiable. Otherwise, the bytes <x:ref>range-set</x:ref> is unsatisfiable.
 </t>
 <t>
-   In the byte-range syntax, <x:ref>first-byte-pos</x:ref>,
-   <x:ref>last-byte-pos</x:ref>, and <x:ref>suffix-length</x:ref> are
+   In the byte-range syntax, <x:ref>first-pos</x:ref>,
+   <x:ref>last-pos</x:ref>, and <x:ref>suffix-length</x:ref> are
    expressed as decimal number of octets. Since there is no predefined limit
    to the length of a payload, recipients &MUST; anticipate potentially
    large decimal numerals and prevent parsing errors due to integer conversion
@@ -2762,12 +2819,16 @@ bytes=500-700,601-999
 <section title="Other Range Units" anchor="range.units.other">
   <x:anchor-alias value="other-range-unit"/>
 <t>
-  Range units are intended to be extensible.  New range units ought to be
-  registered with IANA, as defined in <xref target="range.unit.registry"/>.
+   Other range units, such as format-specific boundaries like pages,
+   sections, records, rows, or time, are potentially usable in HTTP for
+   application-specific purposes, but are not commonly used in practice.
+   Implementors of alternative range units ought to consider how they would
+   work with content codings and general-purpose intermediaries.
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="other-range-unit"/>
-  <x:ref>other-range-unit</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
+<t>
+   Range units are intended to be extensible.  New range units ought to be
+   registered with IANA, as defined in <xref target="range.unit.registry"/>.
+</t>
 </section>
 
 <section title="Range Unit Registry" anchor="range.unit.registry">
@@ -3277,13 +3338,10 @@ bytes=500-700,601-999
 <section title="Content-Range" anchor="header.content-range">
   <iref primary="true" item="Content-Range header field" x:for-anchor=""/>
   <x:anchor-alias value="Content-Range"/>
-  <x:anchor-alias value="byte-content-range"/>
-  <x:anchor-alias value="byte-range-resp"/>
-  <x:anchor-alias value="byte-range"/>
+  <x:anchor-alias value="range-resp"/>
+  <x:anchor-alias value="incl-range"/>
   <x:anchor-alias value="unsatisfied-range"/>
   <x:anchor-alias value="complete-length"/>
-  <x:anchor-alias value="other-content-range"/>
-  <x:anchor-alias value="other-range-resp"/>
 <t>
    The "Content-Range" header field is sent in a single part
    <x:ref>206 (Partial Content)</x:ref> response to indicate the partial range
@@ -3292,21 +3350,15 @@ bytes=500-700,601-999
    each body part, and sent in <x:ref>416 (Range Not Satisfiable)</x:ref>
    responses to provide information about the selected representation.
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="byte-content-range"/><iref primary="true" item="Grammar" subitem="byte-range-resp"/><iref primary="true" item="Grammar" subitem="byte-range"/><iref primary="true" item="Grammar" subitem="unsatisfied-range"/><iref primary="true" item="Grammar" subitem="other-content-range"/><iref primary="true" item="Grammar" subitem="other-range-resp"/><iref primary="true" item="Grammar" subitem="complete-length"/>
-  <x:ref>Content-Range</x:ref>       = <x:ref>byte-content-range</x:ref>
-                      / <x:ref>other-content-range</x:ref>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="range-resp"/><iref primary="true" item="Grammar" subitem="incl-range"/><iref primary="true" item="Grammar" subitem="unsatisfied-range"/><iref primary="true" item="Grammar" subitem="complete-length"/><iref primary="false" item="Grammar" subitem="first-pos"/><iref primary="false" item="Grammar" subitem="last-pos"/>
+  <x:ref>Content-Range</x:ref>       = <x:ref>range-unit</x:ref> <x:ref>SP</x:ref>
+                        ( <x:ref>range-resp</x:ref> / <x:ref>unsatisfied-range</x:ref> )
 
-  <x:ref>byte-content-range</x:ref>  = <x:ref>bytes-unit</x:ref> <x:ref>SP</x:ref>
-                        ( <x:ref>byte-range-resp</x:ref> / <x:ref>unsatisfied-range</x:ref> )
-
-  <x:ref>byte-range-resp</x:ref>     = <x:ref>byte-range</x:ref> "/" ( <x:ref>complete-length</x:ref> / "*" )
-  <x:ref>byte-range</x:ref>          = <x:ref>first-byte-pos</x:ref> "-" <x:ref>last-byte-pos</x:ref>
+  <x:ref>range-resp</x:ref>          = <x:ref>incl-range</x:ref> "/" ( <x:ref>complete-length</x:ref> / "*" )
+  <x:ref>incl-range</x:ref>          = <x:ref>first-pos</x:ref> "-" <x:ref>last-pos</x:ref>
   <x:ref>unsatisfied-range</x:ref>   = "*/" <x:ref>complete-length</x:ref>
 
   <x:ref>complete-length</x:ref>     = 1*<x:ref>DIGIT</x:ref>
-
-  <x:ref>other-content-range</x:ref> = <x:ref>other-range-unit</x:ref> <x:ref>SP</x:ref> <x:ref>other-range-resp</x:ref>
-  <x:ref>other-range-resp</x:ref>    = *<x:ref>VCHAR</x:ref>
 </sourcecode>
 <t>
    If a <x:ref>206 (Partial Content)</x:ref> response contains a
@@ -3337,10 +3389,10 @@ bytes=500-700,601-999
 </artwork>
 <t>
    A Content-Range field value is invalid if it contains a
-   <x:ref>byte-range-resp</x:ref> that has a <x:ref>last-byte-pos</x:ref>
-   value less than its <x:ref>first-byte-pos</x:ref> value, or a
+   <x:ref>range-resp</x:ref> that has a <x:ref>last-pos</x:ref>
+   value less than its <x:ref>first-pos</x:ref> value, or a
    <x:ref>complete-length</x:ref> value less than or equal to its
-   <x:ref>last-byte-pos</x:ref> value. The recipient of an invalid
+   <x:ref>last-pos</x:ref> value. The recipient of an invalid
    <x:ref>Content-Range</x:ref> &MUST-NOT; attempt to recombine the received
    content with a stored representation.
 </t>
@@ -3929,22 +3981,28 @@ Content-Range: exampleunit 11.2-14.3/25
    the response might differ.
 </t>
 <t>
-   A user agent &MUST-NOT; automatically retry a request with a non-idempotent
+   A client &SHOULD-NOT; automatically retry a request with a non-idempotent
    method unless it has some means to know that the request semantics are
    actually idempotent, regardless of the method, or some means to detect that
-   the original request was never applied. For example, a user agent that
-   knows (through design or configuration) that a POST request to a given
-   resource is safe can repeat that request automatically.
-   Likewise, a user agent designed specifically to operate on a version
-   control repository might be able to recover from partial failure conditions
-   by checking the target resource revision(s) after a failed connection,
-   reverting or fixing any changes that were partially applied, and then
-   automatically retrying the requests that failed.
+   the original request was never applied.
+</t>
+<t>
+   For example, a user agent that knows (through design or configuration)
+   that a POST request to a given resource is safe can repeat that request
+   automatically. Likewise, a user agent designed specifically to operate on
+   a version control repository might be able to recover from partial failure
+   conditions by checking the target resource revision(s) after a failed
+   connection, reverting or fixing any changes that were partially applied,
+   and then automatically retrying the requests that failed.
+</t>
+<t>
+   Some clients use weaker signals to initiate automatic retries. For
+   example, when a POST request is sent, but the underlying transport
+   connection is closed before any part of the response is received. Although
+   this is commonly implemented, it is not recommended.
 </t>
 <t>
    A proxy &MUST-NOT; automatically retry non-idempotent requests.
-</t>
-<t>
    A client &SHOULD-NOT; automatically retry a failed automatic retry.
 </t>
 </section>
@@ -5332,17 +5390,13 @@ Expect: 100-continue
 <section title="Range" anchor="header.range">
   <iref primary="true" item="Range header field" x:for-anchor=""/>
   <x:anchor-alias value="Range"/>
-  <x:anchor-alias value="other-ranges-specifier"/>
-  <x:anchor-alias value="other-range-set"/>
 <t>
    The "Range" header field on a GET request modifies the method semantics to
    request transfer of only one or more subranges of the selected
    representation data, rather than the entire selected representation data.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Range"/>
-  <x:ref>Range</x:ref> = <x:ref>byte-ranges-specifier</x:ref> / <x:ref>other-ranges-specifier</x:ref>
-  <x:ref>other-ranges-specifier</x:ref> = <x:ref>other-range-unit</x:ref> "=" <x:ref>other-range-set</x:ref>
-  <x:ref>other-range-set</x:ref> = 1*<x:ref>VCHAR</x:ref>
+  <x:ref>Range</x:ref> = <x:ref>ranges-specifier</x:ref>
 </sourcecode>
 <t>
    Clients often encounter interrupted data
@@ -5364,8 +5418,8 @@ Expect: 100-continue
 </t>
 <t>
    A server &MAY; ignore the Range header field. However, origin servers and
-   intermediate caches ought to support byte ranges when possible, since Range
-   supports efficient recovery from partially failed transfers and partial
+   intermediate caches ought to support byte ranges when possible, since they
+   support efficient recovery from partially failed transfers and partial
    retrieval of large representations. A server &MUST; ignore a Range header
    field received with a request method other than GET.
 </t>
@@ -6451,11 +6505,11 @@ Expect: 100-continue
    replaced by local equivalents without affecting the protocol.
 </t>
 <t>
-   Responses with status codes that are defined as cacheable by default
+   Responses with status codes that are defined as heuristically cacheable
    (e.g., 200, 203, 204, 206, 300, 301, 404, 405, 410, 414, and 501 in this
    specification) can be reused by a cache with heuristic expiration unless
    otherwise indicated by the method definition or explicit cache controls
-   <xref target="Caching"/>; all other status codes are not cacheable by default.
+   <xref target="Caching"/>; all other status codes are not heuristically cacheable.
 </t>
 <?BEGININC build/draft-ietf-httpbis-semantics-latest.iana-status-codes ?>
 <!--AUTOGENERATED FROM extract-status-code-defs.xslt, do not edit manually-->
@@ -6922,7 +6976,7 @@ Expect: 100-continue
    tunnel, which begins immediately after the 200 response header section.
 </t>
 <t>
-   A 200 response is cacheable by default; i.e., unless otherwise indicated by
+   A 200 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 </section>
@@ -6987,7 +7041,7 @@ Expect: 100-continue
    to responses with any status code.
 </t>
 <t>
-   A 203 response is cacheable by default; i.e., unless otherwise indicated by
+   A 203 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 </section>
@@ -7029,7 +7083,7 @@ Expect: 100-continue
    fields because it cannot contain a message body.
 </t>
 <t>
-   A 204 response is cacheable by default; i.e., unless otherwise indicated by
+   A 204 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 </section>
@@ -7091,7 +7145,7 @@ Expect: 100-continue
    to the same request.
 </t>
 <t>
-   A 206 response is cacheable by default; i.e., unless otherwise indicated by
+   A 206 response is heuristically cacheable; i.e., unless otherwise indicated by
    explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 
@@ -7157,7 +7211,7 @@ Content-Range: bytes 7000-7999/8000
    When multiple ranges are requested, a server &MAY; coalesce any of the
    ranges that overlap, or that are separated by a gap that is smaller than the
    overhead of sending multiple parts, regardless of the order in which the
-   corresponding byte-range-spec appeared in the received <x:ref>Range</x:ref>
+   corresponding range-spec appeared in the received <x:ref>Range</x:ref>
    header field. Since the typical overhead between parts of a
    multipart/byteranges payload is around 80 bytes, depending on the selected
    representation's media type and the chosen boundary parameter length, it
@@ -7176,7 +7230,7 @@ Content-Range: bytes 7000-7999/8000
 </t>
 <t>
    When a multipart response payload is generated, the server &SHOULD; send
-   the parts in the same order that the corresponding byte-range-spec appeared
+   the parts in the same order that the corresponding range-spec appeared
    in the received <x:ref>Range</x:ref> header field, excluding those ranges
    that were deemed unsatisfiable or that were coalesced into other ranges.
    A client that receives a multipart response &MUST; inspect the
@@ -7356,7 +7410,7 @@ Content-Range: bytes 7000-7999/8000
    or content negotiation, or in some commonly accepted hypertext format.
 </t>
 <t>
-   A 300 response is cacheable by default; i.e., unless otherwise indicated by
+   A 300 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 <aside>
@@ -7401,7 +7455,7 @@ Content-Range: bytes 7000-7999/8000
   </t>
 </aside>
 <t>
-   A 301 response is cacheable by default; i.e., unless otherwise indicated by
+   A 301 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 </section>
@@ -7579,7 +7633,7 @@ Content-Range: bytes 7000-7999/8000
    a hyperlink to the new URI(s).
 </t>
 <t>
-   A 308 response is cacheable by default; i.e., unless otherwise indicated by
+   A 308 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 <aside>
@@ -7688,7 +7742,7 @@ Content-Range: bytes 7000-7999/8000
    configurable means, that the condition is likely to be permanent.
 </t>
 <t>
-   A 404 response is cacheable by default; i.e., unless otherwise indicated by
+   A 404 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 </section>
@@ -7705,7 +7759,7 @@ Content-Range: bytes 7000-7999/8000
    supported methods.
 </t>
 <t>
-   A 405 response is cacheable by default; i.e., unless otherwise indicated by
+   A 405 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 
@@ -7807,7 +7861,7 @@ Content-Range: bytes 7000-7999/8000
    discretion of the server owner.
 </t>
 <t>
-   A 410 response is cacheable by default; i.e., unless otherwise indicated by
+   A 410 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 </section>
@@ -7870,7 +7924,7 @@ Content-Range: bytes 7000-7999/8000
    exploit potential security holes.
 </t>
 <t>
-   A 414 response is cacheable by default; i.e., unless otherwise indicated by
+   A 414 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 
@@ -7901,7 +7955,7 @@ Content-Range: bytes 7000-7999/8000
 </t>
 <t>
    For byte ranges, failing to overlap the current extent means that the
-   <x:ref>first-byte-pos</x:ref> of all of the <x:ref>byte-range-spec</x:ref>
+   <x:ref>first-pos</x:ref> of all of the <x:ref>range-spec</x:ref>
    values were greater than or equal to the current length of the selected representation.
    When this status code is generated in response to a byte-range request, the
    sender &SHOULD; generate a <x:ref>Content-Range</x:ref> header field
@@ -8035,7 +8089,7 @@ Content-Type: text/plain
    request method and is not capable of supporting it for any resource.
 </t>
 <t>
-   A 501 response is cacheable by default; i.e., unless otherwise indicated by
+   A 501 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
 
@@ -11237,7 +11291,7 @@ Content-Encoding: gzip
  )
 <x:ref>Content-Length</x:ref> = 1*DIGIT
 <x:ref>Content-Location</x:ref> = absolute-URI / partial-URI
-<x:ref>Content-Range</x:ref> = byte-content-range / other-content-range
+<x:ref>Content-Range</x:ref> = range-unit SP ( range-resp / unsatisfied-range )
 <x:ref>Content-Type</x:ref> = media-type
 
 <x:ref>Date</x:ref> = HTTP-date
@@ -11273,7 +11327,7 @@ Content-Encoding: gzip
 <x:ref>Proxy-Authorization</x:ref> = credentials
 
 <x:ref>RWS</x:ref> = 1*( SP / HTAB )
-<x:ref>Range</x:ref> = byte-ranges-specifier / other-ranges-specifier
+<x:ref>Range</x:ref> = ranges-specifier
 <x:ref>Referer</x:ref> = absolute-URI / partial-URI
 <x:ref>Retry-After</x:ref> = HTTP-date / delay-seconds
 
@@ -11301,17 +11355,6 @@ Content-Encoding: gzip
 <x:ref>auth-param</x:ref> = token BWS "=" BWS ( token / quoted-string )
 <x:ref>auth-scheme</x:ref> = token
 <x:ref>authority</x:ref> = &lt;authority, see <xref target="RFC3986" x:fmt="," x:sec="3.2"/>&gt;
-
-<x:ref>byte-content-range</x:ref> = bytes-unit SP ( byte-range-resp /
- unsatisfied-range )
-<x:ref>byte-range</x:ref> = first-byte-pos "-" last-byte-pos
-<x:ref>byte-range-resp</x:ref> = byte-range "/" ( complete-length / "*" )
-<x:ref>byte-range-set</x:ref> = *( "," OWS ) ( byte-range-spec /
- suffix-byte-range-spec ) *( OWS "," [ OWS ( byte-range-spec /
- suffix-byte-range-spec ) ] )
-<x:ref>byte-range-spec</x:ref> = first-byte-pos "-" [ last-byte-pos ]
-<x:ref>byte-ranges-specifier</x:ref> = bytes-unit "=" byte-range-set
-<x:ref>bytes-unit</x:ref> = "bytes"
 
 <x:ref>challenge</x:ref> = auth-scheme [ 1*SP ( token68 / ( [ auth-param ] *( OWS
  "," OWS [ auth-param ] ) ) ) ]
@@ -11356,15 +11399,18 @@ Content-Encoding: gzip
 <x:ref>field-name</x:ref> = token
 <x:ref>field-value</x:ref> = *( field-content / obs-fold )
 <x:ref>field-vchar</x:ref> = VCHAR / obs-text
-<x:ref>first-byte-pos</x:ref> = 1*DIGIT
+<x:ref>first-pos</x:ref> = 1*DIGIT
 
 <x:ref>hour</x:ref> = 2DIGIT
 <x:ref>http-URI</x:ref> = "http://" authority path-abempty [ "?" query ]
 <x:ref>https-URI</x:ref> = "https://" authority path-abempty [ "?" query ]
 
+<x:ref>incl-range</x:ref> = first-pos "-" last-pos
+<x:ref>int-range</x:ref> = first-pos "-" [ last-pos ]
+
 <x:ref>language-range</x:ref> = &lt;language-range, see <xref target="RFC4647" x:fmt="," x:sec="2.1"/>&gt;
 <x:ref>language-tag</x:ref> = &lt;Language-Tag, see <xref target="RFC5646" x:fmt="," x:sec="2.1"/>&gt;
-<x:ref>last-byte-pos</x:ref> = 1*DIGIT
+<x:ref>last-pos</x:ref> = 1*DIGIT
 
 <x:ref>mailbox</x:ref> = &lt;mailbox, see <xref target="RFC5322" x:fmt="," x:sec="3.4"/>&gt;
 <x:ref>media-range</x:ref> = ( "*/*" / ( type "/*" ) / ( type "/" subtype ) ) *( OWS
@@ -11389,11 +11435,9 @@ Content-Encoding: gzip
 <x:ref>obs-fold</x:ref> = &lt;obs-fold, see <xref target="Messaging" x:fmt="," x:sec="5.2"/>&gt;
 <x:ref>obs-text</x:ref> = %x80-FF
 <x:ref>opaque-tag</x:ref> = DQUOTE *etagc DQUOTE
-<x:ref>other-content-range</x:ref> = other-range-unit SP other-range-resp
-<x:ref>other-range-resp</x:ref> = *VCHAR
-<x:ref>other-range-set</x:ref> = 1*VCHAR
-<x:ref>other-range-unit</x:ref> = token
-<x:ref>other-ranges-specifier</x:ref> = other-range-unit "=" other-range-set
+<x:ref>other-range</x:ref> = 1*( %x21-2B ; '!'-'+'
+ / %x2D-7E ; '-'-'~'
+ )
 
 <x:ref>parameter</x:ref> = parameter-name "=" parameter-value
 <x:ref>parameter-name</x:ref> = token
@@ -11415,7 +11459,11 @@ Content-Encoding: gzip
 <x:ref>quoted-string</x:ref> = DQUOTE *( qdtext / quoted-pair ) DQUOTE
 <x:ref>qvalue</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 
-<x:ref>range-unit</x:ref> = bytes-unit / other-range-unit
+<x:ref>range-resp</x:ref> = incl-range "/" ( complete-length / "*" )
+<x:ref>range-set</x:ref> = [ range-spec ] *( OWS "," OWS [ range-spec ] )
+<x:ref>range-spec</x:ref> = int-range / suffix-range / other-range
+<x:ref>range-unit</x:ref> = token
+<x:ref>ranges-specifier</x:ref> = range-unit "=" range-set
 <x:ref>received-by</x:ref> = ( uri-host [ ":" port ] ) / pseudonym
 <x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
 <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
@@ -11425,8 +11473,8 @@ Content-Encoding: gzip
 <x:ref>second</x:ref> = 2DIGIT
 <x:ref>segment</x:ref> = &lt;segment, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
 <x:ref>subtype</x:ref> = token
-<x:ref>suffix-byte-range-spec</x:ref> = "-" suffix-length
 <x:ref>suffix-length</x:ref> = 1*DIGIT
+<x:ref>suffix-range</x:ref> = "-" suffix-length
 
 <x:ref>tchar</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "." /
  "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
@@ -11470,6 +11518,11 @@ Content-Encoding: gzip
 
 <section title="Changes from RFC 7231" anchor="changes.from.rfc.7231">
 <t>
+  Restrictions on client retries have been loosened, to reflect implementation
+  behavior.
+  (<xref target="idempotent.methods"/>)
+</t>
+<t>
   Removed a superfluous requirement about setting <x:ref>Content-Length</x:ref>
   from the description of the OPTIONS method.
   (<xref target="OPTIONS"/>)
@@ -11484,7 +11537,15 @@ Content-Encoding: gzip
 
 <section title="Changes from RFC 7233" anchor="changes.from.rfc.7233">
 <t>
-   None yet.
+   Refactored the range-unit and ranges-specifier grammars to simplify
+   and reduce artificial distinctions between bytes and other
+   (extension) range units, removing the overlapping grammar of
+   other-range-unit by defining range units generically as a token and
+   placing extensions within the scope of a range-spec (other-range).
+   This disambiguates the role of list syntax (commas) in all range sets,
+   including extension range units, for indicating a range-set of more than
+   one range. Moving the extension grammar into range specifiers also allows
+   protocol specific to byte ranges to be specified separately.
 </t>
 </section>
 
@@ -11616,10 +11677,13 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-05" anchor="changes.since.05">
 <ul x:when-empty="None yet.">
+  <li>Loosen requirements on retries based upon implementation behavior (<eref target="https://github.com/httpwg/http-core/issues/27"/>)</li>
   <li>In <xref target="cacheable.methods"/>, remove concept of "cacheable methods" in favor of prose (<eref target="https://github.com/httpwg/http-core/issues/54"/>)</li>
+  <li>In <xref target="field.order"/>, explicitly specify separator when merging fields (<eref target="https://github.com/httpwg/http-core/issues/148"/>)</li>
+  <li>In <xref target="range.units"/>, refactored the range-unit and ranges-specifier grammars (<eref target="https://github.com/httpwg/http-core/issues/196"/>)</li>
   <li>In <xref target="status.403"/>, replace "authorize" with "fulfill" (<eref target="https://github.com/httpwg/http-core/issues/218"/>)</li>
   <li>In <xref target="OPTIONS"/>, removed a misleading statement about Content-Length (<eref target="https://github.com/httpwg/http-core/issues/235"/>, <eref target="https://www.rfc-editor.org/errata/eid5806"/>)</li>
-  <li>In <xref target="field.order"/>, explicitly specify separator when merging fields (<eref target="https://github.com/httpwg/http-core/issues/148"/>)</li>
+  <li>Changed "cacheable by default" to "heuristically cacheable" throughout (<eref target="https://github.com/httpwg/http-core/issues/242"/>)</li>
 </ul>
 </section>
 </section>
