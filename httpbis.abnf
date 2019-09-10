@@ -18,7 +18,7 @@ Content-Encoding = [ content-coding ] *( OWS "," OWS [ content-coding ] )
 Content-Language = [ language-tag ] *( OWS "," OWS [ language-tag ] )
 Content-Length = 1*DIGIT
 Content-Location = absolute-URI / partial-URI
-Content-Range = byte-content-range / other-content-range
+Content-Range = range-unit SP ( range-resp / unsatisfied-range )
 Content-Type = media-type
 Date = HTTP-date
 ETag = entity-tag
@@ -47,7 +47,7 @@ Proxy-Authenticate = [ challenge ] *( OWS "," OWS [ challenge ] )
 Proxy-Authentication-Info = [ auth-param ] *( OWS "," OWS [ auth-param ] )
 Proxy-Authorization = credentials
 RWS = 1*( SP / HTAB )
-Range = byte-ranges-specifier / other-ranges-specifier
+Range = ranges-specifier
 Referer = absolute-URI / partial-URI
 Retry-After = HTTP-date / delay-seconds
 Server = product *( RWS ( product / comment ) )
@@ -72,13 +72,6 @@ auth-param = token BWS "=" BWS ( token / quoted-string )
 auth-scheme = token
 authority = <authority, see [RFC3986], Section 3.2>
 authority-form = authority
-byte-content-range = bytes-unit SP ( byte-range-resp / unsatisfied-range )
-byte-range = first-byte-pos "-" last-byte-pos
-byte-range-resp = byte-range "/" ( complete-length / "*" )
-byte-range-set = *( "," OWS ) ( byte-range-spec / suffix-byte-range-spec ) *( OWS "," [ OWS ( byte-range-spec / suffix-byte-range-spec ) ] )
-byte-range-spec = first-byte-pos "-" [ last-byte-pos ]
-byte-ranges-specifier = bytes-unit "=" byte-range-set
-bytes-unit = "bytes"
 cache-directive = token [ "=" ( token / quoted-string ) ]
 challenge = auth-scheme [ 1*SP ( token68 / ( [ auth-param ] *( OWS "," OWS [ auth-param ] ) ) ) ]
 charset = token
@@ -128,15 +121,17 @@ field-content = field-vchar [ 1*( SP / HTAB / field-vchar ) field-vchar ]
 field-name = token
 field-value = *( field-content / obs-fold )
 field-vchar = VCHAR / obs-text
-first-byte-pos = 1*DIGIT
+first-pos = 1*DIGIT
 header-field = field-name ":" OWS field-value OWS
 hour = 2DIGIT
 http-URI = "http://" authority path-abempty [ "?" query ]
 https-URI = "https://" authority path-abempty [ "?" query ]
+incl-range = first-pos "-" last-pos
+int-range = first-pos "-" [ last-pos ]
 language-range = <language-range, see [RFC4647], Section 2.1>
 language-tag = <Language-Tag, see [RFC5646], Section 2.1>
-last-byte-pos = 1*DIGIT
 last-chunk = 1*"0" [ chunk-ext ] CRLF
+last-pos = 1*DIGIT
 mailbox = <mailbox, see [RFC5322], Section 3.4>
 media-range = ( "*/*" / ( type "/*" ) / ( type "/" subtype ) ) *( OWS ";" OWS parameter )
 media-type = type "/" subtype *( OWS ";" OWS parameter )
@@ -161,11 +156,9 @@ obs-fold = OWS CRLF RWS
 obs-text = %x80-FF
 opaque-tag = DQUOTE *etagc DQUOTE
 origin-form = absolute-path [ "?" query ]
-other-content-range = other-range-unit SP other-range-resp
-other-range-resp = *VCHAR
-other-range-set = 1*VCHAR
-other-range-unit = token
-other-ranges-specifier = other-range-unit "=" other-range-set
+other-range = 1*( %x21-2B ; '!'-'+'
+ / %x2D-7E ; '-'-'~'
+ )
 parameter = parameter-name "=" parameter-value
 parameter-name = token
 parameter-value = ( token / quoted-string )
@@ -185,7 +178,11 @@ query = <query, see [RFC3986], Section 3.4>
 quoted-pair = "\" ( HTAB / SP / VCHAR / obs-text )
 quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE
 qvalue = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
-range-unit = bytes-unit / other-range-unit
+range-resp = incl-range "/" ( complete-length / "*" )
+range-set = [ range-spec ] *( OWS "," OWS [ range-spec ] )
+range-spec = int-range / suffix-range / other-range
+range-unit = token
+ranges-specifier = range-unit "=" range-set
 rank = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 reason-phrase = 1*( HTAB / SP / VCHAR / obs-text )
 received-by = ( uri-host [ ":" port ] ) / pseudonym
@@ -200,8 +197,8 @@ start-line = request-line / status-line
 status-code = 3DIGIT
 status-line = HTTP-version SP status-code SP [ reason-phrase ]
 subtype = token
-suffix-byte-range-spec = "-" suffix-length
 suffix-length = 1*DIGIT
+suffix-range = "-" suffix-length
 t-codings = "trailers" / ( transfer-coding [ t-ranking ] )
 t-ranking = OWS ";" OWS "q=" rank
 tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
