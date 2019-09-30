@@ -29,6 +29,7 @@
 <?rfc-ext allow-markup-in-artwork="yes" ?>
 <?rfc-ext html-pretty-print="prettyprint https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"?>
 <?rfc-ext include-references-in-index="yes" ?>
+<?github-issue-label cache?>
 
 <rfc category="std" docName="draft-ietf-httpbis-cache-&ID-VERSION;" ipr="pre5378Trust200902"
   obsoletes="7234" x:maturity-level="proposed" xmlns:x="http://purl.org/net/xml2rfc/ext" xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -354,7 +355,7 @@
         <li>contains a Cache Control Extension (see <xref
         target="cache.control.extensions" />) that allows it to be cached,
         or</li>
-        <li>has a status code that is defined as cacheable by default
+        <li>has a status code that is defined as heuristically cacheable
         (see <xref target="heuristic.freshness" />), or</li>
         <li>contains a public response directive (see <xref
         target="cache-response-directive.public"/>).</li>
@@ -687,6 +688,7 @@
 </section>
 
 <section title="Calculating Heuristic Freshness" anchor="heuristic.freshness">
+  <iref item="heuristically cacheable"/>
 <t>
    Since origin servers do not always provide explicit expiration times, a
    cache &MAY; assign a heuristic expiration time when an explicit time is not
@@ -700,10 +702,14 @@
    expiration time is present in the stored response. Because of the
    requirements in <xref target="response.cacheability"/>, this means that,
    effectively, heuristics can only be used on responses without explicit
-   freshness whose status codes are defined as cacheable by default (see
-   <xref target="overview.of.status.codes"/>), and those responses without explicit freshness that have
-   been marked as explicitly cacheable (e.g., with a "public" response 
-   directive).
+   freshness whose status codes are defined as "<x:dfn>heuristically cacheable</x:dfn>" (e.g., see
+   <xref target="overview.of.status.codes"/>), and those responses without
+   explicit freshness that have been marked as explicitly cacheable (e.g.,
+   with a "public" response directive).
+</t>
+<t>
+   Note that in previous specifications heuristically cacheable response status
+   codes were called "cacheable by default."
 </t>
 <t>
    If the response has a <x:ref>Last-Modified</x:ref> header field
@@ -1575,7 +1581,7 @@
    the use of public in response to a request containing
    <x:ref>Authorization</x:ref>, and <xref target="response.cacheability"/> for
    details of how public affects responses that would normally not be stored,
-   due to their status codes not being defined as cacheable by default; see
+   due to their status codes not being defined as heuristically cacheable; see
    <xref target="heuristic.freshness"/>.)
 </t>
 </section>
@@ -1884,34 +1890,58 @@
    information has been removed from the network. Therefore, cache contents
    need to be protected as sensitive information.
 </t>
+
+<section title="Cache Poisoning">
 <t>
-   In particular, various attacks might be amplified by being stored in a
-   shared cache; such "cache poisoning" attacks use the cache to distribute a
-   malicious payload to many clients, and are especially effective when an
-   attacker can use implementation flaws, elevated privileges, or other
-   techniques to insert such a response into a cache. One common attack vector
-   for cache poisoning is to exploit differences in message parsing on proxies
-   and in user agents; see <xref target="message.body.length"/> for the relevant requirements.
+   Various attacks might be amplified by being stored in a shared cache. Such
+   "cache poisoning" attacks use the cache to distribute a malicious payload
+   to many clients, and are especially effective when an attacker can use
+   implementation flaws, elevated privileges, or other techniques to insert
+   such a response into a cache.
 </t>
 <t>
-   Likewise, implementation flaws (as well as misunderstanding of cache
+   One common attack vector for cache poisoning is to exploit differences in
+   message parsing on proxies and in user agents; see <xref
+   target="message.body.length"/> for the relevant requirements regarding
+   HTTP/1.1.
+</t>
+</section>
+
+<section title="Timing Attacks">
+<t>
+   Because one of the primary uses of a cache is to optimise performance,
+   its use can "leak" information about what resources have been previously
+   requested. 
+</t>
+<t>
+   For example, if a user visits a site and their browser caches some of its
+   responses, and then navigates to a second site, that site can attempt to
+   load responses that it knows exists on the first site. If they load very
+   quickly, it can be assumed that the user has visited that site, or even
+   a specific page on it.
+</t>
+<t>
+   Such "timing attacks" can be mitigated by adding more information to the
+   cache key, such as the identity of the referring site (to prevent the
+   attack described above). This is sometimes called "double keying."
+</t>
+</section>
+
+<section title="Caching of Sensitive Information">
+<t>
+   Implementation and deployment flaws (as well as misunderstanding of cache
    operation) might lead to caching of sensitive information (e.g.,
    authentication credentials) that is thought to be private, exposing it to
    unauthorized parties.
 </t>
 <t>
-   Furthermore, the very use of a cache can bring about privacy concerns. For
-   example, if two users share a cache, and the first one browses to a site,
-   the second may be able to detect that the other has been to that site, 
-   because the resources from it load more quickly, thanks to the cache.
+   Note that the Set-Cookie response header field <xref target="RFC6265"/>
+   does not inhibit caching; a cacheable response with a Set-Cookie header
+   field can be (and often is) used to satisfy subsequent requests to caches.
+   Servers who wish to control caching of these responses are encouraged to
+   emit appropriate Cache-Control response header fields.
 </t>
-<t>
-   Note that the Set-Cookie response header field <xref target="RFC6265"/> does not
-   inhibit caching; a cacheable response with a Set-Cookie header field can be (and
-   often is) used to satisfy subsequent requests to caches. Servers who wish
-   to control caching of these responses are encouraged to emit appropriate
-   Cache-Control response header fields.
-</t>
+</section>
 </section>
 
 
@@ -2300,6 +2330,8 @@
 <ul x:when-empty="None yet.">
    <li>In <xref target="incomplete.responses"/>, clarify how weakly framed content is considered for purposes of completeness (<eref target="https://github.com/httpwg/http-core/issues/25"/>)</li>
    <li>In <xref target="response.cacheability"/>, remove concept of "cacheable methods" in favor of prose (<eref target="https://github.com/httpwg/http-core/issues/54"/>)</li>
+   <li>Refactored <xref target="security.considerations"/>, and added a section on timing attacks (<eref target="https://github.com/httpwg/http-core/issues/233"/>)</li>
+   <li>Changed "cacheable by default" to "heuristically cacheable" throughout (<eref target="https://github.com/httpwg/http-core/issues/242"/>)</li>
 </ul>
 </section>
 </section>
