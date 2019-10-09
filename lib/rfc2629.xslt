@@ -1826,6 +1826,7 @@
                 <xsl:with-param name="node" select="address/postal/country"/>
                 <xsl:with-param name="name" select="'address/postal/country'"/>
                 <xsl:with-param name="ascii" select="$ascii"/>
+                <xsl:with-param name="check-country" select="$ascii"/>
               </xsl:call-template>
             </xsl:with-param>
           </xsl:call-template>
@@ -3383,7 +3384,7 @@
       </xsl:variable>
       <a href="{$uri}">
         <xsl:value-of select="@name" />
-        <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+        <xsl:if test="@value!=''"><xsl:text> </xsl:text><xsl:value-of select="@value" /></xsl:if>
       </a>
     </xsl:when>
     <xsl:when test="@name='DOI'">
@@ -3394,7 +3395,7 @@
       </xsl:variable>
       <a href="{$uri}">
         <xsl:value-of select="@name" />
-        <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+        <xsl:if test="@value!=''"><xsl:text> </xsl:text><xsl:value-of select="@value" /></xsl:if>
       </a>
       <xsl:if test="$doi!='' and $doi!=@value">
         <xsl:call-template name="warning">
@@ -3410,7 +3411,7 @@
       </xsl:variable>
       <a href="{$uri}">
         <xsl:value-of select="@name" />
-        <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+        <xsl:if test="@value!=''"><xsl:text> </xsl:text><xsl:value-of select="@value" /></xsl:if>
       </a>
     </xsl:when>
     <xsl:when test="@name='Internet-Draft'">
@@ -3431,16 +3432,22 @@
           <xsl:text>, </xsl:text>
           <xsl:value-of select="@value" />
         </xsl:when>
+        <xsl:when test="/rfc/@version >= 3 and $pub-yearmonth >= 201910">
+          <!-- https://tools.ietf.org/html/draft-flanagan-7322bis-04#section-4.8.6.3 -->
+          <a href="{$uri}">Work in Progress</a>
+          <xsl:text>, Internet-Draft, </xsl:text>
+          <xsl:value-of select="@value" />
+        </xsl:when>
         <xsl:otherwise>
           <xsl:value-of select="@name" />
-          <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+          <xsl:if test="@value!=''"><xsl:text> </xsl:text><xsl:value-of select="@value" /></xsl:if>
           <xsl:if test="@name='Internet-Draft'"> (<a href="{$uri}">work in progress</a>)</xsl:if>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:when>
     <xsl:otherwise>
       <xsl:value-of select="@name" />
-      <xsl:if test="@value!=''">&#0160;<xsl:value-of select="@value" /></xsl:if>
+      <xsl:if test="@value!=''"><xsl:text> </xsl:text><xsl:value-of select="@value" /></xsl:if>
     </xsl:otherwise>
   </xsl:choose>
 
@@ -6750,20 +6757,19 @@ function toggleButton(node) {
 <xsl:if test="$xml2rfc-ext-insert-metadata='yes' and $rfcno!=''">
 <script>
 function getMeta(rfcno, container) {
-
   var xhr = new XMLHttpRequest();
-  xhr.open("GET", "https://tools.ietf.org/draft/rfc" + rfcno + "/state.xml", true);
+  xhr.open("GET", "https://www.rfc-editor.org/rfc/rfc" + rfcno + ".json", true);
   xhr.onload = function (e) {
     if (xhr.readyState === 4) {
       if (xhr.status === 200) {
-        var doc = xhr.responseXML;
-        var data = getDataFromXML(doc, rfcno);
-
+        var doc = JSON.parse(xhr.response);
+        var data = doc[0];
+        
         var cont = document.getElementById(container);
         // empty the container
         while (cont.firstChild) {
           cont.removeChild(myNode.firstChild);
-        }      
+        }
 
         var c = data.status;
         if (c) {
@@ -6810,39 +6816,6 @@ function getMeta(rfcno, container) {
   xhr.send(null);
 }
 
-// extract data from XML
-function getDataFromXML(doc, rfcno) {
-  var data = new Object();
-  var info = getChildByName(doc.documentElement, "info");
-
-  var c = getChildByName(info, "stdstatus");
-  if (c !== null) {
-    data.status = c.textContent;
-  }
-
-  c = getChildByName(info, "updatedby");
-  if (c !== null) {
-    data.updated_by = c.textContent.split(",");
-  }
-
-  c = getChildByName(info, "obsoletedby");
-  if (c !== null) {
-    data.obsoleted_by = c.textContent.split(",");
-  }
-
-  c = getChildByName(info, "errata");
-  if (c !== null) {
-    var template = "<xsl:call-template name="replace-substring">
-        <xsl:with-param name="string" select="$xml2rfc-ext-rfc-errata-uri"/>
-        <xsl:with-param name="replace">"</xsl:with-param>
-        <xsl:with-param name="by">\"</xsl:with-param>
-      </xsl:call-template>";
-    data.errata_url = template.replace("{rfc}", rfcno);
-  }
-
-  return data;
-}
-
 // DOM helpers
 function newElement(name) {
   return document.createElement(name);
@@ -6855,21 +6828,6 @@ function newElementWithText(name, txt) {
 function newText(text) {
   return document.createTextNode(text);
 }
-
-function getChildByName(parent, name) {
-  if (parent === null) {
-    return null;
-  }
-  else {
-    for (var c = parent.firstChild; c !== null; c = c.nextSibling) {
-      if (name == c.nodeName) {
-        return c;
-      }
-    }
-    return null;
-  }
-}
-
 function appendRfcLinks(parent, updates) {
   var template = "<xsl:call-template name="replace-substring">
   <xsl:with-param name="string" select="$xml2rfc-ext-rfc-uri"/>
@@ -6877,7 +6835,7 @@ function appendRfcLinks(parent, updates) {
   <xsl:with-param name="by">\"</xsl:with-param>
 </xsl:call-template>";
   for (var i = 0; i &lt; updates.length; i++) {
-    var rfc = updates[i].trim();
+    var rfc = updates[i].trim().toLowerCase();
     if (rfc.substring(0, 3) == "rfc") {
       var no = rfc.substring(3);
       var link = newElement("a");
@@ -10781,11 +10739,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1159 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1159 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1166 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1166 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/09/28 16:18:01 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/09/28 16:18:01 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/10/09 06:02:29 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/10/09 06:02:29 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -11093,10 +11051,59 @@ prev: <xsl:value-of select="$prev"/>
   </xsl:choose>
 </xsl:template>
 
+<countries xmlns="#data">
+  <c c2="AR" c3="ARG" sn="Argentina"/>
+  <c c2="AU" c3="AUS" sn="Australia"/>
+  <c c2="AT" c3="AUT" sn="Austria"/>
+  <c c2="BE" c3="BEL" sn="Belgium"/>
+  <c c2="BR" c3="BRA" sn="Brazil"/>
+  <c c2="CA" c3="CAN" sn="Canada"/>
+  <c c2="CL" c3="CHL" sn="Chile"/>
+  <c c2="CH" c3="CHN" sn="China"/>
+  <c c2="HR" c3="HRV" sn="Croatia"/>
+  <c c2="CZ" c3="CZE" sn="Czechia"/>
+  <c c2="DK" c3="DNK" sn="Denmark"/>
+  <c c2="DE" c3="DEU" sn="Germany"/>
+  <c c2="GR" c3="GRC" sn="Greece"/>
+  <c c2="FI" c3="FIN" sn="Finland"/>
+  <c c2="FR" c3="FRA" sn="France"/>
+  <c c2="HU" c3="HUN" sn="Hungary"/>
+  <c c2="IN" c3="IND" sn="India"/>
+  <c c2="IR" c3="IRL" sn="Ireland"/>
+  <c c2="IL" c3="ISR" sn="Israel"/>
+  <c c2="IT" c3="ITA" sn="Italy"/>
+  <c c2="JP" c3="JPN" sn="Japan"/>
+  <c c2="KR" c3="KOR" sn="Korea"/>
+  <c c2="LU" c3="LUX" sn="Luxembourg"/>
+  <c c2="MU" c3="MUS" sn="Mauritius"/>
+  <c c2="MX" c3="MEX" sn="Mexico"/>
+  <c c2="NL" c3="NLD" sn="Netherlands"/>
+  <c c2="NZ" c3="NZL" sn="New Zealand"/>
+  <c c2="NO" c3="NOR" sn="Norway"/>
+  <c c2="PL" c3="POL" sn="Poland"/>
+  <c c2="PT" c3="PRT" sn="Portugal"/>
+  <c c2="RO" c3="ROU" sn="Romania"/>
+  <c c2="RU" c3="RUS" sn="Russian Federation"/>
+  <c c2="SG" c3="SGP" sn="Singapore"/>
+  <c c2="SK" c3="SVK" sn="Slovakia"/>
+  <c c2="SI" c3="SVN" sn="Slovenia"/>
+  <c c2="ES" c3="ESP" sn="Spain"/>
+  <c c2="SE" c3="SWE" sn="Sweden"/>
+  <c c2="CH" c3="CHE" sn="Switzerland"/>
+  <c c2="TH" c3="THA" sn="Thailand"/>
+  <c c2="TR" c3="TUR" sn="Turkey"/>
+  <c c2="GB" c3="GBR" sn="United Kingdom of Great Britain and Northern Ireland" alias1="UK"/>
+  <c c2="US" c3="USA" sn="United States of America"/>
+  <c c2="UY" c3="URY" sn="Uruguay"/>
+</countries>
+
+<xsl:variable name="countries" xmlns:c="#data" select="document('')/*/c:countries/c:c"/>
+
 <xsl:template name="extract-normalized">
   <xsl:param name="node" select="."/>
   <xsl:param name="name"/>
   <xsl:param name="ascii" select="false()"/>
+  <xsl:param name="check-country" select="false()"/>
 
   <xsl:variable name="n">
     <xsl:choose>
@@ -11120,6 +11127,44 @@ prev: <xsl:value-of select="$prev"/>
       <xsl:with-param name="msg">missing text in <xsl:value-of select="$name"/></xsl:with-param>
     </xsl:call-template>
   </xsl:if>
+  
+  <xsl:if test="$check-country">
+    <xsl:variable name="short" select="translate(normalize-space(translate($text,'.','')),$lcase,$ucase)"/>
+    <xsl:choose>
+      <xsl:when test="$check-country and $countries[@sn=$text]">
+        <!-- all good -->
+      </xsl:when>
+      <xsl:when test="$short=''">
+        <!-- already warned -->
+      </xsl:when>
+      <xsl:when test="not($countries/@sn=$text) and ($countries/@c3=$short)">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">'<xsl:value-of select="$text"/>' is not an ISO country short name, maybe you meant '<xsl:value-of select="$countries[@c3=$short]/@sn"/>'?</xsl:with-param>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="not($countries/@sn=$text) and ($countries/@c2=$short)">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">'<xsl:value-of select="$text"/>' is not an ISO country short name, maybe you meant '<xsl:value-of select="$countries[@c2=$short]/@sn"/>'?</xsl:with-param>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="not($countries/@sn=$text) and ($countries/@alias1=$short)">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">'<xsl:value-of select="$text"/>' is not an ISO country short name, maybe you meant '<xsl:value-of select="$countries[@alias1=$short]/@sn"/>'?</xsl:with-param>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="$countries[starts-with(translate(@sn,$lcase,$ucase),$short)]">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">'<xsl:value-of select="$text"/>' is not an ISO country short name, maybe you meant '<xsl:value-of select="$countries[starts-with(translate(@sn,$lcase,$ucase),$short)][1]/@sn"/>'? (lookup of short names: https://www.iso.org/obp/ui/)</xsl:with-param>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">ISO country short name '<xsl:value-of select="$text"/>' unknown (lookup of short names: https://www.iso.org/obp/ui/)</xsl:with-param>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:if>
+
   <xsl:value-of select="$text"/>
 </xsl:template>
 
