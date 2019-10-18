@@ -1278,8 +1278,8 @@ https://www.example.org
 </table>
 <aside>
   <t>
-    &Note; the coding name "trailers" is reserved because it would clash
-    with the use of the keyword "trailers" in the <x:ref>TE</x:ref>
+    &Note; the coding name "trailers" is reserved because its use would
+    conflict with the keyword "trailers" in the <x:ref>TE</x:ref>
     header field (<xref target="header.te"/>).
   </t>
 </aside>
@@ -1294,7 +1294,7 @@ https://www.example.org
 <t>
    The chunked transfer coding wraps the payload body in order to transfer it
    as a series of chunks, each with its own size indicator, followed by an
-   &OPTIONAL; trailer containing header fields. Chunked enables content
+   &OPTIONAL; trailer part containing trailer fields. Chunked enables content
    streams of unknown size to be transferred as a sequence of length-delimited
    buffers, which enables the sender to retain connection persistence and the
    recipient to know when it has received the entire message.
@@ -1316,7 +1316,7 @@ https://www.example.org
    The chunk-size field is a string of hex digits indicating the size of
    the chunk-data in octets. The chunked transfer coding is complete when a
    chunk with a chunk-size of zero is received, possibly followed by a
-   trailer, and finally terminated by an empty line.
+   trailer part, and finally terminated by an empty line.
 </t>
 <t>
    A recipient &MUST; be able to parse and decode the chunked transfer coding.
@@ -1365,44 +1365,23 @@ https://www.example.org
 <section title="Chunked Trailer Part" anchor="chunked.trailer.part">
   <x:anchor-alias value="trailer-part"/>
 <t>
-   A trailer allows the sender to include additional fields at the end of a
-   chunked message in order to supply metadata that might be dynamically
+   A trailer part allows the sender to include additional fields at the end
+   of a chunked message in order to supply metadata that might be dynamically
    generated while the message body is sent, such as a message integrity
-   check, digital signature, or post-processing status. The trailer fields are
-   identical to header fields, except they are sent in a chunked trailer
-   instead of the message's header section.
+   check, digital signature, or post-processing status. The proper use and
+   limitations of trailer fields are defined in <xref target="trailer.fields"/>.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="trailer-part"/><iref primary="false" item="Grammar" subitem="header-field"/>
   <x:ref>trailer-part</x:ref>   = *( <x:ref>header-field</x:ref> <x:ref>CRLF</x:ref> )
 </sourcecode>
 <t>
-   A sender &MUST-NOT; generate a trailer field when that field is not
-   explicitly defined as being allowed in trailers. A recipient converting a
-   message's trailer fields into header fields &MUST; ignore and discard any
-   such fields that are not known by them to be explicitly allowed in
-   trailers (by definition). Hence, trailer fields that are not understood by
-   the recipient are discarded, thereby avoiding the risk of their being a
-   means of bypassing controls on header fields.
-</t>
-<t>
-   Unless the request includes a <x:ref>TE</x:ref> header field indicating
-   "trailers" is acceptable, as described in <xref target="header.te"/>, a
-   server &SHOULD-NOT; generate trailer fields that it believes are necessary
-   for the user agent to receive. Without a TE containing "trailers", the
-   server ought to assume that the trailer fields might be silently discarded
-   along the path to the user agent. This requirement allows intermediaries to
-   forward a de-chunked message to an HTTP/1.0 recipient without buffering the
-   entire response.
-</t>
-<t>
-   When a message includes a message body encoded with the chunked
-   transfer coding and the sender desires to send metadata in the form of
-   trailer fields at the end of the message, the sender &SHOULD; generate a
-   <x:ref>Trailer</x:ref> header field before the message body to indicate
-   which fields will be present in the trailers. This allows the
-   recipient to prepare for receipt of that metadata before it starts
-   processing the body, which is useful if the message is being streamed
-   and the recipient wishes to confirm an integrity check on the fly.
+   A recipient that decodes and removes the chunked encoding from a message
+   (e.g., for storage or forwarding to a non-HTTP/1.1 peer) &MUST; discard
+   any received trailer fields, store/forward them separately from the header
+   fields, or selectively merge into the header section only those trailer
+   fields corresponding to header field definitions that are understood by
+   the recipient to explicitly permit and define how their corresponding
+   trailer field value can be safely merged.
 </t>
 </section>
 
@@ -1422,10 +1401,16 @@ https://www.example.org
   }
   read trailer field
   while (trailer field is not empty) {
-     if (trailer field is allowed to be sent in a trailer) {
-         append trailer field to existing header fields
+     if (trailers are stored/forwarded separately) {
+         append trailer field to existing trailer fields
      }
-     read trailer-field
+     else if (trailer field is understood and defined as mergeable) {
+         merge trailer field with existing header fields
+     }
+     else {
+         discard trailer field
+     }
+     read trailer field
   }
   Content-Length := length
   Remove "chunked" from Transfer-Encoding
@@ -2555,6 +2540,7 @@ Upgrade: websocket
     <x:has anchor="status.414"/>
     <x:has anchor="status.codes"/>
     <x:has anchor="tokens"/>
+    <x:has anchor="trailer.fields"/>
     <x:has anchor="uri"/>
     <x:has anchor="uri.comparison"/>
     <x:has anchor="whitespace"/>
@@ -2855,20 +2841,6 @@ Upgrade: websocket
     <date year="2008" month="October"/>
   </front>
   <seriesInfo name="RFC" value="5322"/>
-</reference>
-
-<reference anchor="RFC6265">
-  <front>
-    <title>HTTP State Management Mechanism</title>
-    <author initials="A." surname="Barth" fullname="Adam Barth">
-      <organization abbrev="U.C. Berkeley">
-        University of California, Berkeley
-      </organization>
-      <address><email>abarth@eecs.berkeley.edu</email></address>
-    </author>
-    <date year="2011" month="April" />
-  </front>
-  <seriesInfo name="RFC" value="6265"/>
 </reference>
 
 <reference anchor="RFC7230">
@@ -3387,7 +3359,7 @@ Upgrade: websocket
 
 <section title="Since draft-ietf-httpbis-messaging-05" anchor="changes.since.05">
 <ul x:when-empty="None yet.">
-  <li>In <xref target="chunked.trailer.part"/>, clarify when trailers can be generated (<eref target="https://github.com/httpwg/http-core/issues/16"/>)</li>
+  <li>In <xref target="chunked.trailer.part"/>, trailers are no longer merged as header fields by default, but rather can be discarded, kept separate from header fields, or merged with header fields only if understood and defined as being mergeable. (<eref target="https://github.com/httpwg/http-core/issues/16"/>)</li>
   <li>In <xref target="message.format"/> and related Sections, move the trailing CRLF from the line grammars into the message format (<eref target="https://github.com/httpwg/http-core/issues/62"/>)</li>
   <li>Moved <xref target="http.version"/> down (<eref target="https://github.com/httpwg/http-core/issues/68"/>)</li>
   <li>In <xref target="header.upgrade"/>, use 'websocket' instead of 'HTTP/2.0' in examples (<eref target="https://github.com/httpwg/http-core/issues/112"/>)</li>
