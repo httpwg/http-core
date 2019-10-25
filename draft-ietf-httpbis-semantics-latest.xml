@@ -1717,10 +1717,9 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 
 <section title="Purpose" anchor="trailers.purpose">
 <t>
-   In some cases specific to the transfer coding or HTTP version, additional
+   In some HTTP versions, additional
    metadata can be sent after the initial header section has been completed
-   (during or after transmission of the payload body) that might be
-   dynamically generated while the body is being sent, such as a message
+   (during or after transmission of the payload body), such as a message
    integrity check, digital signature, or post-processing status.
    For example, the chunked coding in HTTP/1.1 allows a trailer section after
    the payload body (<xref target="chunked.trailer.section"/>) which can contain
@@ -1729,7 +1728,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </t>
 <t>
    Trailer fields ought to be processed and stored separately from the fields
-   in the header section to avoid overriding the message semantics known at
+   in the header section to avoid contradicting message semantics known at
    the time the header section was complete. The presence or absence of
    certain header fields might impact choices made for the routing or
    processing of the message as a whole before the trailers are received;
@@ -1748,12 +1747,25 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    in trailers.
 </t>
 <t>
+   Trailer fields can be difficult to process by intermediaries that forward
+   messages from one protocol version to another. If the entire message can be
+   buffered in transit, some intermediaries could merge trailer fields into
+   the header section (as appropriate) before it is forwarded. However, in
+   most cases, the trailers are simply discarded.
+   A recipient &MUST-NOT; merge a trailer field into a header section unless
+   the recipient understands the corresponding header field definition and
+   that definition explicitly permits and defines how trailer field values
+   can be safely merged.
+</t>
+<t>
+   A client can send a <x:ref>TE</x:ref> header field indicating "trailers"
+   is acceptable, as described in <xref target="header.te"/>, to inform the
+   server that it will not discard trailer fields.
+</t>
+<t>
    Because of the potential for trailer fields to be discarded in transit, a
    server &SHOULD-NOT; generate trailer fields that it believes are necessary
-   for the user agent to receive. A client can send a <x:ref>TE</x:ref>
-   header field indicating "trailers" is acceptable, as described in <xref
-   target="header.te"/>, to inform the server that it will not discard such
-   trailer fields.
+   for the user agent to receive.
 </t>
 </section>
 
@@ -1776,9 +1788,10 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    check on the fly as the payload data is received.
 </t>
 <t>
-   A sender that intends to send a non-empty trailer section &SHOULD; generate a
-   <x:ref>Trailer</x:ref> header field in the header section to indicate
-   which fields might be present in the trailers.
+   A sender that intends to generate one or more trailer fields in a message
+   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
+   section of that message to indicate which fields might be present in the
+   trailers.
 </t>
 </section>
 </section>
