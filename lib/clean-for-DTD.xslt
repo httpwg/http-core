@@ -169,7 +169,16 @@
 
 <xsl:template match="x:u-map" mode="cleanup"/>
 <xsl:template match="u" mode="cleanup">
-  <xsl:call-template name="emit-u"/>
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <u>
+        <xsl:apply-templates select="node()|@*" mode="cleanup" />
+      </u>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="emit-u"/>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <!-- extensions -->
@@ -531,11 +540,20 @@
   </title>
 </xsl:template>
 
+<xsl:template match="@x:optional-ascii" mode="cleanup"/>
 <xsl:template match="@ascii" mode="cleanup"/>
-<xsl:template match="postal/*[@ascii]" mode="cleanup">
+<xsl:template match="postal/*[@ascii or @x:optional-ascii]" mode="cleanup">
   <xsl:element name="{local-name()}">
     <xsl:apply-templates select="@*" mode="cleanup"/>
     <xsl:choose>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+        <xsl:copy-of select="@ascii"/>
+        <xsl:if test="@x:optional-ascii and not(@ascii)">
+          <!-- workaround for https://trac.tools.ietf.org/tools/xml2rfc/trac/ticket/443 -->
+          <xsl:attribute name="ascii"><xsl:value-of select="@x:optional-ascii"/></xsl:attribute>
+        </xsl:if>
+        <xsl:value-of select="text()"/>
+      </xsl:when>
       <xsl:when test="@ascii!=''">
         <xsl:value-of select="@ascii"/>
       </xsl:when>
@@ -628,13 +646,25 @@
   <!--<xsl:comment><xsl:value-of select="concat($sfmt, ' ', $tsec, ' ', @x:sec)"/></xsl:comment>-->
   <xsl:choose>
     <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@')) and $sfmt='of'">
-      <xref target="{@target}" section="{$tsec}"/>
+      <xref target="{@target}" section="{$tsec}">
+        <xsl:if test="@x:rel">
+          <xsl:attribute name="relative"><xsl:value-of select="@x:rel"/></xsl:attribute>
+        </xsl:if>
+      </xref>
     </xsl:when>
     <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@')) and $sfmt='comma'">
-      <xref target="{@target}" sectionFormat="comma" section="{$tsec}"/>
+      <xref target="{@target}" sectionFormat="comma" section="{$tsec}">
+        <xsl:if test="@x:rel">
+          <xsl:attribute name="relative"><xsl:value-of select="@x:rel"/></xsl:attribute>
+        </xsl:if>
+      </xref>
     </xsl:when>
     <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@')) and $sfmt='bare'">
-      <xref target="{@target}" sectionFormat="bare" section="{$tsec}"/>
+      <xref target="{@target}" sectionFormat="bare" section="{$tsec}">
+        <xsl:if test="@x:rel">
+          <xsl:attribute name="relative"><xsl:value-of select="@x:rel"/></xsl:attribute>
+        </xsl:if>
+      </xref>
     </xsl:when>
     <xsl:when test="$sfmt='comma'">
       <xref>
