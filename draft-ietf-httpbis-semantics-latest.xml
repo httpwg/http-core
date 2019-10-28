@@ -1711,6 +1711,91 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </section>
 </section>
 
+<section title="Trailer Fields" anchor="trailer.fields">
+   <iref item="trailer fields"/>
+   <iref item="trailers"/>
+
+<section title="Purpose" anchor="trailers.purpose">
+<t>
+   In some HTTP versions, additional
+   metadata can be sent after the initial header section has been completed
+   (during or after transmission of the payload body), such as a message
+   integrity check, digital signature, or post-processing status.
+   For example, the chunked coding in HTTP/1.1 allows a trailer section after
+   the payload body (<xref target="chunked.trailer.section"/>) which can contain
+   trailer fields: field names and values that share the same syntax and
+   namespace as header fields but are received after the header section.
+</t>
+<t>
+   Trailer fields ought to be processed and stored separately from the fields
+   in the header section to avoid contradicting message semantics known at
+   the time the header section was complete. The presence or absence of
+   certain header fields might impact choices made for the routing or
+   processing of the message as a whole before the trailers are received;
+   those choices cannot be unmade by the later discovery of trailer fields.
+</t>
+</section>
+
+<section title="Limitations" anchor="trailers.limitations">
+<t>
+   Many header fields cannot be processed outside the header section because
+   their evaluation is necessary prior to receiving the message body, such as
+   fields that describe message framing, routing, authentication,
+   request modifiers, response controls, or payload format.
+   A sender &MUST-NOT; generate a trailer field unless the sender knows the
+   corresponding header field name's definition permits the field to be sent
+   in trailers.
+</t>
+<t>
+   Trailer fields can be difficult to process by intermediaries that forward
+   messages from one protocol version to another. If the entire message can be
+   buffered in transit, some intermediaries could merge trailer fields into
+   the header section (as appropriate) before it is forwarded. However, in
+   most cases, the trailers are simply discarded.
+   A recipient &MUST-NOT; merge a trailer field into a header section unless
+   the recipient understands the corresponding header field definition and
+   that definition explicitly permits and defines how trailer field values
+   can be safely merged.
+</t>
+<t>
+   A client can send a <x:ref>TE</x:ref> header field indicating "trailers"
+   is acceptable, as described in <xref target="header.te"/>, to inform the
+   server that it will not discard trailer fields.
+</t>
+<t>
+   Because of the potential for trailer fields to be discarded in transit, a
+   server &SHOULD-NOT; generate trailer fields that it believes are necessary
+   for the user agent to receive.
+</t>
+</section>
+
+<section title="Trailer" anchor="header.trailer">
+  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
+  <x:anchor-alias value="Trailer"/>
+<t>
+   The "Trailer" header field provides a list of field names that the sender
+   anticipates sending as trailer fields within that message. This allows a
+   recipient to prepare for receipt of the indicated metadata before it starts
+   processing the body.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
+  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
+</sourcecode>
+<t>
+   For example, a sender might indicate that a message integrity check will
+   be computed as the payload is being streamed and provide the final
+   signature as a trailer field. This allows a recipient to perform the same
+   check on the fly as the payload data is received.
+</t>
+<t>
+   A sender that intends to generate one or more trailer fields in a message
+   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
+   section of that message to indicate which fields might be present in the
+   trailers.
+</t>
+</section>
+</section>
+
 <section title="Considerations for New Header Fields" anchor="considerations.for.new.header.fields">
 <t>
    Authors of specifications defining new fields are advised to choose a short
@@ -1818,29 +1903,6 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
   <li><t>Whether it introduces any additional security considerations, such
     as disclosure of privacy-related data.</t></li>
 </ul>
-</section>
-
-<section title="Trailer" anchor="header.trailer">
-  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
-  <x:anchor-alias value="Trailer"/>
-<t><cref>
-   The "Trailer" header field in a message indicates fields that the sender
-   anticipates sending after the message header block (i.e., during or after
-   the payload is sent). This is typically used to supply metadata that might
-   be dynamically generated while the data is sent, such as a message
-   integrity check, digital signature, or post-processing status.
-</cref></t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
-  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
-</sourcecode>
-<t><cref>
-   How, where, and when trailer fields might be sent depends on both the
-   protocol in use (HTTP version and/or transfer coding) and the semantics
-   of each named header field. Many header fields cannot be processed outside
-   the header section because their evaluation is necessary for message
-   routing, authentication, or configuration prior to receiving the
-   representation data.
-</cref></t>
 </section>
 </section>
 
@@ -9369,7 +9431,7 @@ Content-Encoding: gzip
    way. 
 </t>
 <t>  
-   Authentication-Info can be used inside trailers (<xref target="chunked.trailer.part"/>)
+   Authentication-Info can be used inside trailers (<xref target="chunked.trailer.section"/>)
    when the authentication scheme explicitly allows this.
 </t>
 
@@ -10329,7 +10391,7 @@ Content-Encoding: gzip
 <reference anchor="Messaging">
   <x:source href="draft-ietf-httpbis-messaging-latest.xml" basename="draft-ietf-httpbis-messaging-latest">
     <x:has anchor="chunked.encoding"/>
-    <x:has anchor="chunked.trailer.part"/>
+    <x:has anchor="chunked.trailer.section"/>
     <x:has anchor="connection.management"/>
     <x:has anchor="differences.between.http.and.mime"/>
     <x:has anchor="field.parsing"/>
@@ -11612,22 +11674,29 @@ Content-Encoding: gzip
 
 <section title="Changes from RFC 7230" anchor="changes.from.rfc.7230">
 <t>
-  Most of the sections introducing HTTP's design goals, history, architecture,
-  conformance criteria, protocol versioning, URIs, message routing, and
-  header field values have been moved here (without substantive change).
+   The sections introducing HTTP's design goals, history, architecture,
+   conformance criteria, protocol versioning, URIs, message routing, and
+   header fields have been moved here (without substantive change).
 </t>
 <t>
-  Furthermore:
+   Trailer field semantics now transcend the specifics of chunked encoding.
+   Use of trailer fields has been further limited to only allow generation
+   as a trailer field when the sender knows the field defines that usage and
+   to only allow merging into the header section if the recipient knows the
+   corresponding field definition permits and defines how to merge. In all
+   other cases, implementations are encouraged to either store the trailer
+   fields separately or discard them instead of merging
+   (<xref target="trailers.limitations"/>).
 </t>
 <t>
-  Add status code 308 (previously defined in <xref target="RFC7538"/>)
-  so that it's defined closer to status codes 301, 302, and 307.
-  (<xref target="status.308"/>)
+   Added status code 308 (previously defined in <xref target="RFC7538"/>)
+   so that it's defined closer to status codes 301, 302, and 307
+   (<xref target="status.308"/>).
 </t>
 <t>
-  Add status code 422 (previously defined in <xref target="RFC4918" x:fmt="of" x:sec="11.2"/>)
-  because of it's general applicability.
-  (<xref target="status.422"/>)
+   Added status code 422 (previously defined in
+   <xref target="RFC4918" x:fmt="of" x:sec="11.2"/>) because of its general
+   applicability (<xref target="status.422"/>).
 </t>
 </section>
 
@@ -11792,6 +11861,7 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-05" anchor="changes.since.05">
 <ul x:when-empty="None yet.">
+  <li>Moved transport-independent part of the description of trailers into <xref target="trailer.fields"/> (<eref target="https://github.com/httpwg/http-core/issues/16"/>)</li>
   <li>Loosen requirements on retries based upon implementation behavior (<eref target="https://github.com/httpwg/http-core/issues/27"/>)</li>
   <li>In <xref target="port.reg"/>, update IANA port registry for TCP/UDP on ports 80 and 443 (<eref target="https://github.com/httpwg/http-core/issues/36"/>)</li>
   <li>In <xref target="considerations.for.new.header.fields"/>, revise guidelines for new header field names (<eref target="https://github.com/httpwg/http-core/issues/47"/>)</li>
