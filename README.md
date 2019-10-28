@@ -16,7 +16,7 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 * [draft-ietf-httpbis-semantics](https://datatracker.ietf.org/doc/draft-ietf-httpbis-semantics/)
 * [FrankenDiff of RFC723x to semantics-01](https://httpwg.org/http-core/diffs/diff_semantics_01.html)
 * [RFC7231](https://httpwg.org/specs/rfc7231.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7231.txt), [tracker](https://datatracker.ietf.org/doc/rfc7231/))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
+* [Open Issues](https://github.com/httpwg/http-core/labels/semantics)
 
 ### HTTP Caching
 
@@ -24,7 +24,7 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 * [draft-ietf-httpbis-cache](https://datatracker.ietf.org/doc/draft-ietf-httpbis-cache/)
 * [FrankenDiff of RFC7234 to cache-01](https://httpwg.org/http-core/diffs/diff_cache_01.html)
 * [RFC7234](https://httpwg.org/specs/rfc7234.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7234.txt), [tracker](https://datatracker.ietf.org/doc/rfc7234/))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
+* [Open Issues](https://github.com/httpwg/http-core/labels/caching)
 
 ### HTTP/1.1 Message Syntax and Routing
 
@@ -32,7 +32,7 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 * [draft-ietf-httpbis-messaging](https://datatracker.ietf.org/doc/draft-ietf-httpbis-messaging/)
 * [FrankenDiff of RFC723x to messaging-01](https://httpwg.org/http-core/diffs/diff_messaging_01.html)
 * [RFC7230](https://httpwg.org/specs/rfc7230.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7230.txt), [tracker](https://datatracker.ietf.org/doc/rfc7230/))
-* [Open Issues](https://github.com/httpwg/http-core/issues)
+* [Open Issues](https://github.com/httpwg/http-core/labels/h1-messaging)
 
 ## Obsolete Documents
 
