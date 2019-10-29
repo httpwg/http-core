@@ -169,7 +169,16 @@
 
 <xsl:template match="x:u-map" mode="cleanup"/>
 <xsl:template match="u" mode="cleanup">
-  <xsl:call-template name="emit-u"/>
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <u>
+        <xsl:apply-templates select="node()|@*" mode="cleanup" />
+      </u>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="emit-u"/>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <!-- extensions -->
@@ -320,27 +329,29 @@
 </xsl:template>
 
 <xsl:template match="x:blockquote|blockquote" mode="cleanup">
-  <t><list>
-    <xsl:choose>
-      <xsl:when test="t|ul|ol|dl|artwork|figure|sourcecode">
-        <xsl:apply-templates mode="cleanup" />
-      </xsl:when>
-      <xsl:otherwise>
-        <t>
+  <t>
+    <xsl:apply-templates select="@anchor" mode="cleanup"/>
+    <list>
+      <xsl:choose>
+        <xsl:when test="t|ul|ol|dl|artwork|figure|sourcecode">
           <xsl:apply-templates mode="cleanup" />
+        </xsl:when>
+        <xsl:otherwise>
+          <t>
+            <xsl:apply-templates mode="cleanup" />
+          </t>
+        </xsl:otherwise>
+      </xsl:choose>
+      <xsl:if test="@quotedFrom">
+        <t>
+          <xsl:text>&#8212; </xsl:text>
+          <xsl:choose>
+            <xsl:when test="@cite"><eref target="{@cite}"><xsl:value-of select="@quotedFrom"/></eref></xsl:when>
+            <xsl:otherwise><xsl:value-of select="@quotedFrom"/></xsl:otherwise>
+          </xsl:choose>
         </t>
-      </xsl:otherwise>
-    </xsl:choose>
-    <xsl:if test="@quotedFrom">
-      <t>
-        <xsl:text>&#8212; </xsl:text>
-        <xsl:choose>
-          <xsl:when test="@cite"><eref target="{@cite}"><xsl:value-of select="@quotedFrom"/></eref></xsl:when>
-          <xsl:otherwise><xsl:value-of select="@quotedFrom"/></xsl:otherwise>
-        </xsl:choose>
-      </t>
-    </xsl:if>
-  </list>
+      </xsl:if>
+    </list>
   </t>
 </xsl:template>
 
@@ -529,11 +540,20 @@
   </title>
 </xsl:template>
 
+<xsl:template match="@x:optional-ascii" mode="cleanup"/>
 <xsl:template match="@ascii" mode="cleanup"/>
-<xsl:template match="postal/*[@ascii]" mode="cleanup">
+<xsl:template match="postal/*[@ascii or @x:optional-ascii]" mode="cleanup">
   <xsl:element name="{local-name()}">
     <xsl:apply-templates select="@*" mode="cleanup"/>
     <xsl:choose>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+        <xsl:copy-of select="@ascii"/>
+        <xsl:if test="@x:optional-ascii and not(@ascii)">
+          <!-- workaround for https://trac.tools.ietf.org/tools/xml2rfc/trac/ticket/443 -->
+          <xsl:attribute name="ascii"><xsl:value-of select="@x:optional-ascii"/></xsl:attribute>
+        </xsl:if>
+        <xsl:value-of select="text()"/>
+      </xsl:when>
       <xsl:when test="@ascii!=''">
         <xsl:value-of select="@ascii"/>
       </xsl:when>
@@ -625,11 +645,26 @@
   
   <!--<xsl:comment><xsl:value-of select="concat($sfmt, ' ', $tsec, ' ', @x:sec)"/></xsl:comment>-->
   <xsl:choose>
-    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@'))  and $sfmt='of'">
-      <relref target="{@target}" section="{$tsec}"/>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@')) and $sfmt='of'">
+      <xref target="{@target}" section="{$tsec}">
+        <xsl:if test="@x:rel">
+          <xsl:attribute name="relative"><xsl:value-of select="@x:rel"/></xsl:attribute>
+        </xsl:if>
+      </xref>
     </xsl:when>
-    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@'))  and $sfmt='comma'">
-      <relref target="{@target}" displayFormat="comma" section="{$tsec}"/>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@')) and $sfmt='comma'">
+      <xref target="{@target}" sectionFormat="comma" section="{$tsec}">
+        <xsl:if test="@x:rel">
+          <xsl:attribute name="relative"><xsl:value-of select="@x:rel"/></xsl:attribute>
+        </xsl:if>
+      </xref>
+    </xsl:when>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $tsec!='' and not(contains($tsec,'@')) and $sfmt='bare'">
+      <xref target="{@target}" sectionFormat="bare" section="{$tsec}">
+        <xsl:if test="@x:rel">
+          <xsl:attribute name="relative"><xsl:value-of select="@x:rel"/></xsl:attribute>
+        </xsl:if>
+      </xref>
     </xsl:when>
     <xsl:when test="$sfmt='comma'">
       <xref>
@@ -645,7 +680,7 @@
       <xsl:text> </xsl:text>
       <xsl:value-of select="$sec"/>
     </xsl:when>
-    <xsl:when test="$sfmt='number-only'">
+    <xsl:when test="$sfmt='bare'">
       <xsl:value-of select="$sec"/>
     </xsl:when>
     <xsl:when test="$sfmt='parens'">
@@ -675,6 +710,9 @@
   </xsl:choose>
 </xsl:template>
 
+<xsl:template match="abstract/@anchor" mode="cleanup"/>
+<xsl:template match="note/@anchor" mode="cleanup"/>
+
 <xsl:template match="xref[(@x:fmt or @x:sec or @x:rel) and (*|text())]|relref[*|text()]" mode="cleanup">
   <xsl:call-template name="insert-iref-for-xref"/>
   <xsl:choose>
@@ -696,7 +734,7 @@
   </xsl:choose>
 </xsl:template>
 
-<xsl:template match="xref[node() and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//name//@anchor or @target=//references/@anchor or @target=//artwork/@anchor or @target=//sourcecode/@anchor or @target=//artset/@anchor)]" mode="cleanup">
+<xsl:template match="xref[node() and (@target=//abstract/@anchor or @target=//note/@anchor or @target=//preamble/@anchor or @target=//spanx/@anchor or @target=//name//@anchor or @target=//references/@anchor or @target=//artwork/@anchor or @target=//sourcecode/@anchor or @target=//artset/@anchor)]" mode="cleanup">
   <!-- remove the link -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
@@ -706,7 +744,7 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[not(node()) and (@target=//preamble/@anchor or @target=//spanx/@anchor or @target=//references/@anchor or @target=//artwork/@anchor or @target=//sourcecode/@anchor or @target=//artset/@anchor)]" mode="cleanup">
+<xsl:template match="xref[not(node()) and (@target=//abstract/@anchor or @target=//note/@anchor or @target=//preamble/@anchor or @target=//spanx/@anchor or @target=//references/@anchor or @target=//artwork/@anchor or @target=//sourcecode/@anchor or @target=//artset/@anchor)]" mode="cleanup">
   <xsl:variable name="content">
     <xsl:apply-templates select="."/>
   </xsl:variable>
@@ -1218,7 +1256,7 @@
   <xsl:if test="@symRefs='false'">
     <xsl:processing-instruction name="rfc">symrefs="no"</xsl:processing-instruction>
   </xsl:if>
-  <xsl:if test="@parsedTocDepth!=3">
+  <xsl:if test="$parsedTocDepth!=3 and $xml2rfc-ext-xml2rfc-voc &lt; 3">
     <xsl:processing-instruction name="rfc">tocdepth="<xsl:value-of select="$parsedTocDepth"/>"</xsl:processing-instruction>
   </xsl:if>
   <xsl:if test="@version and (not(@tocInclude) or @tocInclude='true')">
@@ -1227,6 +1265,9 @@
   <rfc>
     <xsl:if test="not(@version) and $xml2rfc-ext-xml2rfc-voc >= 3">
       <xsl:attribute name="version"><xsl:value-of select="$xml2rfc-ext-xml2rfc-voc"/></xsl:attribute>
+    </xsl:if>
+    <xsl:if test="not(@tocDepth) and $xml2rfc-ext-xml2rfc-voc >= 3 and $parsedTocDepth!=3">
+      <xsl:attribute name="tocDepth"><xsl:value-of select="$parsedTocDepth"/></xsl:attribute>
     </xsl:if>
     <xsl:apply-templates select="@*|node()" mode="cleanup"/>
   </rfc>
@@ -1416,6 +1457,21 @@
     </xsl:otherwise>
   </xsl:choose>
 </xsl:template>
+
+
+<xsl:template match="date[ancestor::reference]" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="@year!='' or normalize-space(.)=''">
+      <date>
+        <xsl:apply-templates select="@*" mode="cleanup"/>
+      </date>
+    </xsl:when>
+    <xsl:otherwise>
+      <date year="{normalize-space(.)}"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <xsl:template match="front" mode="cleanup">
   <front>
     <xsl:apply-templates select="title|author" mode="cleanup"/>
@@ -1427,11 +1483,10 @@
     <xsl:apply-templates select="text()|node()[not(self::seriesInfo or self::title or self::author or self::date)]" mode="cleanup"/>
   </front>
 </xsl:template>
-
 <!-- Note titles -->
 <xsl:template match="note" mode="cleanup">
   <note>
-    <xsl:copy-of select="@anchor"/>
+    <xsl:apply-templates select="@anchor" mode="cleanup"/>
     <xsl:variable name="title">
       <xsl:choose>
         <xsl:when test="name">
@@ -1454,30 +1509,73 @@
 </xsl:template>
 <xsl:template match="note/name" mode="cleanup"/>
 
-<!-- References titles -->
+<!-- References -->
 <xsl:template match="references" mode="cleanup">
-  <references>
-    <xsl:apply-templates select="@anchor|@toc" mode="cleanup"/>
-    <xsl:variable name="title">
-      <xsl:choose>
-        <xsl:when test="name">
-          <xsl:variable name="hold">
-            <xsl:apply-templates select="name/node()"/>
-          </xsl:variable>
-          <xsl:value-of select="normalize-space($hold)"/>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:value-of select="@title"/>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-    <xsl:if test="$title!=''">
-      <xsl:attribute name="title"><xsl:value-of select="$title"/></xsl:attribute>
-    </xsl:if>
-    <xsl:apply-templates mode="cleanup"/>
-  </references>
+  <xsl:choose>
+    <xsl:when test="parent::back and count(../references) > 1 and $xml2rfc-ext-xml2rfc-voc >= 3">
+      <!-- insert top-level references section -->
+      <xsl:if test="not(preceding-sibling::references)">
+        <references>
+          <name>References</name>
+          <xsl:for-each select="../references">
+            <references>
+              <xsl:variable name="title">
+                <xsl:choose>
+                  <xsl:when test="name">
+                    <xsl:variable name="hold">
+                      <xsl:apply-templates select="name/node()"/>
+                    </xsl:variable>
+                    <xsl:value-of select="normalize-space($hold)"/>
+                  </xsl:when>
+                  <xsl:otherwise>
+                    <xsl:value-of select="@title"/>
+                  </xsl:otherwise>
+                </xsl:choose>
+              </xsl:variable>
+              <xsl:apply-templates select="@anchor|@toc" mode="cleanup"/>
+              <xsl:if test="not(name)">
+                <name><xsl:value-of select="$title"/></name>
+              </xsl:if>
+              <xsl:apply-templates select="*" mode="cleanup"/>
+            </references>
+          </xsl:for-each>
+        </references>
+      </xsl:if>
+    </xsl:when>
+    <xsl:otherwise>
+      <references>
+        <xsl:variable name="title">
+          <xsl:choose>
+            <xsl:when test="name">
+              <xsl:variable name="hold">
+                <xsl:apply-templates select="name/node()"/>
+              </xsl:variable>
+              <xsl:value-of select="normalize-space($hold)"/>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:value-of select="@title"/>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:variable>
+        <xsl:apply-templates select="@anchor|@toc" mode="cleanup"/>
+        <xsl:choose>
+          <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and name">
+            <xsl:apply-templates select="name" mode="cleanup"/>
+          </xsl:when>
+          <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+            <name><xsl:value-of select="$title"/></name>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:if test="$title!=''">
+              <xsl:attribute name="title"><xsl:value-of select="$title"/></xsl:attribute>
+            </xsl:if>
+          </xsl:otherwise>
+        </xsl:choose>
+        <xsl:apply-templates mode="cleanup" select="node()[not(self::name)]"/>
+      </references>      
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
-<xsl:template match="references/name" mode="cleanup"/>
 
 <!-- Section titles -->
 <xsl:template match="section" mode="cleanup">
@@ -1543,6 +1641,7 @@
 </xsl:template>
 
 <xsl:template name="process-dl">
+  <xsl:copy-of select="@anchor"/>
   <xsl:variable name="newl" select="@newline"/>
   <xsl:variable name="spac" select="@spacing"/>
   <xsl:if test="parent::section">
