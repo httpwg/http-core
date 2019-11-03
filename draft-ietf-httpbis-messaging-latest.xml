@@ -1971,6 +1971,60 @@ https://www.example.org
 </t>
 </section>
 
+<section title="TLS Connection Closure" anchor="tls.connection.closure">
+<t>
+   TLS provides a facility for secure connection closure. When a valid
+   closure alert is received, an implementation can be assured that no
+   further data will be received on that connection.  TLS
+   implementations &MUST; initiate an exchange of closure alerts before
+   closing a connection. A TLS implementation &MAY;, after sending a
+   closure alert, close the connection without waiting for the peer to
+   send its closure alert, generating an "incomplete close".  Note that
+   an implementation which does this &MAY; choose to reuse the session.
+   This &SHOULD; only be done when the application knows (typically
+   through detecting HTTP message boundaries) that it has received all
+   the message data that it cares about.
+</t>
+<t>
+   As specified in <xref target="RFC8446"/>, any implementation which receives a
+   connection close without first receiving a valid closure alert (a
+   "premature close") &MUST-NOT; reuse that session.  Note that a
+   premature close does not call into question the security of the data
+   already received, but simply indicates that subsequent data might
+   have been truncated. Because TLS is oblivious to HTTP
+   request/response boundaries, it is necessary to examine the HTTP data
+   itself (specifically the Content-Length header) to determine whether
+   the truncation occurred inside a message or between messages.
+</t>
+<t>
+   When encountering a premature close, a client &SHOULD; treat as completed
+   all requests for which it has received as much data as specified in the
+   Content-Length header.
+</t>
+<t>
+   A client detecting an incomplete close &SHOULD; recover gracefully.  It
+   &MAY; resume a TLS session closed in this fashion.
+</t>
+<t>
+   Clients &MUST; send a closure alert before closing the connection.
+   Clients which are unprepared to receive any more data &MAY; choose not
+   to wait for the server's closure alert and simply close the
+   connection, thus generating an incomplete close on the server side.
+</t>
+<t>
+   Servers &SHOULD; be prepared to receive an incomplete close from the client,
+   since the client can often determine when the end of server data is.
+   Servers &SHOULD; be willing to resume TLS sessions closed in this
+   fashion.
+</t>
+<t>
+   Servers &MUST; attempt to initiate an exchange of closure alerts with
+   the client before closing the connection. Servers &MAY; close the
+   connection after sending the closure alert, thus generating an
+   incomplete close on the client side.
+</t>
+</section>
+
 <section title="Upgrade" anchor="header.upgrade">
   <iref primary="true" item="Upgrade header field" x:for-anchor=""/>
   <x:anchor-alias value="Upgrade"/>
@@ -2700,6 +2754,27 @@ Upgrade: websocket
   <seriesInfo name="RFC" value="1952"/>
 </reference>
 
+<reference anchor="RFC8446" target="https://www.rfc-editor.org/info/rfc8446">
+   <front>
+      <title>The Transport Layer Security (TLS) Protocol Version 1.3</title>
+      <author initials="E." surname="Rescorla" fullname="E. Rescorla">
+         <organization/>
+      </author>
+      <date year="2018" month="August"/>
+      <abstract>
+         <t>This document specifies version 1.3 of the Transport Layer
+         Security (TLS) protocol. TLS allows client/server applications to
+         communicate over the Internet in a way that is designed to prevent
+         eavesdropping, tampering, and message forgery.</t>
+         <t>This document updates RFCs 5705 and 6066, and obsoletes RFCs
+         5077, 5246, and 6961. This document also specifies new requirements
+         for TLS 1.2 implementations.</t>
+      </abstract>
+   </front>
+   <seriesInfo name="RFC" value="8446"/>
+   <seriesInfo name="DOI" value="10.17487/RFC8446"/>
+</reference>
+
 <reference anchor="Welch">
   <front>
     <title>A Technique for High-Performance Data Compression</title>
@@ -3371,6 +3446,7 @@ Upgrade: websocket
   <li>Moved <xref target="http.version"/> down (<eref target="https://github.com/httpwg/http-core/issues/68"/>)</li>
   <li>In <xref target="header.upgrade"/>, use 'websocket' instead of 'HTTP/2.0' in examples (<eref target="https://github.com/httpwg/http-core/issues/112"/>)</li>
   <li>Move version non-specific text from <xref target="message.body"/> into semantics as "payload body" (<eref target="https://github.com/httpwg/http-core/issues/159"/>)</li>
+  <li>In <xref target="tls.connection.closure"/>, add text from RFC 2818 (<eref target="https://github.com/httpwg/http-core/issues/236"/>)</li>
 </ul>
 </section>
 

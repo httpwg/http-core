@@ -837,9 +837,10 @@ h1:hover > a.self, h2:hover > a.self, h3:hover > a.self, li:hover > a.self, p:ho
                   <li><a href="#rfc.section.9.5">9.5.</a>&nbsp;&nbsp;&nbsp;<a href="#persistent.concurrency">Concurrency</a></li>
                   <li><a href="#rfc.section.9.6">9.6.</a>&nbsp;&nbsp;&nbsp;<a href="#persistent.failures">Failures and Timeouts</a></li>
                   <li><a href="#rfc.section.9.7">9.7.</a>&nbsp;&nbsp;&nbsp;<a href="#persistent.tear-down">Tear-down</a></li>
-                  <li><a href="#rfc.section.9.8">9.8.</a>&nbsp;&nbsp;&nbsp;<a href="#header.upgrade">Upgrade</a><ul>
-                        <li><a href="#rfc.section.9.8.1">9.8.1.</a>&nbsp;&nbsp;&nbsp;<a href="#upgrade.protocol.names">Upgrade Protocol Names</a></li>
-                        <li><a href="#rfc.section.9.8.2">9.8.2.</a>&nbsp;&nbsp;&nbsp;<a href="#upgrade.token.registry">Upgrade Token Registry</a></li>
+                  <li><a href="#rfc.section.9.8">9.8.</a>&nbsp;&nbsp;&nbsp;<a href="#tls.connection.closure">TLS Connection Closure</a></li>
+                  <li><a href="#rfc.section.9.9">9.9.</a>&nbsp;&nbsp;&nbsp;<a href="#header.upgrade">Upgrade</a><ul>
+                        <li><a href="#rfc.section.9.9.1">9.9.1.</a>&nbsp;&nbsp;&nbsp;<a href="#upgrade.protocol.names">Upgrade Protocol Names</a></li>
+                        <li><a href="#rfc.section.9.9.2">9.9.2.</a>&nbsp;&nbsp;&nbsp;<a href="#upgrade.token.registry">Upgrade Token Registry</a></li>
                      </ul>
                   </li>
                </ul>
@@ -1425,7 +1426,7 @@ Host: www.example.org
                   <tr>
                      <td class="left">Upgrade</td>
                      <td class="left">standard</td>
-                     <td class="left"><a href="#header.upgrade" id="rfc.xref.header.upgrade.1" title="Upgrade">Section 9.8</a> 
+                     <td class="left"><a href="#header.upgrade" id="rfc.xref.header.upgrade.1" title="Upgrade">Section 9.9</a> 
                      </td>
                   </tr>
                </tbody>
@@ -2341,100 +2342,140 @@ Host: www.example.org
                   in other transport connection protocols.<a class="self" href="#rfc.section.9.7.p.8">¶</a></p>
             </div>
          </section>
-         <section id="header.upgrade">
-            <h3 id="rfc.section.9.8"><a href="#rfc.section.9.8">9.8.</a>&nbsp;<a href="#header.upgrade">Upgrade</a></h3>
+         <section id="tls.connection.closure">
+            <h3 id="rfc.section.9.8"><a href="#rfc.section.9.8">9.8.</a>&nbsp;<a href="#tls.connection.closure">TLS Connection Closure</a></h3>
             <div id="rfc.section.9.8.p.1">
-               <p>The "Upgrade" header field is intended to provide a simple mechanism for transitioning
-                  from HTTP/1.1 to some other protocol on the same connection.<a class="self" href="#rfc.section.9.8.p.1">¶</a></p>
+               <p>TLS provides a facility for secure connection closure. When a valid closure alert
+                  is received, an implementation can be assured that no further data will be received
+                  on that connection. TLS implementations <em class="bcp14">MUST</em> initiate an exchange of closure alerts before closing a connection. A TLS implementation <em class="bcp14">MAY</em>, after sending a closure alert, close the connection without waiting for the peer
+                  to send its closure alert, generating an "incomplete close". Note that an implementation
+                  which does this <em class="bcp14">MAY</em> choose to reuse the session. This <em class="bcp14">SHOULD</em> only be done when the application knows (typically through detecting HTTP message
+                  boundaries) that it has received all the message data that it cares about.<a class="self" href="#rfc.section.9.8.p.1">¶</a></p>
             </div>
             <div id="rfc.section.9.8.p.2">
+               <p>As specified in <a href="#RFC8446" id="rfc.xref.RFC8446.1"><cite title="The Transport Layer Security (TLS) Protocol Version 1.3">[RFC8446]</cite></a>, any implementation which receives a connection close without first receiving a valid
+                  closure alert (a "premature close") <em class="bcp14">MUST NOT</em> reuse that session. Note that a premature close does not call into question the security
+                  of the data already received, but simply indicates that subsequent data might have
+                  been truncated. Because TLS is oblivious to HTTP request/response boundaries, it is
+                  necessary to examine the HTTP data itself (specifically the Content-Length header)
+                  to determine whether the truncation occurred inside a message or between messages.<a class="self" href="#rfc.section.9.8.p.2">¶</a></p>
+            </div>
+            <div id="rfc.section.9.8.p.3">
+               <p>When encountering a premature close, a client <em class="bcp14">SHOULD</em> treat as completed all requests for which it has received as much data as specified
+                  in the Content-Length header.<a class="self" href="#rfc.section.9.8.p.3">¶</a></p>
+            </div>
+            <div id="rfc.section.9.8.p.4">
+               <p>A client detecting an incomplete close <em class="bcp14">SHOULD</em> recover gracefully. It <em class="bcp14">MAY</em> resume a TLS session closed in this fashion.<a class="self" href="#rfc.section.9.8.p.4">¶</a></p>
+            </div>
+            <div id="rfc.section.9.8.p.5">
+               <p>Clients <em class="bcp14">MUST</em> send a closure alert before closing the connection. Clients which are unprepared to
+                  receive any more data <em class="bcp14">MAY</em> choose not to wait for the server's closure alert and simply close the connection,
+                  thus generating an incomplete close on the server side.<a class="self" href="#rfc.section.9.8.p.5">¶</a></p>
+            </div>
+            <div id="rfc.section.9.8.p.6">
+               <p>Servers <em class="bcp14">SHOULD</em> be prepared to receive an incomplete close from the client, since the client can often
+                  determine when the end of server data is. Servers <em class="bcp14">SHOULD</em> be willing to resume TLS sessions closed in this fashion.<a class="self" href="#rfc.section.9.8.p.6">¶</a></p>
+            </div>
+            <div id="rfc.section.9.8.p.7">
+               <p>Servers <em class="bcp14">MUST</em> attempt to initiate an exchange of closure alerts with the client before closing the
+                  connection. Servers <em class="bcp14">MAY</em> close the connection after sending the closure alert, thus generating an incomplete
+                  close on the client side.<a class="self" href="#rfc.section.9.8.p.7">¶</a></p>
+            </div>
+         </section>
+         <section id="header.upgrade">
+            <h3 id="rfc.section.9.9"><a href="#rfc.section.9.9">9.9.</a>&nbsp;<a href="#header.upgrade">Upgrade</a></h3>
+            <div id="rfc.section.9.9.p.1">
+               <p>The "Upgrade" header field is intended to provide a simple mechanism for transitioning
+                  from HTTP/1.1 to some other protocol on the same connection.<a class="self" href="#rfc.section.9.9.p.1">¶</a></p>
+            </div>
+            <div id="rfc.section.9.9.p.2">
                <p>A client <em class="bcp14">MAY</em> send a list of protocol names in the Upgrade header field of a request to invite the
                   server to switch to one or more of the named protocols, in order of descending preference,
                   before sending the final response. A server <em class="bcp14">MAY</em> ignore a received Upgrade header field if it wishes to continue using the current
-                  protocol on that connection. Upgrade cannot be used to insist on a protocol change.<a class="self" href="#rfc.section.9.8.p.2">¶</a></p>
+                  protocol on that connection. Upgrade cannot be used to insist on a protocol change.<a class="self" href="#rfc.section.9.9.p.2">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.3"><pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.45"></span>  <a href="#header.upgrade" class="smpl">Upgrade</a>          = 1#<a href="#header.upgrade" class="smpl">protocol</a>
+            <div id="rfc.section.9.9.p.3"><pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.45"></span>  <a href="#header.upgrade" class="smpl">Upgrade</a>          = 1#<a href="#header.upgrade" class="smpl">protocol</a>
 
   <a href="#header.upgrade" class="smpl">protocol</a>         = <a href="#header.upgrade" class="smpl">protocol-name</a> ["/" <a href="#header.upgrade" class="smpl">protocol-version</a>]
   <a href="#header.upgrade" class="smpl">protocol-name</a>    = <a href="#imported.rules" class="smpl">token</a>
   <a href="#header.upgrade" class="smpl">protocol-version</a> = <a href="#imported.rules" class="smpl">token</a>
 </pre></div>
-            <div id="rfc.section.9.8.p.4">
-               <p>Although protocol names are registered with a preferred case, recipients <em class="bcp14">SHOULD</em> use case-insensitive comparison when matching each protocol-name to supported protocols.<a class="self" href="#rfc.section.9.8.p.4">¶</a></p>
+            <div id="rfc.section.9.9.p.4">
+               <p>Although protocol names are registered with a preferred case, recipients <em class="bcp14">SHOULD</em> use case-insensitive comparison when matching each protocol-name to supported protocols.<a class="self" href="#rfc.section.9.9.p.4">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.5">
+            <div id="rfc.section.9.9.p.5">
                <p>A server that sends a <a href="draft-ietf-httpbis-semantics-latest.html#status.101" class="smpl">101 (Switching Protocols)</a> response <em class="bcp14">MUST</em> send an Upgrade header field to indicate the new protocol(s) to which the connection
                   is being switched; if multiple protocol layers are being switched, the sender <em class="bcp14">MUST</em> list the protocols in layer-ascending order. A server <em class="bcp14">MUST NOT</em> switch to a protocol that was not indicated by the client in the corresponding request's
                   Upgrade header field. A server <em class="bcp14">MAY</em> choose to ignore the order of preference indicated by the client and select the new
                   protocol(s) based on other factors, such as the nature of the request or the current
-                  load on the server.<a class="self" href="#rfc.section.9.8.p.5">¶</a></p>
+                  load on the server.<a class="self" href="#rfc.section.9.9.p.5">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.6">
+            <div id="rfc.section.9.9.p.6">
                <p>A server that sends a <a href="draft-ietf-httpbis-semantics-latest.html#status.426" class="smpl">426 (Upgrade Required)</a> response <em class="bcp14">MUST</em> send an Upgrade header field to indicate the acceptable protocols, in order of descending
-                  preference.<a class="self" href="#rfc.section.9.8.p.6">¶</a></p>
+                  preference.<a class="self" href="#rfc.section.9.9.p.6">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.7">
+            <div id="rfc.section.9.9.p.7">
                <p>A server <em class="bcp14">MAY</em> send an Upgrade header field in any other response to advertise that it implements
                   support for upgrading to the listed protocols, in order of descending preference,
-                  when appropriate for a future request.<a class="self" href="#rfc.section.9.8.p.7">¶</a></p>
+                  when appropriate for a future request.<a class="self" href="#rfc.section.9.9.p.7">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.8" class="avoidbreakafter">
-               <p>The following is a hypothetical example sent by a client:<a class="self" href="#rfc.section.9.8.p.8">¶</a></p>
+            <div id="rfc.section.9.9.p.8" class="avoidbreakafter">
+               <p>The following is a hypothetical example sent by a client:<a class="self" href="#rfc.section.9.9.p.8">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.9"><pre class="text2">GET /hello HTTP/1.1
+            <div id="rfc.section.9.9.p.9"><pre class="text2">GET /hello HTTP/1.1
 Host: www.example.com
 Connection: upgrade
 Upgrade: websocket, IRC/6.9, RTA/x11
 
 </pre></div>
-            <div id="rfc.section.9.8.p.10">
+            <div id="rfc.section.9.9.p.10">
                <p>The capabilities and nature of the application-level communication after the protocol
                   change is entirely dependent upon the new protocol(s) chosen. However, immediately
                   after sending the <a href="draft-ietf-httpbis-semantics-latest.html#status.101" class="smpl">101 (Switching Protocols)</a> response, the server is expected to continue responding to the original request as
                   if it had received its equivalent within the new protocol (i.e., the server still
                   has an outstanding request to satisfy after the protocol has been changed, and is
-                  expected to do so without requiring the request to be repeated).<a class="self" href="#rfc.section.9.8.p.10">¶</a></p>
+                  expected to do so without requiring the request to be repeated).<a class="self" href="#rfc.section.9.9.p.10">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.11">
+            <div id="rfc.section.9.9.p.11">
                <p>For example, if the Upgrade header field is received in a GET request and the server
                   decides to switch protocols, it first responds with a <a href="draft-ietf-httpbis-semantics-latest.html#status.101" class="smpl">101 (Switching Protocols)</a> message in HTTP/1.1 and then immediately follows that with the new protocol's equivalent
                   of a response to a GET on the target resource. This allows a connection to be upgraded
                   to protocols with the same semantics as HTTP without the latency cost of an additional
                   round trip. A server <em class="bcp14">MUST NOT</em> switch protocols unless the received message semantics can be honored by the new protocol;
-                  an OPTIONS request can be honored by any protocol.<a class="self" href="#rfc.section.9.8.p.11">¶</a></p>
+                  an OPTIONS request can be honored by any protocol.<a class="self" href="#rfc.section.9.9.p.11">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.12" class="avoidbreakafter">
-               <p>The following is an example response to the above hypothetical request:<a class="self" href="#rfc.section.9.8.p.12">¶</a></p>
+            <div id="rfc.section.9.9.p.12" class="avoidbreakafter">
+               <p>The following is an example response to the above hypothetical request:<a class="self" href="#rfc.section.9.9.p.12">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.13"><pre class="text">HTTP/1.1 101 Switching Protocols
+            <div id="rfc.section.9.9.p.13"><pre class="text">HTTP/1.1 101 Switching Protocols
 Connection: upgrade
 Upgrade: websocket
 
 [... data stream switches to websocket with an appropriate response
 (as defined by new protocol) to the "GET /hello" request ...]
 </pre></div>
-            <div id="rfc.section.9.8.p.14">
+            <div id="rfc.section.9.9.p.14">
                <p>When Upgrade is sent, the sender <em class="bcp14">MUST</em> also send a <a href="#header.connection" class="smpl">Connection</a> header field (<a href="#header.connection" id="rfc.xref.header.connection.5" title="Connection">Section 9.1</a>) that contains an "upgrade" connection option, in order to prevent Upgrade from being
                   accidentally forwarded by intermediaries that might not implement the listed protocols.
-                  A server <em class="bcp14">MUST</em> ignore an Upgrade header field that is received in an HTTP/1.0 request.<a class="self" href="#rfc.section.9.8.p.14">¶</a></p>
+                  A server <em class="bcp14">MUST</em> ignore an Upgrade header field that is received in an HTTP/1.0 request.<a class="self" href="#rfc.section.9.9.p.14">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.15">
+            <div id="rfc.section.9.9.p.15">
                <p>A client cannot begin using an upgraded protocol on the connection until it has completely
                   sent the request message (i.e., the client can't change the protocol it is sending
-                  in the middle of a message). If a server receives both an Upgrade and an <a href="draft-ietf-httpbis-semantics-latest.html#header.expect" class="smpl">Expect</a> header field with the "100-continue" expectation (<a href="draft-ietf-httpbis-semantics-latest.html#header.expect" title="Expect">Section 8.1.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.45"><cite title="HTTP Semantics">[Semantics]</cite></a>), the server <em class="bcp14">MUST</em> send a <a href="draft-ietf-httpbis-semantics-latest.html#status.100" class="smpl">100 (Continue)</a> response before sending a <a href="draft-ietf-httpbis-semantics-latest.html#status.101" class="smpl">101 (Switching Protocols)</a> response.<a class="self" href="#rfc.section.9.8.p.15">¶</a></p>
+                  in the middle of a message). If a server receives both an Upgrade and an <a href="draft-ietf-httpbis-semantics-latest.html#header.expect" class="smpl">Expect</a> header field with the "100-continue" expectation (<a href="draft-ietf-httpbis-semantics-latest.html#header.expect" title="Expect">Section 8.1.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.45"><cite title="HTTP Semantics">[Semantics]</cite></a>), the server <em class="bcp14">MUST</em> send a <a href="draft-ietf-httpbis-semantics-latest.html#status.100" class="smpl">100 (Continue)</a> response before sending a <a href="draft-ietf-httpbis-semantics-latest.html#status.101" class="smpl">101 (Switching Protocols)</a> response.<a class="self" href="#rfc.section.9.9.p.15">¶</a></p>
             </div>
-            <div id="rfc.section.9.8.p.16">
+            <div id="rfc.section.9.9.p.16">
                <p>The Upgrade header field only applies to switching protocols on top of the existing
                   connection; it cannot be used to switch the underlying connection (transport) protocol,
                   nor to switch the existing communication to a different connection. For those purposes,
-                  it is more appropriate to use a <a href="draft-ietf-httpbis-semantics-latest.html#status.3xx" class="smpl">3xx (Redirection)</a> response (<a href="draft-ietf-httpbis-semantics-latest.html#status.3xx" title="Redirection 3xx">Section 9.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.46"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.9.8.p.16">¶</a></p>
+                  it is more appropriate to use a <a href="draft-ietf-httpbis-semantics-latest.html#status.3xx" class="smpl">3xx (Redirection)</a> response (<a href="draft-ietf-httpbis-semantics-latest.html#status.3xx" title="Redirection 3xx">Section 9.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.46"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.9.9.p.16">¶</a></p>
             </div>
             <section id="upgrade.protocol.names">
-               <h4 id="rfc.section.9.8.1"><a href="#rfc.section.9.8.1">9.8.1.</a>&nbsp;<a href="#upgrade.protocol.names">Upgrade Protocol Names</a></h4>
-               <div id="rfc.section.9.8.1.p.1">
+               <h4 id="rfc.section.9.9.1"><a href="#rfc.section.9.9.1">9.9.1.</a>&nbsp;<a href="#upgrade.protocol.names">Upgrade Protocol Names</a></h4>
+               <div id="rfc.section.9.9.1.p.1">
                   <p>This specification only defines the protocol name "HTTP" for use by the family of
                      Hypertext Transfer Protocols, as defined by the HTTP version rules of <a href="draft-ietf-httpbis-semantics-latest.html#protocol.version" title="Protocol Versioning">Section 3.5</a> of <a href="#Semantics" id="rfc.xref.Semantics.47"><cite title="HTTP Semantics">[Semantics]</cite></a> and future updates to this specification. Additional protocol names ought to be registered
-                     using the registration procedure defined in <a href="#upgrade.token.registry" title="Upgrade Token Registry">Section 9.8.2</a>.<a class="self" href="#rfc.section.9.8.1.p.1">¶</a></p>
+                     using the registration procedure defined in <a href="#upgrade.token.registry" title="Upgrade Token Registry">Section 9.9.2</a>.<a class="self" href="#rfc.section.9.9.1.p.1">¶</a></p>
                </div>
                <div class="tt">
                   <table class="v3 tleft">
@@ -2458,20 +2499,20 @@ Upgrade: websocket
                </div>
             </section>
             <section id="upgrade.token.registry">
-               <h4 id="rfc.section.9.8.2"><a href="#rfc.section.9.8.2">9.8.2.</a>&nbsp;<a href="#upgrade.token.registry">Upgrade Token Registry</a></h4>
-               <div id="rfc.section.9.8.2.p.1">
+               <h4 id="rfc.section.9.9.2"><a href="#rfc.section.9.9.2">9.9.2.</a>&nbsp;<a href="#upgrade.token.registry">Upgrade Token Registry</a></h4>
+               <div id="rfc.section.9.9.2.p.1">
                   <p>The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" defines the namespace
-                     for protocol-name tokens used to identify protocols in the <a href="#header.upgrade" class="smpl">Upgrade</a> header field. The registry is maintained at &lt;<a href="https://www.iana.org/assignments/http-upgrade-tokens">https://www.iana.org/assignments/http-upgrade-tokens</a>&gt;.<a class="self" href="#rfc.section.9.8.2.p.1">¶</a></p>
+                     for protocol-name tokens used to identify protocols in the <a href="#header.upgrade" class="smpl">Upgrade</a> header field. The registry is maintained at &lt;<a href="https://www.iana.org/assignments/http-upgrade-tokens">https://www.iana.org/assignments/http-upgrade-tokens</a>&gt;.<a class="self" href="#rfc.section.9.9.2.p.1">¶</a></p>
                </div>
-               <div id="rfc.section.9.8.2.p.2">
+               <div id="rfc.section.9.9.2.p.2">
                   <p>Each registered protocol name is associated with contact information and an optional
                      set of specifications that details how the connection will be processed after it has
-                     been upgraded.<a class="self" href="#rfc.section.9.8.2.p.2">¶</a></p>
+                     been upgraded.<a class="self" href="#rfc.section.9.9.2.p.2">¶</a></p>
                </div>
-               <div id="rfc.section.9.8.2.p.3" class="avoidbreakafter">
-                  <p>Registrations happen on a "First Come First Served" basis (see <a href="https://tools.ietf.org/html/rfc8126#section-4.4">Section 4.4</a> of <a href="#RFC8126" id="rfc.xref.RFC8126.2"><cite title="Guidelines for Writing an IANA Considerations Section in RFCs">[RFC8126]</cite></a>) and are subject to the following rules:<a class="self" href="#rfc.section.9.8.2.p.3">¶</a></p>
+               <div id="rfc.section.9.9.2.p.3" class="avoidbreakafter">
+                  <p>Registrations happen on a "First Come First Served" basis (see <a href="https://tools.ietf.org/html/rfc8126#section-4.4">Section 4.4</a> of <a href="#RFC8126" id="rfc.xref.RFC8126.2"><cite title="Guidelines for Writing an IANA Considerations Section in RFCs">[RFC8126]</cite></a>) and are subject to the following rules:<a class="self" href="#rfc.section.9.9.2.p.3">¶</a></p>
                </div>
-               <div id="rfc.section.9.8.2.p.4">
+               <div id="rfc.section.9.9.2.p.4">
                   <ol>
                      <li>A protocol-name token, once registered, stays registered forever.</li>
                      <li>A protocol-name token is case-insensitive and registered with the preferred case to
@@ -2773,7 +2814,7 @@ Upgrade: websocket
          <section id="upgrade.token.registration">
             <h3 id="rfc.section.12.4"><a href="#rfc.section.12.4">12.4.</a>&nbsp;<a href="#upgrade.token.registration">Upgrade Token Registration</a></h3>
             <div id="rfc.section.12.4.p.1">
-               <p>Please update the "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" at &lt;<a href="https://www.iana.org/assignments/http-upgrade-tokens">https://www.iana.org/assignments/http-upgrade-tokens</a>&gt; with the registration procedure of <a href="#upgrade.token.registry" title="Upgrade Token Registry">Section 9.8.2</a> and the upgrade token names summarized in the table of <a href="#upgrade.protocol.names" title="Upgrade Protocol Names">Section 9.8.1</a>.<a class="self" href="#rfc.section.12.4.p.1">¶</a></p>
+               <p>Please update the "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" at &lt;<a href="https://www.iana.org/assignments/http-upgrade-tokens">https://www.iana.org/assignments/http-upgrade-tokens</a>&gt; with the registration procedure of <a href="#upgrade.token.registry" title="Upgrade Token Registry">Section 9.9.2</a> and the upgrade token names summarized in the table of <a href="#upgrade.protocol.names" title="Upgrade Protocol Names">Section 9.9.1</a>.<a class="self" href="#rfc.section.12.4.p.1">¶</a></p>
             </div>
          </section>
       </section>
@@ -2808,6 +2849,9 @@ Upgrade: websocket
                   </dd>
                   <dt id="RFC7405">[RFC7405]</dt>
                   <dd>Kyzivat, P., “<a href="https://tools.ietf.org/html/rfc7405">Case-Sensitive String Support in ABNF</a>”, RFC 7405, <a href="http://dx.doi.org/10.17487/RFC7405">DOI 10.17487/RFC7405</a>, December 2014, &lt;<a href="https://www.rfc-editor.org/info/rfc7405">https://www.rfc-editor.org/info/rfc7405</a>&gt;.
+                  </dd>
+                  <dt id="RFC8446">[RFC8446]</dt>
+                  <dd>Rescorla, E., “<a href="https://tools.ietf.org/html/rfc8446">The Transport Layer Security (TLS) Protocol Version 1.3</a>”, RFC 8446, <a href="http://dx.doi.org/10.17487/RFC8446">DOI 10.17487/RFC8446</a>, August 2018, &lt;<a href="https://www.rfc-editor.org/info/rfc8446">https://www.rfc-editor.org/info/rfc8446</a>&gt;.
                   </dd>
                   <dt id="Semantics">[Semantics]</dt>
                   <dd>Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke, Ed., “<a href="draft-ietf-httpbis-semantics-latest.html">HTTP Semantics</a>”, Internet-Draft draft-ietf-httpbis-semantics-latest (<a href="https://datatracker.ietf.org/doc/draft-ietf-httpbis-semantics">work in progress</a>), November 2019.
@@ -3266,7 +3310,7 @@ Upgrade: websocket
             <h3 id="rfc.section.D.6"><a href="#rfc.section.D.6">D.6.</a>&nbsp;<a href="#changes.since.04">Since draft-ietf-httpbis-messaging-04</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-messaging-04" title="plain text">📄</a> <a class="self" href="https://tools.ietf.org/rfcdiff?url2=draft-ietf-httpbis-messaging-05" title="diffs">🔍</a></h3>
             <div id="rfc.section.D.6.p.1">
                <ul>
-                  <li>In <a href="#header.upgrade" id="rfc.xref.header.upgrade.2" title="Upgrade">Section 9.8</a>, clarify that protocol-name is to be matched case-insensitively (&lt;<a href="https://github.com/httpwg/http-core/issues/8">https://github.com/httpwg/http-core/issues/8</a>&gt;)
+                  <li>In <a href="#header.upgrade" id="rfc.xref.header.upgrade.2" title="Upgrade">Section 9.9</a>, clarify that protocol-name is to be matched case-insensitively (&lt;<a href="https://github.com/httpwg/http-core/issues/8">https://github.com/httpwg/http-core/issues/8</a>&gt;)
                   </li>
                   <li>In <a href="#line.folding" title="Obsolete Line Folding">Section 5.2</a>, add leading optional whitespace to obs-fold ABNF (&lt;<a href="https://github.com/httpwg/http-core/issues/19">https://github.com/httpwg/http-core/issues/19</a>&gt;, &lt;<a href="https://www.rfc-editor.org/errata/eid4189">https://www.rfc-editor.org/errata/eid4189</a>&gt;)
                   </li>
@@ -3291,9 +3335,11 @@ Upgrade: websocket
                   </li>
                   <li>Moved <a href="#http.version" title="HTTP Version">Section 2.3</a> down (&lt;<a href="https://github.com/httpwg/http-core/issues/68">https://github.com/httpwg/http-core/issues/68</a>&gt;)
                   </li>
-                  <li>In <a href="#header.upgrade" id="rfc.xref.header.upgrade.3" title="Upgrade">Section 9.8</a>, use 'websocket' instead of 'HTTP/2.0' in examples (&lt;<a href="https://github.com/httpwg/http-core/issues/112">https://github.com/httpwg/http-core/issues/112</a>&gt;)
+                  <li>In <a href="#header.upgrade" id="rfc.xref.header.upgrade.3" title="Upgrade">Section 9.9</a>, use 'websocket' instead of 'HTTP/2.0' in examples (&lt;<a href="https://github.com/httpwg/http-core/issues/112">https://github.com/httpwg/http-core/issues/112</a>&gt;)
                   </li>
                   <li>Move version non-specific text from <a href="#message.body" title="Message Body">Section 6</a> into semantics as "payload body" (&lt;<a href="https://github.com/httpwg/http-core/issues/159">https://github.com/httpwg/http-core/issues/159</a>&gt;)
+                  </li>
+                  <li>In <a href="#tls.connection.closure" title="TLS Connection Closure">Section 9.8</a>, add text from RFC 2818 (&lt;<a href="https://github.com/httpwg/http-core/issues/236">https://github.com/httpwg/http-core/issues/236</a>&gt;)
                   </li>
                </ul>
             </div>
@@ -3326,9 +3372,9 @@ Upgrade: websocket
                      </li>
                      <li>chunked (Coding Format)&nbsp;&nbsp;<a href="#rfc.section.6.1">6.1</a>, <a href="#rfc.section.6.3">6.3</a></li>
                      <li>chunked (transfer coding)&nbsp;&nbsp;<a href="#rfc.section.7.1"><b>7.1</b></a></li>
-                     <li>close&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">5</a>, <a href="#rfc.xref.header.connection.2">5</a>, <a href="#rfc.xref.header.connection.3">7.4</a>, <a href="#rfc.section.9.1"><b>9.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">9.1</a>, <a href="#rfc.xref.persistent.tear-down.2">9.4.2</a>, <a href="#rfc.section.9.7">9.7</a>, <a href="#rfc.xref.header.connection.4">9.7</a>, <a href="#rfc.xref.header.connection.5">9.8</a></li>
+                     <li>close&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">5</a>, <a href="#rfc.xref.header.connection.2">5</a>, <a href="#rfc.xref.header.connection.3">7.4</a>, <a href="#rfc.section.9.1"><b>9.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">9.1</a>, <a href="#rfc.xref.persistent.tear-down.2">9.4.2</a>, <a href="#rfc.section.9.7">9.7</a>, <a href="#rfc.xref.header.connection.4">9.7</a>, <a href="#rfc.xref.header.connection.5">9.9</a></li>
                      <li>compress (transfer coding)&nbsp;&nbsp;<a href="#rfc.section.7.2"><b>7.2</b></a></li>
-                     <li>Connection header field&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">5</a>, <a href="#rfc.xref.header.connection.2">5</a>, <a href="#rfc.xref.header.connection.3">7.4</a>, <a href="#rfc.section.9.1"><b>9.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">9.1</a>, <a href="#rfc.xref.persistent.tear-down.2">9.4.2</a>, <a href="#rfc.section.9.7">9.7</a>, <a href="#rfc.xref.header.connection.4">9.7</a>, <a href="#rfc.xref.header.connection.5">9.8</a></li>
+                     <li>Connection header field&nbsp;&nbsp;<a href="#rfc.xref.header.connection.1">5</a>, <a href="#rfc.xref.header.connection.2">5</a>, <a href="#rfc.xref.header.connection.3">7.4</a>, <a href="#rfc.section.9.1"><b>9.1</b></a>, <a href="#rfc.xref.persistent.tear-down.1">9.1</a>, <a href="#rfc.xref.persistent.tear-down.2">9.4.2</a>, <a href="#rfc.section.9.7">9.7</a>, <a href="#rfc.xref.header.connection.4">9.7</a>, <a href="#rfc.xref.header.connection.5">9.9</a></li>
                      <li>Content-Length header field&nbsp;&nbsp;<a href="#rfc.section.6.2">6.2</a></li>
                      <li>Content-Transfer-Encoding header field&nbsp;&nbsp;<a href="#rfc.section.B.5">B.5</a></li>
                   </ul>
@@ -3393,7 +3439,7 @@ Upgrade: websocket
                            <li><span class="tt">transfer-coding</span>&nbsp;&nbsp;<a href="#rfc.iref.g.25"><b>7</b></a></li>
                            <li><span class="tt">Transfer-Encoding</span>&nbsp;&nbsp;<a href="#rfc.iref.g.24"><b>6.1</b></a></li>
                            <li><span class="tt">transfer-parameter</span>&nbsp;&nbsp;<a href="#rfc.iref.g.26"><b>7</b></a></li>
-                           <li><span class="tt">Upgrade</span>&nbsp;&nbsp;<a href="#rfc.iref.g.45"><b>9.8</b></a></li>
+                           <li><span class="tt">Upgrade</span>&nbsp;&nbsp;<a href="#rfc.iref.g.45"><b>9.9</b></a></li>
                            <li>VCHAR&nbsp;&nbsp;<a href="#rfc.section.1.2"><b>1.2</b></a></li>
                         </ul>
                      </li>
@@ -3467,15 +3513,16 @@ Upgrade: websocket
                      <li><em>RFC7230</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC7230.1">1</a>, <a href="#rfc.xref.RFC7230.2">1</a>, <a href="#RFC7230"><b>13.2</b></a>, <a href="#rfc.xref.RFC7230.3">C.2</a>, <a href="#rfc.xref.RFC7230.4">D.2</a></li>
                      <li><em>RFC7231</em>&nbsp;&nbsp;<a href="#RFC7231"><b>13.2</b></a>, <a href="#rfc.xref.RFC7231.1">D.2</a></li>
                      <li><em>RFC7405</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC7405.1">1.2</a>, <a href="#RFC7405"><b>13.1</b></a></li>
-                     <li><em>RFC8126</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8126.1">7.3</a>, <a href="#rfc.xref.RFC8126.2">9.8.2</a>, <a href="#RFC8126"><b>13.2</b></a><ul>
-                           <li><em>Section 4.4</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8126.2">9.8.2</a></li>
+                     <li><em>RFC8126</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8126.1">7.3</a>, <a href="#rfc.xref.RFC8126.2">9.9.2</a>, <a href="#RFC8126"><b>13.2</b></a><ul>
+                           <li><em>Section 4.4</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8126.2">9.9.2</a></li>
                            <li><em>Section 4.8</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8126.1">7.3</a></li>
                         </ul>
                      </li>
+                     <li><em>RFC8446</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8446.1">9.8</a>, <a href="#RFC8446"><b>13.1</b></a></li>
                   </ul>
                </li>
                <li><a id="rfc.index.S" href="#rfc.index.S"><b>S</b></a><ul>
-                     <li><em>Semantics</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.1">1</a>, <a href="#rfc.xref.Semantics.2">1</a>, <a href="#rfc.xref.Semantics.3">1.1</a>, <a href="#rfc.xref.Semantics.4">1.2</a>, <a href="#rfc.xref.Semantics.5">1.2</a>, <a href="#rfc.xref.Semantics.6">1.2</a>, <a href="#rfc.xref.Semantics.7">1.2</a>, <a href="#rfc.xref.Semantics.8">1.2</a>, <a href="#rfc.xref.Semantics.9">1.2</a>, <a href="#rfc.xref.Semantics.10">1.2</a>, <a href="#rfc.xref.Semantics.11">1.2</a>, <a href="#rfc.xref.Semantics.12">1.2</a>, <a href="#rfc.xref.Semantics.13">1.2</a>, <a href="#rfc.xref.Semantics.14">1.2</a>, <a href="#rfc.xref.Semantics.15">1.2</a>, <a href="#rfc.xref.Semantics.16">2.3</a>, <a href="#rfc.xref.Semantics.17">3</a>, <a href="#rfc.xref.Semantics.18">3</a>, <a href="#rfc.xref.Semantics.19">3.1</a>, <a href="#rfc.xref.Semantics.20">3.2.1</a>, <a href="#rfc.xref.Semantics.21">3.2.2</a>, <a href="#rfc.xref.Semantics.22">3.2.3</a>, <a href="#rfc.xref.Semantics.23">3.2.4</a>, <a href="#rfc.xref.Semantics.24">3.3</a>, <a href="#rfc.xref.Semantics.25">4</a>, <a href="#rfc.xref.Semantics.26">5</a>, <a href="#rfc.xref.Semantics.27">6</a>, <a href="#rfc.xref.Semantics.28">6</a>, <a href="#rfc.xref.Semantics.29">6.1</a>, <a href="#rfc.xref.Semantics.30">6.1</a>, <a href="#rfc.xref.Semantics.31">6.1</a>, <a href="#rfc.xref.Semantics.32">6.2</a>, <a href="#rfc.xref.Semantics.33">7.1.2</a>, <a href="#rfc.xref.Semantics.34">7.2</a>, <a href="#rfc.xref.Semantics.35">7.2</a>, <a href="#rfc.xref.Semantics.36">7.2</a>, <a href="#rfc.xref.Semantics.37">7.3</a>, <a href="#rfc.xref.Semantics.38">7.4</a>, <a href="#rfc.xref.Semantics.39">9</a>, <a href="#rfc.xref.Semantics.40">9</a>, <a href="#rfc.xref.Semantics.41">9.3</a>, <a href="#rfc.xref.Semantics.42">9.4.1</a>, <a href="#rfc.xref.Semantics.43">9.4.2</a>, <a href="#rfc.xref.Semantics.44">9.4.2</a>, <a href="#rfc.xref.Semantics.45">9.8</a>, <a href="#rfc.xref.Semantics.46">9.8</a>, <a href="#rfc.xref.Semantics.47">9.8.1</a>, <a href="#rfc.xref.Semantics.48">9.8.1</a>, <a href="#rfc.xref.Semantics.49">11</a>, <a href="#rfc.xref.Semantics.50">11.4</a>, <a href="#Semantics"><b>13.1</b></a>, <a href="#rfc.xref.Semantics.51">A</a>, <a href="#rfc.xref.Semantics.52">A</a>, <a href="#rfc.xref.Semantics.53">A</a>, <a href="#rfc.xref.Semantics.54">A</a>, <a href="#rfc.xref.Semantics.55">A</a>, <a href="#rfc.xref.Semantics.56">A</a>, <a href="#rfc.xref.Semantics.57">A</a>, <a href="#rfc.xref.Semantics.58">A</a>, <a href="#rfc.xref.Semantics.59">A</a>, <a href="#rfc.xref.Semantics.60">A</a>, <a href="#rfc.xref.Semantics.61">A</a>, <a href="#rfc.xref.Semantics.62">B.2</a>, <a href="#rfc.xref.Semantics.63">B.3</a>, <a href="#rfc.xref.Semantics.64">B.6</a>, <a href="#rfc.xref.Semantics.65">C.1.1</a>, <a href="#rfc.xref.Semantics.66">C.2</a>, <a href="#rfc.xref.Semantics.67">D.2</a>, <a href="#rfc.xref.Semantics.68">D.2</a>, <a href="#rfc.xref.Semantics.69">D.6</a>, <a href="#rfc.xref.Semantics.70">E</a><ul>
+                     <li><em>Semantics</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.1">1</a>, <a href="#rfc.xref.Semantics.2">1</a>, <a href="#rfc.xref.Semantics.3">1.1</a>, <a href="#rfc.xref.Semantics.4">1.2</a>, <a href="#rfc.xref.Semantics.5">1.2</a>, <a href="#rfc.xref.Semantics.6">1.2</a>, <a href="#rfc.xref.Semantics.7">1.2</a>, <a href="#rfc.xref.Semantics.8">1.2</a>, <a href="#rfc.xref.Semantics.9">1.2</a>, <a href="#rfc.xref.Semantics.10">1.2</a>, <a href="#rfc.xref.Semantics.11">1.2</a>, <a href="#rfc.xref.Semantics.12">1.2</a>, <a href="#rfc.xref.Semantics.13">1.2</a>, <a href="#rfc.xref.Semantics.14">1.2</a>, <a href="#rfc.xref.Semantics.15">1.2</a>, <a href="#rfc.xref.Semantics.16">2.3</a>, <a href="#rfc.xref.Semantics.17">3</a>, <a href="#rfc.xref.Semantics.18">3</a>, <a href="#rfc.xref.Semantics.19">3.1</a>, <a href="#rfc.xref.Semantics.20">3.2.1</a>, <a href="#rfc.xref.Semantics.21">3.2.2</a>, <a href="#rfc.xref.Semantics.22">3.2.3</a>, <a href="#rfc.xref.Semantics.23">3.2.4</a>, <a href="#rfc.xref.Semantics.24">3.3</a>, <a href="#rfc.xref.Semantics.25">4</a>, <a href="#rfc.xref.Semantics.26">5</a>, <a href="#rfc.xref.Semantics.27">6</a>, <a href="#rfc.xref.Semantics.28">6</a>, <a href="#rfc.xref.Semantics.29">6.1</a>, <a href="#rfc.xref.Semantics.30">6.1</a>, <a href="#rfc.xref.Semantics.31">6.1</a>, <a href="#rfc.xref.Semantics.32">6.2</a>, <a href="#rfc.xref.Semantics.33">7.1.2</a>, <a href="#rfc.xref.Semantics.34">7.2</a>, <a href="#rfc.xref.Semantics.35">7.2</a>, <a href="#rfc.xref.Semantics.36">7.2</a>, <a href="#rfc.xref.Semantics.37">7.3</a>, <a href="#rfc.xref.Semantics.38">7.4</a>, <a href="#rfc.xref.Semantics.39">9</a>, <a href="#rfc.xref.Semantics.40">9</a>, <a href="#rfc.xref.Semantics.41">9.3</a>, <a href="#rfc.xref.Semantics.42">9.4.1</a>, <a href="#rfc.xref.Semantics.43">9.4.2</a>, <a href="#rfc.xref.Semantics.44">9.4.2</a>, <a href="#rfc.xref.Semantics.45">9.9</a>, <a href="#rfc.xref.Semantics.46">9.9</a>, <a href="#rfc.xref.Semantics.47">9.9.1</a>, <a href="#rfc.xref.Semantics.48">9.9.1</a>, <a href="#rfc.xref.Semantics.49">11</a>, <a href="#rfc.xref.Semantics.50">11.4</a>, <a href="#Semantics"><b>13.1</b></a>, <a href="#rfc.xref.Semantics.51">A</a>, <a href="#rfc.xref.Semantics.52">A</a>, <a href="#rfc.xref.Semantics.53">A</a>, <a href="#rfc.xref.Semantics.54">A</a>, <a href="#rfc.xref.Semantics.55">A</a>, <a href="#rfc.xref.Semantics.56">A</a>, <a href="#rfc.xref.Semantics.57">A</a>, <a href="#rfc.xref.Semantics.58">A</a>, <a href="#rfc.xref.Semantics.59">A</a>, <a href="#rfc.xref.Semantics.60">A</a>, <a href="#rfc.xref.Semantics.61">A</a>, <a href="#rfc.xref.Semantics.62">B.2</a>, <a href="#rfc.xref.Semantics.63">B.3</a>, <a href="#rfc.xref.Semantics.64">B.6</a>, <a href="#rfc.xref.Semantics.65">C.1.1</a>, <a href="#rfc.xref.Semantics.66">C.2</a>, <a href="#rfc.xref.Semantics.67">D.2</a>, <a href="#rfc.xref.Semantics.68">D.2</a>, <a href="#rfc.xref.Semantics.69">D.6</a>, <a href="#rfc.xref.Semantics.70">E</a><ul>
                            <li><em>Section 2.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.55">A</a></li>
                            <li><em>Section 4.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.57">A</a>, <a href="#rfc.xref.Semantics.58">A</a></li>
                            <li><em>Section 4.2.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.56">A</a>, <a href="#rfc.xref.Semantics.59">A</a>, <a href="#rfc.xref.Semantics.60">A</a>, <a href="#rfc.xref.Semantics.61">A</a></li>
@@ -3486,7 +3533,7 @@ Upgrade: websocket
                            <li><em>Section 2.5.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.40">9</a></li>
                            <li><em>Section 2.5.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.50">11.4</a></li>
                            <li><em>Section 3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.3">1.1</a>, <a href="#rfc.xref.Semantics.17">3</a></li>
-                           <li><em>Section 3.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.16">2.3</a>, <a href="#rfc.xref.Semantics.47">9.8.1</a>, <a href="#rfc.xref.Semantics.48">9.8.1</a></li>
+                           <li><em>Section 3.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.16">2.3</a>, <a href="#rfc.xref.Semantics.47">9.9.1</a>, <a href="#rfc.xref.Semantics.48">9.9.1</a></li>
                            <li><em>Section 4.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.11">1.2</a></li>
                            <li><em>Section 4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.26">5</a></li>
                            <li><em>Section 4.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.12">1.2</a></li>
@@ -3511,11 +3558,11 @@ Upgrade: websocket
                            <li><em>Section 7.2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.42">9.4.1</a>, <a href="#rfc.xref.Semantics.44">9.4.2</a></li>
                            <li><em>Section 7.3.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.22">3.2.3</a>, <a href="#rfc.xref.Semantics.31">6.1</a></li>
                            <li><em>Section 7.3.7</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.23">3.2.4</a></li>
-                           <li><em>Section 8.1.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.45">9.8</a></li>
+                           <li><em>Section 8.1.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.45">9.9</a></li>
                            <li><em>Section 8.4.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.38">7.4</a></li>
                            <li><em>Section 9</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.25">4</a></li>
                            <li><em>Section 9.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.41">9.3</a></li>
-                           <li><em>Section 9.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.46">9.8</a></li>
+                           <li><em>Section 9.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.46">9.9</a></li>
                            <li><em>Section 9.4.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.30">6.1</a></li>
                            <li><em>Section 9.5.15</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.18">3</a></li>
                            <li><em>Section 10.1.1.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.63">B.3</a></li>
@@ -3532,7 +3579,7 @@ Upgrade: websocket
                   </ul>
                </li>
                <li><a id="rfc.index.U" href="#rfc.index.U"><b>U</b></a><ul>
-                     <li>Upgrade header field&nbsp;&nbsp;<a href="#rfc.xref.header.upgrade.1">5</a>, <a href="#rfc.section.9.8"><b>9.8</b></a>, <a href="#rfc.xref.header.upgrade.2">D.6</a>, <a href="#rfc.xref.header.upgrade.3">D.7</a></li>
+                     <li>Upgrade header field&nbsp;&nbsp;<a href="#rfc.xref.header.upgrade.1">5</a>, <a href="#rfc.section.9.9"><b>9.9</b></a>, <a href="#rfc.xref.header.upgrade.2">D.6</a>, <a href="#rfc.xref.header.upgrade.3">D.7</a></li>
                      <li><em>USASCII</em>&nbsp;&nbsp;<a href="#rfc.xref.USASCII.1">1.2</a>, <a href="#rfc.xref.USASCII.2">2.2</a>, <a href="#USASCII"><b>13.1</b></a></li>
                   </ul>
                </li>
