@@ -49,7 +49,7 @@
                 exclude-result-prefixes="date ed exslt fo msxsl myns rdf saxon saxon-old svg x xi xhtml"
                 >
 
-<xsl:strip-space elements="abstract address artset author back dl figure front list middle note ol postal reference references rfc section table tbody thead tr texttable ul svg:svg"/>
+<xsl:strip-space elements="abstract address artset author back boilerplate dl figure front list middle note ol postal reference references rfc section table tbody thead tr texttable ul svg:svg"/>
 
 <xsl:output method="html" encoding="utf-8" doctype-system="about:legacy-compat" indent="no"/>
 
@@ -2874,6 +2874,33 @@
 
 </xsl:template>
 
+<xsl:template name="string-diff">
+  <xsl:param name="s1"/>
+  <xsl:param name="s2"/>
+  <xsl:param name="p"/>
+
+  <xsl:choose>
+    <xsl:when test="$s1='' and $s2=''"><!-- done --></xsl:when>
+    <xsl:when test="$s1=''">
+      <xsl:value-of select="concat('Extra characters at the end of 1st string: ',$s1)"/>
+    </xsl:when>
+    <xsl:when test="$s2=''">
+      <xsl:value-of select="concat('Extra characters at the end of 2sn string: ',$s2)"/>
+    </xsl:when>
+    <xsl:when test="substring($s1,1,1)!=substring($s2,1,1)">
+      <xsl:value-of select="concat('Strings differ at position ',string-length($p),', 1st string ends in: [[[',$s1,']]], 2nd string ends in: [[[',$s2,']]]')"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="string-diff">
+        <xsl:with-param name="s1" select="substring($s1,2)"/>
+        <xsl:with-param name="s2" select="substring($s2,2)"/>
+        <xsl:with-param name="p" select="concat($p,substring($s1,1,1))"/>
+      </xsl:call-template>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+
 <xsl:template name="emit-ietf-preamble">
   <xsl:param name="notes"/>
 
@@ -2886,21 +2913,29 @@
     </xsl:for-each>
   </xsl:variable>
 
-  <!-- get document-supplied boilerplate -->
-  <xsl:variable name="userboiler" select="/rfc/front/boilerplate"/>
-
   <!-- emit it -->
   <xsl:choose>
     <xsl:when test="function-available('exslt:node-set')">
-      <xsl:variable name="differ" select="$userboiler and translate(normalize-space(string($userboiler)),' ','')!=translate(normalize-space(string($preamble)),' ','')"/>
-      <!--<xsl:if test="$differ">
-        <xsl:message>1: <xsl:value-of select="normalize-space(string($userboiler))"/></xsl:message>
-        <xsl:message>2: <xsl:value-of select="normalize-space(string($preamble))"/></xsl:message>
-      </xsl:if>-->
-      <xsl:apply-templates select="exslt:node-set($preamble)" />
+      <!-- get document-supplied boilerplate -->
+      <xsl:variable name="userboiler">
+        <xsl:apply-templates select="$src//rfc/front/boilerplate"/>
+      </xsl:variable>
+      <xsl:variable name="generated">
+         <xsl:apply-templates select="exslt:node-set($preamble)"/>
+      </xsl:variable>
+      <xsl:copy-of select="$generated"/>
+      <!--<xsl:message>1: [[[<xsl:value-of select="normalize-space(string($userboiler))"/>]]]</xsl:message>
+      <xsl:message>2: [[[<xsl:value-of select="normalize-space(string($generated))"/>]]]</xsl:message>-->
+      <xsl:variable name="differ" select="$src//rfc/front/boilerplate and normalize-space(string($userboiler))!=normalize-space(string($generated))"/>
       <xsl:if test="$differ">
+        <xsl:variable name="diff">
+          <xsl:call-template name="string-diff">
+            <xsl:with-param name="s1" select="normalize-space(string($userboiler))"/>
+            <xsl:with-param name="s2" select="normalize-space(string($generated))"/>
+          </xsl:call-template>
+        </xsl:variable>
         <xsl:call-template name="error">
-          <xsl:with-param name="msg" select="'user-supplied boilerplate differs from auto-generated boilerplate (inserting auto-generated)'"/>
+          <xsl:with-param name="msg" select="concat('User-supplied boilerplate differs from auto-generated boilerplate (inserting auto-generated); ', $diff)"/>
         </xsl:call-template>
       </xsl:if>
     </xsl:when>
@@ -6601,7 +6636,7 @@
         <xsl:with-param name="msg" select="'month missing but is required for RFCs'"/>
       </xsl:call-template>
     </xsl:if>
-    <xsl:if test="$xml2rfc-ext-pub-day='' and /rfc/@docName and not(substring(/rfc/@docName, string-length(/rfc/@docName) - string-length('-latest') + 1) = '-latest')">
+    <xsl:if test="$xml2rfc-ext-pub-day='' and /rfc/@docName and $rfcno='' and not(substring(/rfc/@docName, string-length(/rfc/@docName) - string-length('-latest') + 1) = '-latest')">
       <xsl:call-template name="warning">
         <xsl:with-param name="msg" select="concat('/rfc/front/date/@day appears to be missing for a historic draft dated ', $pub-yearmonth)"/>
       </xsl:call-template>
@@ -8588,7 +8623,7 @@ dd, li, p {
   <section anchor="{$anchor-pref}status">
   <name>
     <xsl:choose>
-      <xsl:when test="$xml2rfc-rfcedstyle='yes'">Status of This Memo</xsl:when>
+      <xsl:when test="$xml2rfc-rfcedstyle='yes' or $src/rfc/@version >= 3">Status of This Memo</xsl:when>
       <xsl:otherwise>Status of this Memo</xsl:otherwise>
     </xsl:choose>
   </name>
@@ -8982,7 +9017,7 @@ dd, li, p {
       <section anchor="{$anchor-pref}copyrightnotice">
         <name>Copyright Notice</name>
         <t>
-          Copyright &#169; <xsl:value-of select="$xml2rfc-ext-pub-year" /> IETF Trust and the persons identified
+          Copyright (c) <xsl:value-of select="$xml2rfc-ext-pub-year" /> IETF Trust and the persons identified
           as the document authors.  All rights reserved.
         </t>
         <xsl:choose>
@@ -11296,11 +11331,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1219 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1219 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1225 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1225 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2019/11/02 12:56:10 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/11/02 12:56:10 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2019/11/08 13:45:58 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2019/11/08 13:45:58 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
