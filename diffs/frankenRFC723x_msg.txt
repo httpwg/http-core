@@ -277,48 +277,6 @@ X.  [Message]
    response is interpreted as an unknown or invalid request method) and
    clients are implemented to only expect a response.
 
-2.6.  Protocol Versioning
-
-   HTTP uses a "<major>.<minor>" numbering scheme to indicate versions
-   of the protocol.  This specification defines version "1.1".
-
-   The version of an HTTP message is indicated by an HTTP-version field
-   in the first line of the message.  HTTP-version is case-sensitive.
-
-     HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
-     HTTP-name     = %x48.54.54.50 ; "HTTP", case-sensitive
-
-   When an HTTP/1.1 message is sent to an HTTP/1.0 recipient [RFC1945]
-   or a recipient whose version is unknown, the HTTP/1.1 message is
-   constructed such that it can be interpreted as a valid HTTP/1.0
-   message if all of the newer features are ignored.  This specification
-   places recipient-version requirements on some new features so that a
-   conformant sender will only use compatible features until it has
-   determined, through configuration or the receipt of a message, that
-   the recipient supports HTTP/1.1.
-
-   Intermediaries that process HTTP messages (i.e., all intermediaries
-   other than those acting as tunnels) MUST send their own HTTP-version
-   in forwarded messages.  In other words, they are not allowed to
-   blindly forward the first line of an HTTP message without ensuring
-   that the protocol version in that message matches a version to which
-   that intermediary is conformant for both the receiving and sending of
-   messages.  Forwarding an HTTP message without rewriting the
-   HTTP-version might result in communication errors when downstream
-   recipients use the message sender's version to determine what
-   features are safe to use for later communication with that sender.
-
-   A server MAY send an HTTP/1.0 response to a request if it is known or
-   suspected that the client incorrectly implements the HTTP
-   specification and is incapable of correctly processing later version
-   responses, such as when a client fails to parse the version number
-   correctly or when an intermediary is known to blindly forward the
-   HTTP-version even when it doesn't conform to the given minor version
-   of the protocol.  Such protocol downgrades SHOULD NOT be performed
-   unless triggered by specific client attributes, such as when one or
-   more of the request header fields (e.g., User-Agent) uniquely match
-   the values sent by a client known to be in error.
-
 3.5.  Message Parsing Robustness
 
    The normal procedure for parsing an HTTP message is to read the
@@ -376,6 +334,48 @@ X.  [Message]
    receives a sequence of octets that does not match the HTTP-message
    grammar aside from the robustness exceptions listed above, the server
    SHOULD respond with a 400 (Bad Request) response.
+
+2.6.  Protocol Versioning
+
+   HTTP uses a "<major>.<minor>" numbering scheme to indicate versions
+   of the protocol.  This specification defines version "1.1".
+
+   The version of an HTTP message is indicated by an HTTP-version field
+   in the first line of the message.  HTTP-version is case-sensitive.
+
+     HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
+     HTTP-name     = %x48.54.54.50 ; "HTTP", case-sensitive
+
+   When an HTTP/1.1 message is sent to an HTTP/1.0 recipient [RFC1945]
+   or a recipient whose version is unknown, the HTTP/1.1 message is
+   constructed such that it can be interpreted as a valid HTTP/1.0
+   message if all of the newer features are ignored.  This specification
+   places recipient-version requirements on some new features so that a
+   conformant sender will only use compatible features until it has
+   determined, through configuration or the receipt of a message, that
+   the recipient supports HTTP/1.1.
+
+   Intermediaries that process HTTP messages (i.e., all intermediaries
+   other than those acting as tunnels) MUST send their own HTTP-version
+   in forwarded messages.  In other words, they are not allowed to
+   blindly forward the first line of an HTTP message without ensuring
+   that the protocol version in that message matches a version to which
+   that intermediary is conformant for both the receiving and sending of
+   messages.  Forwarding an HTTP message without rewriting the
+   HTTP-version might result in communication errors when downstream
+   recipients use the message sender's version to determine what
+   features are safe to use for later communication with that sender.
+
+   A server MAY send an HTTP/1.0 response to a request if it is known or
+   suspected that the client incorrectly implements the HTTP
+   specification and is incapable of correctly processing later version
+   responses, such as when a client fails to parse the version number
+   correctly or when an intermediary is known to blindly forward the
+   HTTP-version even when it doesn't conform to the given minor version
+   of the protocol.  Such protocol downgrades SHOULD NOT be performed
+   unless triggered by specific client attributes, such as when one or
+   more of the request header fields (e.g., User-Agent) uniquely match
+   the values sent by a client known to be in error.
 
 3.1.1.  Request Line
 
@@ -645,7 +645,7 @@ X.  [Message]
 
      reason-phrase  = *( HTAB / SP / VCHAR / obs-text )
 
-3.2.  Header Fields
+5.  Header Field Syntax
 
    Each header field consists of a case-insensitive field name followed
    by a colon (":"), optional leading whitespace, the field value, and
@@ -676,7 +676,7 @@ X.  [Message]
    | Close             | http     | reserved | Section 8.1 |
    +-------------------+----------+----------+-------------+
 
-3.2.4.  Field Parsing
+5.1.  Field Parsing
 
    Messages are parsed using a generic algorithm, independent of the
    individual header field names.  The contents within a given field
@@ -754,16 +754,7 @@ X.  [Message]
 
    The presence of a message body in a response depends on both the
    request method to which it is responding and the response status code
-   (Section 3.1.2).  Responses to the HEAD request method (Section 4.3.2
-   of [RFC7231]) never include a message body because the associated
-   response header fields (e.g., Transfer-Encoding, Content-Length,
-   etc.), if present, indicate only what their values would have been if
-   the request method had been GET (Section 4.3.1 of [RFC7231]). 2xx
-   (Successful) responses to a CONNECT request method (Section 4.3.6 of
-   [RFC7231]) switch to tunnel mode instead of having a message body.
-   All 1xx (Informational), 204 (No Content), and 304 (Not Modified)
-   responses do not include a message body.  All other responses do
-   include a message body, although the body might be of zero length.
+   (Section 3.1.2).
 
 3.3.1.  Transfer-Encoding
 
@@ -1066,14 +1057,6 @@ X.  [Message]
 
      trailer-part   = *( header-field CRLF )
 
-   A sender MUST NOT generate a trailer that contains a field necessary
-   for message framing (e.g., Transfer-Encoding and Content-Length),
-   routing (e.g., Host), request modifiers (e.g., controls and
-   conditionals in Section 5 of [RFC7231]), authentication (e.g., see
-   [RFC7235] and [RFC6265]), response control data (e.g., see Section
-   7.1 of [RFC7231]), or determining how to process the payload (e.g.,
-   Content-Encoding, Content-Type, Content-Range, and Trailer).
-
    When a chunked message containing a non-empty trailer is received,
    the recipient MAY process the fields (aside from those forbidden
    above) as if they were appended to the message's header section.  A
@@ -1081,24 +1064,6 @@ X.  [Message]
    forbidden to be sent in a trailer, since processing them as if they
    were present in the header section might bypass external security
    filters.
-
-   Unless the request includes a TE header field indicating "trailers"
-   is acceptable, as described in Section 4.3, a server SHOULD NOT
-   generate trailer fields that it believes are necessary for the user
-   agent to receive.  Without a TE containing "trailers", the server
-   ought to assume that the trailer fields might be silently discarded
-   along the path to the user agent.  This requirement allows
-   intermediaries to forward a de-chunked message to an HTTP/1.0
-   recipient without buffering the entire response.
-
-   When a message includes a message body encoded with the chunked
-   transfer coding and the sender desires to send metadata in the form
-   of trailer fields at the end of the message, the sender SHOULD
-   generate a Trailer header field before the message body to indicate
-   which fields will be present in the trailers.  This allows the
-   recipient to prepare for receipt of that metadata before it starts
-   processing the body, which is useful if the message is being streamed
-   and the recipient wishes to confirm an integrity check on the fly.
 
 4.1.3.  Decoding Chunked
 
@@ -1124,12 +1089,12 @@ X.  [Message]
      Remove "chunked" from Transfer-Encoding
      Remove Trailer from existing header fields
 
-4.2.  Compression Codings
+7.2.  Compression Codings
 
    The codings defined below can be used to compress the payload of a
    message.
 
-8.4.  Transfer Coding Registry
+7.3.  Transfer Coding Registry
 
    The "HTTP Transfer Coding Registry" defines the namespace for
    transfer coding names.  It is maintained at
@@ -1335,13 +1300,29 @@ X.  [Message]
    "close" connection option in every response message that does not
    have a 1xx (Informational) status code.
 
-6.2.  Establishment
+9.2.  Establishment
 
    It is beyond the scope of this specification to describe how
    connections are established via various transport- or session-layer
    protocols.  Each connection applies to only one transport link.
 
-6.3.  Persistence
+9.3.  Associating a Response to a Request
+
+   HTTP does not include a request identifier for associating a given
+   request message with its corresponding one or more response messages.
+   Hence, it relies on the order of response arrival to correspond
+   exactly to the order in which requests are made on the same
+   connection.  More than one response message per request only occurs
+   when one or more informational responses (1xx, see Section 6.2 of
+   [RFC7231]) precede a final response to the same request.
+
+   A client that has more than one outstanding request on a connection
+   MUST maintain a list of outstanding requests in the order sent and
+   MUST associate each received response message on that connection to
+   the highest ordered request that has not yet received a final
+   (non-1xx) response.
+
+9.4.  Persistence
 
    HTTP/1.1 defaults to the use of "persistent connections", allowing
    multiple requests and responses to be carried over a single
@@ -1396,23 +1377,7 @@ X.  [Message]
    When an inbound connection is closed prematurely, a client MAY open a
    new connection and automatically retransmit an aborted sequence of
    requests if all of those requests have idempotent methods (Section
-   4.2.2 of [RFC7231]).  A proxy MUST NOT automatically retry
-   non-idempotent requests.
-
-   A user agent MUST NOT automatically retry a request with a non-
-   idempotent method unless it has some means to know that the request
-   semantics are actually idempotent, regardless of the method, or some
-   means to detect that the original request was never applied.  For
-   example, a user agent that knows (through design or configuration)
-   that a POST request to a given resource is safe can repeat that
-   request automatically.  Likewise, a user agent designed specifically
-   to operate on a version control repository might be able to recover
-   from partial failure conditions by checking the target resource
-   revision(s) after a failed connection, reverting or fixing any
-   changes that were partially applied, and then automatically retrying
-   the requests that failed.
-
-   A client SHOULD NOT automatically retry a failed automatic retry.
+   4.2.2 of [RFC7231]).
 
 6.3.2.  Pipelining
 
@@ -1559,6 +1524,86 @@ X.  [Message]
 
    It is unknown whether the reset problem is exclusive to TCP or might
    also be found in other transport connection protocols.
+
+9.8.  TLS Connection Closure [RFC2818]
+
+   TLS provides a facility for secure connection closure. When a valid
+   closure alert is received, an implementation can be assured that no
+   further data will be received on that connection.  TLS
+   implementations MUST initiate an exchange of closure alerts before
+   closing a connection. A TLS implementation MAY, after sending a
+   closure alert, close the connection without waiting for the peer to
+   send its closure alert, generating an "incomplete close".  Note that
+   an implementation which does this MAY choose to reuse the session.
+   This SHOULD only be done when the application knows (typically
+   through detecting HTTP message boundaries) that it has received all
+   the message data that it cares about.
+
+   As specified in [RFC2246], any implementation which receives a
+   connection close without first receiving a valid closure alert (a
+   "premature close") MUST NOT reuse that session.  Note that a
+   premature close does not call into question the security of the data
+   already received, but simply indicates that subsequent data might
+   have been truncated. Because TLS is oblivious to HTTP
+   request/response boundaries, it is necessary to examine the HTTP data
+   itself (specifically the Content-Length header) to determine whether
+   the truncation occurred inside a message or between messages.
+
+2.2.1.  Client Behavior
+
+   Because HTTP uses connection closure to signal end of server data,
+   client implementations MUST treat any premature closes as errors and
+   the data received as potentially truncated.  While in some cases the
+   HTTP protocol allows the client to find out whether truncation took
+   place so that, if it received the complete reply, it may tolerate
+   such errors following the principle to "[be] strict when sending and
+   tolerant when receiving" [RFC1958], often truncation does not show in
+   the HTTP protocol data; two cases in particular deserve special note:
+
+     A HTTP response without a Content-Length header. Since data length
+     in this situation is signalled by connection close a premature
+     close generated by the server cannot be distinguished from a
+     spurious close generated by an attacker.
+
+     A HTTP response with a valid Content-Length header closed before
+     all data has been read. Because TLS does not provide document
+     oriented protection, it is impossible to determine whether the
+     server has miscomputed the Content-Length or an attacker has
+     truncated the connection.
+
+   There is one exception to the above rule.
+
+   When encountering a premature close, a client SHOULD treat as
+   completed all requests for which it has received as much data as
+   specified in the Content-Length header.
+
+   A client detecting an incomplete close SHOULD recover gracefully.  It
+   MAY resume a TLS session closed in this fashion.
+
+   Clients MUST send a closure alert before closing the connection.
+   Clients which are unprepared to receive any more data MAY choose not
+   to wait for the server's closure alert and simply close the
+   connection, thus generating an incomplete close on the server side.
+
+2.2.2.  Server Behavior
+
+   RFC 2616 permits an HTTP client to close the connection at any time,
+   and requires servers to recover gracefully.  In particular, servers
+   SHOULD be prepared to receive an incomplete close from the client,
+   since the client can often determine when the end of server data is.
+   Servers SHOULD be willing to resume TLS sessions closed in this
+   fashion.
+
+   Implementation note: In HTTP implementations which do not use
+   persistent connections, the server ordinarily expects to be able to
+   signal end of data by closing the connection. When Content-Length is
+   used, however, the client may have already sent the closure alert and
+   dropped the connection.
+
+   Servers MUST attempt to initiate an exchange of closure alerts with
+   the client before closing the connection. Servers MAY close the
+   connection after sending the closure alert, thus generating an
+   incomplete close on the client side.
 
 6.7.  Upgrade
 
@@ -1925,12 +1970,12 @@ X. Enclosing Messages as Data
    The "https" scheme can be used to identify resources that require a
    confidential connection, as described in Section 2.7.2.
 
-8.  IANA Considerations
+12.  IANA Considerations
 
    The change controller is: "IETF (iesg@ietf.org) - Internet
    Engineering Task Force".
 
-8.1.  Header Field Registration
+12.1.  Header Field Registration
 
    HTTP header fields are registered within the "Message Headers"
    registry maintained at
@@ -1939,7 +1984,7 @@ X. Enclosing Messages as Data
    "Permanent Message Header Field Names" registry has been updated
    accordingly (see [BCP90])
 
-8.3.  Internet Media Type Registration
+12.2.  Internet Media Type Registration
 
    IANA maintains the registry of Internet media types [BCP13] at
    <http://www.iana.org/assignments/media-types>.
@@ -1948,19 +1993,19 @@ X. Enclosing Messages as Data
    types "message/http" and "application/http".  The following has been
    registered with IANA.
 
-8.4.2.  [Transfer Coding] Registration
+12.3.  [Transfer Coding] Registration
 
    The "HTTP Transfer Coding Registry" has been updated with the
    registrations below:
 
-8.6.2.  Upgrade Token Registration
+12.4.  Upgrade Token Registration
 
    The "HTTP" entry in the upgrade token registry has been updated with
    the registration below:
 
-11.  References
+13.  References
 
-11.1.  Normative References
+13.1.  Normative References
 
    [RFC1950]     Deutsch, L. and J-L. Gailly, "ZLIB Compressed Data
                  Format Specification version 3.3", RFC 1950, May 1996.
@@ -2010,7 +2055,7 @@ X. Enclosing Messages as Data
    [Welch]       Welch, T., "A Technique for High-Performance Data
                  Compression", IEEE Computer 17(6), June 1984.
 
-11.2.  Informative References
+13.2.  Informative References
 
    [BCP13]       Freed, N., Klensin, J., and T. Hansen, "Media Type
                  Specifications and Registration Procedures", BCP 13,
@@ -2088,7 +2133,7 @@ X. Enclosing Messages as Data
                  Codes", RFC 6585, April 2012.
 
 
-Appendix B.  Collected ABNF
+Appendix A.  Collected ABNF
 
    BWS = OWS
 
@@ -2204,7 +2249,7 @@ Appendix B.  Collected ABNF
 
    uri-host = <host, see [RFC3986], Section 3.2.2>
 
-Appendix A.  Differences between HTTP and MIME
+Appendix B.  Differences between HTTP and MIME
 
    HTTP/1.1 uses many of the constructs defined for the Internet Message
    Format [RFC5322] and the Multipurpose Internet Mail Extensions (MIME)
