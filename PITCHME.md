@@ -7,9 +7,7 @@
 @snapend
 
 @snap[south text-06 text-gray span-100]
-Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/agenda#2019-11-18-080000)
-
-[view as slides](https://gitpitch.com/httpwg/http-core)
+Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/agenda#2019-11-18-080000) | [view as slides](https://gitpitch.com/httpwg/http-core)
 @snapend
 
 ---
@@ -26,15 +24,15 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ### Since 05
 
-  - https://httpwg.org/http-core/diffs/diff_semantics_05_to_06.html
-  - https://httpwg.org/http-core/diffs/diff_messaging_05_to_06.html
-  - https://httpwg.org/http-core/diffs/diff_cache_05_to_06.html
+  - [diff_semantics_05_to_06.html](https://httpwg.org/http-core/diffs/diff_semantics_05_to_06.html)
+  - [diff_messaging_05_to_06.html](https://httpwg.org/http-core/diffs/diff_messaging_05_to_06.html)
+  - [diff_cache_05_to_06.html](https://httpwg.org/http-core/diffs/diff_cache_05_to_06.html)
 
 ### Since RFC 723x
 
-  - https://httpwg.org/http-core/diffs/diff_semantics_frfc_to_06.html
-  - https://httpwg.org/http-core/diffs/diff_messaging_frfc_to_06.html
-  - https://httpwg.org/http-core/diffs/diff_cache_frfc_to_06.html
+  - [diff_semantics_frfc_to_06](https://httpwg.org/http-core/diffs/diff_semantics_frfc_to_06.html)
+  - [diff_messaging_frfc_to_06](https://httpwg.org/http-core/diffs/diff_messaging_frfc_to_06.html)
+  - [diff_cache_frfc_to_06](https://httpwg.org/http-core/diffs/diff_cache_frfc_to_06.html)
 
 ---
 
@@ -44,31 +42,33 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ## Commits and open issues:
 
+@snap[text-06 span-100]
   - https://github.com/httpwg/http-core/commits/master
   - https://github.com/httpwg/http-core/issues
+@snapend
 
 ---
 
 ## RFC 723x Errata
 
-  - https://httpwg.org/http-core/httpbis-errata-status.html
+  - [Status](https://httpwg.org/http-core/httpbis-errata-status.html)
 
 ### Only two remaining
 
- - https://github.com/httpwg/http-core/issues/163
- - https://github.com/httpwg/http-core/issues/53
+ - [163](https://github.com/httpwg/http-core/issues/163)
+ - [53](https://github.com/httpwg/http-core/issues/53)
 
 ---
 
 ## Issues to discuss now
 
-  - https://github.com/httpwg/http-core/labels/discuss
+  - [labelled discuss](https://github.com/httpwg/http-core/labels/discuss)
 
 ---
 
 ## Issues Closed since Montreal IETF 105:
 
-  - https://github.com/httpwg/http-core/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed+closed%3A%3E2019-07-19+sort%3Acreated-asc
+  - [](https://github.com/httpwg/http-core/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed+closed%3A%3E2019-07-19+sort%3Acreated-asc)
 
 Bulk of text changes being about:
 
