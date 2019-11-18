@@ -36,21 +36,6 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ---
 
-## RFC 723x [Errata Status](https://httpwg.org/http-core/httpbis-errata-status.html)
-
-### Only two remaining
-
- - [163](https://github.com/httpwg/http-core/issues/163)
- - [53](https://github.com/httpwg/http-core/issues/53)
-
----
-
-## Issues to discuss now
-
-[labelled discuss](https://github.com/httpwg/http-core/labels/discuss)
-
----
-
 #### Closed [since Montreal](https://github.com/httpwg/http-core/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed+closed%3A%3E2019-07-19+sort%3Acreated-asc)
 
 @snap[text-06 span-100]
@@ -64,6 +49,21 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
  - replacing "cacheable by default" with heuristically cacheable: [54](https://github.com/httpwg/http-core/issues/54), [242](https://github.com/httpwg/http-core/issues/242)
  - defining requirements on caching incomplete responses: [25](https://github.com/httpwg/http-core/issues/25), [221](https://github.com/httpwg/http-core/issues/221)
 @snapend
+
+---
+
+## RFC 723x [Errata Status](https://httpwg.org/http-core/httpbis-errata-status.html)
+
+### Only two remaining
+
+ - [163](https://github.com/httpwg/http-core/issues/163)
+ - [53](https://github.com/httpwg/http-core/issues/53)
+
+---
+
+## Issues to discuss now
+
+[labelled discuss](https://github.com/httpwg/http-core/labels/discuss)
 
 ---
 
