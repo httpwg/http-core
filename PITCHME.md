@@ -36,19 +36,6 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ---
 
-## Track us on Github
-
-  - https://github.com/httpwg/http-core
-
-## Commits and open issues:
-
-@snap[text-06 span-100]
-  - https://github.com/httpwg/http-core/commits/master
-  - https://github.com/httpwg/http-core/issues
-@snapend
-
----
-
 ## RFC 723x Errata
 
   - [Status](https://httpwg.org/http-core/httpbis-errata-status.html)
@@ -66,12 +53,9 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ---
 
-## Issues Closed since Montreal IETF 105:
+#### Closed [since Montreal](https://github.com/httpwg/http-core/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed+closed%3A%3E2019-07-19+sort%3Acreated-asc)
 
-  - [](https://github.com/httpwg/http-core/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed+closed%3A%3E2019-07-19+sort%3Acreated-asc)
-
-Bulk of text changes being about:
-
+@snap[text-06 span-100]
  - refactoring the byte ranges grammar to be extensible: [196](https://github.com/httpwg/http-core/issues/196), [212](https://github.com/httpwg/http-core/issues/212)
  - moving trailer fields to Semantics: [16](https://github.com/httpwg/http-core/issues/16), [117](https://github.com/httpwg/http-core/issues/117)
  - moving payload body requirements to Semantics: [159](https://github.com/httpwg/http-core/issues/159), [202](https://github.com/httpwg/http-core/issues/202)
@@ -81,7 +65,23 @@ Bulk of text changes being about:
  - incorporating the remaining RFC2818 (HTTP over TLS) text: [236](https://github.com/httpwg/http-core/issues/236)
  - replacing "cacheable by default" with heuristically cacheable: [54](https://github.com/httpwg/http-core/issues/54), [242](https://github.com/httpwg/http-core/issues/242)
  - defining requirements on caching incomplete responses: [25](https://github.com/httpwg/http-core/issues/25), [221](https://github.com/httpwg/http-core/issues/221)
+@snapend
 
-See the "Changes since ..." sections at the end of each draft for a brief
-summary of what has been changed.
+---
+
+## Track us on Github
+
+https://github.com/httpwg/http-core
+
+### Commits
+
+@snap[text-06 span-100]
+  - https://github.com/httpwg/http-core/commits/master
+@snapend
+
+### Issues
+
+@snap[text-06 span-100]
+  - https://github.com/httpwg/http-core/issues
+@snapend
 
