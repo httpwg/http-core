@@ -1,14 +1,16 @@
 # http-core status
 
+@snap[list-no-bullets]
+ - Roy T. Fielding
+ - Mark Nottingham
+ - Julian F. Reschke
+@snapend
+
+@snap[south text-06 text-gray span-100]
 Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/agenda#2019-11-18-080000)
 
-### Editors
-
-  - Roy T. Fielding
-  - Mark Nottingham
-  - Julian F. Reschke
-
 [view as slides](https://gitpitch.com/httpwg/http-core)
+@snapend
 
 ---
   
