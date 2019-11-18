@@ -20,7 +20,7 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ---
 
-## Diffs
+## diffs
 
 ### Since 05
 
@@ -36,9 +36,7 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ---
 
-## RFC 723x Errata
-
-  - [Status](https://httpwg.org/http-core/httpbis-errata-status.html)
+## RFC 723x [Errata Status](https://httpwg.org/http-core/httpbis-errata-status.html)
 
 ### Only two remaining
 
@@ -49,7 +47,7 @@ Last updated for [Singapore IETF 106](https://datatracker.ietf.org/meeting/106/a
 
 ## Issues to discuss now
 
-  - [labelled discuss](https://github.com/httpwg/http-core/labels/discuss)
+[labelled discuss](https://github.com/httpwg/http-core/labels/discuss)
 
 ---
 
@@ -76,12 +74,12 @@ https://github.com/httpwg/http-core
 ### Commits
 
 @snap[text-06 span-100]
-  - https://github.com/httpwg/http-core/commits/master
+https://github.com/httpwg/http-core/commits/master
 @snapend
 
 ### Issues
 
 @snap[text-06 span-100]
-  - https://github.com/httpwg/http-core/issues
+https://github.com/httpwg/http-core/issues
 @snapend
 
