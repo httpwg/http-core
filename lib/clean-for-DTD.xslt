@@ -739,8 +739,8 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[node() and @format='none' and (@target=//artwork//@anchor or @target=//sourcecode//@anchor)]" mode="cleanup">
-  <!-- remove the link -->
+<xsl:template match="xref[node() and @format='none' and (@target=//artwork//*/@anchor or @target=//sourcecode//*/@anchor)]" mode="cleanup">
+  <!-- remove links to elements inside <artwork> or <sourcecode> -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
@@ -1248,6 +1248,7 @@
 <xsl:template match="rfc/@symRefs" mode="cleanup"/>
 <xsl:template match="rfc/@tocInclude" mode="cleanup"/>
 <xsl:template match="rfc/@tocDepth" mode="cleanup"/>
+<xsl:template match="rfc/@consensus" mode="cleanup"/>
 
 <xsl:template match="rfc" mode="cleanup">
   <xsl:if test="@sortRefs='true'">
@@ -1276,6 +1277,13 @@
     <xsl:if test="not(@sortRefs) and $xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-sortrefs='yes'">
       <xsl:attribute name="sortRefs">true</xsl:attribute>
     </xsl:if>
+    <xsl:choose>
+      <xsl:when test="@consensus='yes' and $xml2rfc-ext-xml2rfc-voc >= 3"><xsl:attribute name="consensus">true</xsl:attribute></xsl:when>
+      <xsl:when test="@consensus='no' and $xml2rfc-ext-xml2rfc-voc >= 3"><xsl:attribute name="consensus">false</xsl:attribute></xsl:when>
+      <xsl:when test="@consensus='true' and $xml2rfc-ext-xml2rfc-voc &lt; 3"><xsl:attribute name="consensus">yes</xsl:attribute></xsl:when>
+      <xsl:when test="@consensus='false' and $xml2rfc-ext-xml2rfc-voc &lt; 3"><xsl:attribute name="consensus">no</xsl:attribute></xsl:when>
+      <xsl:otherwise><xsl:copy-of select="@consensus"/></xsl:otherwise>
+    </xsl:choose>
     <xsl:apply-templates select="@*|node()" mode="cleanup"/>
   </rfc>
 </xsl:template>
@@ -1673,7 +1681,14 @@
       <xsl:variable name="desc" select="following-sibling::dd[1]"/>
       <xsl:variable name="block-level-children" select="$desc/artwork | $desc/dl | $desc/ol | $desc/sourcecode | $desc/t | $desc/ul"/>
       <t hangText="{normalize-space($txt)}">
-        <xsl:copy-of select="@anchor"/>
+        <xsl:choose>
+          <xsl:when test="@anchor">
+            <xsl:copy-of select="@anchor"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:copy-of select="$desc/@anchor"/>
+          </xsl:otherwise>
+        </xsl:choose>
         <xsl:if test="$newl='true'">
           <xsl:choose>
             <xsl:when test="$block-level-children">
@@ -1711,6 +1726,20 @@
       </t>
     </xsl:for-each>
   </list>
+</xsl:template>
+
+<!-- rewrite link target going to <dd> to use preceding <dt>'s anchor when present -->
+<xsl:template match="xref/@target[.=//dd/@anchor]" mode="cleanup">
+  <xsl:variable name="t" select="//dd[@anchor=current()]"/>
+  <xsl:variable name="p" select="$t/preceding-sibling::dt[1]"/>
+  <xsl:choose>
+    <xsl:when test="$p/@anchor">
+      <xsl:attribute name="target"><xsl:value-of select="$p/@anchor"/></xsl:attribute>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:attribute name="target"><xsl:value-of select="@target"/></xsl:attribute>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <!-- List items -->
