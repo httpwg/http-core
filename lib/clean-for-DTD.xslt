@@ -1,7 +1,7 @@
 <!--
     Strip rfc2629.xslt extensions, generating XML input for "official" xml2rfc
 
-    Copyright (c) 2006-2019, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2020, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -739,8 +739,8 @@
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
-<xsl:template match="xref[node() and @format='none' and (@target=//artwork//@anchor or @target=//sourcecode//@anchor)]" mode="cleanup">
-  <!-- remove the link -->
+<xsl:template match="xref[node() and @format='none' and (@target=//artwork//*/@anchor or @target=//sourcecode//*/@anchor)]" mode="cleanup">
+  <!-- remove links to elements inside <artwork> or <sourcecode> -->
   <xsl:apply-templates select="node()" mode="cleanup"/>
 </xsl:template>
 
@@ -1248,6 +1248,7 @@
 <xsl:template match="rfc/@symRefs" mode="cleanup"/>
 <xsl:template match="rfc/@tocInclude" mode="cleanup"/>
 <xsl:template match="rfc/@tocDepth" mode="cleanup"/>
+<xsl:template match="rfc/@consensus" mode="cleanup"/>
 
 <xsl:template match="rfc" mode="cleanup">
   <xsl:if test="@sortRefs='true'">
@@ -1276,6 +1277,13 @@
     <xsl:if test="not(@sortRefs) and $xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-sortrefs='yes'">
       <xsl:attribute name="sortRefs">true</xsl:attribute>
     </xsl:if>
+    <xsl:choose>
+      <xsl:when test="@consensus='yes' and $xml2rfc-ext-xml2rfc-voc >= 3"><xsl:attribute name="consensus">true</xsl:attribute></xsl:when>
+      <xsl:when test="@consensus='no' and $xml2rfc-ext-xml2rfc-voc >= 3"><xsl:attribute name="consensus">false</xsl:attribute></xsl:when>
+      <xsl:when test="@consensus='true' and $xml2rfc-ext-xml2rfc-voc &lt; 3"><xsl:attribute name="consensus">yes</xsl:attribute></xsl:when>
+      <xsl:when test="@consensus='false' and $xml2rfc-ext-xml2rfc-voc &lt; 3"><xsl:attribute name="consensus">no</xsl:attribute></xsl:when>
+      <xsl:otherwise><xsl:copy-of select="@consensus"/></xsl:otherwise>
+    </xsl:choose>
     <xsl:apply-templates select="@*|node()" mode="cleanup"/>
   </rfc>
 </xsl:template>
@@ -1349,7 +1357,7 @@
     <front>
       <title>
         <xsl:text>Consisting of: </xsl:text>
-        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/reference"/>
+        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/*[self::reference or self::referencegroup]"/>
         <xsl:for-each select="reference|$included">
           <xsl:value-of select="concat('[',@anchor,']')"/>
           <xsl:choose>
@@ -1671,9 +1679,16 @@
       </xsl:variable>
       <!-- TODO: check for more block-level elements -->
       <xsl:variable name="desc" select="following-sibling::dd[1]"/>
-      <xsl:variable name="block-level-children" select="$desc/artwork | $desc/dl | $desc/ol | $desc/sourcecode | $desc/t | $desc/ul"/>
+      <xsl:variable name="block-level-children" select="$desc/artwork | $desc/dl | $desc/figure | $desc/ol | $desc/sourcecode | $desc/t | $desc/table | $desc/ul"/>
       <t hangText="{normalize-space($txt)}">
-        <xsl:copy-of select="@anchor"/>
+        <xsl:choose>
+          <xsl:when test="@anchor">
+            <xsl:copy-of select="@anchor"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:copy-of select="$desc/@anchor"/>
+          </xsl:otherwise>
+        </xsl:choose>
         <xsl:if test="$newl='true'">
           <xsl:choose>
             <xsl:when test="$block-level-children">
@@ -1711,6 +1726,20 @@
       </t>
     </xsl:for-each>
   </list>
+</xsl:template>
+
+<!-- rewrite link target going to <dd> to use preceding <dt>'s anchor when present -->
+<xsl:template match="xref/@target[.=//dd/@anchor]" mode="cleanup">
+  <xsl:variable name="t" select="//dd[@anchor=current()]"/>
+  <xsl:variable name="p" select="$t/preceding-sibling::dt[1]"/>
+  <xsl:choose>
+    <xsl:when test="$p/@anchor">
+      <xsl:attribute name="target"><xsl:value-of select="$p/@anchor"/></xsl:attribute>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:attribute name="target"><xsl:value-of select="@target"/></xsl:attribute>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <!-- List items -->
@@ -2077,7 +2106,7 @@
 
 <!-- x:include -->
 <xsl:template match="/rfc/back/references/xi:include|/rfc/back/references/referencegroup/xi:include" mode="cleanup">
-  <xsl:copy-of select="document(@href)"/>
+  <xsl:apply-templates select="document(@href)" mode="cleanup"/>
 </xsl:template>
 
 <!-- Display names for references -->
