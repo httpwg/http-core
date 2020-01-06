@@ -44,13 +44,6 @@ body {
   font-family: 'Noto Sans', segoe, optima, arial, sans-serif, serif;
   font-size: 16px;
   line-height: 1.5;
-  margin: 10px 0px 10px 10px;
-}
-@media screen and (min-width: 940px) {
-  body {
-    margin: 10px auto;
-    max-width: 900px;
-  }
 }
 samp, span.tt, code, pre {
   font-family: 'Roboto Mono', monospace;
@@ -100,7 +93,7 @@ h1 {
   font-size: 150%;
   font-weight: bold;
   text-align: center;
-  margin-top: 36pt;
+  margin-top: 18pt;
   margin-bottom: 0pt;
 }
 h2 {
@@ -175,91 +168,11 @@ pre.drawing {
   background-color: #f8f8f8;
   padding: 2em;
 }
-table {
-  margin-left: 2em;
-}
-div.tt {
-  margin-left: 2em;
-} 
-table.tt {
-  border-collapse: collapse;
-  border-color: gray;
-  border-spacing: 0; 
+table td {
   vertical-align: top;
- }
-table.tt th {
-  border-color: gray;
-  padding: 3px;
-}
-table.tt td {
-  border-color: gray;
-  padding: 3px;
-}
-table.all {
-  border-style: solid;
-  border-width: 2px;
-}
-table.full {
-  border-style: solid;
-  border-width: 2px;
-}
-table.tt td {
-  vertical-align: top;
-}
-table.all td {
   border-style: solid;
   border-width: 1px;
-}
-table.full td {
-  border-style: none solid;
-  border-width: 1px;
-}
-table.tt th {
-  vertical-align: top;
-}
-table.all th {
-  border-style: solid;
-  border-width: 1px;
-}
-table.full th {
-  border-style: solid;
-  border-width: 1px 1px 2px 1px;
-}
-table.headers th {
-  border-style: none none solid none;
-  border-width: 2px;
-}
-table.tleft {
-  margin-right: auto;
-}
-table.tright {
-  margin-left: auto;
-}
-table.tcenter {
-  margin-left: auto;
-  margin-right: auto;
-}
-caption {
-  caption-side: bottom;
-  font-weight: bold;
-  font-size: 80%;
-  margin-top: .5em;
-}
-
-table.header {
-  border-spacing: 1px;
-  width: 95%;
-  font-size: 90%;
-}
-td.top {
-  vertical-align: top;
-}
-td.topnowrap {
-  vertical-align: top;
-  white-space: nowrap;
-}
-table.header td {
-  width: 50%;
+  border-color: gray;
 }
 table.header a {
   color: black;
@@ -381,48 +294,6 @@ section.rfcEditorRemove > div:first-of-type {
   -ms-user-select: none;
 }
 
-@media screen {
-  pre.text, pre.text2 {
-    width: 69em;
-  }
-}
-
-@media print {
-  .noprint {
-    display: none;
-  }
-
-  a {
-    color: black;
-    text-decoration: none;
-  }
-
-  table.header {
-    width: 90%;
-  }
-
-  td.header {
-    width: 50%;
-    color: black;
-    background-color: white;
-    vertical-align: top;
-    font-size: 110%;
-  }
-
-  ul.toc a:last-child::after {
-    content: leader('.') target-counter(attr(href), page);
-  }
-
-  ul.ind li li a {
-    content: target-counter(attr(href), page);
-  }
-
-  .print2col {
-    column-count: 2;
-    -moz-column-count: 2;
-    column-fill: auto;
-  }
-}
 @page {
   font-family: 'Noto Sans', segoe, optima, arial, sans-serif, serif;
 }
@@ -432,15 +303,19 @@ section.rfcEditorRemove > div:first-of-type {
       <div id="page">
         <div id="content">
           <h1>HTTP Core Drafts: Combined Table of Contents</h1>
+          <table>
           <xsl:for-each select="document('')//data:specs/data:name">
             <xsl:variable name="doc" select="document(concat('../build/',.,'.xhtml'))"/>
+            <td width="33%">
             <h2>
               <a href="{concat(.,'.html')}">
                 <xsl:value-of select="$doc//xhtml:title"/>
               </a>
             </h2>
             <xsl:apply-templates select="$doc//xhtml:nav/xhtml:ul[@class='toc']" mode="tocgen"/>
+            </td>
           </xsl:for-each>
+          </table>
         </div>
       </div>
     </body>

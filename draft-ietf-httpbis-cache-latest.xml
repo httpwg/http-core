@@ -29,6 +29,7 @@
 <?rfc-ext allow-markup-in-artwork="yes" ?>
 <?rfc-ext html-pretty-print="prettyprint https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"?>
 <?rfc-ext include-references-in-index="yes" ?>
+<?github-issue-label cache?>
 
 <rfc category="std" docName="draft-ietf-httpbis-cache-&ID-VERSION;" ipr="pre5378Trust200902"
   obsoletes="7234" x:maturity-level="proposed" xmlns:x="http://purl.org/net/xml2rfc/ext" xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -45,7 +46,7 @@
         <city>San Jose</city>
         <region>CA</region>
         <code>95110</code>
-        <country>USA</country>
+        <country>United States of America</country>
       </postal>
       <email>fielding@gbiv.com</email>
       <uri>https://roy.gbiv.com/</uri>
@@ -65,7 +66,7 @@
     <address>
       <postal>
         <street>Hafenweg 16</street>
-        <city>Muenster</city><region>NW</region><code>48155</code>
+        <city>Muenster</city><code>48155</code>
         <country>Germany</country>
       </postal>
       <email>julian.reschke@greenbytes.de</email>
@@ -106,7 +107,7 @@
     <eref target="https://github.com/httpwg/http-core"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.05"/>.
+    The changes in this draft are summarized in <xref target="changes.since.06"/>.
   </t>
 </note>
 
@@ -237,9 +238,9 @@
 <sourcecode type="abnf7230">
   <x:ref>HTTP-date</x:ref>     = &lt;HTTP-date, see <xref target="http.date"/>&gt;
   <x:ref>OWS</x:ref>           = &lt;OWS, see <xref target="whitespace"/>&gt;
-  <x:ref>field-name</x:ref>    = &lt;field-name, see <xref target="field.values"/>&gt;
-  <x:ref>quoted-string</x:ref> = &lt;quoted-string, see <xref target="field.components"/>&gt;
-  <x:ref>token</x:ref>         = &lt;token, see <xref target="field.components"/>&gt;
+  <x:ref>field-name</x:ref>    = &lt;field-name, see <xref target="field.names"/>&gt;
+  <x:ref>quoted-string</x:ref> = &lt;quoted-string, see <xref target="quoted.strings"/>&gt;
+  <x:ref>token</x:ref>         = &lt;token, see <xref target="tokens"/>&gt;
 </sourcecode>
 </section>
 
@@ -276,7 +277,6 @@
 </section>
 
 <section title="Overview of Cache Operation" anchor="caching.overview">
-<iref item="cache entry" />
 <iref item="cache key" />
 <t>
    Proper cache operation preserves the semantics of HTTP transfers (<xref
@@ -289,30 +289,35 @@
    reusing a stored response inappropriately, rather than mandating that
    caches always store and reuse particular responses.
 </t>
+<iref item="cache key" />
 <t>
-   Each <x:dfn>cache entry</x:dfn> consists of a cache key and one or more
-   HTTP responses corresponding to prior requests that used the same key. The
-   most common form of cache entry is a successful result of a retrieval
+   The base <x:dfn>cache key</x:dfn> consists of the request method and target
+   URI used to retrieve the stored response; the method determines under which
+   circumstances that response can be used to satisfy a request. However, many
+   HTTP caches in common use today only cache GET responses, and therefore only
+   use the URI as the cache key, forwarding other methods.
+</t>
+<t>
+   If a request target is subject to content negotiation, the cache might
+   store multiple responses for it. Caches differentiate these responses
+   by incorporating values of the original request's selecting header fields
+   into the cache key as well, as per <xref target="caching.negotiated.responses"/>.
+</t>
+<t>
+  Furthermore, caches might incorporate additional material into the cache key.
+  For example, user agent caches might include the referring site's identity,
+  thereby "double keying" the cache to avoid some privacy risks (see <xref
+  target="security.timing"/>).
+</t>
+<t>
+   Most commonly, caches store the successful result of a retrieval
    request: i.e., a <x:ref>200 (OK)</x:ref> response to a GET request, which
    contains a representation of the resource identified by the request target
-   (<xref target="GET"/>). However, it is also possible to cache permanent redirects,
-   negative results (e.g., <x:ref>404 (Not Found)</x:ref>),
+   (<xref target="GET"/>). However, it is also possible to store 
+   redirects, negative results (e.g., <x:ref>404 (Not Found)</x:ref>),
    incomplete results (e.g., <x:ref>206 (Partial Content)</x:ref>), and
    responses to methods other than GET if the method's definition allows such
    caching and defines something suitable for use as a cache key.
-</t>
-<iref item="cache key" />
-<t>
-   The primary <x:dfn>cache key</x:dfn> consists of the request method and
-   target URI.  However, since HTTP caches in common use today are typically
-   limited to caching responses to GET, many caches simply decline
-   other methods and use only the URI as the primary cache key.
-</t>
-<t>
-   If a request target is subject to content negotiation, its cache entry
-   might consist of multiple stored responses, each differentiated by a
-   secondary key for the values of the original request's selecting header
-   fields (<xref target="caching.negotiated.responses"/>).
 </t>
 <t>
    A cache is <x:dfn>disconnected</x:dfn> when it cannot contact the origin
@@ -354,7 +359,7 @@
         <li>contains a Cache Control Extension (see <xref
         target="cache.control.extensions" />) that allows it to be cached,
         or</li>
-        <li>has a status code that is defined as cacheable by default
+        <li>has a status code that is defined as heuristically cacheable
         (see <xref target="heuristic.freshness" />), or</li>
         <li>contains a public response directive (see <xref
         target="cache-response-directive.public"/>).</li>
@@ -380,21 +385,30 @@
 <section title="Storing Incomplete Responses" anchor="incomplete.responses">
 <t>
    A response message is considered complete when all of the octets indicated
-   by the message framing (<xref target="Messaging"/>) are received prior to the connection
-   being closed. If the request method is GET, the response status code is
-   <x:ref>200 (OK)</x:ref>, and the entire response header section has been received, a
-   cache &MAY; store an incomplete response message body if the cache entry is
-   recorded as incomplete. Likewise, a <x:ref>206 (Partial Content)</x:ref>
-   response &MAY; be stored as if it were an incomplete <x:ref>200
-   (OK)</x:ref> cache entry. However, a cache &MUST-NOT; store incomplete or
-   partial-content responses if it does not support the <x:ref>Range</x:ref>
-   and <x:ref>Content-Range</x:ref> header fields or if it does not understand
-   the range units used in those fields.
+   by its framing are available. Note that, when no explicit framing is
+   provided, a response message that is ended by the connection's close is
+   considered complete even though it might be indistinguishable from an
+   incomplete response (see <xref target="Messaging" x:fmt=","
+   x:rel="#message.body.length"/>). A cache &SHOULD; consider a close-terminated
+   response incomplete if the connection termination is detected to be an
+   error. A server that wishes to avoid premature termination resulting in an
+   incorrect cached response &SHOULD; send the response with explicit framing.
+</t>
+<t>
+   If the request method is GET, the response status code is <x:ref>200
+   (OK)</x:ref>, and the entire response header section has been received, a
+   cache &MAY; store an incomplete response message body if the stored response
+   is recorded as incomplete. Likewise, a <x:ref>206 (Partial
+   Content)</x:ref> response &MAY; be stored as if it were an incomplete
+   <x:ref>200 (OK)</x:ref> response. However, a cache &MUST-NOT; store
+   incomplete or partial-content responses if it does not support the
+   <x:ref>Range</x:ref> and <x:ref>Content-Range</x:ref> header fields or if
+   it does not understand the range units used in those fields.
 </t>
 <t>
    A cache &MAY; complete a stored incomplete response by making a subsequent
    range request (<xref target="header.range"/>) and combining the successful response with the
-   stored entry, as defined in <xref target="combining.responses"/>. A cache
+   stored response, as defined in <xref target="combining.responses"/>. A cache
    &MUST-NOT; use an incomplete response to answer requests unless the
    response has been made complete or the request is partial and specifies a
    range that is wholly within the incomplete response. A cache &MUST-NOT;
@@ -497,7 +511,7 @@
    responses without revalidating them upon every use.
 </t>
 
-<section title="Calculating Secondary Keys with Vary" anchor="caching.negotiated.responses">
+<section title="Calculating Cache Keys with Vary" anchor="caching.negotiated.responses">
 <t>
    When a cache receives a request that can be satisfied by a stored response
    that has a <x:ref>Vary</x:ref> header field (<xref target="header.vary"/>),
@@ -547,6 +561,13 @@
    used to select preferred responses; of the remainder, the most recent
    response (as determined by the <x:ref>Date</x:ref> header field) is used, as
    per <xref target="constructing.responses.from.caches"/>.
+</t>
+<t>
+   Note that in practice, some resources might send the Vary header field on
+   responses inconsistently. When a cache has multiple responses for a given
+   target URI, and one or more omits the Vary header field, it &SHOULD; use the
+   most recent non-empty value available to select an appropriate response
+   for the request.
 </t>
 <t>
    If no selected response is available, the cache cannot satisfy the 
@@ -679,6 +700,7 @@
 </section>
 
 <section title="Calculating Heuristic Freshness" anchor="heuristic.freshness">
+  <iref item="heuristically cacheable"/>
 <t>
    Since origin servers do not always provide explicit expiration times, a
    cache &MAY; assign a heuristic expiration time when an explicit time is not
@@ -692,10 +714,14 @@
    expiration time is present in the stored response. Because of the
    requirements in <xref target="response.cacheability"/>, this means that,
    effectively, heuristics can only be used on responses without explicit
-   freshness whose status codes are defined as cacheable by default (see
-   <xref target="overview.of.status.codes"/>), and those responses without explicit freshness that have
-   been marked as explicitly cacheable (e.g., with a "public" response 
-   directive).
+   freshness whose status codes are defined as "<x:dfn>heuristically cacheable</x:dfn>" (e.g., see
+   <xref target="overview.of.status.codes"/>), and those responses without
+   explicit freshness that have been marked as explicitly cacheable (e.g.,
+   with a "public" response directive).
+</t>
+<t>
+   Note that in previous specifications heuristically cacheable response status
+   codes were called "cacheable by default."
 </t>
 <t>
    If the response has a <x:ref>Last-Modified</x:ref> header field
@@ -795,10 +821,10 @@
    amount of time (in seconds) since the stored response was last validated by
    the origin server to the corrected_initial_age.
 </t>
-<figure><artwork type="code">
+<artwork type="code">
   resident_time = now - response_time;
   current_age = corrected_initial_age + resident_time;
-</artwork></figure>
+</artwork>
 </section>
 
 <section title="Serving Stale Responses" anchor="serving.stale.responses">
@@ -840,16 +866,16 @@
 <section title="Sending a Validation Request" anchor="validation.sent"><iref item="validator" />
 <t>
    When generating a conditional request for validation, a cache starts with
-   either a request it is attempting to satisfy, or -- if it is initiating
-   the request independently -- it synthesises a request using a stored
+   either a request it is attempting to satisfy, or &mdash; if it is initiating
+   the request independently &mdash; it synthesises a request using a stored
    response by copying the method, request-target, and request header fields
-   used for identifying the secondary cache key <xref
+   identified by the Vary header field <xref
    target="caching.negotiated.responses"/>.
 </t>
 <t>
    It then updates that request with one or more precondition header fields.
    These contain validator metadata sourced from stored response(s) that have
-   the same cache key (both primary and secondary, as applicable).
+   the same cache key.
 </t>
 <t>
    The precondition header fields are then compared by recipients to
@@ -1567,7 +1593,7 @@
    the use of public in response to a request containing
    <x:ref>Authorization</x:ref>, and <xref target="response.cacheability"/> for
    details of how public affects responses that would normally not be stored,
-   due to their status codes not being defined as cacheable by default; see
+   due to their status codes not being defined as heuristically cacheable; see
    <xref target="heuristic.freshness"/>.)
 </t>
 </section>
@@ -1657,7 +1683,7 @@
    proxy-revalidate response directive.
 </t>
 <t>
-   The must-revalidate directive also has the effect of allowing a stored
+   The s-maxage directive also has the effect of allowing a stored
    response to be used to satisfy a request with an Authorization header
    field; see <xref target="caching.authenticated.responses"/>.
 </t>
@@ -1876,34 +1902,58 @@
    information has been removed from the network. Therefore, cache contents
    need to be protected as sensitive information.
 </t>
+
+<section title="Cache Poisoning">
 <t>
-   In particular, various attacks might be amplified by being stored in a
-   shared cache; such "cache poisoning" attacks use the cache to distribute a
-   malicious payload to many clients, and are especially effective when an
-   attacker can use implementation flaws, elevated privileges, or other
-   techniques to insert such a response into a cache. One common attack vector
-   for cache poisoning is to exploit differences in message parsing on proxies
-   and in user agents; see <xref target="message.body.length"/> for the relevant requirements.
+   Various attacks might be amplified by being stored in a shared cache. Such
+   "cache poisoning" attacks use the cache to distribute a malicious payload
+   to many clients, and are especially effective when an attacker can use
+   implementation flaws, elevated privileges, or other techniques to insert
+   such a response into a cache.
 </t>
 <t>
-   Likewise, implementation flaws (as well as misunderstanding of cache
+   One common attack vector for cache poisoning is to exploit differences in
+   message parsing on proxies and in user agents; see <xref
+   target="message.body.length"/> for the relevant requirements regarding
+   HTTP/1.1.
+</t>
+</section>
+
+<section title="Timing Attacks" anchor="security.timing">
+<t>
+   Because one of the primary uses of a cache is to optimise performance,
+   its use can "leak" information about what resources have been previously
+   requested. 
+</t>
+<t>
+   For example, if a user visits a site and their browser caches some of its
+   responses, and then navigates to a second site, that site can attempt to
+   load responses that it knows exists on the first site. If they load very
+   quickly, it can be assumed that the user has visited that site, or even
+   a specific page on it.
+</t>
+<t>
+   Such "timing attacks" can be mitigated by adding more information to the
+   cache key, such as the identity of the referring site (to prevent the
+   attack described above). This is sometimes called "double keying."
+</t>
+</section>
+
+<section title="Caching of Sensitive Information">
+<t>
+   Implementation and deployment flaws (as well as misunderstanding of cache
    operation) might lead to caching of sensitive information (e.g.,
    authentication credentials) that is thought to be private, exposing it to
    unauthorized parties.
 </t>
 <t>
-   Furthermore, the very use of a cache can bring about privacy concerns. For
-   example, if two users share a cache, and the first one browses to a site,
-   the second may be able to detect that the other has been to that site, 
-   because the resources from it load more quickly, thanks to the cache.
+   Note that the Set-Cookie response header field <xref target="RFC6265"/>
+   does not inhibit caching; a cacheable response with a Set-Cookie header
+   field can be (and often is) used to satisfy subsequent requests to caches.
+   Servers who wish to control caching of these responses are encouraged to
+   emit appropriate Cache-Control response header fields.
 </t>
-<t>
-   Note that the Set-Cookie response header field <xref target="RFC6265"/> does not
-   inhibit caching; a cacheable response with a Set-Cookie header field can be (and
-   often is) used to satisfy subsequent requests to caches. Servers who wish
-   to control caching of these responses are encouraged to emit appropriate
-   Cache-Control response header fields.
-</t>
+</section>
 </section>
 
 
@@ -1974,12 +2024,15 @@
       <x:has anchor="header.vary"/>
       <x:has anchor="header.via"/>
       <x:has anchor="http.date"/>
+      <x:has anchor="field.names"/>
       <x:has anchor="field.values"/>
       <x:has anchor="message.transformations"/>
       <x:has anchor="overview.of.status.codes"/>
       <x:has anchor="precedence"/>
       <x:has anchor="preconditions"/>
+      <x:has anchor="quoted.strings"/>
       <x:has anchor="safe.methods"/>
+      <x:has anchor="tokens"/>
       <x:has anchor="uri"/>
       <x:has anchor="weak.and.strong.validators"/>
       <x:has anchor="whitespace"/>
@@ -2218,7 +2271,7 @@
 <t>
    The Warning response header was obsoleted. Much of the information
    supported by Warning could be gleaned by examining the response), and the
-   remaining warn-codes -- although potentially useful -- were entirely
+   remaining warn-codes &mdash; although potentially useful &mdash; were entirely
    advisory, and in practice were not added by caches or intermediaries.
    (<xref target="header.warning"/>)
 </t>
@@ -2290,7 +2343,17 @@
 
 <section title="Since draft-ietf-httpbis-cache-05" anchor="changes.since.05">
 <ul x:when-empty="None yet.">
-   <li>In <xref target="response.cacheability"/>, remove concept of "cacheable methods" in favor of prose (<eref target="https://github.com/httpwg/http-core/issues/54"/>)</li>
+   <li>In <xref target="incomplete.responses"/>, clarify how weakly framed content is considered for purposes of completeness (<eref target="https://github.com/httpwg/http-core/issues/25"/>)</li>
+   <li>Throughout, describe Vary and cache key operations more clearly (<eref target="https://github.com/httpwg/http-core/issues/28"/>)</li>
+   <li>In <xref target="response.cacheability"/>, remove concept of "cacheable methods" in favor of prose (<eref target="https://github.com/httpwg/http-core/issues/54"/>, <eref target="https://www.rfc-editor.org/errata/eid5300"/>)</li>
+   <li>Refactored <xref target="security.considerations"/>, and added a section on timing attacks (<eref target="https://github.com/httpwg/http-core/issues/233"/>)</li>
+   <li>Changed "cacheable by default" to "heuristically cacheable" throughout (<eref target="https://github.com/httpwg/http-core/issues/242"/>)</li>
+</ul>
+</section>
+
+<section title="Since draft-ietf-httpbis-cache-06" anchor="changes.since.06">
+<ul x:when-empty="None yet.">
+   <li>Fix typo in <xref target="cache-response-directive.s-maxage"/> (<eref target="https://github.com/httpwg/http-core/issues/264"/>)</li>
 </ul>
 </section>
 </section>
