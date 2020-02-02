@@ -1126,6 +1126,72 @@ Content-Type: text/plain
       <xref target="field.extensibility"/>.
    </t>
 
+<section title="Field Ordering" anchor="field.order">
+<t>
+   The order in which fields with differing names are
+   received is not significant. However, it is good practice to send
+   header fields that contain control data first, such as <x:ref>Host</x:ref>
+   on requests and <x:ref>Date</x:ref> on responses, so that implementations
+   can decide when not to handle a message as early as possible.
+   A server &MUST-NOT; apply a request to the target resource until the entire
+   request header section is received, since later header fields might include
+   conditionals, authentication credentials, or deliberately misleading
+   duplicate header fields that would impact request processing.
+</t>
+<t>
+   Aside from the well-known exception noted below, a sender &MUST-NOT;
+   generate multiple fields with the same name in a message (whether in the
+   headers or trailers), or append a field when a field of the same name
+   already exists in the message, unless that field's definition allows
+   multiple field values to be recombined as a comma-separated list [i.e., at
+   least one alternative of the field's definition allows a comma-separated
+   list, such as an ABNF rule of #(values)].
+</t>
+<t>
+   A recipient &MAY; combine multiple fields with the same name
+   into one "field-name: field-value" pair, without changing the semantics of
+   the message, by appending each subsequent field value to the combined
+   field value in order, separated by a comma. The order in which
+   fields with the same name are received is therefore
+   significant to the interpretation of the combined field value;
+   a proxy &MUST-NOT; change the order of these field values when
+   forwarding a message.
+</t>
+<aside>
+  <t>
+   &Note; In practice, the "Set-Cookie" header field (<xref target="RFC6265"/>)
+   often appears multiple times in a response message and does not use the
+   list syntax, violating the above requirements on multiple header fields
+   with the same name. Since it cannot be combined into a single field-value,
+   recipients ought to handle "Set-Cookie" as a special case while processing
+   header fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
+  </t>
+</aside>
+</section>
+
+<section title="Field Limits" anchor="field.limits">
+<t>
+   HTTP does not place a predefined limit on the length of each field
+   or on the length of the header or trailer section as a whole, as described in
+   <xref target="conformance"/>. Various ad hoc limitations on individual
+   field length are found in practice, often depending on the specific
+   field's semantics.
+</t>
+<t>
+   A server that receives a request header field or set of fields larger
+   than it wishes to process &MUST; respond with an appropriate
+   <x:ref>4xx (Client Error)</x:ref> status code. Ignoring such header fields
+   would increase the server's vulnerability to request smuggling attacks
+   (<xref target="request.smuggling"/>).
+</t>
+<t>
+   A client &MAY; discard or truncate received fields that are larger
+   than the client wishes to process if the field semantics are such that the
+   dropped value(s) can be safely ignored without changing the
+   message framing or response semantics.
+</t>
+</section>
+
 <section title="Field Names" anchor="field.names">
   <x:anchor-alias value="field-name"/>
 <t>
@@ -1257,72 +1323,6 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
    opaque data.
 </t>
-
-<section title="Field Order" anchor="field.order">
-<t>
-   The order in which fields with differing names are
-   received is not significant. However, it is good practice to send
-   header fields that contain control data first, such as <x:ref>Host</x:ref>
-   on requests and <x:ref>Date</x:ref> on responses, so that implementations
-   can decide when not to handle a message as early as possible.
-   A server &MUST-NOT; apply a request to the target resource until the entire
-   request header section is received, since later header fields might include
-   conditionals, authentication credentials, or deliberately misleading
-   duplicate header fields that would impact request processing.
-</t>
-<t>
-   Aside from the well-known exception noted below, a sender &MUST-NOT;
-   generate multiple fields with the same name in a message (whether in the
-   headers or trailers), or append a field when a field of the same name
-   already exists in the message, unless that field's definition allows
-   multiple field values to be recombined as a comma-separated list [i.e., at
-   least one alternative of the field's definition allows a comma-separated
-   list, such as an ABNF rule of #(values)].
-</t>
-<t>
-   A recipient &MAY; combine multiple fields with the same name
-   into one "field-name: field-value" pair, without changing the semantics of
-   the message, by appending each subsequent field value to the combined
-   field value in order, separated by a comma. The order in which
-   fields with the same name are received is therefore
-   significant to the interpretation of the combined field value;
-   a proxy &MUST-NOT; change the order of these field values when
-   forwarding a message.
-</t>
-<aside>
-  <t>
-   &Note; In practice, the "Set-Cookie" header field (<xref target="RFC6265"/>)
-   often appears multiple times in a response message and does not use the
-   list syntax, violating the above requirements on multiple header fields
-   with the same name. Since it cannot be combined into a single field-value,
-   recipients ought to handle "Set-Cookie" as a special case while processing
-   header fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
-  </t>
-</aside>
-</section>
-
-<section title="Field Limits" anchor="field.limits">
-<t>
-   HTTP does not place a predefined limit on the length of each field
-   or on the length of the header or trailer section as a whole, as described in
-   <xref target="conformance"/>. Various ad hoc limitations on individual
-   field length are found in practice, often depending on the specific
-   field's semantics.
-</t>
-<t>
-   A server that receives a request header field or set of fields larger
-   than it wishes to process &MUST; respond with an appropriate
-   <x:ref>4xx (Client Error)</x:ref> status code. Ignoring such header fields
-   would increase the server's vulnerability to request smuggling attacks
-   (<xref target="request.smuggling"/>).
-</t>
-<t>
-   A client &MAY; discard or truncate received fields that are larger
-   than the client wishes to process if the field semantics are such that the
-   dropped value(s) can be safely ignored without changing the
-   message framing or response semantics.
-</t>
-</section>
 
 <section title="Common Field Value Components" anchor="field.components">
 
