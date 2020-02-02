@@ -1090,7 +1090,7 @@ Content-Type: text/plain
    <t>
       HTTP messages use key/value pairs to convey data about the
       message, its payload, the target resource, or the connection (i.e.,
-      control data). They are called "HTTP fields" or just "fields."
+      control data). They are called "HTTP fields" or just "fields".
    </t>
    <t>
       Every message has two separate areas that such fields can occur within;
@@ -1103,16 +1103,17 @@ Content-Type: text/plain
       limitations of trailer fields.
    </t>
    <t>
-      Each field has a "field name" (see <xref target="field.names"/>)
-      identifying the field, and a "field value" (see <xref
-      target="field.values"/>) that conveys the field's data.
+      Both sections are composed of any number of "field lines", each with a
+      "field name" (see <xref target="field.names"/>) identifying the field,
+      and a "field line value" that conveys data for the field.
    </t>
    <t>
-      When defining and processing fields, a given field's value is
-      considered to be all of the values for the given field name in that
-      section, concatenated together and separated with commas; see <xref
-      section="field.order"/> for further discussion of the semantics of
-      field ordering and combination in messages.
+      Each field name present in a section has a corresponding "field value"
+      for that section, composed from all field line values with that given
+      field name in that section, concatenated together and separated with
+      commas. See <xref section="field.order"/> for further discussion of the
+      semantics of field ordering and combination in messages, and <xref
+      section="field.values"/> for more discussion of field values.
    </t>
    <t>
       The interpretation of a field does not change between minor
@@ -1131,65 +1132,64 @@ Content-Type: text/plain
 
 <section title="Field Ordering and Combination" anchor="field.order">
 <t>
-   The order in which fields with differing names are
+   The order in which field lines with differing names are
    received in a message is not significant. However, it is good practice to send
    header fields that contain control data first, such as <x:ref>Host</x:ref>
    on requests and <x:ref>Date</x:ref> on responses, so that implementations
    can decide when not to handle a message as early as possible.
    A server &MUST-NOT; apply a request to the target resource until the entire
-   request header section is received, since later header fields might include
+   request header section is received, since later header field lines might include
    conditionals, authentication credentials, or deliberately misleading
    duplicate header fields that would impact request processing.
 </t>
 <t>
-   A recipient &MAY; combine multiple fields with the same name
-   into one "field-name: field-value" pair, without changing the semantics of
-   the message, by appending each subsequent field value to the combined
-   field value in order, separated by a comma. The order in which
-   fields with the same name are received is therefore
-   significant to the interpretation of the combined field value;
-   a proxy &MUST-NOT; change the order of these field values when
-   forwarding a message.
+   A recipient &MAY; combine multiple field lines with the same field name
+   into one field line, without changing the semantics of the message, by
+   appending each subsequent field line value to the initial field line value
+   in order, separated by a comma. The order in which field lines with the
+   same name are received is therefore significant to the interpretation of
+   the field value; a proxy &MUST-NOT; change the order of these field line
+   values when forwarding a message.
 </t>
 <t>
    This means that, aside from the well-known exception noted below, a sender
-   &MUST-NOT; generate multiple fields with the same name in a message
-   (whether in the headers or trailers), or append a field when a field of
-   the same name already exists in the message, unless that field's
-   definition allows multiple field values to be recombined as a
+   &MUST-NOT; generate multiple field lines with the same name in a message
+   (whether in the headers or trailers), or append a field line when a field
+   line of the same name already exists in the message, unless that field's
+   definition allows multiple field line values to be recombined as a
    comma-separated list [i.e., at least one alternative of the field's
    definition allows a comma-separated list, such as an ABNF rule of
-   #(values)].
+   #(values) defined in <xref target="abnf.extension"/>].
 </t>
 <aside>
   <t>
    &Note; In practice, the "Set-Cookie" header field (<xref target="RFC6265"/>)
-   often appears multiple times in a response message and does not use the
-   list syntax, violating the above requirements on multiple header fields
-   with the same name. Since it cannot be combined into a single field-value,
+   often appears in a response message across multiple field and does not use the
+   list syntax, violating the above requirements on multiple field lines
+   with the same field name. Since it cannot be combined into a single field value,
    recipients ought to handle "Set-Cookie" as a special case while processing
-   header fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
+   fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
   </t>
 </aside>
 </section>
 
 <section title="Field Limits" anchor="field.limits">
 <t>
-   HTTP does not place a predefined limit on the length of each field
+   HTTP does not place a predefined limit on the length of each field line, field value, 
    or on the length of the header or trailer section as a whole, as described in
    <xref target="conformance"/>. Various ad hoc limitations on individual
-   field length are found in practice, often depending on the specific
+   lengths are found in practice, often depending on the specific
    field's semantics.
 </t>
 <t>
-   A server that receives a request header field or set of fields larger
-   than it wishes to process &MUST; respond with an appropriate
+   A server that receives a request header field line, field value, or set of
+   fields larger than it wishes to process &MUST; respond with an appropriate
    <x:ref>4xx (Client Error)</x:ref> status code. Ignoring such header fields
    would increase the server's vulnerability to request smuggling attacks
    (<xref target="request.smuggling"/>).
 </t>
 <t>
-   A client &MAY; discard or truncate received fields that are larger
+   A client &MAY; discard or truncate received field lines that are larger
    than the client wishes to process if the field semantics are such that the
    dropped value(s) can be safely ignored without changing the
    message framing or response semantics.
@@ -1323,7 +1323,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </t>
 <aside>
    <t>
-      This specification does not use ABNF rules to define each "Field-Name:
+      This specification does not use ABNF rules to define each "Field Name:
       Field Value" pair, as was done in earlier editions. Instead, this
       specification uses ABNF rules that are named according to each
       registered field name, wherein the rule defines the valid grammar for
