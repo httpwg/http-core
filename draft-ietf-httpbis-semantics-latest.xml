@@ -1260,6 +1260,30 @@ Content-Type: text/plain
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
 </sourcecode>
 
+<t>
+   Authors of specifications defining new fields are advised to choose a short
+   but descriptive field name. Short names avoid needless data transmission;
+   descriptive names avoid confusion and "squatting" on names that might have
+   broader uses.
+</t>
+<t>
+   To that end, limited-use fields (such as a header confined to a single
+   application or use case) are encouraged to use a name that includes its name
+   (or an abbreviation) as a prefix; for example, if the Foo Application needs
+   a Description field, it might use "Foo-Desc"; "Description" is too generic,
+   and "Foo-Description" is needlessly long.
+</t>
+<t>
+   Field names ought not be prefixed with "X-"; see
+   <xref target="BCP178"/> for further information.
+</t>
+<t>
+   Other prefixes are sometimes used in HTTP field names; for example,
+   "Accept-" is used in many content negotiation headers. These prefixes are
+   only an aid to recognizing the purpose of a field, and do not
+   trigger automatic processing.
+</t>
+
 <section title="Field Extensibility" anchor="field.extensibility">
 <t>
    There is no limit on the introduction of new field names, each presumably
@@ -1346,7 +1370,11 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
   <x:anchor-alias value="field-vchar"/>
   
 <t>
-   HTTP field values are defined as textual strings.
+   HTTP field values typically have their syntax defined using ABNF
+   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
+   as necessary, and are usually constrained to the range of US-ASCII characters.
+   Fields needing a greater range of characters can use an encoding
+   such as the one defined in <xref target="RFC8187"/>. 
 </t>
   
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
@@ -1364,6 +1392,41 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    fields &SHOULD; limit their values to US&nbhy;ASCII octets.
    A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
    opaque data.
+</t>
+<t>
+   Leading and trailing whitespace in raw field values is removed upon field
+   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
+   whitespace in values is significant will have to use a container syntax such
+   as quoted-string (<xref target="quoted.strings"/>).
+</t>
+<t>
+   Because commas (",") are used as a generic delimiter between field values,
+   they need to be treated with care if they are allowed in the field value.
+   Typically, components that might contain a comma are protected with
+   double-quotes using the quoted-string ABNF production.
+</t>
+<t>
+   For example, a textual date and a URI (either of which might contain a comma)
+   could be safely carried in field values like these:
+</t>
+<artwork type="example">
+  Example-URI-Field: "http://example.com/a.html,foo",
+                     "http://without-a-comma.example.com/"
+  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+</artwork>
+<t>
+   Note that double-quote delimiters almost always are used with the
+   quoted-string production; using a different syntax inside double-quotes
+   will likely cause unnecessary confusion.
+</t>
+<t>
+   Many fields (such as <x:ref>Content-Type</x:ref>, defined in
+   <xref target="header.content-type"/>) use a common syntax for parameters
+   that allows both unquoted (token) and quoted (quoted-string) syntax for
+   a parameter value (<xref target="parameter"/>). Use of common syntax
+   allows recipients to reuse existing parser components. When allowing both
+   forms, the meaning of a parameter value ought to be the same whether it
+   was received as a token or a quoted string.
 </t>
 <t>
    Historically, HTTP field values could be extended over multiple
@@ -1663,70 +1726,10 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </section>
 
 <section title="Considerations for New HTTP Fields" anchor="considerations.for.new.header.fields">
+
 <t>
-   Authors of specifications defining new fields are advised to choose a short
-   but descriptive field name. Short names avoid needless data transmission;
-   descriptive names avoid confusion and "squatting" on names that might have
-   broader uses.
-</t>
-<t>
-   To that end, limited-use fields (such as a header confined to a single
-   application or use case) are encouraged to use a name that includes its name
-   (or an abbreviation) as a prefix; for example, if the Foo Application needs
-   a Description field, it might use "Foo-Desc"; "Description" is too generic,
-   and "Foo-Description" is needlessly long.
-</t>
-<t>
-   Field names ought not be prefixed with "X-"; see
-   <xref target="BCP178"/> for further information.
-</t>
-<t>
-   Other prefixes are sometimes used in HTTP field names; for example,
-   "Accept-" is used in many content negotiation headers. These prefixes are
-   only an aid to recognizing the purpose of a field, and do not
-   trigger automatic processing.
-</t>
-<t>
-   Field values typically have their syntax defined using ABNF
-   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
-   as necessary, and are usually constrained to the range of US-ASCII characters.
-   Fields needing a greater range of characters can use an encoding
-   such as the one defined in <xref target="RFC8187"/>. 
-</t>
-<t>
-   Leading and trailing whitespace in raw field values is removed upon field
-   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
-   whitespace in values is significant will have to use a container syntax such
-   as quoted-string (<xref target="quoted.strings"/>).
-</t>
-<t>
-   Because commas (",") are used as a generic delimiter between field values,
-   they need to be treated with care if they are allowed in the field value.
-   Typically, components that might contain a comma are protected with
-   double-quotes using the quoted-string ABNF production.
-</t>
-<t>
-   For example, a textual date and a URI (either of which might contain a comma)
-   could be safely carried in field values like these:
-</t>
-<artwork type="example">
-  Example-URI-Field: "http://example.com/a.html,foo",
-                     "http://without-a-comma.example.com/"
-  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
-</artwork>
-<t>
-   Note that double-quote delimiters almost always are used with the
-   quoted-string production; using a different syntax inside double-quotes
-   will likely cause unnecessary confusion.
-</t>
-<t>
-   Many fields (such as <x:ref>Content-Type</x:ref>, defined in
-   <xref target="header.content-type"/>) use a common syntax for parameters
-   that allows both unquoted (token) and quoted (quoted-string) syntax for
-   a parameter value (<xref target="parameter"/>). Use of common syntax
-   allows recipients to reuse existing parser components. When allowing both
-   forms, the meaning of a parameter value ought to be the same whether it
-   was received as a token or a quoted string.
+   See <xref target="field.names"/> for a general requirements for field names,
+   and <xref target="field.values"/> for a discussion of field values.
 </t>
 <t>
    Authors of specifications defining new fields are advised to consider
