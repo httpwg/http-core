@@ -1724,8 +1724,8 @@ Content-Type: text/plain
                      such as DNS, to find an address for an appropriate origin server.<a class="self" href="#rfc.section.2.5.4.p.12">¶</a></p>
                </div>
                <div id="rfc.section.2.5.4.p.13">
-                  <p>Access to "http" services is not limited to the authority mechanism. For example,
-                     the Alt-Svc header field <a href="#RFC7838" id="rfc.xref.RFC7838.1"><cite title="HTTP Alternative Services">[RFC7838]</cite></a> allows an origin server to explicitly alias its own namespace to an alternative service
+                  <p>Access to "http" services is not limited to the default mechanism. For example, the
+                     Alt-Svc header field <a href="#RFC7838" id="rfc.xref.RFC7838.1"><cite title="HTTP Alternative Services">[RFC7838]</cite></a> allows an origin server to explicitly alias its own namespace to an alternative service
                      at a different origin. Access to "http" identified resources might also be provided
                      by other protocols outside the scope of this document.<a class="self" href="#rfc.section.2.5.4.p.13">¶</a></p>
                </div>
@@ -1735,42 +1735,41 @@ Content-Type: text/plain
                      be trustworthy for the identified host. If a server presents a certificate that verifiably
                      applies to the host, along with proof that it controls the private key, then a client
                      will accept a secured connection to that server as being authoritative for all origins
-                     with the same host. However, each origin remains distinct (from origins with a different
-                     scheme or port) unless explicitly aliased by an origin server verified to be under
-                     the same authority.<a class="self" href="#rfc.section.2.5.4.p.14">¶</a></p>
+                     with the same host.<a class="self" href="#rfc.section.2.5.4.p.14">¶</a></p>
                </div>
                <div id="rfc.section.2.5.4.p.15">
-                  <p>The client is therefore relying upon a chain of trust, conveyed from some trust anchor
+                  <p>A client is therefore relying upon a chain of trust, conveyed from some trust anchor
                      (which is usually prearranged or configured), through a chain of certificates (e.g., <a href="#RFC5280" id="rfc.xref.RFC5280.1"><cite title="Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile">[RFC5280]</cite></a>) to a final certificate that binds a private key to the host name of the origin.
-                     The secure handshake and certificate validation in <a href="#https.initiation" title="Initiating HTTP Over TLS">Section 5.3</a> describe how that final certificate can be used to initiate a secured connection.<a class="self" href="#rfc.section.2.5.4.p.15">¶</a></p>
+                     The handshake and certificate validation in <a href="#https.initiation" title="Initiating HTTP Over TLS">Section 5.3</a> describe how that final certificate can be used to initiate a secured connection.<a class="self" href="#rfc.section.2.5.4.p.15">¶</a></p>
                </div>
                <div id="rfc.section.2.5.4.p.16">
-                  <p>Note that the "https" scheme does not rely on TCP and the port number for establishing
-                     authority, even though it provides for use of HTTP over TLS over TCP via that port
-                     as the default mechanism for obtaining a certificate that can be used for verifying
-                     authority and providing access to the origin's resources. The peers establishing a
-                     secure connection cannot trust transport parameters outside the secured channel, but
-                     the port number remains useful (beyond the default mechanism) as an identifier to
-                     distinguish different origin namespaces on the same host. The port identifier is therefore
-                     applicable even when the protocols being used for access do not include TCP.<a class="self" href="#rfc.section.2.5.4.p.16">¶</a></p>
+                  <p>Note that the "https" scheme does not rely on TCP and the connected port number for
+                     associating authority, since both are outside the secured communication and thus cannot
+                     be trusted as definitive. Hence, the HTTP communication might take place over any
+                     channel that has been secured, as defined in <a href="#https.uri" title="https URI Scheme">Section 2.5.2</a>, including protocols that don't use TCP. It is the origin's responsibility to ensure
+                     that any services provided with control over its own certificate's private key are
+                     equally responsible for managing the corresponding "https" namespaces. Regardless,
+                     the origin's host and port value are passed within each HTTP request, identifying
+                     the target resource and distinguishing it from other namespaces that might be controlled
+                     by the same server.<a class="self" href="#rfc.section.2.5.4.p.16">¶</a></p>
                </div>
                <div id="rfc.section.2.5.4.p.17">
-                  <p>In HTTP/1.1 and earlier, the only URIs for which the client will assign authority
+                  <p>In HTTP/1.1 and earlier, the only URIs for which a client will associate authority
                      are those that contain a TLS server_name extension matching the origin's host.<a class="self" href="#rfc.section.2.5.4.p.17">¶</a></p>
                </div>
                <div id="rfc.section.2.5.4.p.18">
-                  <p>In HTTP/2, the client will assign authority to all names that are present in the certificate.
-                     However, a client will only do that if it concludes that it could open a connection
-                     to the origin for that URL. In practice, a client will make a DNS query and see that
-                     it contains the same server IP address. A server sending the ORIGIN frame removes
-                     this restriction <a href="#RFC8336" id="rfc.xref.RFC8336.1"><cite title="The ORIGIN HTTP/2 Frame">[RFC8336]</cite></a>.<a class="self" href="#rfc.section.2.5.4.p.18">¶</a></p>
+                  <p>In HTTP/2, a client will associate authority to all names that are present in the
+                     certificate. However, a client will only do that if it concludes that it could open
+                     a connection to the origin for that URI. In practice, a client will make a DNS query
+                     and see that it contains the same server IP address. A server sending the ORIGIN frame
+                     removes this restriction <a href="#RFC8336" id="rfc.xref.RFC8336.1"><cite title="The ORIGIN HTTP/2 Frame">[RFC8336]</cite></a>.<a class="self" href="#rfc.section.2.5.4.p.18">¶</a></p>
                </div>
                <div id="rfc.section.2.5.4.p.19">
                   <p>In addition to the client's verification, the origin server is responsible for verifying
-                     that that requests it receives over a connection correspond to resources for which
-                     it actually wants to be the origin. If a network attacker causes connections for port
-                     N to be received at port Q, checking the Host header field is necessary to ensure
-                     that the attacker can't cause "https://example.com:N/foo" to be replaced by "https://example.com:Q/foo"
+                     that requests it receives over a connection correspond to resources for which it actually
+                     wants to be the origin. If a network attacker causes connections for port N to be
+                     received at port Q, checking the Host header field is necessary to ensure that the
+                     attacker can't cause "https://example.com:N/foo" to be replaced by "https://example.com:Q/foo"
                      without consent. Likewise, a server might be unwilling to serve as the origin for
                      some hosts even when they have the authority to do so.<a class="self" href="#rfc.section.2.5.4.p.19">¶</a></p>
                </div>

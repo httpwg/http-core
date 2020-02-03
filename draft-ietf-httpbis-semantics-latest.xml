@@ -921,7 +921,7 @@ Content-Type: text/plain
    an appropriate origin server.
 </t>
 <t>
-   Access to "http" services is not limited to the authority mechanism.
+   Access to "http" services is not limited to the default mechanism.
    For example, the Alt-Svc header field <xref target="RFC7838"/> allows an
    origin server to explicitly alias its own namespace to an alternative
    service at a different origin. Access to "http" identified resources might
@@ -934,47 +934,46 @@ Content-Type: text/plain
    If a server presents a certificate that verifiably applies to the host,
    along with proof that it controls the private key, then a client will
    accept a secured connection to that server as being authoritative for all
-   origins with the same host. However, each origin remains distinct (from
-   origins with a different scheme or port) unless explicitly aliased by an
-   origin server verified to be under the same authority.
+   origins with the same host.
 </t>
 <t>
-   The client is therefore relying upon a chain of trust, conveyed from some
+   A client is therefore relying upon a chain of trust, conveyed from some
    trust anchor (which is usually prearranged or configured), through a
    chain of certificates (e.g., <xref target="RFC5280"/>) to a final
-   certificate that binds a private key to the host name of the origin. The
-   secure handshake and certificate validation in
+   certificate that binds a private key to the host name of the origin.
+   The handshake and certificate validation in
    <xref target="https.initiation"/> describe how that final certificate can
    be used to initiate a secured connection.
 </t>
 <t>
-   Note that the "https" scheme does not rely on TCP and the port number for
-   establishing authority, even though it provides for use of HTTP over TLS
-   over TCP via that port as the default mechanism for obtaining a
-   certificate that can be used for verifying authority and providing access
-   to the origin's resources. The peers establishing a secure connection
-   cannot trust transport parameters outside the secured channel, but the
-   port number remains useful (beyond the default mechanism) as an identifier
-   to distinguish different origin namespaces on the same host. The port
-   identifier is therefore applicable even when the protocols being used for
-   access do not include TCP.
+   Note that the "https" scheme does not rely on TCP and the connected port
+   number for associating authority, since both are outside the secured
+   communication and thus cannot be trusted as definitive. Hence, the HTTP
+   communication might take place over any channel that has been secured,
+   as defined in <xref target="https.uri"/>, including protocols that don't
+   use TCP. It is the origin's responsibility to ensure that any services
+   provided with control over its own certificate's private key are equally
+   responsible for managing the corresponding "https" namespaces.
+   Regardless, the origin's host and port value are passed within each HTTP
+   request, identifying the target resource and distinguishing it from other
+   namespaces that might be controlled by the same server.
 </t>
 <t>
-   In HTTP/1.1 and earlier, the only URIs for which the client will assign
+   In HTTP/1.1 and earlier, the only URIs for which a client will associate
    authority are those that contain a TLS server_name extension matching the
    origin's host.
 </t>
 <t>
-   In HTTP/2, the client will assign authority to all names that are present
+   In HTTP/2, a client will associate authority to all names that are present
    in the certificate. However, a client will only do that if it concludes
-   that it could open a connection to the origin for that URL. In practice, a
+   that it could open a connection to the origin for that URI. In practice, a
    client will make a DNS query and see that it contains the same server IP
    address. A server sending the ORIGIN frame removes this restriction
    <xref target="RFC8336"/>.
 </t>
 <t>
    In addition to the client's verification, the origin server is responsible
-   for verifying that that requests it receives over a connection correspond
+   for verifying that requests it receives over a connection correspond
    to resources for which it actually wants to be the origin. If a network
    attacker causes connections for port N to be received at port Q, checking
    the Host header field is necessary to ensure that the attacker can't cause
