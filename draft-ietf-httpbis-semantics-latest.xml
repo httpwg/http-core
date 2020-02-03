@@ -291,7 +291,7 @@
 </t>
 <t>
    <xref target="field.components"/> defines some generic syntactic
-   components for header field values.
+   components for field values.
 </t>
 <t anchor="imported.rules">
   <x:anchor-alias value="obs-fold"/>
@@ -381,8 +381,8 @@
    Each major version of HTTP defines its own syntax for the inclusion of
    information in messages. Nevertheless, a common abstraction is that a
    message includes some form of envelope/framing, a potential set of named
-   header fields up front (a header section), a potential body, and a
-   potential set of named trailer fields.
+   fields up front (a header section), a potential body, and a
+   potential following set of named fields (a trailer section).
 </t>
 <t>
    A client sends an HTTP request to a server in the form of a
@@ -864,7 +864,7 @@ Content-Type: text/plain
 <t>
    A sender &MUST-NOT; generate the userinfo subcomponent (and its "@"
    delimiter) when an "http" or "https" URI reference is generated within a
-   message as a request target or header field value.
+   message as a request target or field value.
 </t>
 <t>
    Before making use of an "http" or "https" URI reference received from an untrusted
@@ -971,8 +971,8 @@ Content-Type: text/plain
    role and that matches the grammar defined by the corresponding ABNF rules.
    Note, however, that some received protocol elements might not be parsed.
    For example, an intermediary forwarding a message might parse a
-   header-field into generic field-name and field-value components, but then
-   forward the header field without further parsing inside the field-value.
+   field into generic field name and field value components, but then
+   forward the field without further parsing inside the field value.
 </t>
 <t>
    HTTP does not have specific length limitations for many of its protocol
@@ -1093,56 +1093,574 @@ Content-Type: text/plain
 </section>
 </section>
 
-<section title="Header Fields" anchor="header.fields">
-<t>
-   This section defines the abstraction for message fields as field-name and
-   field-value pairs.
-</t>
+<section title="Header and Trailer Fields" anchor="header.fields">
+   <t>
+      <iref item="field"/>
+      HTTP messages use key/value pairs to convey data about the
+      message, its payload, the target resource, or the connection (i.e.,
+      control data). They are called "HTTP fields" or just "<x:dfn>fields</x:dfn>".
+   </t>
+   <t>
+      <iref item="header section"/>
+      <iref item="trailer section"/>
+      Every message can have two separate areas that such fields can occur
+      within; the "<x:dfn>header field section</x:dfn>" (or just "header section") preceding
+      the message body and containing "header fields" (or just "headers",
+      colloquially) and the "<x:dfn>trailer field section</x:dfn>" (or just "trailer
+      section") after the message body containing "trailer fields" (or just
+      "trailers" colloquially). Header fields are more common; see <xref
+      target="trailer.fields"/> for discussion of the applicability and
+      limitations of trailer fields.
+   </t>
+   <t>
+      <iref item="field line"/>
+      <iref item="field name"/>
+      <iref item="field line value"/>
+      Both sections are composed of any number of "<x:dfn>field lines</x:dfn>", each with a
+      "<x:dfn>field name</x:dfn>" (see <xref target="field.names"/>) identifying the field,
+      and a "<x:dfn>field line value</x:dfn>" that conveys data for the field.
+   </t>
+   <t>
+      <iref item="field value"/>
+      Each field name present in a section has a corresponding "<x:dfn>field value</x:dfn>"
+      for that section, composed from all field line values with that given
+      field name in that section, concatenated together and separated with
+      commas. See <xref target="field.order"/> for further discussion of the
+      semantics of field ordering and combination in messages, and <xref
+      target="field.values"/> for more discussion of field values.
+   </t>
+   <t>
+      The interpretation of a field does not change between minor
+      versions of the same major HTTP version, though the default behavior of a
+      recipient in the absence of such a field can change. Unless specified
+      otherwise, fields are defined for all versions of HTTP.
+      In particular, the <x:ref>Host</x:ref> and <x:ref>Connection</x:ref>
+      fields ought to be implemented by all HTTP/1.x implementations
+      whether or not they advertise conformance with HTTP/1.1.
+   </t>
+   <t>
+      New fields can be introduced without changing the protocol version if
+      their defined semantics allow them to be safely ignored by recipients
+      that do not recognize them; see <xref target="field.extensibility"/>.
+   </t>
 
-<section title="Header Field Names" anchor="field.names">
+<section title="Field Ordering and Combination" anchor="field.order">
+<t>
+   The order in which field lines with differing names are
+   received in a message is not significant. However, it is good practice to send
+   header fields that contain control data first, such as <x:ref>Host</x:ref>
+   on requests and <x:ref>Date</x:ref> on responses, so that implementations
+   can decide when not to handle a message as early as possible.
+   A server &MUST-NOT; apply a request to the target resource until the entire
+   request header section is received, since later header field lines might include
+   conditionals, authentication credentials, or deliberately misleading
+   duplicate header fields that would impact request processing.
+</t>
+<t>
+   A recipient &MAY; combine multiple field lines with the same field name
+   into one field line, without changing the semantics of the message, by
+   appending each subsequent field line value to the initial field line value
+   in order, separated by a comma. The order in which field lines with the
+   same name are received is therefore significant to the interpretation of
+   the field value; a proxy &MUST-NOT; change the order of these field line
+   values when forwarding a message.
+</t>
+<t>
+   This means that, aside from the well-known exception noted below, a sender
+   &MUST-NOT; generate multiple field lines with the same name in a message
+   (whether in the headers or trailers), or append a field line when a field
+   line of the same name already exists in the message, unless that field's
+   definition allows multiple field line values to be recombined as a
+   comma-separated list [i.e., at least one alternative of the field's
+   definition allows a comma-separated list, such as an ABNF rule of
+   #(values) defined in <xref target="abnf.extension"/>].
+</t>
+<aside>
+  <t>
+   &Note; In practice, the "Set-Cookie" header field (<xref target="RFC6265"/>)
+   often appears in a response message across multiple field and does not use the
+   list syntax, violating the above requirements on multiple field lines
+   with the same field name. Since it cannot be combined into a single field value,
+   recipients ought to handle "Set-Cookie" as a special case while processing
+   fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
+  </t>
+</aside>
+</section>
+
+<section title="Field Limits" anchor="field.limits">
+<t>
+   HTTP does not place a predefined limit on the length of each field line, field value, 
+   or on the length of the header or trailer section as a whole, as described in
+   <xref target="conformance"/>. Various ad hoc limitations on individual
+   lengths are found in practice, often depending on the specific
+   field's semantics.
+</t>
+<t>
+   A server that receives a request header field line, field value, or set of
+   fields larger than it wishes to process &MUST; respond with an appropriate
+   <x:ref>4xx (Client Error)</x:ref> status code. Ignoring such header fields
+   would increase the server's vulnerability to request smuggling attacks
+   (<xref target="request.smuggling"/>).
+</t>
+<t>
+   A client &MAY; discard or truncate received field lines that are larger
+   than the client wishes to process if the field semantics are such that the
+   dropped value(s) can be safely ignored without changing the
+   message framing or response semantics.
+</t>
+</section>
+
+<section title="Field Names" anchor="field.names">
   <x:anchor-alias value="field-name"/>
 <t>
-   Header fields are key:value pairs that can be used to communicate data about
-   the message, its payload, the target resource, or the connection
-   (i.e., control data).
-</t>
-<t>
-   The requirements for header field names are defined in
-   <xref target="BCP90"/>.
-</t>
-<t>
-   The field-name token labels the corresponding field-value as having the
-   semantics defined by that header field.  For example, the <x:ref>Date</x:ref>
+   The field-name token labels the corresponding field value as having the
+   semantics defined by that field.  For example, the <x:ref>Date</x:ref>
    header field is defined in <xref target="header.date"/> as containing the origination
    timestamp for the message in which it appears.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-name"/>
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
 </sourcecode>
+
+<section title="Field Extensibility" anchor="field.extensibility">
 <t>
-   The interpretation of a header field does not change between minor
-   versions of the same major HTTP version, though the default behavior of a
-   recipient in the absence of such a field can change. Unless specified
-   otherwise, header fields are defined for all versions of HTTP.
-   In particular, the <x:ref>Host</x:ref> and <x:ref>Connection</x:ref>
-   header fields ought to be implemented by all HTTP/1.x implementations
-   whether or not they advertise conformance with HTTP/1.1.
+   There is no limit on the introduction of new field names, each presumably
+   defining new semantics.
 </t>
 <t>
-   New header fields can be introduced without changing the protocol version
-   if their defined semantics allow them to be safely ignored by recipients
-   that do not recognize them. Header field extensibility is discussed in
-   <xref target="field.extensibility"/>.
+   New fields can be defined such that, when they are understood by a
+   recipient, they might override or enhance the interpretation of previously
+   defined fields, define preconditions on request evaluation, or
+   refine the meaning of responses.
 </t>
 <t>
-   The following field names are defined by this document:
+   A proxy &MUST; forward unrecognized header fields unless the
+   field name is listed in the <x:ref>Connection</x:ref> header field
+   (<xref target="header.connection"/>) or the proxy is specifically
+   configured to block, or otherwise transform, such fields.
+   Other recipients &SHOULD; ignore unrecognized header and trailer fields.
+   These requirements allow HTTP's functionality to be enhanced without
+   requiring prior update of deployed intermediaries.
 </t>
+<t>
+   All defined fields ought to be registered with IANA in the
+   "HTTP Field Name" registry; see <xref target="field.name.registry"/>.
+</t>
+</section>
+
+<section title="Field Name Registry" anchor="field.name.registry">
+
+<t>The "Hypertext Transfer Protocol (HTTP) Field Registry" defines the
+namespace for HTTP field names.</t>
+
+<t>Any party can request registration of a HTTP field. See <xref
+target="considerations.for.new.header.fields"/> for considerations to take
+into account when creating a new HTTP field.</t>
+
+<t>The "HTTP Field Name" registry is located at
+"https://www.iana.org/assignments/http-fields/". Registration requests can
+be made by following the instructions located there or by sending an email to
+the "ietf-http-wg@ietf.org" mailing list.</t>
+
+<t>Field names are registered on the advice of a Designated Expert
+(appointed by the IESG or their delegate). Fields with the status
+'permanent' are Specification Required (using terminology from
+<xref target="RFC8126"/>).</t>
+
+<t>Registration requests consist of at least the following information:</t>
+
+<ul>
+   <li><t>Field name: The requested field name. It MUST conform to the
+   field-name syntax defined in <xref target="field.names"/>, and SHOULD be
+   restricted to just letters, digits, hyphen ('-') and underscore ('_')
+   characters, with the first character being a letter.</t></li>
+
+   <li><t>Status: "permanent" or "provisional"</t></li>
+
+   <li><t>Specification document(s): Reference to the document that specifies
+   the field, preferably including a URI that can be used to retrieve
+   a copy of the document. An indication of the relevant section(s) can also
+   be included, but is not required.</t></li>
+</ul>
+
+<t>The Expert(s) can define additional fields to be collected in the
+registry, in consultation with the community.</t>
+
+<t>Standards-defined names have a status of "permanent". Other names can also
+be registered as permanent, if the Expert(s) find that they are in use, in
+consultation with the community. Other names should be registered as
+"provisional".</t>
+
+<t>Provisional entries can be removed by the Expert(s) if &mdash; in consultation
+with the community &mdash; the Expert(s) find that they are not in use. The
+Experts can change a provisional entry's status to permanent at any time.</t>
+
+<t>Note that names can be registered by third parties (including the
+Expert(s)), if the Expert(s) determines that an unregistered name is widely
+deployed and not likely to be registered in a timely manner otherwise.</t>
+
+</section>
+</section>
+
+<section title="Field Values" anchor="field.values">
+  <x:anchor-alias value="field-value"/>
+  <x:anchor-alias value="field-content"/>
+  <x:anchor-alias value="field-vchar"/>
+  
+<t>
+   HTTP field values are defined as textual strings.
+</t>
+  
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
+  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
+  <x:ref>field-content</x:ref>  = <x:ref>field-vchar</x:ref>
+                   [ 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / <x:ref>field-vchar</x:ref> ) <x:ref>field-vchar</x:ref> ]
+  <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
+</sourcecode>
+<t>
+   Historically, HTTP allowed field content with text in the ISO&nbhy;8859&nbhy;1
+   charset <xref target="ISO-8859-1"/>, supporting other charsets only
+   through use of <xref target="RFC2047"/> encoding.
+   In practice, most HTTP field values use only a subset of the
+   US-ASCII charset <xref target="USASCII"/>. Newly defined
+   fields &SHOULD; limit their values to US&nbhy;ASCII octets.
+   A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
+   opaque data.
+</t>
+<t>
+   Historically, HTTP field values could be extended over multiple
+   lines by preceding each extra line with at least one space or horizontal
+   tab (<x:ref>obs-fold</x:ref>).
+   <cref>This document assumes that any such <x:ref>obs-fold</x:ref> has been replaced with one or more
+   <x:ref>SP</x:ref> octets prior to interpreting the field value,
+   as described in <xref target="line.folding"/>.</cref>
+</t>
+<aside>
+   <t>
+      This specification does not use ABNF rules to define each "Field Name:
+      Field Value" pair, as was done in earlier editions. Instead, this
+      specification uses ABNF rules that are named according to each
+      registered field name, wherein the rule defines the valid grammar for
+      that field's corresponding field values (i.e., after the field value
+      has been extracted by a generic field parser).
+   </t>
+</aside>
+
+
+<section title="Common Field Value Components" anchor="field.components">
+
+<t anchor="delimiters">
+   <iref item="Delimiters"/>
+   Many HTTP field values are defined using common syntax
+   components, separated by whitespace or specific delimiting characters.
+   Delimiters are chosen from the set of US-ASCII visual characters not
+   allowed in a <x:ref>token</x:ref> (DQUOTE and "(),/:;&lt;=>?@[\]{}").
+</t>
+
+<section title="Tokens" anchor="tokens">
+<t anchor="rule.token.separators">
+  <x:anchor-alias value="tchar"/>
+  <x:anchor-alias value="token"/>
+  Tokens are short textual identifiers that do not include whitespace or
+  delimiters.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
+  <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
+<!--
+  NOTE: the definition of tchar and the prose above about special characters need to match!
+ -->
+  <x:ref>tchar</x:ref>          = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*"
+                 / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                 / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
+                 ; any <x:ref>VCHAR</x:ref>, except delimiters
+</sourcecode>
+</section>
+
+<section title="Quoted Strings" anchor="quoted.strings">
+<t anchor="rule.quoted-string">
+  <x:anchor-alias value="quoted-string"/>
+  <x:anchor-alias value="qdtext"/>
+  <x:anchor-alias value="obs-text"/>
+   A string of text is parsed as a single value if it is quoted using
+   double-quote marks.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
+  <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
+  <x:ref>qdtext</x:ref>         = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
+  <x:ref>obs-text</x:ref>       = %x80-FF
+</sourcecode>
+<t anchor="rule.quoted-pair">
+  <x:anchor-alias value="quoted-pair"/>
+   The backslash octet ("\") can be used as a single-octet
+   quoting mechanism within quoted-string and comment constructs.
+   Recipients that process the value of a quoted-string &MUST; handle a
+   quoted-pair as if it were replaced by the octet following the backslash.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
+  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
+</sourcecode>
+<t>
+   A sender &SHOULD-NOT; generate a quoted-pair in a quoted-string except
+   where necessary to quote DQUOTE and backslash octets occurring within that
+   string.
+   A sender &SHOULD-NOT; generate a quoted-pair in a comment except
+   where necessary to quote parentheses ["(" and ")"] and backslash octets
+   occurring within that comment.
+</t>
+</section>
+
+<section title="Comments" anchor="comments">
+<t anchor="rule.comment">
+  <x:anchor-alias value="comment"/>
+  <x:anchor-alias value="ctext"/>
+   Comments can be included in some HTTP fields by surrounding
+   the comment text with parentheses. Comments are only allowed in
+   fields containing "comment" as part of their field value definition.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
+  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
+  <x:ref>ctext</x:ref>          = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
+</sourcecode>
+</section>
+
+<section title="Parameters" anchor="parameter">
+<t anchor="rule.parameter">
+   <x:anchor-alias value="parameter-name"/>
+   <x:anchor-alias value="parameter-value"/>
+   A parameter is a name=value pair that is often defined within field
+   values as a common syntax for appending auxiliary information to an item.
+   Each parameter is usually delimited by an immediately preceding semicolon.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="parameter-name"/><iref primary="true" item="Grammar" subitem="parameter-value"/>
+  <x:ref>parameter</x:ref>       = <x:ref>parameter-name</x:ref> "=" <x:ref>parameter-value</x:ref>
+  <x:ref>parameter-name</x:ref>  = <x:ref>token</x:ref>
+  <x:ref>parameter-value</x:ref> = ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
+</sourcecode>
+<t>
+   Parameter names are case-insensitive. Parameter values might or might
+   not be case-sensitive, depending on the semantics of the parameter
+   name. Examples of parameters and some equivalent forms can be seen in
+   media types (<xref target="media.type"/>) and the Accept header field
+   (<xref target="header.accept"/>).
+</t>
+<t>
+   A parameter value that matches the <x:ref>token</x:ref> production can be
+   transmitted either as a token or within a quoted-string. The quoted and
+   unquoted values are equivalent.
+</t>
+<aside>
+  <t>
+    &Note; Parameters do not allow whitespace (not even "bad" whitespace)
+    around the "=" character.
+  </t>
+</aside>
+</section>
+</section>
+</section>
+
+<section title="Trailer Fields" anchor="trailer.fields">
+   <iref item="trailer fields"/>
+   <iref item="trailers"/>
+
+<section title="Purpose" anchor="trailers.purpose">
+<t>
+   In some HTTP versions, additional
+   metadata can be sent after the initial header section has been completed
+   (during or after transmission of the payload body), such as a message
+   integrity check, digital signature, or post-processing status.
+   For example, the chunked coding in HTTP/1.1 allows a trailer section after
+   the payload body (<xref target="chunked.trailer.section"/>) which can contain
+   trailer fields: field names and values that share the same syntax and
+   namespace as header fields but that are received after the header section.
+</t>
+<t>
+   Trailer fields ought to be processed and stored separately from the fields
+   in the header section to avoid contradicting message semantics known at
+   the time the header section was complete. The presence or absence of
+   certain header fields might impact choices made for the routing or
+   processing of the message as a whole before the trailers are received;
+   those choices cannot be unmade by the later discovery of trailer fields.
+</t>
+</section>
+
+<section title="Limitations" anchor="trailers.limitations">
+<t>
+   Many fields cannot be processed outside the header section because
+   their evaluation is necessary prior to receiving the message body, such as
+   those that describe message framing, routing, authentication,
+   request modifiers, response controls, or payload format.
+   A sender &MUST-NOT; generate a trailer field unless the sender knows the
+   corresponding header field name's definition permits the field to be sent
+   in trailers.
+</t>
+<t>
+   Trailer fields can be difficult to process by intermediaries that forward
+   messages from one protocol version to another. If the entire message can be
+   buffered in transit, some intermediaries could merge trailer fields into
+   the header section (as appropriate) before it is forwarded. However, in
+   most cases, the trailers are simply discarded.
+   A recipient &MUST-NOT; merge a trailer field into a header section unless
+   the recipient understands the corresponding header field definition and
+   that definition explicitly permits and defines how trailer field values
+   can be safely merged.
+</t>
+<t>
+   A client can send a <x:ref>TE</x:ref> header field indicating "trailers"
+   is acceptable, as described in <xref target="header.te"/>, to inform the
+   server that it will not discard trailer fields.
+</t>
+<t>
+   Because of the potential for trailer fields to be discarded in transit, a
+   server &SHOULD-NOT; generate trailer fields that it believes are necessary
+   for the user agent to receive.
+</t>
+</section>
+
+<section title="Trailer" anchor="header.trailer">
+  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
+  <x:anchor-alias value="Trailer"/>
+<t>
+   The "Trailer" header field provides a list of field names that the sender
+   anticipates sending as trailer fields within that message. This allows a
+   recipient to prepare for receipt of the indicated metadata before it starts
+   processing the body.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
+  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
+</sourcecode>
+<t>
+   For example, a sender might indicate that a message integrity check will
+   be computed as the payload is being streamed and provide the final
+   signature as a trailer field. This allows a recipient to perform the same
+   check on the fly as the payload data is received.
+</t>
+<t>
+   A sender that intends to generate one or more trailer fields in a message
+   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
+   section of that message to indicate which fields might be present in the
+   trailers.
+</t>
+</section>
+</section>
+
+<section title="Considerations for New HTTP Fields" anchor="considerations.for.new.header.fields">
+<t>
+   Authors of specifications defining new fields are advised to choose a short
+   but descriptive field name. Short names avoid needless data transmission;
+   descriptive names avoid confusion and "squatting" on names that might have
+   broader uses.
+</t>
+<t>
+   To that end, limited-use fields (such as a header confined to a single
+   application or use case) are encouraged to use a name that includes its name
+   (or an abbreviation) as a prefix; for example, if the Foo Application needs
+   a Description field, it might use "Foo-Desc"; "Description" is too generic,
+   and "Foo-Description" is needlessly long.
+</t>
+<t>
+   Field names ought not be prefixed with "X-"; see
+   <xref target="BCP178"/> for further information.
+</t>
+<t>
+   Other prefixes are sometimes used in HTTP field names; for example,
+   "Accept-" is used in many content negotiation headers. These prefixes are
+   only an aid to recognizing the purpose of a field, and do not
+   trigger automatic processing.
+</t>
+<t>
+   Field values typically have their syntax defined using ABNF
+   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
+   as necessary, and are usually constrained to the range of US-ASCII characters.
+   Fields needing a greater range of characters can use an encoding
+   such as the one defined in <xref target="RFC8187"/>. 
+</t>
+<t>
+   Leading and trailing whitespace in raw field values is removed upon field
+   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
+   whitespace in values is significant will have to use a container syntax such
+   as quoted-string (<xref target="quoted.strings"/>).
+</t>
+<t>
+   Because commas (",") are used as a generic delimiter between field values,
+   they need to be treated with care if they are allowed in the field value.
+   Typically, components that might contain a comma are protected with
+   double-quotes using the quoted-string ABNF production.
+</t>
+<t>
+   For example, a textual date and a URI (either of which might contain a comma)
+   could be safely carried in field values like these:
+</t>
+<artwork type="example">
+  Example-URI-Field: "http://example.com/a.html,foo",
+                     "http://without-a-comma.example.com/"
+  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+</artwork>
+<t>
+   Note that double-quote delimiters almost always are used with the
+   quoted-string production; using a different syntax inside double-quotes
+   will likely cause unnecessary confusion.
+</t>
+<t>
+   Many fields (such as <x:ref>Content-Type</x:ref>, defined in
+   <xref target="header.content-type"/>) use a common syntax for parameters
+   that allows both unquoted (token) and quoted (quoted-string) syntax for
+   a parameter value (<xref target="parameter"/>). Use of common syntax
+   allows recipients to reuse existing parser components. When allowing both
+   forms, the meaning of a parameter value ought to be the same whether it
+   was received as a token or a quoted string.
+</t>
+<t>
+   Authors of specifications defining new fields are advised to consider
+   documenting:
+</t>
+<ul>
+  <li>
+    <t>Whether the field is a single value or whether it can be a list
+    (delimited by commas; see <xref target="field.values"/>).</t>
+    <t>If it does not use the list syntax, document how to treat messages
+    where the field occurs multiple times (a sensible default would
+    be to ignore the field, but this might not always be the right
+    choice).</t>
+    <t>Note that intermediaries and software libraries might combine
+    multiple field instances into a single one, despite the
+    field's definition not allowing the list syntax. A robust format enables
+    recipients to discover these situations (good example: "Content-Type",
+    as the comma can only appear inside quoted strings;
+    bad example: "Location", as a comma can occur inside a URI).</t>
+  </li>
+  <li><t>Under what conditions the field can be used; e.g., only in
+    responses or requests, in all messages, only on responses to a
+    particular request method, etc.</t></li>
+  <li><t>Whether the field should be stored by origin servers that
+    understand it upon a PUT request.</t></li>
+  <li><t>Whether the field semantics are further refined by the context,
+    such as by existing request methods or status codes.</t></li>
+  <li><t>Whether it is appropriate to list the field name in the
+    <x:ref>Connection</x:ref> header field (i.e., if the field is to
+    be hop-by-hop; see <xref target="header.connection"/>).</t></li>
+  <li><t>Under what conditions intermediaries are allowed to insert,
+    delete, or modify the field's value.</t></li>
+  <li><t>Whether it is appropriate to list the field name in a
+    <x:ref>Vary</x:ref> response header field (e.g., when the request header
+    field is used by an origin server's content selection algorithm; see
+    <xref target="header.vary"/>).</t></li>
+  <li><t>Whether the field is allowable in trailers (see
+    <xref target="trailer.fields"/>).</t></li>
+  <li><t>Whether the field ought to be preserved across redirects.</t></li>
+  <li><t>Whether it introduces any additional security considerations, such
+    as disclosure of privacy-related data.</t></li>
+</ul>
+</section>
+<section title="Fields Defined In This Document" anchor="field.definitions">
+   <t>
+      The following fields are defined by this document:
+   </t>
 <?BEGININC build/draft-ietf-httpbis-semantics-latest.iana-headers ?>
 <!--AUTOGENERATED FROM extract-header-defs.xslt, do not edit manually-->
 <table align="left" anchor="iana.header.registration.table">
    <thead>
       <tr>
-         <th>Header Field Name</th>
+         <th>Field Name</th>
          <th>Status</th>
          <th>Reference</th>
       </tr>
@@ -1426,496 +1944,6 @@ Content-Type: text/plain
 <!--(END)-->
 
 <?ENDINC build/draft-ietf-httpbis-semantics-latest.iana-headers ?>
-
-<section title="Header Field Name Registry" anchor="field.name.registry">
-
-<t>The "Hypertext Transfer Protocol (HTTP) Header Field Registry" defines the
-namespace for HTTP header field names.</t>
-
-<t>Any party can request registration of a HTTP header field. See <xref
-target="considerations.for.new.header.fields"/> for considerations to take
-into account when creating a new HTTP header field.</t>
-
-<t>The "HTTP Header Field Name" registry is located at
-"https://www.iana.org/assignments/http-headers/". Registration requests can
-be made by following the instructions located there or by sending an email to
-the "ietf-http-wg@ietf.org" mailing list.</t>
-
-<t>Header field names are registered on the advice of a Designated Expert
-(appointed by the IESG or their delegate). Header fields with the status
-'permanent' are Specification Required (using terminology from
-<xref target="RFC8126"/>).</t>
-
-<t>Registration requests consist of at least the following information:</t>
-
-<ul>
-   <li><t>Header field name: The requested field name. It MUST conform to the
-   field-name syntax defined in <xref target="field.names"/>, and SHOULD be
-   restricted to just letters, digits, hyphen ('-') and underscore ('_')
-   characters, with the first character being a letter.</t></li>
-
-   <li><t>Status: "permanent" or "provisional"</t></li>
-
-   <li><t>Specification document(s): Reference to the document that specifies
-   the header field, preferably including a URI that can be used to retrieve
-   a copy of the document. An indication of the relevant section(s) can also
-   be included, but is not required.</t></li>
-</ul>
-
-<t>The Expert(s) can define additional fields to be collected in the
-registry, in consultation with the community.</t>
-
-<t>Standards-defined names have a status of "permanent". Other names can also
-be registered as permanent, if the Expert(s) find that they are in use, in
-consultation with the community. Other names should be registered as
-"provisional".</t>
-
-<t>Provisional entries can be removed by the Expert(s) if &mdash; in consultation
-with the community &mdash; the Expert(s) find that they are not in use. The
-Experts can change a provisional entry's status to permanent at any time.</t>
-
-<t>Note that names can be registered by third parties (including the
-Expert(s)), if the Expert(s) determines that an unregistered name is widely
-deployed and not likely to be registered in a timely manner otherwise.</t>
-
-</section>
-
-<section title="Header Field Extensibility" anchor="field.extensibility">
-<t>
-   Header fields are fully extensible: there is no limit on the
-   introduction of new field names, each presumably defining new semantics,
-   nor on the number of header fields used in a given message.  Existing
-   fields are defined in each part of this specification and in many other
-   specifications outside this document set.
-</t>
-<t>
-   New header fields can be defined such that, when they are understood by a
-   recipient, they might override or enhance the interpretation of previously
-   defined header fields, define preconditions on request evaluation, or
-   refine the meaning of responses.
-</t>
-<t>
-   A proxy &MUST; forward unrecognized header fields unless the
-   field-name is listed in the <x:ref>Connection</x:ref> header field
-   (<xref target="header.connection"/>) or the proxy is specifically
-   configured to block, or otherwise transform, such fields.
-   Other recipients &SHOULD; ignore unrecognized header fields.
-   These requirements allow HTTP's functionality to be enhanced without
-   requiring prior update of deployed intermediaries.
-</t>
-<t>
-   All defined header fields ought to be registered with IANA in the
-   "HTTP Header Field Name" registry.
-</t>
-</section>
-</section>
-
-<section title="Header Field Values" anchor="field.values">
-  <x:anchor-alias value="field-value"/>
-  <x:anchor-alias value="field-content"/>
-  <x:anchor-alias value="field-vchar"/>
-<t>
-   This specification does not use ABNF rules to define each
-   "Field-Name: Field Value" pair, as was done in earlier editions.
-   Instead, this specification uses ABNF rules that are named according to
-   each registered field name, wherein the rule defines the valid grammar for
-   that field's corresponding field values (i.e., after the field-value
-   has been extracted by a generic field parser).
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
-  <x:ref>field-value</x:ref>    = *( <x:ref>field-content</x:ref> / <x:ref>obs-fold</x:ref> )
-  <x:ref>field-content</x:ref>  = <x:ref>field-vchar</x:ref>
-                   [ 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> / <x:ref>field-vchar</x:ref> ) <x:ref>field-vchar</x:ref> ]
-  <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
-</sourcecode>
-<t>
-   Historically, HTTP header field values could be extended over multiple
-   lines by preceding each extra line with at least one space or horizontal
-   tab (<x:ref>obs-fold</x:ref>).
-   <cref>This document assumes that any such <x:ref>obs-fold</x:ref> has been replaced with one or more
-   <x:ref>SP</x:ref> octets prior to interpreting the field value,
-   as described in <xref target="line.folding"/>.</cref>
-</t>
-<t>
-   Historically, HTTP has allowed field content with text in the ISO&nbhy;8859&nbhy;1
-   charset <xref target="ISO-8859-1"/>, supporting other charsets only
-   through use of <xref target="RFC2047"/> encoding.
-   In practice, most HTTP header field values use only a subset of the
-   US-ASCII charset <xref target="USASCII"/>. Newly defined
-   header fields &SHOULD; limit their field values to US&nbhy;ASCII octets.
-   A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
-   opaque data.
-</t>
-
-<section title="Header Field Order" anchor="field.order">
-<t>
-   The order in which header fields with differing field names are
-   received is not significant. However, it is good practice to send
-   header fields that contain control data first, such as <x:ref>Host</x:ref>
-   on requests and <x:ref>Date</x:ref> on responses, so that implementations
-   can decide when not to handle a message as early as possible.
-   A server &MUST-NOT; apply a request to the target resource until the entire
-   request header section is received, since later header fields might include
-   conditionals, authentication credentials, or deliberately misleading
-   duplicate header fields that would impact request processing.
-</t>
-<t>
-   Aside from the well-known exception noted below, a sender &MUST-NOT;
-   generate multiple header fields with the same field name in a message, or
-   append a header field when a field of the same name already exists in the
-   message, unless that field's definition allows multiple field values to be
-   recombined as a comma-separated list [i.e., at least one alternative of
-   the field's definition allows a comma-separated list, such as an ABNF rule
-   of #(values)].
-</t>
-<t>
-   A recipient &MAY; combine multiple header fields with the same field name
-   into one "field-name: field-value" pair, without changing the semantics of
-   the message, by appending each subsequent field value to the combined
-   field value in order, separated by a comma. The order in which
-   header fields with the same field name are received is therefore
-   significant to the interpretation of the combined field value;
-   a proxy &MUST-NOT; change the order of these field values when
-   forwarding a message.
-</t>
-<aside>
-  <t>
-   &Note; In practice, the "Set-Cookie" header field (<xref target="RFC6265"/>)
-   often appears multiple times in a response message and does not use the
-   list syntax, violating the above requirements on multiple header fields
-   with the same name. Since it cannot be combined into a single field-value,
-   recipients ought to handle "Set-Cookie" as a special case while processing
-   header fields. (See Appendix A.2.3 of <xref target="Kri2001"/> for details.)
-  </t>
-</aside>
-</section>
-
-<section title="Header Field Limits" anchor="field.limits">
-<t>
-   HTTP does not place a predefined limit on the length of each header field
-   or on the length of the header section as a whole, as described in
-   <xref target="conformance"/>. Various ad hoc limitations on individual
-   header field length are found in practice, often depending on the specific
-   field semantics.
-</t>
-<t>
-   A server that receives a request header field, or set of fields, larger
-   than it wishes to process &MUST; respond with an appropriate
-   <x:ref>4xx (Client Error)</x:ref> status code. Ignoring such header fields
-   would increase the server's vulnerability to request smuggling attacks
-   (<xref target="request.smuggling"/>).
-</t>
-<t>
-   A client &MAY; discard or truncate received header fields that are larger
-   than the client wishes to process if the field semantics are such that the
-   dropped value(s) can be safely ignored without changing the
-   message framing or response semantics.
-</t>
-</section>
-
-<section title="Header Field Value Components" anchor="field.components">
-
-<t anchor="delimiters">
-   <iref item="Delimiters"/>
-   Many HTTP header field values are defined using common syntax
-   components, separated by whitespace or specific delimiting characters.
-   Delimiters are chosen from the set of US-ASCII visual characters not
-   allowed in a <x:ref>token</x:ref> (DQUOTE and "(),/:;&lt;=>?@[\]{}").
-</t>
-
-<section title="Tokens" anchor="tokens">
-<t anchor="rule.token.separators">
-  <x:anchor-alias value="tchar"/>
-  <x:anchor-alias value="token"/>
-  Tokens are short textual identifiers that do not include whitespace or
-  delimiters.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="token"/><iref primary="true" item="Grammar" subitem="tchar"/>
-  <x:ref>token</x:ref>          = 1*<x:ref>tchar</x:ref>
-<!--
-  NOTE: the definition of tchar and the prose above about special characters need to match!
- -->
-  <x:ref>tchar</x:ref>          = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*"
-                 / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
-                 / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
-                 ; any <x:ref>VCHAR</x:ref>, except delimiters
-</sourcecode>
-</section>
-
-<section title="Quoted Strings" anchor="quoted.strings">
-<t anchor="rule.quoted-string">
-  <x:anchor-alias value="quoted-string"/>
-  <x:anchor-alias value="qdtext"/>
-  <x:anchor-alias value="obs-text"/>
-   A string of text is parsed as a single value if it is quoted using
-   double-quote marks.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="quoted-string"/><iref primary="true" item="Grammar" subitem="qdtext"/><iref primary="true" item="Grammar" subitem="obs-text"/>
-  <x:ref>quoted-string</x:ref>  = <x:ref>DQUOTE</x:ref> *( <x:ref>qdtext</x:ref> / <x:ref>quoted-pair</x:ref> ) <x:ref>DQUOTE</x:ref>
-  <x:ref>qdtext</x:ref>         = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21 / %x23-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-  <x:ref>obs-text</x:ref>       = %x80-FF
-</sourcecode>
-<t anchor="rule.quoted-pair">
-  <x:anchor-alias value="quoted-pair"/>
-   The backslash octet ("\") can be used as a single-octet
-   quoting mechanism within quoted-string and comment constructs.
-   Recipients that process the value of a quoted-string &MUST; handle a
-   quoted-pair as if it were replaced by the octet following the backslash.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="quoted-pair"/>
-  <x:ref>quoted-pair</x:ref>    = "\" ( <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref> )
-</sourcecode>
-<t>
-   A sender &SHOULD-NOT; generate a quoted-pair in a quoted-string except
-   where necessary to quote DQUOTE and backslash octets occurring within that
-   string.
-   A sender &SHOULD-NOT; generate a quoted-pair in a comment except
-   where necessary to quote parentheses ["(" and ")"] and backslash octets
-   occurring within that comment.
-</t>
-</section>
-
-<section title="Comments" anchor="comments">
-<t anchor="rule.comment">
-  <x:anchor-alias value="comment"/>
-  <x:anchor-alias value="ctext"/>
-   Comments can be included in some HTTP header fields by surrounding
-   the comment text with parentheses. Comments are only allowed in
-   fields containing "comment" as part of their field value definition.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="comment"/><iref primary="true" item="Grammar" subitem="ctext"/>
-  <x:ref>comment</x:ref>        = "(" *( <x:ref>ctext</x:ref> / <x:ref>quoted-pair</x:ref> / <x:ref>comment</x:ref> ) ")"
-  <x:ref>ctext</x:ref>          = <x:ref>HTAB</x:ref> / <x:ref>SP</x:ref> / %x21-27 / %x2A-5B / %x5D-7E / <x:ref>obs-text</x:ref>
-</sourcecode>
-</section>
-
-<section title="Parameters" anchor="parameter">
-<t anchor="rule.parameter">
-   <x:anchor-alias value="parameter-name"/>
-   <x:anchor-alias value="parameter-value"/>
-   A parameter is a name=value pair that is often defined within header field
-   values as a common syntax for appending auxiliary information to an item.
-   Each parameter is usually delimited by an immediately preceding semicolon.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="parameter-name"/><iref primary="true" item="Grammar" subitem="parameter-value"/>
-  <x:ref>parameter</x:ref>       = <x:ref>parameter-name</x:ref> "=" <x:ref>parameter-value</x:ref>
-  <x:ref>parameter-name</x:ref>  = <x:ref>token</x:ref>
-  <x:ref>parameter-value</x:ref> = ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
-</sourcecode>
-<t>
-   Parameter names are case-insensitive. Parameter values might or might
-   not be case-sensitive, depending on the semantics of the parameter
-   name. Examples of parameters and some equivalent forms can be seen in
-   media types (<xref target="media.type"/>) and the Accept header field
-   (<xref target="header.accept"/>).
-</t>
-<t>
-   A parameter value that matches the <x:ref>token</x:ref> production can be
-   transmitted either as a token or within a quoted-string. The quoted and
-   unquoted values are equivalent.
-</t>
-<aside>
-  <t>
-    &Note; Parameters do not allow whitespace (not even "bad" whitespace)
-    around the "=" character.
-  </t>
-</aside>
-</section>
-</section>
-</section>
-
-<section title="Trailer Fields" anchor="trailer.fields">
-   <iref item="trailer fields"/>
-   <iref item="trailers"/>
-
-<section title="Purpose" anchor="trailers.purpose">
-<t>
-   In some HTTP versions, additional
-   metadata can be sent after the initial header section has been completed
-   (during or after transmission of the payload body), such as a message
-   integrity check, digital signature, or post-processing status.
-   For example, the chunked coding in HTTP/1.1 allows a trailer section after
-   the payload body (<xref target="chunked.trailer.section"/>) which can contain
-   trailer fields: field names and values that share the same syntax and
-   namespace as header fields but are received after the header section.
-</t>
-<t>
-   Trailer fields ought to be processed and stored separately from the fields
-   in the header section to avoid contradicting message semantics known at
-   the time the header section was complete. The presence or absence of
-   certain header fields might impact choices made for the routing or
-   processing of the message as a whole before the trailers are received;
-   those choices cannot be unmade by the later discovery of trailer fields.
-</t>
-</section>
-
-<section title="Limitations" anchor="trailers.limitations">
-<t>
-   Many header fields cannot be processed outside the header section because
-   their evaluation is necessary prior to receiving the message body, such as
-   fields that describe message framing, routing, authentication,
-   request modifiers, response controls, or payload format.
-   A sender &MUST-NOT; generate a trailer field unless the sender knows the
-   corresponding header field name's definition permits the field to be sent
-   in trailers.
-</t>
-<t>
-   Trailer fields can be difficult to process by intermediaries that forward
-   messages from one protocol version to another. If the entire message can be
-   buffered in transit, some intermediaries could merge trailer fields into
-   the header section (as appropriate) before it is forwarded. However, in
-   most cases, the trailers are simply discarded.
-   A recipient &MUST-NOT; merge a trailer field into a header section unless
-   the recipient understands the corresponding header field definition and
-   that definition explicitly permits and defines how trailer field values
-   can be safely merged.
-</t>
-<t>
-   A client can send a <x:ref>TE</x:ref> header field indicating "trailers"
-   is acceptable, as described in <xref target="header.te"/>, to inform the
-   server that it will not discard trailer fields.
-</t>
-<t>
-   Because of the potential for trailer fields to be discarded in transit, a
-   server &SHOULD-NOT; generate trailer fields that it believes are necessary
-   for the user agent to receive.
-</t>
-</section>
-
-<section title="Trailer" anchor="header.trailer">
-  <iref primary="true" item="Trailer header field" x:for-anchor=""/>
-  <x:anchor-alias value="Trailer"/>
-<t>
-   The "Trailer" header field provides a list of field names that the sender
-   anticipates sending as trailer fields within that message. This allows a
-   recipient to prepare for receipt of the indicated metadata before it starts
-   processing the body.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
-  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
-</sourcecode>
-<t>
-   For example, a sender might indicate that a message integrity check will
-   be computed as the payload is being streamed and provide the final
-   signature as a trailer field. This allows a recipient to perform the same
-   check on the fly as the payload data is received.
-</t>
-<t>
-   A sender that intends to generate one or more trailer fields in a message
-   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
-   section of that message to indicate which fields might be present in the
-   trailers.
-</t>
-</section>
-</section>
-
-<section title="Considerations for New Header Fields" anchor="considerations.for.new.header.fields">
-<t>
-   Authors of specifications defining new fields are advised to choose a short
-   but descriptive field name. Short names avoid needless data transmission;
-   descriptive names avoid confusion and "squatting" on names that might have
-   broader uses.
-</t>
-<t>
-   To that end, limited-use fields (such as a header confined to a single
-   application or use case) are encouraged to use a name that includes its name
-   (or an abbreviation) as a prefix; for example, if the Foo Application needs
-   a Description field, it might use "Foo-Desc"; "Description" is too generic,
-   and "Foo-Description" is needlessly long.
-</t>
-<t>
-   Header field names ought not be prefixed with "X-"; see
-   <xref target="BCP178"/> for further information.
-</t>
-<t>
-   Other prefixes are sometimes used in HTTP header field names; for example,
-   "Accept-" is used in many content negotiation headers. These prefixes are
-   only an aid to recognizing the purpose of a header field, and do not
-   trigger automatic processing.
-</t>
-<t>
-   Header field values typically have their syntax defined using ABNF
-   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
-   as necessary, and are usually constrained to the range of US-ASCII characters.
-   Header fields needing a greater range of characters can use an encoding
-   such as the one defined in <xref target="RFC8187"/>. 
-</t>
-<t>
-   Leading and trailing whitespace in raw field values is removed upon field
-   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
-   whitespace in values is significant will have to use a container syntax such
-   as quoted-string (<xref target="quoted.strings"/>).
-</t>
-<t>
-   Because commas (",") are used as a generic delimiter between field-values,
-   they need to be treated with care if they are allowed in the field-value.
-   Typically, components that might contain a comma are protected with
-   double-quotes using the quoted-string ABNF production.
-</t>
-<t>
-   For example, a textual date and a URI (either of which might contain a comma)
-   could be safely carried in field-values like these:
-</t>
-<artwork type="example">
-  Example-URI-Field: "http://example.com/a.html,foo",
-                     "http://without-a-comma.example.com/"
-  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
-</artwork>
-<t>
-   Note that double-quote delimiters almost always are used with the
-   quoted-string production; using a different syntax inside double-quotes
-   will likely cause unnecessary confusion.
-</t>
-<t>
-   Many header fields (such as <x:ref>Content-Type</x:ref>, defined in
-   <xref target="header.content-type"/>) use a common syntax for parameters
-   that allows both unquoted (token) and quoted (quoted-string) syntax for
-   a parameter value (<xref target="parameter"/>). Use of common syntax
-   allows recipients to reuse existing parser components. When allowing both
-   forms, the meaning of a parameter value ought to be the same whether it
-   was received as a token or a quoted string.
-</t>
-<t>
-   Authors of specifications defining new header fields are advised to consider
-   documenting:
-</t>
-<ul>
-  <li>
-    <t>Whether the field is a single value or whether it can be a list
-    (delimited by commas; see <xref target="field.values"/>).</t>
-    <t>If it does not use the list syntax, document how to treat messages
-    where the field occurs multiple times (a sensible default would
-    be to ignore the field, but this might not always be the right
-    choice).</t>
-    <t>Note that intermediaries and software libraries might combine
-    multiple header field instances into a single one, despite the
-    field's definition not allowing the list syntax. A robust format enables
-    recipients to discover these situations (good example: "Content-Type",
-    as the comma can only appear inside quoted strings;
-    bad example: "Location", as a comma can occur inside a URI).</t>
-  </li>
-  <li><t>Under what conditions the header field can be used; e.g., only in
-    responses or requests, in all messages, only on responses to a
-    particular request method, etc.</t></li>
-  <li><t>Whether the field should be stored by origin servers that
-    understand it upon a PUT request.</t></li>
-  <li><t>Whether the field semantics are further refined by the context,
-    such as by existing request methods or status codes.</t></li>
-  <li><t>Whether it is appropriate to list the field-name in the
-    <x:ref>Connection</x:ref> header field (i.e., if the header field is to
-    be hop-by-hop; see <xref target="header.connection"/>).</t></li>
-  <li><t>Under what conditions intermediaries are allowed to insert,
-    delete, or modify the field's value.</t></li>
-  <li><t>Whether it is appropriate to list the field-name in a
-    <x:ref>Vary</x:ref> response header field (e.g., when the request header
-    field is used by an origin server's content selection algorithm; see
-    <xref target="header.vary"/>).</t></li>
-  <li><t>Whether the header field is useful or allowable in trailers (see
-    <xref target="chunked.encoding"/>).</t></li>
-  <li><t>Whether the header field ought to be preserved across redirects.</t></li>
-  <li><t>Whether it introduces any additional security considerations, such
-    as disclosure of privacy-related data.</t></li>
-</ul>
 </section>
 </section>
 
@@ -2126,14 +2154,14 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 <t>
    A client &MUST; send a Host header field in all HTTP/1.1 request messages.
    If the target URI includes an authority component, then a client &MUST;
-   send a field-value for Host that is identical to that authority
+   send a field value for Host that is identical to that authority
    component, excluding any userinfo subcomponent and its "@" delimiter
    (<xref target="http.uri"/>).
    If the authority component is missing or undefined for the target URI,
-   then a client &MUST; send a Host header field with an empty field-value.
+   then a client &MUST; send a Host header field with an empty field value.
 </t>
 <t>
-   Since the Host field-value is critical information for handling a request,
+   Since the Host field value is critical information for handling a request,
    a user agent &SHOULD; generate Host as the first header field following the
    request-line.
 </t>
@@ -2156,15 +2184,15 @@ Host: www.example.org
    request-target, the proxy &MUST; ignore the received
    Host header field (if any) and instead replace it with the host
    information of the request-target.  A proxy that forwards such a request
-   &MUST; generate a new Host field-value based on the received
-   request-target rather than forward the received Host field-value.
+   &MUST; generate a new Host field value based on the received
+   request-target rather than forward the received Host field value.
 </t>
 <t>
    Since the Host header field acts as an application-level routing
    mechanism, it is a frequent target for malware seeking to poison
    a shared cache or redirect a request to an unintended server.
    An interception proxy is particularly vulnerable if it relies on
-   the Host field-value for redirecting requests to internal
+   the Host field value for redirecting requests to internal
    servers, or for use as a cache key in a shared cache, without
    first verifying that the intercepted connection is targeting a
    valid IP address for that host.
@@ -2173,7 +2201,7 @@ Host: www.example.org
    A server &MUST; respond with a <x:ref>400 (Bad Request)</x:ref> status code
    to any HTTP/1.1 request message that lacks a Host header field and
    to any request message that contains more than one Host header field
-   or a Host header field with an invalid field-value.
+   or a Host header field with an invalid field value.
 </t>
 </section>
 
@@ -3008,7 +3036,7 @@ bytes=500-700,601-999
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -3220,7 +3248,7 @@ bytes=500-700,601-999
 <t>
    A server &MAY; send a Content-Length header field in a response to a HEAD
    request (<xref target="HEAD"/>); a server &MUST-NOT; send Content-Length in such a
-   response unless its field-value equals the decimal number of octets that
+   response unless its field value equals the decimal number of octets that
    would have been sent in the payload body of a response if the same
    request had used the GET method.
 </t>
@@ -3228,7 +3256,7 @@ bytes=500-700,601-999
    A server &MAY; send a Content-Length header field in a
    <x:ref>304 (Not Modified)</x:ref> response to a conditional GET request
    (<xref target="status.304"/>); a server &MUST-NOT; send Content-Length in such a
-   response unless its field-value equals the decimal number of octets that
+   response unless its field value equals the decimal number of octets that
    would have been sent in the payload body of a <x:ref>200 (OK)</x:ref>
    response to the same request.
 </t>
@@ -3256,12 +3284,12 @@ bytes=500-700,601-999
 </t>
 <t>
    If a message is received that has multiple Content-Length header fields
-   with field-values consisting of the same decimal value, or a single
+   with field values consisting of the same decimal value, or a single
    Content-Length header field with a field value containing a list of
    identical decimal values (e.g., "Content-Length: 42, 42"), indicating that
    duplicate Content-Length header fields have been generated or combined by an
    upstream message processor, then the recipient &MUST; either reject the
-   message as invalid or replace the duplicated field-values with a single
+   message as invalid or replace the duplicated field values with a single
    valid Content-Length field containing that decimal value prior to
    determining the message body length or forwarding the message.
 </t>
@@ -3308,7 +3336,7 @@ bytes=500-700,601-999
 </t>
 <t>
    If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
-   response message and its field-value refers to a URI that differs from the
+   response message and its field value refers to a URI that differs from the
    effective request URI, then the origin server claims that the URI
    is an identifier for a different resource corresponding to the enclosed
    representation. Such a claim can only be trusted if both identifiers share
@@ -3318,18 +3346,18 @@ bytes=500-700,601-999
 <ul>
   <li>For a response to a GET or HEAD request, this is an indication that the
      effective request URI refers to a resource that is subject to content
-     negotiation and the Content-Location field-value is a more specific
+     negotiation and the Content-Location field value is a more specific
      identifier for the <x:ref>selected representation</x:ref>.</li>
   <li>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
-     a Content-Location field-value that is identical to the
-     <x:ref>Location</x:ref> field-value indicates that this payload is a
+     a Content-Location field value that is identical to the
+     <x:ref>Location</x:ref> field value indicates that this payload is a
      current representation of the newly created resource.</li>
   <li>Otherwise, such a Content-Location indicates that this payload is a
      representation reporting on the requested action's status and that the
      same report is available (for future access with GET) at the given URI.
      For example, a purchase transaction made via a POST request might
      include a receipt document as the payload of the <x:ref>200 (OK)</x:ref>
-     response; the Content-Location field-value provides an identifier for
+     response; the Content-Location field value provides an identifier for
      retrieving a copy of that same receipt in the future.</li>
 </ul>
 <t>
@@ -3379,7 +3407,7 @@ bytes=500-700,601-999
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -3437,7 +3465,7 @@ bytes=500-700,601-999
 <ul>
    <li>If the request has a <x:ref>Content-Location</x:ref> header field,
        then the sender asserts that the payload is a representation of the
-       resource identified by the Content-Location field-value. However,
+       resource identified by the Content-Location field value. However,
        such an assertion cannot be trusted unless it can be verified by
        other means (not defined by this specification). The information
        might still be useful for revision history links.</li>
@@ -3460,14 +3488,14 @@ bytes=500-700,601-999
        a potentially modified or enhanced representation of the
        <x:ref>target resource</x:ref> as provided by an intermediary.</li>
    <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field-value is a reference to the same URI as the effective
+       and its field value is a reference to the same URI as the effective
        request URI, the payload is a representation of the resource
        identified by the effective request URI.</li>
    <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field-value is a reference to a URI different from the
+       and its field value is a reference to a URI different from the
        effective request URI, then the sender asserts that the payload is a
        representation of the resource identified by the Content-Location
-       field-value. However, such an assertion cannot be trusted unless
+       field value. However, such an assertion cannot be trusted unless
        it can be verified by other means (not defined by this specification).</li>
    <li>Otherwise, the payload is unidentified.</li>
 </ol>
@@ -4372,8 +4400,9 @@ Content-Range: exampleunit 11.2-14.3/25
    indicate successful completion of the request.
 </t>
 <t>
-   An origin server &SHOULD; ignore unrecognized header fields received in a
-   PUT request (i.e., do not save them as part of the resource state).
+   An origin server &SHOULD; ignore unrecognized header and trailer fields
+   received in a PUT request (i.e., do not save them as part of the resource
+   state).
 </t>
 <t>
    An origin server &SHOULD; verify that the PUT representation is
@@ -4655,7 +4684,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </t>
 <t>
    A server generating a successful response to OPTIONS &SHOULD; send any
-   header fields that might indicate optional features implemented by the
+   header that might indicate optional features implemented by the
    server and applicable to the target resource (e.g., <x:ref>Allow</x:ref>),
    including potential extensions not defined by this specification.
    The response payload, if any, might also describe the communication options
@@ -4698,12 +4727,12 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    (<xref target="header.max-forwards"/>).
 </t>
 <t>
-   A client &MUST-NOT; generate header fields in a TRACE request containing
+   A client &MUST-NOT; generate fields in a TRACE request containing
    sensitive data that might be disclosed by the response. For example, it
    would be foolish for a user agent to send stored user credentials
    <xref target="request.auth"/> or cookies <xref target="RFC6265"/> in a TRACE
    request. The final recipient of the request &SHOULD; exclude any request
-   header fields that are likely to contain sensitive data when that recipient
+   fields that are likely to contain sensitive data when that recipient
    generates the response body.
 </t>
 <t>
@@ -4813,7 +4842,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -4861,10 +4890,10 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
   <x:ref>Expect</x:ref>  = "100-continue"
 </sourcecode>
 <t>
-   The Expect field-value is case-insensitive.
+   The Expect field value is case-insensitive.
 </t>
 <t>
-   A server that receives an Expect field-value other than
+   A server that receives an Expect field value other than
    <x:ref>100-continue</x:ref> &MAY; respond with a
    <x:ref>417 (Expectation Failed)</x:ref> status code to indicate that the
    unexpected expectation cannot be met.
@@ -5014,7 +5043,7 @@ Expect: 100-continue
    &MUST-NOT; forward the request; instead, the intermediary &MUST; respond as
    the final recipient. If the received Max-Forwards value is greater than
    zero, the intermediary &MUST; generate an updated Max-Forwards field in the
-   forwarded message with a field-value that is the lesser of a) the received
+   forwarded message with a field value that is the lesser of a) the received
    value decremented by one (1) or b) the recipient's maximum supported value
    for Max-Forwards.
 </t>
@@ -5070,7 +5099,7 @@ Expect: 100-continue
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -5229,10 +5258,10 @@ Expect: 100-continue
 <t>
    The "If-Match" header field makes the request method conditional on the
    recipient origin server either having at least one current
-   representation of the target resource, when the field-value is "*", or
+   representation of the target resource, when the field value is "*", or
    having a current representation of the target resource that has an
    entity-tag matching a member of the list of entity-tags provided in the
-   field-value.
+   field value.
 </t>
 <t>
    An origin server &MUST; use the strong comparison function when comparing
@@ -5262,9 +5291,9 @@ Expect: 100-continue
 <t>
    An origin server that receives an If-Match header field &MUST; evaluate the
    condition prior to performing the method (<xref target="evaluation"/>).
-   If the field-value is "*", the condition is false if the origin server
+   If the field value is "*", the condition is false if the origin server
    does not have a current representation for the target resource.
-   If the field-value is a list of entity-tags, the condition is false if
+   If the field value is a list of entity-tags, the condition is false if
    none of the listed tags match the entity-tag of the selected representation.
 </t>
 <t>
@@ -5294,9 +5323,9 @@ Expect: 100-continue
 <t>
    The "If-None-Match" header field makes the request method conditional on
    a recipient cache or origin server either not having any current
-   representation of the target resource, when the field-value is "*", or
+   representation of the target resource, when the field value is "*", or
    having a selected representation with an entity-tag that does not match any
-   of those listed in the field-value.
+   of those listed in the field value.
 </t>
 <t>
    A recipient &MUST; use the weak comparison function when comparing
@@ -5340,9 +5369,9 @@ Expect: 100-continue
    An origin server that receives an If-None-Match header field &MUST;
    evaluate the condition prior to performing the method
    (<xref target="evaluation"/>).
-   If the field-value is "*", the condition is false if the origin server
+   If the field value is "*", the condition is false if the origin server
    has a current representation for the target resource.
-   If the field-value is a list of entity-tags, the condition is false if
+   If the field value is a list of entity-tags, the condition is false if
    one of the listed tags match the entity-tag of the selected representation.
 </t>
 <t>
@@ -5364,7 +5393,7 @@ Expect: 100-continue
 <t>
    The "If-Modified-Since" header field makes a GET or HEAD request method
    conditional on the selected representation's modification date being more
-   recent than the date provided in the field-value. Transfer of the selected
+   recent than the date provided in the field value. Transfer of the selected
    representation's data is avoided if that data has not changed.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-Modified-Since"/>
@@ -5386,11 +5415,11 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Modified-Since header field if the
-   received field-value is not a valid HTTP-date, or if the request method
+   received field value is not a valid HTTP-date, or if the request method
    is neither GET nor HEAD.
 </t>
 <t>
-   A recipient &MUST; interpret an If-Modified-Since field-value's timestamp
+   A recipient &MUST; interpret an If-Modified-Since field value's timestamp
    in terms of the origin server's clock.
 </t>
 <t>
@@ -5427,7 +5456,7 @@ Expect: 100-continue
    (<xref target="evaluation"/>).
    The origin server &SHOULD-NOT; perform the requested method if the selected
    representation's last modification date is earlier than or equal to the
-   date provided in the field-value; instead, the origin server &SHOULD;
+   date provided in the field value; instead, the origin server &SHOULD;
    generate a <x:ref>304 (Not Modified)</x:ref> response, including only those
    metadata that are useful for identifying or updating a previously cached
    response.
@@ -5444,7 +5473,7 @@ Expect: 100-continue
 <t>
    The "If-Unmodified-Since" header field makes the request method conditional
    on the selected representation's last modification date being earlier than or
-   equal to the date provided in the field-value. This field accomplishes the
+   equal to the date provided in the field value. This field accomplishes the
    same purpose as <x:ref>If-Match</x:ref> for cases where the user agent does
    not have an entity-tag for the representation.
 </t>
@@ -5467,10 +5496,10 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Unmodified-Since header field if the
-   received field-value is not a valid HTTP-date.
+   received field value is not a valid HTTP-date.
 </t>
 <t>
-   A recipient &MUST; interpret an If-Unmodified-Since field-value's timestamp
+   A recipient &MUST; interpret an If-Unmodified-Since field value's timestamp
    in terms of the origin server's clock.
 </t>
 <t>
@@ -5488,7 +5517,7 @@ Expect: 100-continue
    (<xref target="evaluation"/>).
    The origin server &MUST-NOT; perform the requested method if the selected
    representation's last modification date is more recent than the date
-   provided in the field-value; instead the origin server &MUST; respond with either
+   provided in the field value; instead the origin server &MUST; respond with either
    a) the <x:ref>412 (Precondition Failed)</x:ref> status code or
    b) one of the <x:ref>2xx (Successful)</x:ref> status codes if the origin
    server has verified that a state change is being requested and the final
@@ -5679,7 +5708,7 @@ Expect: 100-continue
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -5994,7 +6023,7 @@ Expect: 100-continue
        content-coding with the highest non-zero qvalue is preferred.</li>
 </ol>
 <t>
-   An Accept-Encoding header field with a combined field-value that is empty
+   An Accept-Encoding header field with a field value that is empty
    implies that the user agent does not want any content-coding in response.
    If an Accept-Encoding header field is present in a request and none of the
    available representations for the response have a content-coding that
@@ -6096,7 +6125,7 @@ Expect: 100-continue
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -6454,7 +6483,7 @@ Expect: 100-continue
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -6592,7 +6621,7 @@ Expect: 100-continue
   <x:ref>User-Agent</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
 </sourcecode>
 <t>
-   The User-Agent field-value consists of one or more product identifiers,
+   The User-Agent field value consists of one or more product identifiers,
    each followed by zero or more comments (<xref target="comments"/>), which together
    identify the user agent software and its significant subproducts.
    By convention, the product identifiers are listed in decreasing order of
@@ -6648,8 +6677,7 @@ Expect: 100-continue
    understanding is obviously desirable. However, a client &MUST;
    understand the class of any status code, as indicated by the first
    digit, and treat an unrecognized status code as being equivalent to the
-   x00 status code of that class, with the exception that
-   a recipient &MUST-NOT; cache a response with an unrecognized status code.
+   x00 status code of that class.
 </t>
 <t>
    For example, if an unrecognized status code of 471 is received by a client,
@@ -7246,7 +7274,7 @@ Expect: 100-continue
 <t>
    For example, if a 204 status code is received in response to a PUT
    request and the response contains an <x:ref>ETag</x:ref> header field, then
-   the PUT was successful and the ETag field-value contains the entity-tag for
+   the PUT was successful and the ETag field value contains the entity-tag for
    the new representation of that target resource.
 </t>
 <t>
@@ -8393,7 +8421,7 @@ Content-Type: text/plain
    conditions that would cause a response containing that status code (e.g.,
    combinations of request header fields and/or method(s)) along with any 
    dependencies on response header fields (e.g., what fields are required,
-   what fields can modify the semantics, and what header field semantics are
+   what fields can modify the semantics, and what field semantics are
    further refined when used with the new status code).
 </t>
 <t>
@@ -8436,7 +8464,7 @@ Content-Type: text/plain
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -8504,8 +8532,8 @@ Sunday, 06-Nov-94 08:49:37 GMT   ; obsolete RFC 850 format
 Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </artwork>
 <t>
-   A recipient that parses a timestamp value in an HTTP header field &MUST;
-   accept all three HTTP-date formats. When a sender generates a header field
+   A recipient that parses a timestamp value in an HTTP field &MUST;
+   accept all three HTTP-date formats. When a sender generates a field
    that contains one or more timestamps defined as HTTP-date,
    the sender &MUST; generate those timestamps in the IMF-fixdate format.
 </t>
@@ -8889,7 +8917,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -9382,7 +9410,7 @@ Content-Encoding: gzip
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -9406,7 +9434,7 @@ Content-Encoding: gzip
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -9600,7 +9628,7 @@ Content-Encoding: gzip
 <table align="left">
   <thead>
     <tr>
-      <th>Header Field Name</th>
+      <th>Field Name</th>
       <th>Defined in...</th>
     </tr>
   </thead>
@@ -9704,7 +9732,7 @@ Content-Encoding: gzip
   <x:ref>Server</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
 </sourcecode>
 <t>
-   The Server field-value consists of one or more product identifiers, each
+   The Server field value consists of one or more product identifiers, each
    followed by zero or more comments (<xref target="comments"/>), which together
    identify the origin server software and its significant subproducts.
    By convention, the product identifiers are listed in decreasing order of
@@ -10036,7 +10064,7 @@ Content-Encoding: gzip
 <t>
    To promote interoperability, specific recommendations are made for minimum
    size limits on request-line (<xref target="request.line"/>)
-   and header fields (<xref target="header.fields"/>). These are
+   and fields (<xref target="header.fields"/>). These are
    minimum recommendations, chosen to be supportable even by implementations
    with limited resources; it is expected that most implementations will
    choose substantially higher limits.
@@ -10051,7 +10079,7 @@ Content-Encoding: gzip
 <t>
    Recipients ought to carefully limit the extent to which they process other
    protocol elements, including (but not limited to) request methods, response
-   status phrases, header field-names, numeric values, and body chunks.
+   status phrases, field names, numeric values, and body chunks.
    Failure to limit such processing can result in buffer overflows, arithmetic
    overflows, or increased vulnerability to denial-of-service attacks.
 </t>
@@ -10276,7 +10304,7 @@ Content-Encoding: gzip
 </t>
 <t>
    HTTP depends on the security properties of the underlying transport- or
-   session-level connection to provide confidential transmission of header
+   session-level connection to provide confidential transmission of
    fields. In other words, if a server limits access to authenticated users
    using this framework, the server needs to ensure that the connection is
    properly secured in accordance with the nature of the authentication
@@ -10334,7 +10362,7 @@ Content-Encoding: gzip
 </t>
 </section>
 
-<section title="Additional Response Header Fields" anchor="security.auth.add.resp">
+<section title="Additional Response Fields" anchor="security.auth.add.resp">
 <t>
   Adding information to responses that are sent over an unencrypted
   channel can affect security and privacy. The presence of the
@@ -10394,7 +10422,7 @@ Content-Encoding: gzip
 </dl>
 </section>
 
-<section title="Header Field Registration" anchor="header.field.registration">
+<section title="HTTP Field Registration" anchor="header.field.registration">
 <t>      
    Please create a new registry as outlined in <xref
    target="field.name.registry"/>.
@@ -10418,12 +10446,12 @@ Content-Encoding: gzip
 </ol>
 <t>
    Please annotate the Permanent and Provisional Message Header registries to
-   indicate that HTTP header field registrations have moved, with an
+   indicate that HTTP field registrations have moved, with an
    appropriate link.
 </t>
 <t>
    After that is complete, please update the new registry with the
-   header field names listed in the table of <xref target="field.names"/>.
+   field names listed in the table of <xref target="field.names"/>.
 </t>
 <t>
    <iref primary="true" item="Content-MD5 header field"/>
@@ -11391,27 +11419,6 @@ Content-Encoding: gzip
   <seriesInfo name="RFC" value="7595"/>
 </reference>
 
-<reference anchor='BCP90'>
-  <front>
-    <title>Registration Procedures for Message Header Fields</title>
-    <author initials='G.' surname='Klyne' fullname='G. Klyne'>
-      <organization>Nine by Nine</organization>
-      <address><email>GK-IETF@ninebynine.org</email></address>
-    </author>
-    <author initials='M.' surname='Nottingham' fullname='M. Nottingham'>
-      <organization>BEA Systems</organization>
-      <address><email>mnot@pobox.com</email></address>
-    </author>
-    <author initials='J.' surname='Mogul' fullname='J. Mogul'>
-      <organization>HP Labs</organization>
-      <address><email>JeffMogul@acm.org</email></address>
-    </author>
-    <date year='2004' month='September' />
-  </front>
-  <seriesInfo name='BCP' value='90' />
-  <seriesInfo name='RFC' value='3864' />
-</reference>
-
 <reference anchor="BCP178">
   <front>
     <title>Deprecating the "X-" Prefix and Similar Constructs in Application Protocols</title>
@@ -11744,8 +11751,8 @@ Content-Encoding: gzip
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
 <x:ref>product</x:ref> = token [ "/" product-version ]
 <x:ref>product-version</x:ref> = token
-<x:ref>protocol-name</x:ref> = &lt;protocol-name, see <xref target="Messaging" x:fmt="," x:sec="9.8"/>&gt;
-<x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="Messaging" x:fmt="," x:sec="9.8"/>&gt;
+<x:ref>protocol-name</x:ref> = &lt;protocol-name, see <xref target="Messaging" x:fmt="," x:sec="9.9"/>&gt;
+<x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="Messaging" x:fmt="," x:sec="9.9"/>&gt;
 <x:ref>pseudonym</x:ref> = token
 
 <x:ref>qdtext</x:ref> = HTAB / SP / "!" / %x23-5B ; '#'-'['
@@ -11797,6 +11804,11 @@ Content-Encoding: gzip
    The sections introducing HTTP's design goals, history, architecture,
    conformance criteria, protocol versioning, URIs, message routing, and
    header fields have been moved here (without substantive change).
+</t>
+<t>
+   "Field value" now refers to the value after multiple instances are combined
+   with commas &mdash; by far the most common use. To refer to a single header
+   line's value, use "field line value".
 </t>
 <t>
    Trailer field semantics now transcend the specifics of chunked encoding.
@@ -12016,6 +12028,7 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-06" anchor="changes.since.06">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="header.fields"/>, introduce field terminology and distinguish between field line values and field values; use terminology consistently throughout (<eref target="https://github.com/httpwg/http-core/issues/111"/>)</li>
   <li>In <xref target="http.userinfo"/>, be more correct about what was deprecated by RFC 3986 (<eref target="https://github.com/httpwg/http-core/issues/278"/>, <eref target="https://www.rfc-editor.org/errata/eid5964"/>)</li>
 </ul>
 </section>
