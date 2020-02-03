@@ -314,6 +314,44 @@
    "protocol element"
    as they are defined in <xref target="RFC6365"/>.
 </t>
+
+<section title="Whitespace" anchor="whitespace">
+  <x:anchor-alias value="BWS"/>
+  <x:anchor-alias value="OWS"/>
+  <x:anchor-alias value="RWS"/>
+<t>
+   This specification uses three rules to denote the use of linear
+   whitespace: OWS (optional whitespace), RWS (required whitespace), and
+   BWS ("bad" whitespace).
+</t>
+<t>
+   The OWS rule is used where zero or more linear whitespace octets might
+   appear. For protocol elements where optional whitespace is preferred to
+   improve readability, a sender &SHOULD; generate the optional whitespace
+   as a single SP; otherwise, a sender &SHOULD-NOT; generate optional
+   whitespace except as needed to white out invalid or unwanted protocol
+   elements during in-place message filtering.
+</t>
+<t>
+   The RWS rule is used when at least one linear whitespace octet is required
+   to separate field tokens. A sender &SHOULD; generate RWS as a single SP.
+</t>
+<t>
+   The BWS rule is used where the grammar allows optional whitespace only for
+   historical reasons. A sender &MUST-NOT; generate BWS in messages.
+   A recipient &MUST; parse for such bad whitespace and remove it before
+   interpreting the protocol element.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
+  <x:ref>OWS</x:ref>            = *( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
+                 ; optional whitespace
+  <x:ref>RWS</x:ref>            = 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
+                 ; required whitespace
+  <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
+                 ; "bad" whitespace
+</sourcecode>
+</section>
+
 </section>
 </section>
 
@@ -1250,7 +1288,7 @@ Content-Type: text/plain
 
 <section title="Field Name Registry" anchor="field.name.registry">
 
-<t>The "Hypertext Transfer Protocol (HTTP) Field Registry" defines the
+<t>The "Hypertext Transfer Protocol (HTTP) Field Name Registry" defines the
 namespace for HTTP field names.</t>
 
 <t>Any party can request registration of a HTTP field. See <xref
@@ -1345,7 +1383,6 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
       has been extracted by a generic field parser).
    </t>
 </aside>
-
 
 <section title="Common Field Value Components" anchor="field.components">
 
@@ -1455,6 +1492,88 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
   </t>
 </aside>
 </section>
+</section>
+</section>
+
+<section title="ABNF List Extension: #rule" anchor="abnf.extension">
+<t>
+   A #rule extension to the ABNF rules of <xref target="RFC5234"/> is used to
+   improve readability in the definitions of some header field values.
+</t>
+<t>
+   A construct "#" is defined, similar to "*", for defining comma-delimited
+   lists of elements. The full form is "&lt;n&gt;#&lt;m&gt;element" indicating
+   at least &lt;n&gt; and at most &lt;m&gt; elements, each separated by a single
+   comma (",") and optional whitespace (OWS).   
+</t>
+<section title="Sender Requirements">
+<t>
+   In any production that uses the list construct, a sender &MUST-NOT;
+   generate empty list elements. In other words, a sender &MUST; generate
+   lists that satisfy the following syntax:
+</t>
+<artwork type="example">
+  1#element =&gt; element *( OWS "," OWS element )
+</artwork>
+<t>
+   and:
+</t>
+<artwork type="example">
+  #element =&gt; [ 1#element ]
+</artwork>
+<t>
+   and for n &gt;= 1 and m &gt; 1:
+</t>
+<artwork type="example">
+  &lt;n&gt;#&lt;m&gt;element =&gt; element &lt;n-1&gt;*&lt;m-1&gt;( OWS "," OWS element )
+</artwork>
+</section>
+<section title="Recipient Requirements">
+<t>
+   Empty elements do not contribute to the count of elements present.
+   A recipient &MUST; parse and ignore
+   a reasonable number of empty list elements: enough to handle common mistakes
+   by senders that merge values, but not so much that they could be used as a
+   denial-of-service mechanism. In other words, a recipient &MUST; accept lists
+   that satisfy the following syntax:
+</t>
+<artwork type="example">
+  #element =&gt; [ element ] *( OWS "," OWS [ element ] )
+</artwork>
+<t>
+   Note that because of the potential presence of empty list elements, the
+   RFC 5234 ABNF cannot enforce the cardinality of list elements, and
+   consequently all cases are mapped is if there was no cardinality specified.
+</t>
+<t>
+   For example, given these ABNF productions: 
+</t>
+<artwork type="example">
+  example-list      = 1#example-list-elmt
+  example-list-elmt = token ; see <xref target="tokens"/>
+</artwork>
+<t>
+   Then the following are valid values for example-list (not including the
+   double quotes, which are present for delimitation only):
+</t>
+<artwork type="example">
+  "foo,bar"
+  "foo ,bar,"
+  "foo , ,bar,charlie"
+</artwork>
+<t>
+   In contrast, the following values would be invalid, since at least one
+   non-empty element is required by the example-list production:
+</t>
+<artwork type="example">
+  ""
+  ","
+  ",   ,"
+</artwork>
+<t>
+   <xref target="collected.abnf"/> shows the collected ABNF for recipients
+   after the list constructs have been expanded.
+</t>
 </section>
 </section>
 
@@ -9767,129 +9886,6 @@ Content-Encoding: gzip
 </section>
 </section>
 
-<section title="Generic Syntax" anchor="generic.syntax">
-
-<section title="Whitespace" anchor="whitespace">
-  <x:anchor-alias value="BWS"/>
-  <x:anchor-alias value="OWS"/>
-  <x:anchor-alias value="RWS"/>
-<t>
-   This specification uses three rules to denote the use of linear
-   whitespace: OWS (optional whitespace), RWS (required whitespace), and
-   BWS ("bad" whitespace).
-</t>
-<t>
-   The OWS rule is used where zero or more linear whitespace octets might
-   appear. For protocol elements where optional whitespace is preferred to
-   improve readability, a sender &SHOULD; generate the optional whitespace
-   as a single SP; otherwise, a sender &SHOULD-NOT; generate optional
-   whitespace except as needed to white out invalid or unwanted protocol
-   elements during in-place message filtering.
-</t>
-<t>
-   The RWS rule is used when at least one linear whitespace octet is required
-   to separate field tokens. A sender &SHOULD; generate RWS as a single SP.
-</t>
-<t>
-   The BWS rule is used where the grammar allows optional whitespace only for
-   historical reasons. A sender &MUST-NOT; generate BWS in messages.
-   A recipient &MUST; parse for such bad whitespace and remove it before
-   interpreting the protocol element.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="OWS"/><iref primary="true" item="Grammar" subitem="RWS"/><iref primary="true" item="Grammar" subitem="BWS"/>
-  <x:ref>OWS</x:ref>            = *( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
-                 ; optional whitespace
-  <x:ref>RWS</x:ref>            = 1*( <x:ref>SP</x:ref> / <x:ref>HTAB</x:ref> )
-                 ; required whitespace
-  <x:ref>BWS</x:ref>            = <x:ref>OWS</x:ref>
-                 ; "bad" whitespace
-</sourcecode>
-</section>
-
-</section>
-
-<section title="ABNF List Extension: #rule" anchor="abnf.extension">
-<t>
-   A #rule extension to the ABNF rules of <xref target="RFC5234"/> is used to
-   improve readability in the definitions of some header field values.
-</t>
-<t>
-   A construct "#" is defined, similar to "*", for defining comma-delimited
-   lists of elements. The full form is "&lt;n&gt;#&lt;m&gt;element" indicating
-   at least &lt;n&gt; and at most &lt;m&gt; elements, each separated by a single
-   comma (",") and optional whitespace (OWS).   
-</t>
-<section title="Sender Requirements">
-<t>
-   In any production that uses the list construct, a sender &MUST-NOT;
-   generate empty list elements. In other words, a sender &MUST; generate
-   lists that satisfy the following syntax:
-</t>
-<artwork type="example">
-  1#element =&gt; element *( OWS "," OWS element )
-</artwork>
-<t>
-   and:
-</t>
-<artwork type="example">
-  #element =&gt; [ 1#element ]
-</artwork>
-<t>
-   and for n &gt;= 1 and m &gt; 1:
-</t>
-<artwork type="example">
-  &lt;n&gt;#&lt;m&gt;element =&gt; element &lt;n-1&gt;*&lt;m-1&gt;( OWS "," OWS element )
-</artwork>
-</section>
-<section title="Recipient Requirements">
-<t>
-   Empty elements do not contribute to the count of elements present.
-   A recipient &MUST; parse and ignore
-   a reasonable number of empty list elements: enough to handle common mistakes
-   by senders that merge values, but not so much that they could be used as a
-   denial-of-service mechanism. In other words, a recipient &MUST; accept lists
-   that satisfy the following syntax:
-</t>
-<artwork type="example">
-  #element =&gt; [ element ] *( OWS "," OWS [ element ] )
-</artwork>
-<t>
-   Note that because of the potential presence of empty list elements, the
-   RFC 5234 ABNF cannot enforce the cardinality of list elements, and
-   consequently all cases are mapped is if there was no cardinality specified.
-</t>
-<t>
-   For example, given these ABNF productions: 
-</t>
-<artwork type="example">
-  example-list      = 1#example-list-elmt
-  example-list-elmt = token ; see <xref target="tokens"/>
-</artwork>
-<t>
-   Then the following are valid values for example-list (not including the
-   double quotes, which are present for delimitation only):
-</t>
-<artwork type="example">
-  "foo,bar"
-  "foo ,bar,"
-  "foo , ,bar,charlie"
-</artwork>
-<t>
-   In contrast, the following values would be invalid, since at least one
-   non-empty element is required by the example-list production:
-</t>
-<artwork type="example">
-  ""
-  ","
-  ",   ,"
-</artwork>
-<t>
-   <xref target="collected.abnf"/> shows the collected ABNF for recipients
-   after the list constructs have been expanded.
-</t>
-</section>
-</section>
-
 <section title="Security Considerations" anchor="security.considerations">
 <t>
    This section is meant to inform developers, information providers, and
@@ -10431,7 +10427,7 @@ Content-Encoding: gzip
 </dl>
 </section>
 
-<section title="HTTP Field Registration" anchor="header.field.registration">
+<section title="HTTP Field Name Registration" anchor="header.field.registration">
 <t>      
    Please create a new registry as outlined in <xref
    target="field.name.registry"/>.
@@ -10455,7 +10451,7 @@ Content-Encoding: gzip
 </ol>
 <t>
    Please annotate the Permanent and Provisional Message Header registries to
-   indicate that HTTP field registrations have moved, with an
+   indicate that HTTP field name registrations have moved, with an
    appropriate link.
 </t>
 <t>
@@ -12029,7 +12025,7 @@ Content-Encoding: gzip
   <li>In <xref target="cacheable.methods"/>, remove concept of "cacheable methods" in favor of prose (<eref target="https://github.com/httpwg/http-core/issues/54"/>, <eref target="https://www.rfc-editor.org/errata/eid5300"/>)</li>
   <li>In <xref target="establishing.authority"/>, mention that the concept of authority can be modified by protocol extensions (<eref target="https://github.com/httpwg/http-core/issues/143"/>)</li>
   <li>Create new subsection on payload body in <xref target="payload.body"/>, taken from portions of message body (<eref target="https://github.com/httpwg/http-core/issues/159"/>)</li>
-  <li>Moved definition of "Whitespace" into new container "Generic Syntax" (<xref target="generic.syntax"/>) (<eref target="https://github.com/httpwg/http-core/issues/162"/>)</li>
+  <li>Moved definition of "Whitespace" into new container "Generic Syntax" (<eref target="https://github.com/httpwg/http-core/issues/162"/>)</li>
   <li>In <xref target="resources"/>, recommend minimum URI size support for implementations (<eref target="https://github.com/httpwg/http-core/issues/169"/>)</li>
   <li>In <xref target="range.units"/>, refactored the range-unit and ranges-specifier grammars (<eref target="https://github.com/httpwg/http-core/issues/196"/>, <eref target="https://www.rfc-editor.org/errata/eid5620"/>)</li>
   <li>In <xref target="GET"/>, caution against a request body more strongly (<eref target="https://github.com/httpwg/http-core/issues/202"/>)</li>
@@ -12045,6 +12041,7 @@ Content-Encoding: gzip
 <ul x:when-empty="None yet.">
   <li>In <xref target="header.via"/>, simplify received-by grammar (and disallow comma character) (<eref target="https://github.com/httpwg/http-core/issues/24"/>)</li>
   <li>In <xref target="header.fields"/>, introduce field terminology and distinguish between field line values and field values; use terminology consistently throughout (<eref target="https://github.com/httpwg/http-core/issues/111"/>)</li>
+  <li>Moved #rule definition into <xref target="field.values"/> and whitespace into <xref target="notation"/> (<eref target="https://github.com/httpwg/http-core/issues/162"/>)</li>
   <li>In <xref target="http.userinfo"/>, be more correct about what was deprecated by RFC 3986 (<eref target="https://github.com/httpwg/http-core/issues/278"/>, <eref target="https://www.rfc-editor.org/errata/eid5964"/>)</li>
 </ul>
 </section>
