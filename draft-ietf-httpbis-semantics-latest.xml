@@ -2356,6 +2356,7 @@ Host: www.example.org
 
 <section title="Via" anchor="header.via">
   <iref primary="true" item="Via header field" x:for-anchor=""/>
+  <x:anchor-alias value="pseudonym"/>
   <x:anchor-alias value="received-by"/>
   <x:anchor-alias value="received-protocol"/>
   <x:anchor-alias value="Via"/>
@@ -2369,16 +2370,13 @@ Host: www.example.org
    avoiding request loops, and identifying the protocol capabilities of
    senders along the request/response chain.
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
   <x:ref>Via</x:ref> = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
 
   <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
                       ; see <xref target="header.upgrade"/>
-  <x:ref>received-by</x:ref>       = "!" / "#" / "$" / "%" / "&amp;" / "'" 
-                      / "(" / ")" / "*" / "+" / "-" / "." / DIGIT
-                      / ":" / ";" / "=" / ALPHA / "[" / "]" / "^"
-                      / "_" / "`" / "|" / "~"
-                      ; characters from uri-host minus ","
+  <x:ref>received-by</x:ref>       = <x:ref>pseudonym</x:ref> [ ":" <x:ref>port</x:ref> ]
+  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
 </sourcecode>
 <t>
    Multiple Via field values represent each proxy or gateway that has
@@ -2412,13 +2410,6 @@ Host: www.example.org
    a recipient &MAY; interpret that as meaning it was received on the default
    TCP port, if any, for the received-protocol.
 </t>
-<aside>
-  <t>
-    &Note;: the "host" production in <xref target="RFC3986" x:fmt="of" x:sec="3.2.2"/>
-    allows the comma character, but it was excluded from "received-by" for
-    compatibility with list parsing.
-  </t>
-</aside>
 <t>
    A sender &MAY; generate comments in the Via header field to identify the
    software of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
@@ -11758,6 +11749,7 @@ Content-Encoding: gzip
 <x:ref>product-version</x:ref> = token
 <x:ref>protocol-name</x:ref> = &lt;protocol-name, see <xref target="Messaging" x:fmt="," x:sec="9.9"/>&gt;
 <x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="Messaging" x:fmt="," x:sec="9.9"/>&gt;
+<x:ref>pseudonym</x:ref> = token
 
 <x:ref>qdtext</x:ref> = HTAB / SP / "!" / %x23-5B ; '#'-'['
  / %x5D-7E ; ']'-'~'
@@ -11772,9 +11764,7 @@ Content-Encoding: gzip
 <x:ref>range-spec</x:ref> = int-range / suffix-range / other-range
 <x:ref>range-unit</x:ref> = token
 <x:ref>ranges-specifier</x:ref> = range-unit "=" range-set
-<x:ref>received-by</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "(" / ")" / "*" /
- "+" / "-" / "." / DIGIT / ":" / ";" / "=" / ALPHA / "[" / "]" / "^"
- / "_" / "`" / "|" / "~"
+<x:ref>received-by</x:ref> = pseudonym [ ":" port ]
 <x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
 <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
 <x:ref>request-target</x:ref> = &lt;request-target, see <xref target="Messaging" x:fmt="," x:sec="3.2"/>&gt;
@@ -11837,9 +11827,13 @@ Content-Encoding: gzip
    applicability (<xref target="status.422"/>).
 </t>
 <t>
-   The grammar definition for the Via field's "received-by" was both 
-   simplified and fixed to exclude the comma character
-   (<xref target="header.via"/>).
+   The grammar definition for the Via field's "received-by" was unfortunately
+   expanded in 7230 due to changes in the URI grammar for host
+   <xref target="RFC3986"/> that are not desirable for Via. For simplicity,
+   we have removed uri-host from the received-by production because it can
+   be encompassed by the existing grammar for pseudonym. In particular, this
+   change removed comma from the allowed set of charaters for a host name in
+   received-by (<xref target="header.via"/>).
 </t>
 </section>
 
