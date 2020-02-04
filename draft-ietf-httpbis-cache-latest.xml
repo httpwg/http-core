@@ -335,10 +335,9 @@
 <ul>
   <li><t>the request method is understood by the cache;</t></li>
   <li><t>the response status code is final (see
-         <xref target="associating.response.to.request"/>);</t></li>
-  <li><t>if the "must-understand" cache directive (see <xref
-         target="header.cache-control"/>) is present or the response status code is
-         206 or 304: the cache understands the response status code;</t></li>
+         <xref target="status.codes"/>);</t></li>
+  <li><t>if the response status code is 206 or 304, or the "must-understand" cache directive (see <xref
+         target="header.cache-control"/>) is present: the cache understands the response status code;</t></li>
   <li><t>the "no-store" cache directive is not present in the response
          (see <xref target="header.cache-control"/>);</t></li>
   <li><t>if the cache is shared: the "private" response directive is not
@@ -548,7 +547,7 @@
    there.
 </t>
 <t>
-   A <x:ref>Vary</x:ref> header field-value of "*" always fails to match.
+   A <x:ref>Vary</x:ref> header field value containing a member "*" always fails to match.
 </t>
 <t>
    The stored response with matching selecting header fields is known as the
@@ -892,7 +891,7 @@
    specifically to a previously obtained representation with that timestamp).
 </t>
 <t>
-   Another validator is the entity-tag given in an <x:ref>ETag</x:ref> header
+   Another validator is the entity-tag given in an <x:ref>ETag</x:ref>
    field (<xref target="header.etag"/>). One or more entity-tags, indicating one or more
    stored responses, can be used in an <x:ref>If-None-Match</x:ref> header
    field for response validation, or in an <x:ref>If-Match</x:ref> or
@@ -951,7 +950,7 @@
    cache &MUST-NOT; include its entity-tag in the union unless the request is
    for a range that would be fully satisfied by that partial stored response.
    If the response to the forwarded request is
-   <x:ref>304 (Not Modified)</x:ref> and has an ETag header field value with
+   <x:ref>304 (Not Modified)</x:ref> and has an ETag field value with
    an entity-tag that is not in the client's list, the cache &MUST;
    generate a <x:ref>200 (OK)</x:ref> response for the client by reusing its
    corresponding stored response, as updated by the 304 response metadata
@@ -1218,7 +1217,7 @@
    <x:anchor-alias value="Cache-Control"/>
    <x:anchor-alias value="cache-directive"/>
 <t>
-   The "Cache-Control" header field is used to specify directives for caches
+   The "Cache-Control" header field is used to list directives for caches
    along the request/response chain. Such cache directives are unidirectional
    in that the presence of a directive in a request does not imply that the
    same directive is present in the response, or to be repeated in it.
@@ -1243,9 +1242,7 @@
    Cache directives are identified by a token, to be compared case-insensitively,
    and have an optional argument, that can use both token and quoted-string
    syntax. For the directives defined below that define arguments, recipients
-   ought to accept both forms, even if one is documented to be preferred. For
-   any directive not defined by this specification, a recipient &MUST; accept
-   both forms. 
+   ought to accept both forms, even if a specific form is required for generation.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Cache-Control"/><iref primary="true" item="Grammar" subitem="cache-directive"/>
   <x:ref>Cache-Control</x:ref>   = 1#<x:ref>cache-directive</x:ref>
@@ -1368,7 +1365,7 @@
 </t>
 <t>
    This directive uses the token form of the argument syntax:
-   e.g., 'max-age=5' not 'max-age="5"'. A sender &SHOULD-NOT; generate the
+   e.g., 'max-age=5' not 'max-age="5"'. A sender &MUST-NOT; generate the
    quoted-string form.
 </t>
 </section>
@@ -1391,7 +1388,7 @@
 </t>
 <t>
    This directive uses the token form of the argument syntax:
-   e.g., 'max-stale=10' not 'max-stale="10"'. A sender &SHOULD-NOT; generate
+   e.g., 'max-stale=10' not 'max-stale="10"'. A sender &MUST-NOT; generate
    the quoted-string form.
 </t>
 </section>
@@ -1412,7 +1409,7 @@
 </t>
 <t>
    This directive uses the token form of the argument syntax:
-   e.g., 'min-fresh=20' not 'min-fresh="20"'. A sender &SHOULD-NOT; generate
+   e.g., 'min-fresh=20' not 'min-fresh="20"'. A sender &MUST-NOT; generate
    the quoted-string form.
 </t>
 </section>
@@ -1671,7 +1668,7 @@
 </t>
 <t>
    This directive uses the token form of the argument syntax:
-   e.g., 'max-age=5' not 'max-age="5"'. A sender &SHOULD-NOT; generate the
+   e.g., 'max-age=5' not 'max-age="5"'. A sender &MUST-NOT; generate the
    quoted-string form.
 </t>
 </section>      
@@ -1698,7 +1695,7 @@
 </t>
 <t>
    This directive uses the token form of the argument syntax:
-   e.g., 's-maxage=10' not 's-maxage="10"'. A sender &SHOULD-NOT; generate
+   e.g., 's-maxage=10' not 's-maxage="10"'. A sender &MUST-NOT; generate
    the quoted-string form.
 </t>
 </section>
@@ -2041,6 +2038,7 @@
       <x:has anchor="preconditions"/>
       <x:has anchor="quoted.strings"/>
       <x:has anchor="safe.methods"/>
+      <x:has anchor="status.codes"/>
       <x:has anchor="tokens"/>
       <x:has anchor="uri"/>
       <x:has anchor="weak.and.strong.validators"/>
@@ -2290,6 +2288,15 @@
    (<xref target="header.warning"/>)
 </t>
 <t>
+   Some cache directives defined by this specification now have stronger
+   prohibitions against generating the quoted form of their values, since
+   this has been found to create interoperability problems. Consumers of
+   extension cache directives are no longer required to accept both token and
+   quoted-string forms, but they still need to properly parse them for
+   unknown extensions.
+   (<xref target="header.cache-control"/>)
+</t>
+<t>
    The "must-understand" cache directive was introduced; caches are no
    longer required to understand the semantics of new response status codes
    unless it is present.
@@ -2374,8 +2381,10 @@
 <section title="Since draft-ietf-httpbis-cache-06" anchor="changes.since.06">
 <ul x:when-empty="None yet.">
    <li>In <xref target="response.cacheability"/> and <xref target="cache-response-directive.must-understand"/>, change response cacheability to only require understanding the response status code if the must-understand cache directive is present (<eref target="https://github.com/httpwg/http-core/issues/120"/>)</li>
+   <li>Change requirements for handling different forms of cache directives in <xref target="header.cache-control"/> (<eref target="https://github.com/httpwg/http-core/issues/128"/>)</li>
    <li>Fix typo in <xref target="cache-response-directive.s-maxage"/> (<eref target="https://github.com/httpwg/http-core/issues/264"/>)</li>
    <li>In <xref target="cache-response-directive.public"/> and <xref target="cache-response-directive.private"/>, clarify "private" and "public" so that they do not override all other cache directives (<eref target="https://github.com/httpwg/http-core/issues/268"/>)</li>
+   <li>In <xref target="caching.negotiated.responses"/>, clarify that any "*" as a member of Vary will disable caching (<eref target="https://github.com/httpwg/http-core/issues/286"/>)</li>
 </ul>
 </section>
 </section>
