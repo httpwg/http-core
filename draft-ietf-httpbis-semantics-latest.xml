@@ -1260,6 +1260,30 @@ Content-Type: text/plain
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
 </sourcecode>
 
+<t>
+   Authors of specifications defining new fields are advised to choose a short
+   but descriptive field name. Short names avoid needless data transmission;
+   descriptive names avoid confusion and "squatting" on names that might have
+   broader uses.
+</t>
+<t>
+   To that end, limited-use fields (such as a header confined to a single
+   application or use case) are encouraged to use a name that includes its name
+   (or an abbreviation) as a prefix; for example, if the Foo Application needs
+   a Description field, it might use "Foo-Desc"; "Description" is too generic,
+   and "Foo-Description" is needlessly long.
+</t>
+<t>
+   Field names ought not be prefixed with "X-"; see
+   <xref target="BCP178"/> for further information.
+</t>
+<t>
+   Other prefixes are sometimes used in HTTP field names; for example,
+   "Accept-" is used in many content negotiation headers. These prefixes are
+   only an aid to recognizing the purpose of a field, and do not
+   trigger automatic processing.
+</t>
+
 <section title="Field Extensibility" anchor="field.extensibility">
 <t>
    There is no limit on the introduction of new field names, each presumably
@@ -1346,7 +1370,11 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
   <x:anchor-alias value="field-vchar"/>
   
 <t>
-   HTTP field values are defined as textual strings.
+   HTTP field values typically have their syntax defined using ABNF
+   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
+   as necessary, and are usually constrained to the range of US-ASCII characters.
+   Fields needing a greater range of characters can use an encoding
+   such as the one defined in <xref target="RFC8187"/>. 
 </t>
   
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
@@ -1364,6 +1392,41 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    fields &SHOULD; limit their values to US&nbhy;ASCII octets.
    A recipient &SHOULD; treat other octets in field content (obs&nbhy;text) as
    opaque data.
+</t>
+<t>
+   Leading and trailing whitespace in raw field values is removed upon field
+   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
+   whitespace in values is significant will have to use a container syntax such
+   as quoted-string (<xref target="quoted.strings"/>).
+</t>
+<t>
+   Because commas (",") are used as a generic delimiter between field values,
+   they need to be treated with care if they are allowed in the field value.
+   Typically, components that might contain a comma are protected with
+   double-quotes using the quoted-string ABNF production.
+</t>
+<t>
+   For example, a textual date and a URI (either of which might contain a comma)
+   could be safely carried in field values like these:
+</t>
+<artwork type="example">
+  Example-URI-Field: "http://example.com/a.html,foo",
+                     "http://without-a-comma.example.com/"
+  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+</artwork>
+<t>
+   Note that double-quote delimiters almost always are used with the
+   quoted-string production; using a different syntax inside double-quotes
+   will likely cause unnecessary confusion.
+</t>
+<t>
+   Many fields (such as <x:ref>Content-Type</x:ref>, defined in
+   <xref target="header.content-type"/>) use a common syntax for parameters
+   that allows both unquoted (token) and quoted (quoted-string) syntax for
+   a parameter value (<xref target="parameter"/>). Use of common syntax
+   allows recipients to reuse existing parser components. When allowing both
+   forms, the meaning of a parameter value ought to be the same whether it
+   was received as a token or a quoted string.
 </t>
 <t>
    Historically, HTTP field values could be extended over multiple
@@ -1663,70 +1726,10 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </section>
 
 <section title="Considerations for New HTTP Fields" anchor="considerations.for.new.header.fields">
+
 <t>
-   Authors of specifications defining new fields are advised to choose a short
-   but descriptive field name. Short names avoid needless data transmission;
-   descriptive names avoid confusion and "squatting" on names that might have
-   broader uses.
-</t>
-<t>
-   To that end, limited-use fields (such as a header confined to a single
-   application or use case) are encouraged to use a name that includes its name
-   (or an abbreviation) as a prefix; for example, if the Foo Application needs
-   a Description field, it might use "Foo-Desc"; "Description" is too generic,
-   and "Foo-Description" is needlessly long.
-</t>
-<t>
-   Field names ought not be prefixed with "X-"; see
-   <xref target="BCP178"/> for further information.
-</t>
-<t>
-   Other prefixes are sometimes used in HTTP field names; for example,
-   "Accept-" is used in many content negotiation headers. These prefixes are
-   only an aid to recognizing the purpose of a field, and do not
-   trigger automatic processing.
-</t>
-<t>
-   Field values typically have their syntax defined using ABNF
-   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
-   as necessary, and are usually constrained to the range of US-ASCII characters.
-   Fields needing a greater range of characters can use an encoding
-   such as the one defined in <xref target="RFC8187"/>. 
-</t>
-<t>
-   Leading and trailing whitespace in raw field values is removed upon field
-   parsing (<xref target="field.parsing"/>). Field definitions where leading or trailing
-   whitespace in values is significant will have to use a container syntax such
-   as quoted-string (<xref target="quoted.strings"/>).
-</t>
-<t>
-   Because commas (",") are used as a generic delimiter between field values,
-   they need to be treated with care if they are allowed in the field value.
-   Typically, components that might contain a comma are protected with
-   double-quotes using the quoted-string ABNF production.
-</t>
-<t>
-   For example, a textual date and a URI (either of which might contain a comma)
-   could be safely carried in field values like these:
-</t>
-<artwork type="example">
-  Example-URI-Field: "http://example.com/a.html,foo",
-                     "http://without-a-comma.example.com/"
-  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
-</artwork>
-<t>
-   Note that double-quote delimiters almost always are used with the
-   quoted-string production; using a different syntax inside double-quotes
-   will likely cause unnecessary confusion.
-</t>
-<t>
-   Many fields (such as <x:ref>Content-Type</x:ref>, defined in
-   <xref target="header.content-type"/>) use a common syntax for parameters
-   that allows both unquoted (token) and quoted (quoted-string) syntax for
-   a parameter value (<xref target="parameter"/>). Use of common syntax
-   allows recipients to reuse existing parser components. When allowing both
-   forms, the meaning of a parameter value ought to be the same whether it
-   was received as a token or a quoted string.
+   See <xref target="field.names"/> for a general requirements for field names,
+   and <xref target="field.values"/> for a discussion of field values.
 </t>
 <t>
    Authors of specifications defining new fields are advised to consider
@@ -4366,6 +4369,11 @@ Content-Range: exampleunit 11.2-14.3/25
    information via HTTP, they are generally referring to making a GET request.
 </t>
 <t>
+   The GET method is specifically intended to reflect the quality of
+   "sameness" identified by the request URI as if it were referenced as an
+   ordinary hypertext link.
+</t>
+<t>
    It is tempting to think of resource identifiers as remote file system
    pathnames and of representations as being a copy of the contents of such
    files. In fact, that is how many resources are implemented (see
@@ -4387,9 +4395,7 @@ Content-Range: exampleunit 11.2-14.3/25
    <x:ref>Range</x:ref> header field in the request (<xref target="header.range"/>).
 </t>
 <t>
-   The GET method is specifically intended to reflect the quality of
-   "sameness" identified by the request URI as if it were referenced as an
-   ordinary hypertext link. A client &SHOULD-NOT; generate a body in a GET
+   A client &SHOULD-NOT; generate a body in a GET
    request. A payload received in a GET request has no defined semantics,
    cannot alter the meaning or target of the request, and might lead some
    implementations to reject the request and close the connection because of
@@ -7392,7 +7398,7 @@ Expect: 100-continue
 </t>
 <t>
    For example, if a 204 status code is received in response to a PUT
-   request and the response contains an <x:ref>ETag</x:ref> header field, then
+   request and the response contains an <x:ref>ETag</x:ref> field, then
    the PUT was successful and the ETag field value contains the entity-tag for
    the new representation of that target resource.
 </t>
@@ -9028,7 +9034,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    request.
 </t>
 <t>
-   For example, an ETag header field in a <x:ref>201 (Created)</x:ref> response communicates the
+   For example, an ETag field in a <x:ref>201 (Created)</x:ref> response communicates the
    entity-tag of the newly created resource's representation, so that it can
    be used in later conditional requests to prevent the "lost update"
    problem <xref target="preconditions"/>.
@@ -9271,14 +9277,14 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </section>
 
 <section title="ETag" anchor="header.etag">
-  <iref primary="true" item="ETag header field" x:for-anchor=""/>
+  <iref primary="true" item="ETag field" x:for-anchor=""/>
   <x:anchor-alias value="ETag"/>
   <x:anchor-alias value="entity-tag"/>
   <x:anchor-alias value="opaque-tag"/>
   <x:anchor-alias value="weak"/>
   <x:anchor-alias value="etagc"/>
 <t>
-   The "ETag" header field in a response provides the current entity-tag for
+   The "ETag" field in a response provides the current entity-tag for
    the selected representation, as determined at the conclusion of handling
    the request.
    An entity-tag is an opaque validator for differentiating between
@@ -9327,6 +9333,11 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    (<xref target="weak.and.strong.validators"/>), then the origin server
    &MUST; mark the entity-tag as weak by prefixing its opaque value
    with "W/" (case-sensitive).
+</t>
+<t>
+   The Etag field can appear in the trailer section as well (see
+   <xref target="trailer.fields"/>). Note, however, that recipients might
+   ignore it when it is not sent as a header field.
 </t>
 
 <section title="Generation" anchor="entity.tag.generation">
@@ -12026,6 +12037,7 @@ Content-Encoding: gzip
 <ul x:when-empty="None yet.">
   <li>In <xref target="header.fields"/>, introduce field terminology and distinguish between field line values and field values; use terminology consistently throughout (<eref target="https://github.com/httpwg/http-core/issues/111"/>)</li>
   <li>Moved #rule definition into <xref target="field.values"/> and whitespace into <xref target="notation"/> (<eref target="https://github.com/httpwg/http-core/issues/162"/>)</li>
+  <li>In <xref target="header.etag"/>, note that Etag can be used in trailers (<eref target="https://github.com/httpwg/http-core/issues/262"/>)</li>
   <li>In <xref target="header.field.registration"/>, consider reserved fields as well (<eref target="https://github.com/httpwg/http-core/issues/273"/>)</li>
   <li>In <xref target="http.userinfo"/>, be more correct about what was deprecated by RFC 3986 (<eref target="https://github.com/httpwg/http-core/issues/278"/>, <eref target="https://www.rfc-editor.org/errata/eid5964"/>)</li>
 </ul>
