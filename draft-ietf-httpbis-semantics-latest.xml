@@ -760,6 +760,14 @@ Content-Type: text/plain
     </tr>
   </tbody>
 </table>
+<t>
+   Note that the presence of an "http" or "https" URI does not imply that
+   there is always an HTTP server at the identified origin listening for
+   connections. Anyone can mint a URI, whether or not a server exists and
+   whether or not that server currently maps that identifier to a resource.
+   The delegated nature of registered names and IP addresses creates a
+   federated namespace whether or not an HTTP server is present.
+</t>
 
 <section title="http URI Scheme" anchor="http.uri">
   <x:anchor-alias value="http-URI"/>
@@ -779,49 +787,35 @@ Content-Type: text/plain
    and optional port number (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
    If the port subcomponent is empty or not given, TCP port 80 (the
    reserved port for WWW services) is the default.
-</t>
-<t>
-   The hierarchical path component and optional query component identify the
-   target resource within that origin server's name space.
+   The origin determines who has the right to respond authoritatively to
+   requests that target the identified resource, as defined in
+   <xref target="http.origin"/>.
 </t>
 <t>
    A sender &MUST-NOT; generate an "http" URI with an empty host identifier.
    A recipient that processes such a URI reference &MUST; reject it as invalid. 
 </t>
 <t>
-   When an "http" URI is used within a context that calls for access to the
-   indicated resource, a client &MAY; attempt access by resolving the host
-   identifier to an IP address, establishing a TCP connection to that address
-   on the indicated port, and sending an HTTP request message to the server
-   containing the URI's identifying data (<xref target="http.message"/>).
-</t>
-<t>
-   If the server responds to such a request with a non-interim HTTP response
-   message, as described in <xref target="status.codes"/>, then that response
-   is considered an authoritative answer to the client's request.
-</t>
-<t>
-   Note, however, that the above is not the only means for obtaining an
-   authoritative response, nor does it imply that an authoritative response
-   is always necessary (see <xref target="Caching"/>). The "http" scheme
-   merely uses this relationship as its reference point for establishing and
-   verifying authority, as defined in <xref target="http.origin"/>.
+   The hierarchical path component and optional query component identify the
+   target resource within that origin server's name space.
 </t>
 </section>
 
 <section title="https URI Scheme" anchor="https.uri">
    <x:anchor-alias value="https-URI"/>
-   <iref item="https URI scheme"/>
-   <iref item="URI scheme" subitem="https"/>
+   <iref item="https URI scheme" primary="true"/>
+   <iref item="URI scheme" subitem="https" primary="true"/>
+   <iref item="secured" primary="true"/>
 <t>
    The "https" URI scheme is hereby defined for minting identifiers within the
    hierarchical namespace governed by a potential origin server listening for
    TCP connections on a given port and capable of establishing a TLS
    (<xref target="RFC8446"/>) connection that has been secured for HTTP
-   communication. By "secured" in this context, we specifically mean that the
-   server has been authenticated as acting on behalf of the identified
-   authority and all HTTP communication with that server has been protected
-   for confidentiality and integrity through the use of strong encryption.
+   communication. In this context, "<x:dfn>secured</x:dfn>" specifically
+   means that the server has been authenticated as acting on behalf of the
+   identified authority and all HTTP communication with that server has been
+   protected for confidentiality and integrity through the use of strong
+   encryption.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
   <x:ref>https-URI</x:ref> = "https" "://" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
@@ -832,14 +826,17 @@ Content-Type: text/plain
    and optional port number (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
    If the port subcomponent is empty or not given, TCP port 443
    (the reserved port for HTTP over TLS) is the default.
-</t>
-<t>
-   The hierarchical path component and optional query component identify the
-   target resource within that origin server's name space.
+   The origin determines who has the right to respond authoritatively to
+   requests that target the identified resource, as defined in
+   <xref target="https.origin"/>.
 </t>
 <t>
    A sender &MUST-NOT; generate an "https" URI with an empty host identifier.
    A recipient that processes such a URI reference &MUST; reject it as invalid.
+</t>
+<t>
+   The hierarchical path component and optional query component identify the
+   target resource within that origin server's name space.
 </t>
 <t>
    A client &MUST; ensure that its HTTP requests for an "https" resource are
@@ -847,25 +844,12 @@ Content-Type: text/plain
    responses to those requests.
 </t>
 <t>
-   When an "https" URI is used within a context that calls for access to the
-   indicated resource, a client &MAY; attempt access by resolving the host
-   identifier to an IP address, establishing a TCP connection to that address
-   on the indicated port, securing the connection end-to-end by successfully
-   initiating TLS over TCP with confidentiality and integrity protection, and
-   sending an HTTP request message to the server over that secured connection
-   containing the URI's identifying data (<xref target="http.message"/>).
-</t>
-<t>
-   If the server responds to such a request with a non-interim HTTP response
-   message, as described in <xref target="status.codes"/>, then that response
-   is considered an authoritative answer to the client's request.
-</t>
-<t>
-   Note, however, that the above is not the only means for obtaining an
-   authoritative response, nor does it imply that an authoritative response
-   is always necessary (see <xref target="Caching"/>). The "https" scheme
-   merely uses this relationship as its reference point for establishing and
-   verifying authority, as defined in <xref target="http.origin"/>.
+   Resources made available via the "https" scheme have no shared identity
+   with the "http" scheme. They are distinct origins with separate namespaces.
+   However, an extension to HTTP that is defined to apply to all origins with
+   the same host, such as the Cookie protocol <xref target="RFC6265"/>, can
+   allow information set by one service to impact communication with other
+   services within a matching group of host domains.
 </t>
 </section>
 
@@ -897,165 +881,6 @@ Content-Type: text/plain
    http://EXAMPLE.com/%7Esmith/home.html
    http://EXAMPLE.com:/%7esmith/home.html
 </artwork>
-</section>
-
-<section title="Origin" anchor="origin">
-<t>
-   The origin for a given URI is the triple of scheme, host, and port
-   after normalizing the scheme and host to lowercase and normalizing the
-   port to remove any leading zeros. If port is elided from the URI, the
-   default port for that scheme is used. For example, the URI
-</t>
-<artwork type="example">
-   https://Example.Com/happy.js
-</artwork>
-<t>
-   would have the origin
-</t>
-<artwork type="example">
-   { "https", "example.com", "443" }
-</artwork>
-<t>
-   which can also be described as the normalized URI prefix with port always
-   present:
-</t>
-<artwork type="example">
-   https://example.com:443
-</artwork>
-<t>
-   The notion of an origin for any given URI is central to the semantics of
-   HTTP. Each origin defines its own namespace and controls how identifiers
-   within that namespace are mapped to resources. In turn, how the origin
-   responds to valid requests, consistently over time, determines the
-   semantics that users will associate with a URI, and the usefulness of
-   those semantics is what ultimately transforms these mechanisms into a
-   "resource" for users to reference and access in the future.
-</t>
-<t>
-   Two origins are distinct if they differ in scheme, host, or port. Even
-   when it can be verified that the same entity controls two distinct origins,
-   the two namespaces under those origins are distinct unless explicitly
-   aliased by a server authoritative for that origin.
-</t>
-<t>
-   Origin is also used within HTML and related Web protocols, beyond the
-   scope of this document, as described in <xref target="RFC6454"/>.
-</t>
-<t>
-   Note that the presence of a URI does not imply that there is always an
-   HTTP server at the identified origin listening for connections on
-   the identified host and port. Anyone can mint a URI. What the origin
-   determines is who has the right to respond authoritatively to requests that
-   target the identified resource. The delegated nature of registered names
-   and IP addresses creates a federated namespace whether or not an HTTP
-   server is present.
-</t>
-
-<section title="Associating authority for http origins" anchor="http.origin">
-<t>
-   Although HTTP is independent of the transport protocol, the "http" scheme
-   is specific to associating authority with whomever controls the origin
-   server listening for TCP connections on the indicated port of whatever
-   host is identified within the authority component. This is a very weak
-   sense of authority because it depends on both client-specific name
-   resolution mechanisms and communication that might not be secured from
-   man-in-the-middle attacks. Nevertheless, it is a sufficient minimum for
-   binding "http" identifiers to an origin server for consistent resolution
-   within a trusted environment.
-</t>
-<t>
-   If the host identifier is provided as an IP address, the origin server is
-   the listener (if any) on the indicated TCP port at that IP address.
-   If host is a registered name, the registered name is an indirect identifier
-   for use with a name resolution service, such as DNS, to find an address for
-   an appropriate origin server.
-</t>
-<t>
-   Access to "http" services is not limited to the default mechanism.
-   For example, the Alt-Svc header field <xref target="RFC7838"/> allows an
-   origin server to identify other services that are also authoritative for
-   that origin. Access to "http" identified resources might also be provided
-   by protocols outside the scope of this document.
-</t>
-</section>
-
-<section title="Associating authority for https origins" anchor="https.origin">
-<t>
-   The "https" scheme associates authority based on the ability
-   of a server to use a private key associated with a certificate that
-   the client considers to be trustworthy for the identified host.
-   If a server presents a certificate that verifiably applies to the host,
-   along with proof that it controls the corresponding private key, then a
-   client will accept a secured connection to that server as being
-   authoritative for all origins with the same scheme and host.
-</t>
-<t>
-   A client is therefore relying upon a chain of trust, conveyed from some
-   trust anchor (which is usually prearranged or configured), through a
-   chain of certificates (e.g., <xref target="RFC5280"/>) to a final
-   certificate that binds a private key to the host name of the origin.
-   The handshake and certificate validation in
-   <xref target="https.initiation"/> describe how that final certificate can
-   be used to initiate a secured connection.
-</t>
-<t>
-   Note that the "https" scheme does not rely on TCP and the connected port
-   number for associating authority, since both are outside the secured
-   communication and thus cannot be trusted as definitive. Hence, the HTTP
-   communication might take place over any channel that has been secured,
-   as defined in <xref target="https.uri"/>, including protocols that don't
-   use TCP. It is the origin's responsibility to ensure that any services
-   provided with control over its certificate's private key are equally
-   responsible for managing the corresponding "https" namespaces, or at least
-   prepared to reject requests that appear to have been misdirected.
-   Regardless, the origin's host and port value are passed within each HTTP
-   request, identifying the target resource and distinguishing it from other
-   namespaces that might be controlled by the same server.
-</t>
-<t>
-   In HTTP/1.1 and earlier, the only URIs for which a client will attribute
-   authority to a server are those for which a TLS connection was
-   specifically established toward the origin's host. Only the
-   characteristics of the connection establishment and certificate are used.
-   For a host that is a domain name, the client &MUST; include that name
-   in the TLS server_name extension (if used) and &MUST; verify that the
-   name also appears as either the CN field of the certificate subject or
-   as a dNSName in the subjectAltName field of the certificate
-   (see <xref target="RFC6125"/>).
-   For a host that is an IP address, the client &MUST; verify that the address
-   appears in the subjectAltName of the certificate.
-</t>
-<t>
-   In HTTP/2, a client will associate authority to all names that are present
-   in the certificate. However, a client will only do that if it concludes
-   that it could open a connection to the origin for that URI. In practice, a
-   client will make a DNS query and see that it contains the same server IP
-   address. A server sending the ORIGIN frame removes this restriction
-   <xref target="RFC8336"/>.
-</t>
-<t>
-   In addition to the client's verification, an origin server is responsible
-   for verifying that requests it receives over a connection correspond
-   to resources for which it actually wants to be the origin. If a network
-   attacker causes connections for port N to be received at port Q, checking
-   the effective request URI is necessary to ensure that the attacker can't cause
-   "https://example.com:N/foo" to be replaced by "https://example.com:Q/foo"
-   without consent. Likewise, a server might be unwilling to serve as the
-   origin for some hosts even when they have the authority to do so.
-</t>
-<t>
-   Resources made available via the "https" scheme have no shared identity
-   with the "http" scheme. They are distinct origins with separate namespaces.
-   However, an extension to HTTP that is defined to apply to all origins with
-   the same host, such as the Cookie protocol <xref target="RFC6265"/>, can
-   allow information set by one service to impact communication with other
-   services within a matching group of host domains.
-</t>
-<t>
-   See <xref target="establishing.authority"/> for security considerations
-   related to establishing authority.
-</t>
-</section>
 </section>
 
 <section title="Deprecated userinfo" anchor="http.userinfo">
@@ -2285,11 +2110,56 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </t>
 </section>
 
+<section title="Determining Origin" anchor="origin">
+  <iref primary="true" item="origin"/>
+  <iref primary="true" item="URI" subitem="origin"/>
+<t>
+   The "<x:dfn>origin</x:dfn>" for a given URI is the triple of scheme, host,
+   and port after normalizing the scheme and host to lowercase and
+   normalizing the port to remove any leading zeros. If port is elided from
+   the URI, the default port for that scheme is used. For example, the URI
+</t>
+<artwork type="example">
+   https://Example.Com/happy.js
+</artwork>
+<t>
+   would have the origin
+</t>
+<artwork type="example">
+   { "https", "example.com", "443" }
+</artwork>
+<t>
+   which can also be described as the normalized URI prefix with port always
+   present:
+</t>
+<artwork type="example">
+   https://example.com:443
+</artwork>
+<t>
+   Each origin defines its own namespace and controls how identifiers
+   within that namespace are mapped to resources. In turn, how the origin
+   responds to valid requests, consistently over time, determines the
+   semantics that users will associate with a URI, and the usefulness of
+   those semantics is what ultimately transforms these mechanisms into a
+   "resource" for users to reference and access in the future.
+</t>
+<t>
+   Two origins are distinct if they differ in scheme, host, or port. Even
+   when it can be verified that the same entity controls two distinct origins,
+   the two namespaces under those origins are distinct unless explicitly
+   aliased by a server authoritative for that origin.
+</t>
+<t>
+   Origin is also used within HTML and related Web protocols, beyond the
+   scope of this document, as described in <xref target="RFC6454"/>.
+</t>
+</section>
+
 <section title="Routing Inbound" anchor="routing.inbound">
 <t>
-   Once the target URI is determined, a client needs to decide whether
-   a network request is necessary to accomplish the desired semantics and,
-   if so, where that request is to be directed.
+   Once the target URI and its origin is determined, a client decides whether
+   a network request is necessary to accomplish the desired semantics and, if
+   so, where that request is to be directed.
 </t>
 <t>
    If the client has a cache <xref target="Caching"/> and the request can be
@@ -2308,7 +2178,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 <t>
    If no proxy is applicable, a typical client will invoke a handler routine,
    usually specific to the target URI's scheme, to connect directly
-   to an authority for the target resource.  How that is accomplished is
+   to an origin for the target resource.  How that is accomplished is
    dependent on the target URI scheme and defined by its associated
    specification, similar to how this specification defines origin server
    access for resolution of the "http" (<xref target="http.uri"/>) and
@@ -2317,6 +2187,138 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 <t>
    HTTP requirements regarding connection management are defined in
    <xref target="connection.management"/>.
+</t>
+</section>
+
+<section title="Direct Authoritative Access" anchor="authoritative.access">
+<section title="http origins" anchor="http.origin">
+<t>
+   Although HTTP is independent of the transport protocol, the "http" scheme
+   is specific to associating authority with whomever controls the origin
+   server listening for TCP connections on the indicated port of whatever
+   host is identified within the authority component. This is a very weak
+   sense of authority because it depends on both client-specific name
+   resolution mechanisms and communication that might not be secured from
+   man-in-the-middle attacks. Nevertheless, it is a sufficient minimum for
+   binding "http" identifiers to an origin server for consistent resolution
+   within a trusted environment.
+</t>
+<t>
+   If the host identifier is provided as an IP address, the origin server is
+   the listener (if any) on the indicated TCP port at that IP address.
+   If host is a registered name, the registered name is an indirect identifier
+   for use with a name resolution service, such as DNS, to find an address for
+   an appropriate origin server.
+</t>
+<t>
+   When an "http" URI is used within a context that calls for access to the
+   indicated resource, a client &MAY; attempt access by resolving the host
+   identifier to an IP address, establishing a TCP connection to that address
+   on the indicated port, and sending an HTTP request message to the server
+   containing the URI's identifying data (<xref target="http.message"/>).
+</t>
+<t>
+   If the server responds to such a request with a non-interim HTTP response
+   message, as described in <xref target="status.codes"/>, then that response
+   is considered an authoritative answer to the client's request.
+</t>
+<t>
+   Note, however, that the above is not the only means for obtaining an
+   authoritative response, nor does it imply that an authoritative response
+   is always necessary (see <xref target="Caching"/>).
+   For example, the Alt-Svc header field <xref target="RFC7838"/> allows an
+   origin server to identify other services that are also authoritative for
+   that origin. Access to "http" identified resources might also be provided
+   by protocols outside the scope of this document.
+</t>
+<t>
+   See <xref target="establishing.authority"/> for security considerations
+   related to establishing authority.
+</t>
+</section>
+
+<section title="https origins" anchor="https.origin">
+<t>
+   The "https" scheme associates authority based on the ability
+   of a server to use a private key associated with a certificate that
+   the client considers to be trustworthy for the identified host.
+   If a server presents a certificate that verifiably applies to the host,
+   along with proof that it controls the corresponding private key, then a
+   client will accept a secured connection to that server as being
+   authoritative for all origins with the same scheme and host.
+</t>
+<t>
+   A client is therefore relying upon a chain of trust, conveyed from some
+   trust anchor (which is usually prearranged or configured), through a
+   chain of certificates (e.g., <xref target="RFC5280"/>) to a final
+   certificate that binds a private key to the host name of the origin.
+   The handshake and certificate validation in
+   <xref target="https.initiation"/> describe how that final certificate can
+   be used to initiate a secured connection.
+</t>
+<t>
+   Note that the "https" scheme does not rely on TCP and the connected port
+   number for associating authority, since both are outside the secured
+   communication and thus cannot be trusted as definitive. Hence, the HTTP
+   communication might take place over any channel that has been secured,
+   as defined in <xref target="https.uri"/>, including protocols that don't
+   use TCP. It is the origin's responsibility to ensure that any services
+   provided with control over its certificate's private key are equally
+   responsible for managing the corresponding "https" namespaces, or at least
+   prepared to reject requests that appear to have been misdirected.
+   Regardless, the origin's host and port value are passed within each HTTP
+   request, identifying the target resource and distinguishing it from other
+   namespaces that might be controlled by the same server.
+</t>
+<t>
+   In HTTP/1.1 and earlier, the only URIs for which a client will attribute
+   authority to a server are those for which a TLS connection was
+   specifically established toward the origin's host. Only the
+   characteristics of the connection establishment and certificate are used.
+   For a host that is a domain name, the client &MUST; include that name
+   in the TLS server_name extension (if used) and &MUST; verify that the
+   name also appears as either the CN field of the certificate subject or
+   as a dNSName in the subjectAltName field of the certificate
+   (see <xref target="RFC6125"/>).
+   For a host that is an IP address, the client &MUST; verify that the address
+   appears in the subjectAltName of the certificate.
+</t>
+<t>
+   In HTTP/2, a client will associate authority to all names that are present
+   in the certificate. However, a client will only do that if it concludes
+   that it could open a connection to the origin for that URI. In practice, a
+   client will make a DNS query and see that it contains the same server IP
+   address. A server sending the ORIGIN frame removes this restriction
+   <xref target="RFC8336"/>.
+</t>
+<t>
+   In addition to the client's verification, an origin server is responsible
+   for verifying that requests it receives over a connection correspond
+   to resources for which it actually wants to be the origin. If a network
+   attacker causes connections for port N to be received at port Q, checking
+   the effective request URI is necessary to ensure that the attacker can't cause
+   "https://example.com:N/foo" to be replaced by "https://example.com:Q/foo"
+   without consent. Likewise, a server might be unwilling to serve as the
+   origin for some hosts even when they have the authority to do so.
+</t>
+<t>
+   When an "https" URI is used within a context that calls for access to the
+   indicated resource, a client &MAY; attempt access by resolving the host
+   identifier to an IP address, establishing a TCP connection to that address
+   on the indicated port, securing the connection end-to-end by successfully
+   initiating TLS over TCP with confidentiality and integrity protection, and
+   sending an HTTP request message to the server over that secured connection
+   containing the URI's identifying data (<xref target="http.message"/>).
+</t>
+<t>
+   If the server responds to such a request with a non-interim HTTP response
+   message, as described in <xref target="status.codes"/>, then that response
+   is considered an authoritative answer to the client's request.
+</t>
+<t>
+   Note, however, that the above is not the only means for obtaining an
+   authoritative response, nor does it imply that an authoritative response
+   is always necessary (see <xref target="Caching"/>).
 </t>
 </section>
 
@@ -2405,6 +2407,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    server has such knowledge (typically from some source external to
    HTTP or TLS) it &SHOULD; check the identity as described above.
 </t>
+</section>
 </section>
 </section>
 
