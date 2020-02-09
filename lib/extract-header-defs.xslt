@@ -23,8 +23,8 @@
       </thead>
       <xsl:text>&#10;</xsl:text>
       <tbody>
-        <xsl:apply-templates select="//section[iref[contains(@item,' header field') and @primary='true']]">
-          <xsl:sort select="translate(iref[contains(@item,' header field') and @primary='true']/@item,$ucase,$lcase)"/>
+        <xsl:apply-templates select="//section[iref[@item='Fields' and @primary='true']]">
+          <xsl:sort select="translate(iref[@item='Fields' and @primary='true']/@subitem,$ucase,$lcase)"/>
         </xsl:apply-templates>
       </tbody>
     </table>
