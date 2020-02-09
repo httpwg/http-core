@@ -93,10 +93,10 @@
       <xsl:otherwise>standard</xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
-  <xsl:variable name="t" select="iref[contains(@item,'header field')]/@item"/>
+  <xsl:variable name="t" select="iref[@item='Fields']/@subitem"/>
   <xsl:text>&#10;</xsl:text>
   <tr>
-    <td><xsl:value-of select="substring-before($t,' header field')"/></td>
+    <td><xsl:value-of select="$t"/></td>
     <td><xsl:value-of select="$status"/></td>
     <td><xref target="{@anchor}"/></td>
   </tr>  
