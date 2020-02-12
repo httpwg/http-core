@@ -2559,6 +2559,14 @@
   <xsl:param name="ascii" select="true()"/>
   <b>
     <xsl:choose>
+      <xsl:when test="(not(@fullname) or @fullname='') and @surname!=''">
+        <xsl:call-template name="warning">
+          <xsl:with-param name="msg">fullname attribute should be specified for author (using surname instead)</xsl:with-param>
+        </xsl:call-template>
+        <xsl:call-template name="format-initials"/>
+        <xsl:text> </xsl:text>
+        <xsl:value-of select="@surname"/>
+      </xsl:when>
       <xsl:when test="@asciiFullname!='' and $ascii">
         <xsl:value-of select="@asciiFullname" />
       </xsl:when>
@@ -2880,6 +2888,13 @@
           </xsl:otherwise>
         </xsl:choose>
         
+        <xsl:variable name="si" select="/rfc/front/seriesInfo[@name='Internet-Draft']"/>
+        <xsl:if test="$si and $si/@value!=$docname">
+          <xsl:call-template name="error">
+            <xsl:with-param name="msg">Inconsistent draft names in /rfc/@docName ('<xsl:value-of select="$docname"/>') and /rfc/seriesInfo ('<xsl:value-of select="$si/@value"/>').</xsl:with-param>
+          </xsl:call-template>
+        </xsl:if>
+
         <xsl:call-template name="draft-name-legal">
           <xsl:with-param name="name" select="$docname"/>
         </xsl:call-template>
@@ -6303,9 +6318,24 @@
     <xsl:variable name="node" select="key('anchor-item',$target)|exslt:node-set($includeDirectives)//*[self::reference or self::referencegroup][@anchor=$target]"/>
     <xsl:if test="count($node)=0 and not($node/ancestor::ed:del)">
       <xsl:for-each select="$xref">
-        <xsl:call-template name="error">
-          <xsl:with-param name="msg" select="concat('Undefined target: ',$xref/@target)"/>
-        </xsl:call-template>
+        <xsl:choose>
+          <xsl:when test="not($xref/@target)">
+            <xsl:variable name="present">
+              <xsl:for-each select="$xref/@*">
+                <xsl:text> @</xsl:text>
+                <xsl:value-of select="local-name(.)"/>
+              </xsl:for-each>
+            </xsl:variable>
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">Undefined target: no @target attribute specified<xsl:if test="$present!=''"> (attributes found:<xsl:value-of select="$present"/>)</xsl:if></xsl:with-param>
+            </xsl:call-template>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">Undefined target: '<xsl:value-of select="$xref/@target"/>'</xsl:with-param>
+            </xsl:call-template>
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:for-each>
     </xsl:if>
 
@@ -7890,10 +7920,6 @@ table.full th {
   border-style: solid;
   border-width: 1px 1px 2px 1px;
 }
-table.headers th {
-  border-style: none none solid none;
-  border-width: 2px;
-}
 table.<xsl:value-of select="$css-tleft"/> {
   margin-right: auto;
 }
@@ -7957,7 +7983,8 @@ td.topnowrap {
   vertical-align: top;
   white-space: nowrap;
 }
-table.<xsl:value-of select="$css-header"/> td {<xsl:if test="not(contains($styles,' header-bw '))">
+table.<xsl:value-of select="$css-header"/> td {
+  vertical-align: top;<xsl:if test="not(contains($styles,' header-bw '))">
   background-color: gray;</xsl:if>
   width: 50%;
 }<xsl:if test="/rfc/@obsoletes | /rfc/@updates">
@@ -11454,11 +11481,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1249 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1249 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1254 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1254 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/01/03 13:20:45 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/01/03 13:20:45 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/02/09 12:16:30 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/02/09 12:16:30 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -11789,7 +11816,7 @@ prev: <xsl:value-of select="$prev"/>
   <c c2="IL" c3="ISR" sn="Israel" fmt="%A%n%C %Z"/>
   <c c2="IT" c3="ITA" sn="Italy" fmt="%A%n%Z %C %S"/>
   <c c2="JP" c3="JPN" sn="Japan" fmt="%Z%n%S%n%A" postprefix="&#12306;"/>
-  <c c2="KR" c3="KOR" sn="Korea" fmt="%A%n%C, %S %Z"/>
+  <c c2="KR" c3="KOR" sn="Korea (the Republic of)" fmt="%A%n%C, %S %Z"/>
   <c c2="LU" c3="LUX" sn="Luxembourg" fmt="%A%n%Z %C" postprefix="L-"/>
   <c c2="MU" c3="MUS" sn="Mauritius" fmt="%A%n%Z%n%C"/>
   <c c2="MX" c3="MEX" sn="Mexico" fmt="%A%n%D%n%Z %C, %S"/>
