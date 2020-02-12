@@ -181,6 +181,18 @@
   </xsl:choose>
 </xsl:template>
 
+<!-- experimental for QUIC tls draft -->
+<xsl:template match="t/contact" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="@asciiFullname">
+      <xsl:value-of select="@asciiFullname"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="@fullname"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <!-- extensions -->
 
 <xsl:template match="x:abnf-char-sequence" mode="cleanup">
