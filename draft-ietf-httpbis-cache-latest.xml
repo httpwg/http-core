@@ -422,13 +422,17 @@
 <t>
    A shared cache &MUST-NOT; use a cached response to a request with an
    <x:ref>Authorization</x:ref> header field (<xref target="header.authorization"/>) to
-   satisfy any subsequent request unless a response directive that allows such
-   responses to be stored is present.
+   satisfy any subsequent request unless the response contains a
+   <x:ref>Cache-Control</x:ref> field with a response directive
+   (<xref target="cache-response-directive"/>) that allows it to be stored by
+   a shared cache and the cache conforms to the requirements of that
+   directive for that response.
 </t>
 <t>
-   In this specification, the following <x:ref>Cache-Control</x:ref> response
-   directives (<xref target="cache-response-directive"/>) have such an effect:
-   must-revalidate, public, and s-maxage.
+   In this specification, the following response directives have such an effect:
+   must-revalidate (<xref target="cache-response-directive.must-revalidate"/>),
+   public (<xref target="cache-response-directive.public"/>), and
+   s-maxage (<xref target="cache-response-directive.s-maxage"/>).
 </t>
 </section>
 
@@ -1487,16 +1491,14 @@
    <iref item="must-revalidate (cache directive)" primary="true" />
 <t>
    The "must-revalidate" response directive indicates that once the response
-   has become stale, a cache &MUST-NOT; reuse that response to satisfy another
-   request until it has been successfully validated by the origin, as defined
-   by <xref target="validation.model"/>. Furthermore, a cache &MAY; reuse a
-   response containing must-revalidate even if it is a response to a request
-   containing an Authorization field, subject to the above requirement on
-   revalidation.
+   has become stale, a cache &MUST-NOT; reuse that response to satisfy
+   another request until it has been successfully validated by the origin, as
+   defined by <xref target="validation.model"/>.
 </t>
 <t>
    The must-revalidate directive is necessary to support reliable operation
-   for certain protocol features. In particular, if a cache is unable to
+   for certain protocol features. In all circumstances a cache &MUST; obey
+   the must-revalidate directive; in particular, if a cache is unable to
    validate a stale response containing must-revalidate, for any reason,
    the cache &MUST; generate a <x:ref>504 (Gateway Timeout)</x:ref> response
    rather than reuse the stale response.
@@ -1504,7 +1506,14 @@
 <t>
    The must-revalidate directive ought to be used by servers if and only
    if failure to validate a request on the representation could result in
-   incorrect operation, such as a silently unexecuted financial transaction.
+   incorrect operation, such as a silently unexecuted financial
+   transaction.
+</t>
+<t>
+   The must-revalidate directive directive also permits a shared cache to
+   reuse a response to a request containing an Authorization header field,
+   subject to the above requirement on revalidation
+   (<xref target="caching.authenticated.responses"/>).
 </t>
 </section>
 
@@ -1534,16 +1543,17 @@
    successful response; see <xref target="validation.model"/>.
 </t>
 <t>
-   This allows an origin server to prevent a cache from using the response
-   to satisfy a request without contacting it, even by caches that have
+   This allows an origin server to prevent a cache from using
+   the response to satisfy a request without contacting it, even by caches that have
    been configured to send stale responses.
 </t>
 <t>
    The qualified form of no-cache response directive, with an argument that
-   lists one or more field names, indicates that a cache &MAY; store the
-   response, subject to any other restrictions on caching, if the listed
-   header fields are excluded from being sent in response to a
-   subsequent request without successful revalidation with the origin server.
+   lists one or more field names, indicates that a cache &MAY; use the
+   response to satisfy a subsequent request, subject to any other restrictions
+   on caching, if the listed header fields are excluded from the subsequent
+   response or the subsequent response has been successfully revalidated with
+   the origin server (updating or removing those fields).
    This allows an origin server to prevent the re-use of certain header
    fields in a response, while still allowing caching of the rest of the
    response.
@@ -1600,17 +1610,16 @@
 <section title="public" anchor="cache-response-directive.public">
    <iref item="public (cache directive)" primary="true" />
 <t>
-   The "public" response directive indicates that a cache (shared or private)
-   is permitted to store the response, subject to any other cache directives
-   present in the response, overriding the heuristic caching algorithm.
+   The "public" response directive indicates that a cache &MAY; store the
+   response even if it would otherwise be prohibited, subject to the
+   constraints of any other response directives present. In other words,
+   public explicitly marks the response as cacheable. For example,
+   public permits a shared cache to reuse a response to a request containing
+   an Authorization header field (<xref target="caching.authenticated.responses"/>).
 </t>
 <t>
-   Specifically, a public response directive can be used to override the
-   default for a response to a request containing <x:ref>Authorization</x:ref>
-   (<xref target="caching.authenticated.responses"/>), making it cacheable by
-   a shared cache, or the default for a response with a status code that is
-   not heuristically cacheable (<xref target="response.cacheability"/> and
-   <xref target="heuristic.freshness"/>.
+   If no explicit freshness information is provided, the response is
+   is heuristically cacheable (<xref target="heuristic.freshness"/>.
 </t>
 </section>
 
@@ -1647,11 +1656,12 @@
    to be needed for single-entry lists).
 </t>
 <t>
-   &Note; This usage of the word "private" only controls where the response
-   can be stored; it cannot ensure the privacy of the message content. Also,
-   the qualified form of the directive is often handled by caches as if an
-   unqualified private directive was received; i.e., the special handling for
-   the qualified form is not widely implemented.
+   &Note; This usage of the word "private" only controls
+   where the response can be stored; it cannot ensure the privacy of the
+   message content. Also, the qualified form of the directive is
+   often handled by caches as if an unqualified private directive
+   was received; i.e., the special handling for the qualified form is not
+   widely implemented.
 </t>
 </section>
 
@@ -1668,9 +1678,7 @@
 <t>
    Note that "proxy-revalidate" on its own does not imply that a response is
    cacheable. For example, it might be combined with the public directive
-   (<xref target="cache-response-directive.public"/>) on a response to a
-   request containing <x:ref>Authorization</x:ref>
-   (<xref target="caching.authenticated.responses"/>), allowing the response
+   (<xref target="cache-response-directive.public"/>), allowing the response
    to be cached while requiring only a shared cache to revalidate when stale.
 </t>
 </section>
@@ -1686,9 +1694,7 @@
 <t>
    The "max-age" response directive indicates that the response is to be
    considered stale after its age is greater than the specified number of
-   seconds. The max-age response directive implies that the response is
-   cacheable (i.e., "public") unless some other, more restrictive cache
-   directive is also present.
+   seconds.
 </t>
 <t>
    This directive uses the token form of the argument syntax:
@@ -1712,15 +1718,16 @@
    header field.
 </t>
 <t>
-   The s-maxage directive also incorporates, for a shared cache, the
+   The s-maxage directive incorporates the
    proxy-revalidate (<xref target="cache-response-directive.proxy-revalidate"/>)
-   response directive's semantics.
+   response directive's semantics for a shared cache.
    A shared cache &MUST-NOT; reuse a stale response with s-maxage to satisfy
    another request until it has been successfully validated by the origin, as
    defined by <xref target="validation.model"/>.
-   Furthermore, a shared cache &MAY; reuse a response containing s-maxage
-   even if it is a response to a request containing an Authorization field,
-   subject to the above requirement on revalidation.
+   This directive also permits a shared cache to reuse a response to a
+   request containing an Authorization header field, subject to the above
+   requirements on maximum age and revalidation
+   (<xref target="caching.authenticated.responses"/>).
 </t>
 <t>
    This directive uses the token form of the argument syntax:
