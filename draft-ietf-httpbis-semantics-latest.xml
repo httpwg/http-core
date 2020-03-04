@@ -4097,12 +4097,14 @@ Content-Range: exampleunit 11.2-14.3/25
    provides mechanisms for <x:ref>content negotiation</x:ref>.
 </t>
 <t>
-   This specification defines two patterns of content negotiation that can
+   This specification defines three patterns of content negotiation that can
    be made visible within the protocol:
-   "proactive", where the server selects the representation based
-   upon the user agent's stated preferences, and "reactive" negotiation,
+   "proactive" negotiation, where the server selects the representation based
+   upon the user agent's stated preferences, "reactive" negotiation,
    where the server provides a list of representations for the user agent to
-   choose from. Other patterns of content negotiation include
+   choose from, and "request payload" negotiation, where the user agent
+   selects the representation for a future request based upon the server's
+   stated preferences. Other patterns of content negotiation include
    "conditional content", where the representation consists of multiple
    parts that are selectively rendered based on user agent parameters, 
    "active content", where the representation contains a script that
@@ -4118,7 +4120,7 @@ Content-Range: exampleunit 11.2-14.3/25
    and over the varying dimensions of content negotiation, and thus the
    "sameness" of a resource's observed representations over time, is
    determined entirely by whatever entity or algorithm selects or generates
-   those responses. HTTP pays no attention to the man behind the curtain.
+   those responses.
 </t>
 
 <section title="Proactive Negotiation" anchor="proactive.negotiation">
@@ -4235,6 +4237,57 @@ Content-Range: exampleunit 11.2-14.3/25
    to obtain an alternate representation. Furthermore, this specification
    does not define a mechanism for supporting automatic selection, though it
    does not prevent such a mechanism from being developed as an extension.
+</t>
+</section>
+
+<section title="Request Payload Negotiation" anchor="request.payload.negotiation">
+  <x:anchor-alias value="request payload negotiation"/>
+<t>
+   When content negotiation preferences are sent in a server's response, the
+   listed preferences are called <x:dfn>request payload negotiation</x:dfn>
+   because they intend to influence selection of an appropriate payload for
+   subsequent requests to that resource. For example,
+   the <x:ref>Accept-Encoding</x:ref> field
+   (<xref target="header.accept-encoding"/>) can be sent in a response to
+   indicate preferred content codings for subsequent requests to that
+   resource <xref target="RFC7694"/>.
+</t>
+<aside>
+  <t>
+    Similarly, <xref target="RFC5789" x:sec="3.1" x:fmt="of"/> defines
+    the "Accept-Patch" response header field which allows discovery of
+    which content types are accepted in PATCH requests.
+  </t>
+</aside>
+</section>
+
+<section title="Quality Values" anchor="quality.values">
+  <x:anchor-alias value="weight"/>
+  <x:anchor-alias value="qvalue"/>
+<t>
+   The content negotiation fields
+   use a common parameter, named "q" (case-insensitive), to assign a relative
+   "weight" to the preference for that associated kind of content.
+   This weight is referred to as a "quality value" (or "qvalue") because
+   the same parameter name is often used within server configurations to
+   assign a weight to the relative quality of the various representations
+   that can be selected for a resource.
+</t>
+<t>
+   The weight is normalized to a real number in the range 0 through 1,
+   where 0.001 is the least preferred and 1 is the most preferred;
+   a value of 0 means "not acceptable". If no "q" parameter is present,
+   the default weight is 1.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
+  <x:ref>weight</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref>
+  <x:ref>qvalue</x:ref> = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
+         / ( "1" [ "." 0*3("0") ] )
+</sourcecode>
+<t>
+   A sender of qvalue &MUST-NOT; generate more than three digits after the
+   decimal point. User configuration of these values ought to be limited in
+   the same fashion.
 </t>
 </section>
 </section>
@@ -6030,9 +6083,9 @@ Expect: 100-continue
 </t>
 </section>
 
-<section title="Content Negotiation" anchor="request.conneg">
+<section title="Negotiation" anchor="request.conneg">
 <t>
-   The following header fields are sent by a user agent to engage in
+   The following request header fields can be sent by a user agent to engage in
    <x:ref>proactive negotiation</x:ref> of the response content, as defined in
    <xref target="proactive.negotiation"/>. The preferences sent in these
    fields apply to any content in the response, including representations of
@@ -6097,51 +6150,6 @@ Expect: 100-continue
    they still need to be able to handle a different response, since the
    server is allowed to ignore their preference.
 </t>
-<t>
-   Initially, the fields above were just defined as request header fields.
-   However, content negotiation can apply to request messages as well, in
-   which case the client needs to understand the server's capabilities
-   beforehand. <xref target="RFC7694"/> consequently extended the definition
-   of <x:ref>Accept-Encoding</x:ref> for use in responses, so that clients
-   can discover what content codings are supported by a resource.
-</t>
-<aside>
-  <t>
-    Similarly, <xref target="RFC5789" x:sec="3.1" x:fmt="of"/> defines
-    the "Accept-Patch" response header field which allows discovery of
-    which content types are accepted in PATCH requests.
-  </t>
-</aside>
-
-<section title="Quality Values" anchor="quality.values">
-  <x:anchor-alias value="weight"/>
-  <x:anchor-alias value="qvalue"/>
-<t>
-   Many of the request header fields for <x:ref>proactive negotiation</x:ref>
-   use a common parameter, named "q" (case-insensitive), to assign a relative
-   "weight" to the preference for that associated kind of content.
-   This weight is referred to as a "quality value" (or "qvalue") because
-   the same parameter name is often used within server configurations to
-   assign a weight to the relative quality of the various representations
-   that can be selected for a resource.
-</t>
-<t>
-   The weight is normalized to a real number in the range 0 through 1,
-   where 0.001 is the least preferred and 1 is the most preferred;
-   a value of 0 means "not acceptable". If no "q" parameter is present,
-   the default weight is 1.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
-  <x:ref>weight</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref>
-  <x:ref>qvalue</x:ref> = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
-         / ( "1" [ "." 0*3("0") ] )
-</sourcecode>
-<t>
-   A sender of qvalue &MUST-NOT; generate more than three digits after the
-   decimal point. User configuration of these values ought to be limited in
-   the same fashion.
-</t>
-</section>
 
 <section title="Accept" anchor="header.accept">
   <iref primary="true" item="Fields" subitem="Accept" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Accept" x:for-anchor=""/><iref primary="true" item="Accept header field" x:for-anchor=""/>
@@ -6330,16 +6338,16 @@ Expect: 100-continue
   <x:anchor-alias value="codings"/>
 <t>
    The "Accept-Encoding" header field can be used to indicate preferences
-   regarding the use of content-codings (<xref target="content.codings"/>).
+   regarding the use of content codings (<xref target="content.codings"/>).
 </t>
 <t>
-   When used by a user agent in a request, it applies to the content codings
-   acceptable in the response.
+   When sent by a user agent in a request, Accept-Encoding indicates the
+   content codings acceptable in a response.
 </t>
 <t>
-   When used by a server in a response, it provides information about what
-   content codings could be used in the payload of a subsequent request to the
-   same resource. 
+   When sent by a server in a response, Accept-Encoding provides information
+   about what content codings are preferred in the payload of a subsequent
+   request to the same resource. 
 </t>
 <t>   
    An "identity" token is used as a synonym for
