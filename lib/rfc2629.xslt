@@ -3653,6 +3653,7 @@
 </xsl:template>
 
 <xsl:template match="middle">
+  <xsl:call-template name="check-no-text-content"/>
   <xsl:apply-templates />
   <xsl:apply-templates select="../back//references"/>
 </xsl:template>
@@ -4158,6 +4159,18 @@
   </xsl:if>
 </xsl:template>
 
+<xsl:template name="find-ref-in-artwork">
+  <xsl:variable name="lookup" select="concat('[',@anchor,']')"/>
+  <xsl:variable name="aw" select="//artwork[contains(.,$lookup)]|//sourcecode[contains(.,$lookup)]"/>
+  <xsl:for-each select="$aw[1]">
+    <xsl:text> (but found in </xsl:text>
+    <xsl:value-of select="local-name()"/>
+    <xsl:text> element</xsl:text>
+    <xsl:call-template name="lineno"/>
+    <xsl:text>, consider marking up the text content which is supported by this processor, see https://greenbytes.de/tech/webdav/rfc2629xslt/rfc2629xslt.html#extension.pis)</xsl:text>
+  </xsl:for-each>
+</xsl:template>
+
 <xsl:template match="reference">
   <xsl:call-template name="check-no-text-content"/>
 
@@ -4171,12 +4184,12 @@
     </xsl:when>
     <xsl:when test="not(ancestor::ed:del) and (ancestor::rfc and not(key('xref-item',$anchor)))">
       <xsl:call-template name="warning">
-        <xsl:with-param name="msg">unused reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+        <xsl:with-param name="msg">unused reference '<xsl:value-of select="@anchor"/>'<xsl:call-template name="find-ref-in-artwork"/></xsl:with-param>
       </xsl:call-template>
     </xsl:when>
     <xsl:when test="not(ancestor::ed:del) and (not(ancestor::rfc) and not($src//xref[@target=$anchor]))">
       <xsl:call-template name="warning">
-        <xsl:with-param name="msg">unused (included) reference '<xsl:value-of select="@anchor"/>'</xsl:with-param>
+        <xsl:with-param name="msg">unused (included) reference '<xsl:value-of select="@anchor"/>'<xsl:call-template name="find-ref-in-artwork"/></xsl:with-param>
       </xsl:call-template>
     </xsl:when>
     <xsl:otherwise/>
@@ -5396,6 +5409,10 @@
   <xsl:call-template name="insert-blank-lines">
     <xsl:with-param name="no" select="@blankLines"/>
   </xsl:call-template>
+</xsl:template>
+
+<xsl:template match="br">
+  <br/>
 </xsl:template>
 
 <!-- keep the root for the case when we process XSLT-inline markup -->
@@ -11481,11 +11498,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1254 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1254 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1257 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1257 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/02/09 12:16:30 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/02/09 12:16:30 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/03/05 12:37:35 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/03/05 12:37:35 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:value-of select="concat('XSLT vendor: ',system-property('xsl:vendor'),' ',system-property('xsl:vendor-url'))" />
   </xsl:variable>
@@ -11979,6 +11996,10 @@ prev: <xsl:value-of select="$prev"/>
 
 <xsl:template match="text()" mode="get-text-content">
   <xsl:value-of select="normalize-space(.)"/>
+</xsl:template>
+
+<xsl:template match="br" mode="get-text-content">
+  <xsl:text> </xsl:text>
 </xsl:template>
 
 <xsl:template match="*" mode="get-text-content">
