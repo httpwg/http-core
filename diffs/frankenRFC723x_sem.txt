@@ -24,6 +24,21 @@ Abstract
    messages (metadata and body content) and mechanisms for content
    negotiation.
 
+Editorial Note
+
+   This note is not in the original RFC.
+
+   The purpose of this document is to produce diffs that show just the
+   changes from text in the original RFCs that were input for http-core.
+   Hence, the frankenRFC documents show all of the original text (including
+   stuff that has been deleted) plus some new text [in brackets] to anchor
+   context, rearranged to minimize the resulting diffs when compared to the
+   most recently published version of draft-ietf-httpbis-semantics.
+
+   After this document is updated to match any reorg changes in the latest
+   version, the franken diffs are saved and published in this directory as
+   diff_semantics_frfc_to_NN.html (where NN is the I-D draft revision)
+
 Status of This Memo
 
    This is an Internet Standards Track document.
@@ -299,6 +314,35 @@ Table of Contents
    This specification uses the terms "character", "character encoding
    scheme", "charset", and "protocol element" as they are defined in
    [RFC6365].
+
+3.2.3.  Whitespace
+
+   This specification uses three rules to denote the use of linear
+   whitespace: OWS (optional whitespace), RWS (required whitespace), and
+   BWS ("bad" whitespace).
+
+   The OWS rule is used where zero or more linear whitespace octets
+   might appear.  For protocol elements where optional whitespace is
+   preferred to improve readability, a sender SHOULD generate the
+   optional whitespace as a single SP; otherwise, a sender SHOULD NOT
+   generate optional whitespace except as needed to white out invalid or
+   unwanted protocol elements during in-place message filtering.
+
+   The RWS rule is used when at least one linear whitespace octet is
+   required to separate field tokens.  A sender SHOULD generate RWS as a
+   single SP.
+
+   The BWS rule is used where the grammar allows optional whitespace
+   only for historical reasons.  A sender MUST NOT generate BWS in
+   messages.  A recipient MUST parse for such bad whitespace and remove
+   it before interpreting the protocol element.
+
+     OWS            = *( SP / HTAB )
+                    ; optional whitespace
+     RWS            = 1*( SP / HTAB )
+                    ; required whitespace
+     BWS            = OWS
+                    ; "bad" whitespace
 
 2.  Architecture
 
@@ -599,6 +643,15 @@ Table of Contents
    | https      | Hypertext Transfer Protocol Secure | Section 2.7.2 |
    +------------+------------------------------------+---------------+
 
+   Note that the presence of a URI with a given authority component does
+   not imply that there is always an HTTP server listening for
+   connections on that host and port.  Anyone can mint a URI.  What the
+   authority component determines is who has the right to respond
+   authoritatively to requests that target the identified resource.  The
+   delegated nature of registered names and IP addresses creates a
+   federated namespace, based on control over the indicated host and
+   port, whether or not an HTTP server is present.
+
 2.7.1.  http URI Scheme
 
    The "http" URI scheme is hereby defined for the purpose of minting
@@ -611,51 +664,17 @@ Table of Contents
 
    The origin server for an "http" URI is identified by the authority
    component, which includes a host identifier and optional TCP port
-   ([RFC3986], Section 3.2.2).  The hierarchical path component and
-   optional query component serve as an identifier for a potential
-   target resource within that origin server's name space.
+   ([RFC3986], Section 3.2.2).  If the port subcomponent is empty or not
+   given, TCP port 80 (the reserved port for WWW services) is the
+   default.
 
    A sender MUST NOT generate an "http" URI with an empty host
    identifier.  A recipient that processes such a URI reference MUST
    reject it as invalid.
 
-   If the host identifier is provided as an IP address, the origin
-   server is the listener (if any) on the indicated TCP port at that IP
-   address.  If host is a registered name, the registered name is an
-   indirect identifier for use with a name resolution service, such as
-   DNS, to find an address for that origin server.  If the port
-   subcomponent is empty or not given, TCP port 80 (the reserved port
-   for WWW services) is the default.
-
-   Note that the presence of a URI with a given authority component does
-   not imply that there is always an HTTP server listening for
-   connections on that host and port.  Anyone can mint a URI.  What the
-   authority component determines is who has the right to respond
-   authoritatively to requests that target the identified resource.  The
-   delegated nature of registered names and IP addresses creates a
-   federated namespace, based on control over the indicated host and
-   port, whether or not an HTTP server is present.  See Section 9.1 for
-   security considerations related to establishing authority.
-
-   When an "http" URI is used within a context that calls for access to
-   the indicated resource, a client MAY attempt access by resolving the
-   host to an IP address, establishing a TCP connection to that address
-   on the indicated port, and sending an HTTP request message
-   (Section 3) containing the URI's identifying data (Section 5) to the
-   server.  If the server responds to that request with a non-interim
-   HTTP response message, as described in Section 6 of [RFC7231], then
-   that response is considered an authoritative answer to the client's
-   request.
-
-   Although HTTP is independent of the transport protocol, the "http"
-   scheme is specific to TCP-based services because the name delegation
-   process depends on TCP for establishing authority.  An HTTP service
-   based on some other underlying connection protocol would presumably
-   be identified using a different URI scheme, just as the "https"
-   scheme (below) is used for resources that require an end-to-end
-   secured connection.  Other protocols might also be used to provide
-   access to "http" identified resources -- it is only the authoritative
-   interface that is specific to TCP.
+   The hierarchical path component and optional query component serve
+   as an identifier for a potential target resource within that
+   origin server's name space.
 
 2.7.2.  https URI Scheme
 
@@ -664,6 +683,9 @@ Table of Contents
    namespace governed by a potential HTTP origin server listening to a
    given TCP port for TLS-secured connections ([RFC5246]).
 
+     https-URI = "https:" "//" authority path-abempty [ "?" query ]
+                 [ "#" fragment ]
+
    All of the requirements listed above for the "http" scheme are also
    requirements for the "https" scheme, except that TCP port 443 is the
    default if the port subcomponent is empty or not given, and the user
@@ -671,22 +693,21 @@ Table of Contents
    through the use of strong encryption, end-to-end, prior to sending
    the first HTTP request.
 
-     https-URI = "https:" "//" authority path-abempty [ "?" query ]
-                 [ "#" fragment ]
-
    Note that the "https" URI scheme depends on both TLS and TCP for
-   establishing authority.  Resources made available via the "https"
-   scheme have no shared identity with the "http" scheme even if their
-   resource identifiers indicate the same authority (the same host
-   listening to the same TCP port).  They are distinct namespaces and
-   are considered to be distinct origin servers.  However, an extension
-   to HTTP that is defined to apply to entire host domains, such as the
-   Cookie protocol [RFC6265], can allow information set by one service
-   to impact communication with other services within a matching group
-   of host domains.
-
+   establishing authority.  
+   
    The process for authoritative access to an "https" identified
    resource is defined in [RFC2818].
+
+   Resources made available via the "https" scheme have no shared
+   identity with the "http" scheme even if their resource identifiers
+   indicate the same authority (the same host listening to the same TCP
+   port). They are distinct namespaces and are considered to be distinct
+   origin servers. However, an extension to HTTP that is defined
+   to apply to entire host domains, such as the Cookie
+   protocol [RFC6265], can allow information set by one service to
+   impact communication with other services within a matching group of
+   host domains.
 
 2.5.4.  http and https URI Normalization and Comparison
 
@@ -716,17 +737,21 @@ X.X.X.  Deprecated userinfo
 
    The URI generic syntax for authority also includes a deprecated
    userinfo subcomponent ([RFC3986], Section 3.2.1) for including user
-   authentication information in the URI.  Some implementations make use
-   of the userinfo component for internal configuration of
-   authentication information, such as within command invocation
-   options, configuration files, or bookmark lists, even though such
-   usage might expose a user identifier or password.  A sender MUST NOT
-   generate the userinfo subcomponent (and its "@" delimiter) when an
-   "http" URI reference is generated within a message as a request
-   target or header field value.  Before making use of an "http" URI
-   reference received from an untrusted source, a recipient SHOULD parse
-   for userinfo and treat its presence as an error; it is likely being
-   used to obscure the authority for the sake of phishing attacks.
+   authentication information in the URI.
+   
+   Some implementations make use of the userinfo component for internal
+   configuration of authentication information, such as within command
+   invocation options, configuration files, or bookmark lists, even
+   though such usage might expose a user identifier or password.
+   
+   A sender MUST NOT generate the userinfo subcomponent (and its "@"
+   delimiter) when an "http" URI reference is generated
+   within a message as a request target or header field value.
+   
+   Before making use of an "http" URI reference received from
+   an untrusted source, a recipient SHOULD parse for userinfo and treat
+   its presence as an error; it is likely being used to obscure the
+   authority for the sake of phishing attacks.
 
 2.5.3.  Fragment Identifiers on http(s) URI References
 
@@ -734,7 +759,9 @@ X.X.X.  Deprecated userinfo
    secondary resource, independent of the URI scheme, as defined in Section
    3.5 of [RFC3986].
 
-X. [Conformance]
+
+
+3.  Conformance
 
 2.2.  Implementation Diversity
 
@@ -900,23 +927,14 @@ X. [Conformance]
    sufficiently backwards-compatible to be safely processed by any
    implementation of the same major version.
 
-4.  Header Fields
+  [When a major version ...]
 
-4.1.  Header Field Names
+4.  Header Fields
 
    Header fields are key:value pairs that can be used to communicate
    data about the message, its payload, the target resource, or the
    connection (i.e., control data).  See Section 3.2 of [RFC7230] for a
    general definition of header field syntax in HTTP messages.
-
-   The requirements for header field names are defined in [BCP90].
-
-   The field-name token labels the corresponding field-value as having
-   the semantics defined by that header field.  For example, the Date
-   header field is defined in Section 7.1.1.2 of [RFC7231] as containing
-   the origination timestamp for the message in which it appears.
-
-     field-name     = token
 
    The interpretation of a header field does not change between minor
    versions of the same major HTTP version, though the default behavior
@@ -931,109 +949,7 @@ X. [Conformance]
    recipients that do not recognize them.  Header field extensibility is
    discussed in Section 3.2.1.
 
-   The "Message Headers" registry has been updated with the following
-   permanent registrations:
-
-   +-------------------+----------+----------+-----------------+
-   | Header Field Name | Protocol | Status   | Reference       |
-   +-------------------+----------+----------+-----------------+
-   | Accept            | http     | standard | Section 5.3.2   |
-   | Accept-Charset    | http     | standard | Section 5.3.3   |
-   | Accept-Encoding   | http     | standard | Section 5.3.4   |
-   | Accept-Language   | http     | standard | Section 5.3.5   |
-   | Accept-Ranges     | http     | standard | Section 2.3 |
-   | Allow             | http     | standard | Section 7.4.1   |
-   | Authorization       | http     | standard | Section 4.2 |
-   | Content-Encoding  | http     | standard | Section 3.1.2.2 |
-   | Content-Language  | http     | standard | Section 3.1.3.2 |
-   | Content-Length    | http     | standard | Section 3.3.2 |
-   | Content-Location  | http     | standard | Section 3.1.4.2 |
-   | Content-Range     | http     | standard | Section 4.2 |
-   | Content-Type      | http     | standard | Section 3.1.1.5 |
-   | Date              | http     | standard | Section 7.1.1.2 |
-   | ETag                | http     | standard | Section 2.3 |
-   | Expect            | http     | standard | Section 5.1.1   |
-   | From              | http     | standard | Section 5.5.1   |
-   | Host              | http     | standard | Section 5.4   |
-   | If-Match            | http     | standard | Section 3.1 |
-   | If-Modified-Since   | http     | standard | Section 3.3 |
-   | If-None-Match       | http     | standard | Section 3.2 |
-   | If-Range          | http     | standard | Section 3.2 |
-   | If-Unmodified-Since | http     | standard | Section 3.4 |
-   | Last-Modified       | http     | standard | Section 2.2 |
-   | Location          | http     | standard | Section 7.1.2   |
-   | Max-Forwards      | http     | standard | Section 5.1.2   |
-   | Proxy-Authenticate  | http     | standard | Section 4.3 |
-   | Proxy-Authorization | http     | standard | Section 4.4 |
-   | Range             | http     | standard | Section 3.1 |
-   | Referer           | http     | standard | Section 5.5.2   |
-   | Retry-After       | http     | standard | Section 7.1.3   |
-   | Server            | http     | standard | Section 7.4.2   |
-   | Trailer           | http     | standard | Section 4.4   |
-   | User-Agent        | http     | standard | Section 5.5.3   |
-   | Vary              | http     | standard | Section 7.1.4   |
-   | Via               | http     | standard | Section 5.7.1 |
-   | WWW-Authenticate    | http     | standard | Section 4.1 |
-   +-------------------+----------+----------+-----------------+
-
-4.1.1.  Header Field Name Registry
-
-   HTTP header fields are registered within the "Message Headers"
-   registry located at
-   <http://www.iana.org/assignments/message-headers>, as defined by
-   [BCP90].
-
-4.1.2.  Header Field Extensibility
-
-   Header fields are fully extensible: there is no limit on the
-   introduction of new field names, each presumably defining new
-   semantics, nor on the number of header fields used in a given
-   message.  Existing fields are defined in each part of this
-   specification and in many other specifications outside this document
-   set.
-
-   New header fields can be defined such that, when they are understood
-   by a recipient, they might override or enhance the interpretation of
-   previously defined header fields, define preconditions on request
-   evaluation, or refine the meaning of responses.
-
-   A proxy MUST forward unrecognized header fields unless the field-name
-   is listed in the Connection header field (Section 6.1) or the proxy
-   is specifically configured to block, or otherwise transform, such
-   fields.  Other recipients SHOULD ignore unrecognized header fields.
-   These requirements allow HTTP's functionality to be enhanced without
-   requiring prior update of deployed intermediaries.
-
-   All defined header fields ought to be registered with IANA in the
-   "Message Headers" registry, as described in Section 8.3 of [RFC7231].
-
-4.2.  Field Values
-
-   Consequently, this specification does not use ABNF rules
-   to define each "Field-Name: Field Value" pair, as was done in
-   previous editions.  Instead, this specification uses ABNF rules that
-   are named according to each registered field name, wherein the rule
-   defines the valid grammar for that field's corresponding field values
-   (i.e., after the field-value has been extracted from the header
-   section by a generic field parser).
-
-     field-value    = *( field-content / obs-fold )
-     field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-     field-vchar    = VCHAR / obs-text
-
-   Historically, HTTP header field values could be extended over
-   multiple lines by preceding each extra line with at least one space
-   or horizontal tab (obs-fold).
-
-   Historically, HTTP has allowed field content with text in the
-   ISO-8859-1 charset [ISO-8859-1], supporting other charsets only
-   through use of [RFC2047] encoding.  In practice, most HTTP header
-   field values use only a subset of the US-ASCII charset [USASCII].
-   Newly defined header fields SHOULD limit their field values to
-   US-ASCII octets.  A recipient SHOULD treat other octets in field
-   content (obs-text) as opaque data.
-
-4.2.1.  Field Order
+4.1.  Field Ordering and Combination
 
    The order in which header fields with differing field names are
    received is not significant.  However, it is good practice to send
@@ -1045,19 +961,20 @@ X. [Conformance]
    conditionals, authentication credentials, or deliberately misleading
    duplicate header fields that would impact request processing.
 
+   A recipient MAY combine multiple header fields with the same field
+   name into one "field-name: field-value" pair, without changing the
+   semantics of the message, by appending each subsequent field value to
+   the combined field value in order, separated by a comma.  
+
+   The order in which header fields with the same field name are received is
+   therefore significant to the interpretation of the combined field value; a
+   proxy MUST NOT change the order of these field values when
+   forwarding a message.
+
    A sender MUST NOT generate multiple header fields with the same field
    name in a message unless either the entire field value for that
    header field is defined as a comma-separated list [i.e., #(values)]
    or the header field is a well-known exception (as noted below).
-
-   A recipient MAY combine multiple header fields with the same field
-   name into one "field-name: field-value" pair, without changing the
-   semantics of the message, by appending each subsequent field value to
-   the combined field value in order, separated by a comma.  The order
-   in which header fields with the same field name are received is
-   therefore significant to the interpretation of the combined field
-   value; a proxy MUST NOT change the order of these field values when
-   forwarding a message.
 
       Note: In practice, the "Set-Cookie" header field ([RFC6265]) often
       appears multiple times in a response message and does not use the
@@ -1085,6 +1002,128 @@ X. [Conformance]
    larger than the client wishes to process if the field semantics are
    such that the dropped value(s) can be safely ignored without changing
    the message framing or response semantics.
+
+4.1.  Header Field Names
+
+   The field-name token labels the corresponding field-value as having
+   the semantics defined by that header field.  For example, the Date
+   header field is defined in Section 7.1.1.2 of [RFC7231] as containing
+   the origination timestamp for the message in which it appears.
+
+     field-name     = token
+
+   The requirements for header field names are defined in [BCP90].
+
+   Authors of specifications defining new fields are advised to keep the
+   name as short as practical and not to prefix the name with "X-"
+   unless the header field will never be used on the Internet.  (The
+   "X-" prefix idiom has been extensively misused in practice; it was
+   intended to only be used as a mechanism for avoiding name collisions
+   inside proprietary software or intranet processing, since the prefix
+   would ensure that private names never collide with a newly registered
+   Internet name; see [BCP178] for further information).
+
+[
+   Other prefixes are sometimes used in HTTP field names; for example,
+   "Accept-" is used in many content negotiation headers.  These
+   prefixes are only an aid to recognizing the purpose of a field, and
+   do not trigger automatic processing.
+]
+
+4.3.1.  Field Extensibility
+
+   Header fields are fully extensible: there is no limit on the
+   introduction of new field names, each presumably defining new
+   semantics, nor on the number of header fields used in a given
+   message.  Existing fields are defined in each part of this
+   specification and in many other specifications outside this document
+   set.
+
+   New header fields can be defined such that, when they are understood
+   by a recipient, they might override or enhance the interpretation of
+   previously defined header fields, define preconditions on request
+   evaluation, or refine the meaning of responses.
+
+   A proxy MUST forward unrecognized header fields unless the field-name
+   is listed in the Connection header field (Section 6.1) or the proxy
+   is specifically configured to block, or otherwise transform, such
+   fields.  Other recipients SHOULD ignore unrecognized header fields.
+   These requirements allow HTTP's functionality to be enhanced without
+   requiring prior update of deployed intermediaries.
+
+4.3.2.  Field Name Registry
+
+   HTTP header fields are registered within the "Message Headers"
+   registry located at
+   <http://www.iana.org/assignments/message-headers>, as defined by
+   [BCP90].
+
+   All defined header fields ought to be registered with IANA in the
+   "Message Headers" registry, as described in Section 8.3 of [RFC7231].
+
+4.4.  Field Values
+
+   New header field values typically have their syntax defined using
+   ABNF ([RFC5234]), using the extension defined in Section 7 of
+   [RFC7230] as necessary, and are usually constrained to the range of
+   US-ASCII characters.  Header fields needing a greater range of
+   characters can use an encoding such as the one defined in [RFC5987].
+
+     field-value    = *( field-content / obs-fold )
+     field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+     field-vchar    = VCHAR / obs-text
+
+   Historically, HTTP has allowed field content with text in the
+   ISO-8859-1 charset [ISO-8859-1], supporting other charsets only
+   through use of [RFC2047] encoding.  In practice, most HTTP header
+   field values use only a subset of the US-ASCII charset [USASCII].
+   Newly defined header fields SHOULD limit their field values to
+   US-ASCII octets.  A recipient SHOULD treat other octets in field
+   content (obs-text) as opaque data.
+
+   Leading and trailing whitespace in raw field values is removed upon
+   field parsing (Section 3.2.4 of [RFC7230]).  Field definitions where
+   leading or trailing whitespace in values is significant will have to
+   use a container syntax such as quoted-string (Section 3.2.6 of
+   [RFC7230]).
+
+   Because commas (",") are used as a generic delimiter between
+   field-values, they need to be treated with care if they are allowed
+   in the field-value.  Typically, components that might contain a comma
+   are protected with double-quotes using the quoted-string ABNF
+   production.
+
+   For example, a textual date and a URI (either of which might contain
+   a comma) could be safely carried in field-values like these:
+
+     Example-URI-Field: "http://example.com/a.html,foo",
+                        "http://without-a-comma.example.com/"
+     Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+
+   Note that double-quote delimiters almost always are used with the
+   quoted-string production; using a different syntax inside
+   double-quotes will likely cause unnecessary confusion.
+
+   Many header fields use a format including (case-insensitively) named
+   parameters (for instance, Content-Type, defined in Section 3.1.1.5).
+   Allowing both unquoted (token) and quoted (quoted-string) syntax for
+   the parameter value enables recipients to use existing parser
+   components.  When allowing both forms, the meaning of a parameter
+   value ought to be independent of the syntax used for it (for an
+   example, see the notes on parameter handling for media types in
+   Section 3.1.1.1).
+
+   Historically, HTTP header field values could be extended over
+   multiple lines by preceding each extra line with at least one space
+   or horizontal tab (obs-fold).
+
+   Consequently, this specification does not use ABNF rules
+   to define each "Field-Name: Field Value" pair, as was done in
+   previous editions.  Instead, this specification uses ABNF rules that
+   are named according to each registered field name, wherein the rule
+   defines the valid grammar for that field's corresponding field values
+   (i.e., after the field-value has been extracted from the header
+   section by a generic field parser).
 
 3.2.6.  Field Value Components
 
@@ -1143,7 +1182,66 @@ X. [Conformance]
       type parameters do not allow whitespace (even "bad" whitespace)
       around the "=" character.
 
-X.X.  [Trailer Fields]
+7.  ABNF List Extension: #rule
+
+   A #rule extension to the ABNF rules of [RFC5234] is used to improve
+   readability in the definitions of some header field values.
+
+   A construct "#" is defined, similar to "*", for defining
+   comma-delimited lists of elements.  The full form is "<n>#<m>element"
+   indicating at least <n> and at most <m> elements, each separated by a
+   single comma (",") and optional whitespace (OWS).
+
+   In any production that uses the list construct, a sender MUST NOT
+   generate empty list elements.  In other words, a sender MUST generate
+   lists that satisfy the following syntax:
+
+     1#element => element *( OWS "," OWS element )
+
+   and:
+
+     #element => [ 1#element ]
+
+   and for n >= 1 and m > 1:
+
+     <n>#<m>element => element <n-1>*<m-1>( OWS "," OWS element )
+
+4.5.2.  [Recipient Requirements]
+
+   For compatibility with legacy list rules, a recipient MUST parse and
+   ignore a reasonable number of empty list elements: enough to handle
+   common mistakes by senders that merge values, but not so much that
+   they could be used as a denial-of-service mechanism.  In other words,
+   a recipient MUST accept lists that satisfy the following syntax:
+
+     #element => [ ( "," / element ) *( OWS "," [ OWS element ] ) ]
+
+     1#element => *( "," OWS ) element *( OWS "," [ OWS element ] )
+
+   Empty elements do not contribute to the count of elements present.
+   For example, given these ABNF productions:
+
+     example-list      = 1#example-list-elmt
+     example-list-elmt = token ; see Section 3.2.6
+
+   Then the following are valid values for example-list (not including
+   the double quotes, which are present for delimitation only):
+
+     "foo,bar"
+     "foo ,bar,"
+     "foo , ,bar,charlie   "
+
+   In contrast, the following values would be invalid, since at least
+   one non-empty element is required by the example-list production:
+
+     ""
+     ","
+     ",   ,"
+
+   Appendix B shows the collected ABNF for recipients after the list
+   constructs have been expanded.
+
+4.6.  [Trailer Fields]
 
    A trailer allows the sender to include additional fields at the end
    of a chunked message in order to supply metadata that might be
@@ -1152,6 +1250,8 @@ X.X.  [Trailer Fields]
    status.  The trailer fields are identical to header fields, except
    they are sent in a chunked trailer instead of the message's header
    section.
+
+4.6.2.  Limitations
 
    A sender MUST NOT generate a trailer that contains a field necessary
    for message framing (e.g., Transfer-Encoding and Content-Length),
@@ -1178,7 +1278,7 @@ X.X.  [Trailer Fields]
    intermediaries to forward a de-chunked message to an HTTP/1.0
    recipient without buffering the entire response.
 
-4.3.3.  Trailer
+4.6.3.  Trailer
 
      Trailer = 1#field-name
 
@@ -1191,54 +1291,7 @@ X.X.  [Trailer Fields]
    processing the body, which is useful if the message is being streamed
    and the recipient wishes to confirm an integrity check on the fly.
 
-4.4.  Considerations for New Header Fields
-
-   Authors of specifications defining new fields are advised to keep the
-   name as short as practical and not to prefix the name with "X-"
-   unless the header field will never be used on the Internet.  (The
-   "X-" prefix idiom has been extensively misused in practice; it was
-   intended to only be used as a mechanism for avoiding name collisions
-   inside proprietary software or intranet processing, since the prefix
-   would ensure that private names never collide with a newly registered
-   Internet name; see [BCP178] for further information).
-
-   New header field values typically have their syntax defined using
-   ABNF ([RFC5234]), using the extension defined in Section 7 of
-   [RFC7230] as necessary, and are usually constrained to the range of
-   US-ASCII characters.  Header fields needing a greater range of
-   characters can use an encoding such as the one defined in [RFC5987].
-
-   Leading and trailing whitespace in raw field values is removed upon
-   field parsing (Section 3.2.4 of [RFC7230]).  Field definitions where
-   leading or trailing whitespace in values is significant will have to
-   use a container syntax such as quoted-string (Section 3.2.6 of
-   [RFC7230]).
-
-   Because commas (",") are used as a generic delimiter between
-   field-values, they need to be treated with care if they are allowed
-   in the field-value.  Typically, components that might contain a comma
-   are protected with double-quotes using the quoted-string ABNF
-   production.
-
-   For example, a textual date and a URI (either of which might contain
-   a comma) could be safely carried in field-values like these:
-
-     Example-URI-Field: "http://example.com/a.html,foo",
-                        "http://without-a-comma.example.com/"
-     Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
-
-   Note that double-quote delimiters almost always are used with the
-   quoted-string production; using a different syntax inside
-   double-quotes will likely cause unnecessary confusion.
-
-   Many header fields use a format including (case-insensitively) named
-   parameters (for instance, Content-Type, defined in Section 3.1.1.5).
-   Allowing both unquoted (token) and quoted (quoted-string) syntax for
-   the parameter value enables recipients to use existing parser
-   components.  When allowing both forms, the meaning of a parameter
-   value ought to be independent of the syntax used for it (for an
-   example, see the notes on parameter handling for media types in
-   Section 3.1.1.1).
+4.7.  Considerations for New HTTP Fields
 
    Authors of specifications defining new header fields are advised to
    consider documenting:
@@ -1289,6 +1342,53 @@ X.X.  [Trailer Fields]
    o  Whether it introduces any additional security considerations, such
       as disclosure of privacy-related data.
 
+4.8.  Fields Defined In This Document
+
+   The "Message Headers" registry has been updated with the following
+   permanent registrations:
+
+   +-------------------+----------+----------+-----------------+
+   | Header Field Name | Protocol | Status   | Reference       |
+   +-------------------+----------+----------+-----------------+
+   | Accept            | http     | standard | Section 5.3.2   |
+   | Accept-Charset    | http     | standard | Section 5.3.3   |
+   | Accept-Encoding   | http     | standard | Section 5.3.4   |
+   | Accept-Language   | http     | standard | Section 5.3.5   |
+   | Accept-Ranges     | http     | standard | Section 2.3 |
+   | Allow             | http     | standard | Section 7.4.1   |
+   | Authorization       | http     | standard | Section 4.2 |
+   | Content-Encoding  | http     | standard | Section 3.1.2.2 |
+   | Content-Language  | http     | standard | Section 3.1.3.2 |
+   | Content-Length    | http     | standard | Section 3.3.2 |
+   | Content-Location  | http     | standard | Section 3.1.4.2 |
+   | Content-Range     | http     | standard | Section 4.2 |
+   | Content-Type      | http     | standard | Section 3.1.1.5 |
+   | Date              | http     | standard | Section 7.1.1.2 |
+   | ETag                | http     | standard | Section 2.3 |
+   | Expect            | http     | standard | Section 5.1.1   |
+   | From              | http     | standard | Section 5.5.1   |
+   | Host              | http     | standard | Section 5.4   |
+   | If-Match            | http     | standard | Section 3.1 |
+   | If-Modified-Since   | http     | standard | Section 3.3 |
+   | If-None-Match       | http     | standard | Section 3.2 |
+   | If-Range          | http     | standard | Section 3.2 |
+   | If-Unmodified-Since | http     | standard | Section 3.4 |
+   | Last-Modified       | http     | standard | Section 2.2 |
+   | Location          | http     | standard | Section 7.1.2   |
+   | Max-Forwards      | http     | standard | Section 5.1.2   |
+   | Proxy-Authenticate  | http     | standard | Section 4.3 |
+   | Proxy-Authorization | http     | standard | Section 4.4 |
+   | Range             | http     | standard | Section 3.1 |
+   | Referer           | http     | standard | Section 5.5.2   |
+   | Retry-After       | http     | standard | Section 7.1.3   |
+   | Server            | http     | standard | Section 7.4.2   |
+   | Trailer           | http     | standard | Section 4.4   |
+   | User-Agent        | http     | standard | Section 5.5.3   |
+   | Vary              | http     | standard | Section 7.1.4   |
+   | Via               | http     | standard | Section 5.7.1 |
+   | WWW-Authenticate    | http     | standard | Section 4.1 |
+   +-------------------+----------+----------+-----------------+
+
 5.  Message Routing
 
    HTTP request message routing is determined by each client based on
@@ -1316,7 +1416,7 @@ X.X.  [Trailer Fields]
    since fragment identifiers are reserved for client-side processing
    ([RFC3986], Section 3.5).
 
-5.2.  Connecting Inbound
+5.3.  Routing Inbound
 
    Once the target URI is determined, a client needs to decide whether a
    network request is necessary to accomplish the desired semantics and,
@@ -1345,7 +1445,44 @@ X.X.  [Trailer Fields]
    HTTP requirements regarding connection management are defined in
    Section 6.
 
-2.  HTTP Over TLS
+X.X.  [Direct Authoritative Access]
+
+5.4.1.  http origins
+
+   Although HTTP is independent of the transport protocol, the "http"
+   scheme is specific to TCP-based services because the name delegation
+   process depends on TCP for establishing authority.  An HTTP service
+   based on some other underlying connection protocol would presumably
+   be identified using a different URI scheme, just as the "https"
+   scheme (below) is used for resources that require an end-to-end
+   secured connection.  Other protocols might also be used to provide
+   access to "http" identified resources -- it is only the authoritative
+   interface that is specific to TCP.
+
+   If the host identifier is provided as an IP address, the origin
+   server is the listener (if any) on the indicated TCP port at that IP
+   address.  If host is a registered name, the registered name is an
+   indirect identifier for use with a name resolution service, such as
+   DNS, to find an address for that origin server.
+
+   When an "http" URI is used within a context that calls for access to
+   the indicated resource, a client MAY attempt access by resolving the
+   host to an IP address, establishing a TCP connection to that address
+   on the indicated port, and sending an HTTP request message
+   (Section 3) containing the URI's identifying data (Section 5) to the
+   server.  If the server responds to that request with a non-interim
+   HTTP response message, as described in Section 6 of [RFC7231], then
+   that response is considered an authoritative answer to the client's
+   request.
+   
+   See Section 9.1 for security considerations related to establishing
+   authority.
+
+5.4.2.  https origins
+
+   [new section]
+
+5.4.3.  Initiating HTTP Over TLS
 
    Conceptually, HTTP/TLS is very simple. Simply use HTTP over TLS
    precisely as you would use HTTP over TCP.
@@ -1933,14 +2070,14 @@ X.X.  [Trailer Fields]
 
      range-unit       = bytes-unit / other-range-unit
 
-   +-------------+---------------------------------------+-------------+
-   | Range Unit  | Description                           | Reference   |
-   | Name        |                                       |             |
-   +-------------+---------------------------------------+-------------+
-   | bytes       | a range of octets                     | Section 2.1 |
-   | none        | reserved as keyword, indicating no    | Section 2.3 |
-   |             | ranges are supported                  |             |
-   +-------------+---------------------------------------+-------------+
+   +------------+-----------------------------------------+------------+
+   | Range Unit | Description                             | Reference  |
+   | Name       |                                         |            |
+   +------------+-----------------------------------------+------------+
+   | bytes      | a range of octets                       | Section 2.1 |
+   | none       | reserved as keyword, indicating no      | Section 2.3 |
+   |            | ranges are supported                    |            |
+   +------------+-----------------------------------------+------------+
 
 2.1.  Byte Ranges
 
@@ -2843,18 +2980,18 @@ Appendix A.  Internet Media Type multipart/byteranges
 
 4.2.  Common Method Properties
 
-   +---------+------+------------+---------------+
-   | Method  | Safe | Idempotent | Reference     |
-   +---------+------+------------+---------------+
-   | CONNECT | no   | no         | Section 4.3.6 |
-   | DELETE  | no   | yes        | Section 4.3.5 |
-   | GET     | yes  | yes        | Section 4.3.1 |
-   | HEAD    | yes  | yes        | Section 4.3.2 |
-   | OPTIONS | yes  | yes        | Section 4.3.7 |
-   | POST    | no   | no         | Section 4.3.3 |
-   | PUT     | no   | yes        | Section 4.3.4 |
-   | TRACE   | yes  | yes        | Section 4.3.8 |
-   +---------+------+------------+---------------+
+   +---------+------+------------+----------------+
+   | Method  | Safe | Idempotent | Reference      |
+   +---------+------+------------+----------------+
+   | CONNECT | no   | no         | Section 4.3.6  |
+   | DELETE  | no   | yes        | Section 4.3.5  |
+   | GET     | yes  | yes        | Section 4.3.1  |
+   | HEAD    | yes  | yes        | Section 4.3.2  |
+   | OPTIONS | yes  | yes        | Section 4.3.7  |
+   | POST    | no   | no         | Section 4.3.3  |
+   | PUT     | no   | yes        | Section 4.3.4  |
+   | TRACE   | yes  | yes        | Section 4.3.8  |
+   +---------+------+------------+----------------+
 
 4.2.1.  Safe Methods
 
@@ -4873,7 +5010,7 @@ X.X. [Authentication Scheme Extensibility]
    that identified user agent, even if they might not work as well for
    the actual user agent being used.
 
-6.  Response Status Codes
+9.  Response Status Codes
 
    The status-code element is a three-digit integer code giving the
    result of the attempt to understand and satisfy the request.
@@ -4910,7 +5047,7 @@ X.X. [Authentication Scheme Extensibility]
    o  5xx (Server Error): The server failed to fulfill an apparently
       valid request
 
-6.1.  Overview of Status Codes
+9.1.  Overview of Status Codes
 
    The status codes listed below are defined in this specification,
    Section 4 of [RFC7232], Section 4 of [RFC7233], and Section 3 of
@@ -5555,7 +5692,7 @@ X.X. [Authentication Scheme Extensibility]
       Permanently) ([RFC7238], however, defines the status code 308
       (Permanent Redirect) for this purpose).
 
-3.  308 Permanent Redirect [RFC7538]
+9.4.9.  308 Permanent Redirect
 
    The 308 (Permanent Redirect) status code indicates that the target
    resource has been assigned a new permanent URI and any future
@@ -5827,7 +5964,7 @@ X.X. [Authentication Scheme Extensibility]
    (Section 5.1.1) could not be met by at least one of the inbound
    servers.
 
-6.5.15.  426 Upgrade Required
+9.5.21.  426 Upgrade Required
 
    The 426 (Upgrade Required) status code indicates that the server
    refuses to perform the request using the current protocol but might
@@ -6957,94 +7094,6 @@ X.X. [Authentication Scheme Extensibility]
    implementation details that might make it (slightly) easier for
    attackers to find and exploit known security holes.
 
-11.  [Generic Syntax]
-
-3.2.3.  Whitespace
-
-   This specification uses three rules to denote the use of linear
-   whitespace: OWS (optional whitespace), RWS (required whitespace), and
-   BWS ("bad" whitespace).
-
-   The OWS rule is used where zero or more linear whitespace octets
-   might appear.  For protocol elements where optional whitespace is
-   preferred to improve readability, a sender SHOULD generate the
-   optional whitespace as a single SP; otherwise, a sender SHOULD NOT
-   generate optional whitespace except as needed to white out invalid or
-   unwanted protocol elements during in-place message filtering.
-
-   The RWS rule is used when at least one linear whitespace octet is
-   required to separate field tokens.  A sender SHOULD generate RWS as a
-   single SP.
-
-   The BWS rule is used where the grammar allows optional whitespace
-   only for historical reasons.  A sender MUST NOT generate BWS in
-   messages.  A recipient MUST parse for such bad whitespace and remove
-   it before interpreting the protocol element.
-
-     OWS            = *( SP / HTAB )
-                    ; optional whitespace
-     RWS            = 1*( SP / HTAB )
-                    ; required whitespace
-     BWS            = OWS
-                    ; "bad" whitespace
-
-7.  ABNF List Extension: #rule
-
-   A #rule extension to the ABNF rules of [RFC5234] is used to improve
-   readability in the definitions of some header field values.
-
-   A construct "#" is defined, similar to "*", for defining
-   comma-delimited lists of elements.  The full form is "<n>#<m>element"
-   indicating at least <n> and at most <m> elements, each separated by a
-   single comma (",") and optional whitespace (OWS).
-
-   In any production that uses the list construct, a sender MUST NOT
-   generate empty list elements.  In other words, a sender MUST generate
-   lists that satisfy the following syntax:
-
-     1#element => element *( OWS "," OWS element )
-
-   and:
-
-     #element => [ 1#element ]
-
-   and for n >= 1 and m > 1:
-
-     <n>#<m>element => element <n-1>*<m-1>( OWS "," OWS element )
-
-   For compatibility with legacy list rules, a recipient MUST parse and
-   ignore a reasonable number of empty list elements: enough to handle
-   common mistakes by senders that merge values, but not so much that
-   they could be used as a denial-of-service mechanism.  In other words,
-   a recipient MUST accept lists that satisfy the following syntax:
-
-     #element => [ ( "," / element ) *( OWS "," [ OWS element ] ) ]
-
-     1#element => *( "," OWS ) element *( OWS "," [ OWS element ] )
-
-   Empty elements do not contribute to the count of elements present.
-   For example, given these ABNF productions:
-
-     example-list      = 1#example-list-elmt
-     example-list-elmt = token ; see Section 3.2.6
-
-   Then the following are valid values for example-list (not including
-   the double quotes, which are present for delimitation only):
-
-     "foo,bar"
-     "foo ,bar,"
-     "foo , ,bar,charlie   "
-
-   In contrast, the following values would be invalid, since at least
-   one non-empty element is required by the example-list production:
-
-     ""
-     ","
-     ",   ,"
-
-   Appendix B shows the collected ABNF for recipients after the list
-   constructs have been expanded.
-
 9.  Security Considerations
 
    This section is meant to inform developers, information providers,
@@ -7495,7 +7544,7 @@ X.X. [Authentication Scheme Extensibility]
    The change controller for the above registrations is: "IETF
    (iesg@ietf.org) - Internet Engineering Task Force".
 
-14.1.  URI Scheme Registration
+12.1.  URI Scheme Registration
 
    IANA maintains the registry of URI Schemes [BCP115] at
    <http://www.iana.org/assignments/uri-schemes/>.
@@ -7503,26 +7552,28 @@ X.X. [Authentication Scheme Extensibility]
    This document defines the following URI schemes, so the "Permanent
    URI Schemes" registry has been updated accordingly.
 
-14.2.  Method Registration
+12.2.  Method Registration
 
    The "Hypertext Transfer Protocol (HTTP) Method Registry" has been
    populated with the registrations below:
 
-14.3.  Status Code Registration
+12.3.  Status Code Registration
 
    The status code registry has been updated with the registrations
    below:
 
-14.4.  Header Field Registration
+12.4.  HTTP Field Name Registration
 
-14.5.  Authentication Scheme Registration
+   [new section]
+
+12.5.  Authentication Scheme Registration
 
    The "Hypertext Transfer Protocol (HTTP) Authentication Scheme
    Registry" defines the namespace for the authentication schemes in
    challenges and credentials.  It has been created and is now
    maintained at <http://www.iana.org/assignments/http-authschemes>.
 
-14.6.  Content Coding Registration
+12.6.  Content Coding Registration
 
    IANA maintains the "HTTP Content Coding Registry" at
    <http://www.iana.org/assignments/http-parameters>.
@@ -7530,18 +7581,18 @@ X.X. [Authentication Scheme Extensibility]
    The "HTTP Content Coding Registry" has been updated with the
    registrations below:
 
-14.7.  Range Unit Registration
+12.7.  Range Unit Registration
 
    The initial range unit registry contains the registrations below:
 
-14.8.  Media Type Registration
+12.8.  Media Type Registration
 
    IANA maintains the registry of Internet media types [BCP13] at
    <http://www.iana.org/assignments/media-types>.
 
-15.  References
+13.  References
 
-15.1.  Normative References
+13.1.  Normative References
 
    [RFC0793]     Postel, J., "Transmission Control Protocol", STD 7,
                  RFC 793, September 1981.
@@ -7596,7 +7647,7 @@ X.X. [Authentication Scheme Extensibility]
    [RFC7235]  Fielding, R., Ed. and J. Reschke, Ed., "Hypertext Transfer
               Protocol (HTTP/1.1): Authentication", RFC 7235, June 2014.
 
-15.2.  Informative References
+13.2.  Informative References
 
    [BCP115]   Hansen, T., Hardie, T., and L. Masinter, "Guidelines
               and Registration Procedures for New URI Schemes",
