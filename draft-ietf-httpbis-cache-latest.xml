@@ -384,6 +384,36 @@
    prohibited from storing such responses.
 </t>
 
+<section title"Storing Header and Trailer Fields" anchor="storing.fields">
+<t>
+   Caches are generally expected to include all received header fields --
+   particularly unrecognised ones -- when storing a response; this assures
+   that new HTTP headers can be successfully deployed. However, in some
+   circumstances, it can be advisable to remove headers before storing the
+   response:
+</t>
+<ul>
+   <li>Headers with field names in the Connection header field are
+   required by <xref target="header.connection"/> to be removed before
+   forwarding the message. One way this can be achieved when a cache is used
+   is to do so before storage.</li>
+   <li>Likewise, headers that are known to be "hop-by-hop" are also
+   required to be removed before forwarding, and this can be assisted by
+   removing them before storage; see <xref target="header.connection"/> for
+   some examples.</li>
+   <li>Header fields that are specific to the connection they occur on are
+   not appropriate to store. Effectively, this is limited to
+   Proxy-Authenticate <xref target="header.proxy-authenticate"/> and
+   Proxy-Authorization <xref target="header.proxy-authorization">, since new
+   header fields are discouraged from being tied to a specific
+   connection.</li>
+</ul>
+<t>
+   Caches &MAY; either store trailer fields separately from header fields, or
+   discard them. Caches &MUST-NOT; combine trailer fields with header fields.
+</t>
+</section>
+
 <section title="Storing Incomplete Responses" anchor="incomplete.responses">
 <t>
    A response message is considered complete when all of the octets indicated
@@ -1052,8 +1082,14 @@
    For each stored response identified for update, the cache &MUST; use the
    header fields provided in the <x:ref>304 (Not Modified)</x:ref> response
    to replace all instances of the corresponding header fields in the stored
-   response.
+   response, with the following exceptions:
 </t>
+<ul>
+   <li>Caches are not required to update stored header fields that are not
+   required to be stored; see <xref target="storing.fields"/>.</li>
+   <li>Caches &MUST-NOT; update the following header fields:
+   Content-Encoding, Content-Length, Content-MD5, Content-Range, ETag.</li>
+</ul>
 </section>
 
 <section title="Freshening Responses with HEAD" anchor="head.effects">
@@ -1085,8 +1121,9 @@
    If a cache updates a stored response with the metadata provided in a HEAD
    response, the cache &MUST; use the header fields provided in the HEAD
    response to replace all instances of the corresponding header fields in
-   the stored response and append new header fields to the stored response's
-   header section unless otherwise restricted by the
+   the stored response (subject to the exceptions in <xref
+   target="freshening.responses"/>) and append new header fields to the
+   stored response's header section unless otherwise restricted by the
    <x:ref>Cache-Control</x:ref> header field.
 </t>
 </section>
