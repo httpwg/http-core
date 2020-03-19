@@ -705,8 +705,7 @@ Content-Type: text/plain
    (URI-reference), only a URI in absolute form (absolute-URI), only the
    path and optional query components, or some combination of the above.
    Unless otherwise indicated, URI references are parsed
-   relative to the effective request URI
-   (<xref target="effective.request.uri"/>).
+   relative to the target URI (<xref target="target.resource"/>).
 </t>
 <t>
    It is &RECOMMENDED; that all senders and recipients support, at a minimum,
@@ -2246,7 +2245,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </section>
 </section>
 
-<section title="Effective Request URI" anchor="effective.request.uri">
+<section title="Reconstructing the Target URI" anchor="effective.request.uri">
   <iref primary="true" item="effective request URI"/>
   <x:anchor-alias value="effective request URI"/>
 <t>
@@ -2258,26 +2257,26 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    split into components and transmitted (or implied) within various parts of
    a request message. These parts are recombined by each recipient, in
    accordance with their local configuration and incoming connection context,
-   to form an "<x:dfn>effective request URI</x:dfn>" for identifying the
-   intended target resource with respect to that server.
+   to determine the target URI.
    <xref target="h1.effective.request.uri"/> defines how a server
-   determines the effective request URI for an HTTP/1.1 request.
+   determines the target URI for an HTTP/1.1 request.
 </t>
 <t>
-   For a user agent, the effective request URI is the target URI.
-</t>
-<t>
-   Once the effective request URI has been constructed, an origin server needs
+   Once the target URI has been reconstructed, an origin server needs
    to decide whether or not to provide service for that URI via the connection
    in which the request was received. For example, the request might have been
    misdirected, deliberately or accidentally, such that the information within
-   a received target URI or <x:ref>Host</x:ref> header
+   a received <x:ref>Host</x:ref> header
    field differs from the host or port upon which the connection has been
    made. If the connection is from a trusted gateway, that inconsistency might
    be expected; otherwise, it might indicate an attempt to bypass security
    filters, trick the server into delivering non-public content, or poison a
    cache. See <xref target="security.considerations"/> for security
    considerations regarding message routing.
+</t>
+<t>
+   Note that previous specifications defined the recomposed target URI as a
+   distinct concept, the <x:dfn>effective request URI</x:dfn>.
 </t>
 </section>
 
@@ -2589,7 +2588,7 @@ Host: www.example.org
 <t>
    The representation data associated with an HTTP message is
    either provided as the payload body of the message or
-   referred to by the message semantics and the effective request
+   referred to by the message semantics and the target
    URI.  The representation data is in a format and encoding defined by
    the representation metadata header fields.
 </t>
@@ -3459,8 +3458,8 @@ bytes=500-700,601-999
   <x:ref>Content-Location</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
 </sourcecode>
 <t>
-   The Content-Location value is not a replacement for the effective
-   Request URI (<xref target="effective.request.uri"/>).  It is representation metadata.
+   The Content-Location value is not a replacement for the target URI 
+   (<xref target="target.resource"/>).  It is representation metadata.
    It has the same syntax and semantics as the header field of the same name
    defined for MIME body parts in <xref target="RFC2557" x:fmt="of" x:sec="4"/>.
    However, its appearance in an HTTP message has some special implications
@@ -3469,7 +3468,7 @@ bytes=500-700,601-999
 <t>
    If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
    response message and its value refers (after conversion to absolute form)
-   to a URI that is the same as the effective request URI, then
+   to a URI that is the same as the target URI, then
    the recipient &MAY; consider the payload to be a current representation of
    that resource at the time indicated by the message origination date.
    For a GET (<xref target="GET"/>) or HEAD (<xref target="HEAD"/>) request,
@@ -3486,7 +3485,7 @@ bytes=500-700,601-999
 <t>
    If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
    response message and its field value refers to a URI that differs from the
-   effective request URI, then the origin server claims that the URI
+   target URI, then the origin server claims that the URI
    is an identifier for a different resource corresponding to the enclosed
    representation. Such a claim can only be trusted if both identifiers share
    the same resource owner, which cannot be programmatically determined via
@@ -3494,7 +3493,7 @@ bytes=500-700,601-999
 </t>
 <ul>
   <li>For a response to a GET or HEAD request, this is an indication that the
-     effective request URI refers to a resource that is subject to content
+     target URI refers to a resource that is subject to content
      negotiation and the Content-Location field value is a more specific
      identifier for the <x:ref>selected representation</x:ref>.</li>
   <li>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
@@ -3631,18 +3630,17 @@ bytes=500-700,601-999
        <x:ref>206 (Partial Content)</x:ref>, or
        <x:ref>304 (Not Modified)</x:ref>,
        the payload is a representation of the resource identified by the
-       effective request URI (<xref target="effective.request.uri"/>).</li>
+       target URI (<xref target="request.target"/>).</li>
    <li>If the request method is GET or HEAD and the response status code is
        <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
        a potentially modified or enhanced representation of the
        <x:ref>target resource</x:ref> as provided by an intermediary.</li>
    <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field value is a reference to the same URI as the effective
-       request URI, the payload is a representation of the resource
-       identified by the effective request URI.</li>
+       and its field value is a reference to the same URI as the target URI, 
+       the payload is a representation of the target resource.</li>
    <li>If the response has a <x:ref>Content-Location</x:ref> header field
        and its field value is a reference to a URI different from the
-       effective request URI, then the sender asserts that the payload is a
+       target URI, then the sender asserts that the payload is a
        representation of the resource identified by the Content-Location
        field value. However, such an assertion cannot be trusted unless
        it can be verified by other means (not defined by this specification).</li>
@@ -4296,8 +4294,8 @@ Content-Range: exampleunit 11.2-14.3/25
    aware of an unsafe action before it is requested.
 </t>
 <t>
-   When a resource is constructed such that parameters within the effective
-   request URI have the effect of selecting an action, it is the resource
+   When a resource is constructed such that parameters within the target URI 
+   have the effect of selecting an action, it is the resource
    owner's responsibility to ensure that the action is consistent with the
    request method semantics.
    For example, it is common for Web-based content editing software
@@ -4505,7 +4503,7 @@ Content-Range: exampleunit 11.2-14.3/25
    freshness information (see <xref
    target="calculating.freshness.lifetime"/>) and a
    <x:ref>Content-Location</x:ref> header field that has the same value as
-   the POST's effective request URI (<xref
+   the POST's target URI (<xref
    target="header.content-location"/>). A cached POST response can be reused
    to satisfy a later GET or HEAD request, but not a POST request, since POST
    is required to be written through to the origin server, because it is
@@ -4660,7 +4658,7 @@ Content-Range: exampleunit 11.2-14.3/25
 <t>
    Responses to the PUT method are not cacheable. If a successful PUT request
    passes through a cache that has one or more stored responses for the
-   effective request URI, those stored responses will be invalidated
+   target URI, those stored responses will be invalidated
    (see <xref target="invalidation"/>).
 </t>
 </section>
@@ -4720,7 +4718,7 @@ Content-Range: exampleunit 11.2-14.3/25
 <t>
    Responses to the DELETE method are not cacheable. If a successful DELETE
    request passes through a cache that has one or more stored responses for
-   the effective request URI, those stored responses will be invalidated (see
+   the target URI, those stored responses will be invalidated (see
    <xref target="invalidation"/>).
 </t>
 </section>
@@ -6421,8 +6419,8 @@ Expect: 100-continue
 </t>
 <t>
    A <x:dfn>protection space</x:dfn> is defined by the canonical root URI (the
-   scheme and authority components of the effective request URI; see
-   <xref target="effective.request.uri"/>) of the
+   scheme and authority components of the target URI; see
+   <xref target="target.resource"/>) of the
    server being accessed, in combination with the realm value if present.
    These realms allow the protected resources on a server to be
    partitioned into a set of protection spaces, each with its own
@@ -7369,7 +7367,7 @@ Expect: 100-continue
    been fulfilled and has resulted in one or more new resources being created.
    The primary resource created by the request is identified by either a
    <x:ref>Location</x:ref> header field in the response or, if no
-   <x:ref>Location</x:ref> field is received, by the effective request URI.
+   <x:ref>Location</x:ref> field is received, by the target URI.
 </t>
 <t>
    The 201 response payload typically describes and links to the resource(s)
@@ -7816,7 +7814,7 @@ Content-Range: bytes 7000-7999/8000
    <x:ref>target resource</x:ref> has been assigned a new permanent URI and
    any future references to this resource ought to use one of the enclosed
    URIs. Clients with link-editing capabilities ought to automatically re-link
-   references to the effective request URI to one or more of the new
+   references to the target URI to one or more of the new
    references sent by the server, where possible.
 </t>
 <t>
@@ -7848,7 +7846,7 @@ Content-Range: bytes 7000-7999/8000
    The <x:dfn>302 (Found)</x:dfn> status code indicates that the target
    resource resides temporarily under a different URI. Since the redirection
    might be altered on occasion, the client ought to continue to use the
-   effective request URI for future requests.
+   target URI for future requests.
 </t>
 <t>
    The server &SHOULD; generate a <x:ref>Location</x:ref> header field in the
@@ -7878,7 +7876,7 @@ Content-Range: bytes 7000-7999/8000
    retrieval request targeting that URI (a GET or HEAD request if using HTTP),
    which might also be redirected, and present the eventual result as an
    answer to the original request. Note that the new URI in the Location
-   header field is not considered equivalent to the effective request URI.
+   header field is not considered equivalent to the target URI.
 </t>
 <t>
    This status code is applicable to any HTTP method.  It is
@@ -7982,7 +7980,7 @@ Content-Range: bytes 7000-7999/8000
    and the user agent &MUST-NOT; change the request method if it performs an
    automatic redirection to that URI.
    Since the redirection can change over time, the client ought to continue
-   using the original effective request URI for future requests.
+   using the original target URI for future requests.
 </t>
 <t>
    The server &SHOULD; generate a <x:ref>Location</x:ref> header field in the
@@ -8002,7 +8000,7 @@ Content-Range: bytes 7000-7999/8000
    <x:ref>target resource</x:ref> has been assigned a new permanent URI and
    any future references to this resource ought to use one of the enclosed
    URIs. Clients with link editing capabilities ought to automatically re-link
-   references to the effective request URI
+   references to the target URI
    to one or more of the new references sent by the server, where possible.
 </t>
 <t>
@@ -8872,7 +8870,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    The field value consists of a single URI-reference. When it has the form
    of a relative reference (<xref target="RFC3986" x:fmt="," x:sec="4.2"/>),
-   the final value is computed by resolving it against the effective request
+   the final value is computed by resolving it against the target
    URI (<xref target="RFC3986" x:fmt="," x:sec="5"/>).
 </t>
 <t>
@@ -9679,8 +9677,8 @@ Content-Encoding: gzip
 <t>
    The "Proxy-Authenticate" header field consists of at least one
    challenge that indicates the authentication scheme(s) and parameters
-   applicable to the proxy for this effective request URI
-   (<xref target="effective.request.uri"/>).
+   applicable to the proxy for this target URI
+   (<xref target="target.resource"/>).
    A proxy &MUST; send at least one Proxy-Authenticate header field in
    each <x:ref>407 (Proxy Authentication Required)</x:ref> response that it
    generates.
@@ -10044,7 +10042,7 @@ Content-Encoding: gzip
 <section title="Attacks Based on File and Path Names" anchor="attack.pathname">
 <t>
    Origin servers frequently make use of their local file system to manage the
-   mapping from effective request URI to resource representations.
+   mapping from target URI to resource representations.
    Most file systems are not designed to protect against malicious file
    or path names. Therefore, an origin server needs to avoid accessing
    names that have a special significance to the system when mapping the
