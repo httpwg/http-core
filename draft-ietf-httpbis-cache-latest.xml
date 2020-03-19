@@ -107,7 +107,7 @@
     <eref target="https://github.com/httpwg/http-core"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.06"/>.
+    The changes in this draft are summarized in <xref target="changes.since.07"/>.
   </t>
 </note>
 
@@ -171,9 +171,11 @@
 
 <section title="Requirements Notation" anchor="intro.requirements">
 <t>
-   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
-   document are to be interpreted as described in <xref target="RFC2119"/>.
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+   NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
+   "MAY", and "OPTIONAL" in this document are to be interpreted as
+   described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/> when, and only when, they
+   appear in all capitals, as shown here.
 </t>
 <t>
    Conformance criteria and considerations regarding error handling
@@ -422,13 +424,17 @@
 <t>
    A shared cache &MUST-NOT; use a cached response to a request with an
    <x:ref>Authorization</x:ref> header field (<xref target="header.authorization"/>) to
-   satisfy any subsequent request unless a response directive that allows such
-   responses to be stored is present.
+   satisfy any subsequent request unless the response contains a
+   <x:ref>Cache-Control</x:ref> field with a response directive
+   (<xref target="cache-response-directive"/>) that allows it to be stored by
+   a shared cache and the cache conforms to the requirements of that
+   directive for that response.
 </t>
 <t>
-   In this specification, the following <x:ref>Cache-Control</x:ref> response
-   directives (<xref target="cache-response-directive"/>) have such an effect:
-   must-revalidate, public, and s-maxage.
+   In this specification, the following response directives have such an effect:
+   must-revalidate (<xref target="cache-response-directive.must-revalidate"/>),
+   public (<xref target="cache-response-directive.public"/>), and
+   s-maxage (<xref target="cache-response-directive.s-maxage"/>).
 </t>
 </section>
 
@@ -1187,7 +1193,7 @@
 <?ENDINC build/draft-ietf-httpbis-cache-latest.iana-headers ?>
 
 <section title="Age" anchor="header.age">
-   <iref item="Age header field" primary="true" x:for-anchor="" />
+   <iref primary="true" item="Fields" subitem="Age" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Age" x:for-anchor=""/><iref primary="true" item="Fields" subitem="Age" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Age" x:for-anchor=""/><iref item="Age header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Age"/>
    <x:anchor-alias value="age-value"/>
 <t>
@@ -1213,7 +1219,7 @@
 </section>
 
 <section title="Cache-Control" anchor="header.cache-control">
-   <iref item="Cache-Control header field" primary="true" x:for-anchor="" />
+   <iref primary="true" item="Fields" subitem="Cache-Control" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Cache-Control" x:for-anchor=""/><iref item="Cache-Control header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Cache-Control"/>
    <x:anchor-alias value="cache-directive"/>
 <t>
@@ -1356,7 +1362,7 @@
 
 
 <section title="max-age" anchor="cache-request-directive.max-age">
-   <iref item="max-age (cache directive)" primary="true" />
+   <iref item="max-age (cache directive)" primary="true"/>
 <t>
    Argument syntax:
 </t>
@@ -1377,7 +1383,7 @@
 </section>
 
 <section title="max-stale" anchor="cache-request-directive.max-stale">
-   <iref item="max-stale (cache directive)" primary="true" />
+   <iref item="max-stale (cache directive)" primary="true"/>
 <t>
    Argument syntax:
 </t>
@@ -1400,7 +1406,7 @@
 </section>
 
 <section title="min-fresh" anchor="cache-request-directive.min-fresh">
-   <iref item="min-fresh (cache directive)" primary="true" />
+   <iref item="min-fresh (cache directive)" primary="true"/>
 <t>
    Argument syntax:
 </t>
@@ -1486,16 +1492,17 @@
 <section title="must-revalidate" anchor="cache-response-directive.must-revalidate">
    <iref item="must-revalidate (cache directive)" primary="true" />
 <t>
-   The "must-revalidate" response directive indicates that once it has become
-   stale, the response &MUST-NOT; be used to satisfy any other request
-   without forwarding it for validation and receiving a successful response;
-   see <xref target="validation.model"/>.
+   The "must-revalidate" response directive indicates that once the response
+   has become stale, a cache &MUST-NOT; reuse that response to satisfy
+   another request until it has been successfully validated by the origin, as
+   defined by <xref target="validation.model"/>.
 </t>
 <t>
    The must-revalidate directive is necessary to support reliable operation
    for certain protocol features. In all circumstances a cache &MUST; obey
    the must-revalidate directive; in particular, if a cache is disconnected,
-   it &MUST; generate a <x:ref>504 (Gateway Timeout)</x:ref> response.
+   the cache &MUST; generate a <x:ref>504 (Gateway Timeout)</x:ref> response
+   rather than reuse the stale response.
 </t>
 <t>
    The must-revalidate directive ought to be used by servers if and only
@@ -1504,9 +1511,10 @@
    transaction.
 </t>
 <t>
-   The must-revalidate directive also has the effect of allowing a stored
-   response to be used to satisfy a request with an Authorization header
-   field; see <xref target="caching.authenticated.responses"/>.
+   The must-revalidate directive also permits a shared cache to
+   reuse a response to a request containing an Authorization header field,
+   subject to the above requirement on revalidation
+   (<xref target="caching.authenticated.responses"/>).
 </t>
 </section>
 
@@ -1530,24 +1538,26 @@
   <li>#<x:ref>field-name</x:ref></li>
 </ul>
 <t>
-   The "no-cache" response directive indicates that the response &MUST-NOT;
-   be used to satisfy any other request without forwarding it for validation
-   and receiving a successful response; see <xref target="validation.model"/>.
+   The "no-cache" response directive, in its unqualified form (without an
+   argument), indicates that the response &MUST-NOT; be used to satisfy any
+   other request without forwarding it for validation and receiving a
+   successful response; see <xref target="validation.model"/>.
 </t>
 <t>
    This allows an origin server to prevent a cache from using
-   it to satisfy a request without contacting it, even by caches that have
+   the response to satisfy a request without contacting it, even by caches that have
    been configured to send stale responses.
 </t>
 <t>
-   If the no-cache response directive specifies one or more field names,
-   then a cache &MAY; use the response to satisfy a subsequent request,
-   subject to any other restrictions on caching. However, any header fields
-   in the response that have the field name(s) listed &MUST-NOT; be sent
-   in the response to a subsequent request without successful revalidation
-   with the origin server. This allows an origin server to prevent the
-   re-use of certain header fields in a response, while still allowing
-   caching of the rest of the response.
+   The qualified form of no-cache response directive, with an argument that
+   lists one or more field names, indicates that a cache &MAY; use the
+   response to satisfy a subsequent request, subject to any other restrictions
+   on caching, if the listed header fields are excluded from the subsequent
+   response or the subsequent response has been successfully revalidated with
+   the origin server (updating or removing those fields).
+   This allows an origin server to prevent the re-use of certain header
+   fields in a response, while still allowing caching of the rest of the
+   response.
 </t> 
 <t>
    The field names given are not limited to the set of header
@@ -1560,10 +1570,10 @@
 </t>
 <t>
    &Note; Although it has been back-ported to many implementations, some
-   HTTP/1.0 caches will not recognize or obey this directive. Also, no-cache
-   response directives with field names are often handled by caches
-   as if an unqualified no-cache directive was received; i.e., the special
-   handling for the qualified form is not widely implemented.
+   HTTP/1.0 caches will not recognize or obey this directive. Also, the
+   qualified form of the directive is often handled by caches as if an
+   unqualified no-cache directive was received; i.e., the special handling
+   for the qualified form is not widely implemented.
 </t>
 </section>
 
@@ -1575,7 +1585,7 @@
    the response to satisfy any other request.
 </t>
 <t>
-   This directive applies to both private and shared caches. "&MUST-NOT;
+   This directive applies to both private and shared caches. "MUST NOT
    store" in this context means that the cache &MUST-NOT; intentionally store
    the information in non-volatile storage, and &MUST; make a best-effort
    attempt to remove the information from volatile storage as promptly as
@@ -1601,14 +1611,16 @@
 <section title="public" anchor="cache-response-directive.public">
    <iref item="public (cache directive)" primary="true" />
 <t>
-   The "public" response directive overrides certain conditions that would
-   otherwise make a cache unable to store the response. Specifically, see
-   <xref target="caching.authenticated.responses"/> regarding the use of
-   public in response to a request containing <x:ref>Authorization</x:ref>,
-   and <xref target="response.cacheability"/> for how public affects
-   responses that would normally not be stored, due to their status codes not
-   being defined as heuristically cacheable; see <xref
-   target="heuristic.freshness"/>.
+   The "public" response directive indicates that a cache &MAY; store the
+   response even if it would otherwise be prohibited, subject to the
+   constraints of any other response directives present. In other words,
+   public explicitly marks the response as cacheable. For example,
+   public permits a shared cache to reuse a response to a request containing
+   an Authorization header field (<xref target="caching.authenticated.responses"/>).
+</t>
+<t>
+   If no explicit freshness information is provided, the response is
+   is heuristically cacheable (<xref target="heuristic.freshness"/>).
 </t>
 </section>
 
@@ -1621,15 +1633,19 @@
   <li>#<x:ref>field-name</x:ref></li>
 </ul>
 <t>
-   The "private" response directive indicates that the response message is
-   intended for a single user and &MUST-NOT; be stored by a shared cache.
+   The unqualified "private" response directive indicates that
+   a shared cache &MUST-NOT; store the response (i.e., the response is
+   intended for a single user).
+   It also indicates that a private cache &MAY; store the response, subject
+   to any other cache directives present, even if the response would not
+   otherwise be heuristically cacheable by a private cache.
 </t>
 <t>
-   If the private response directive specifies one or more field names,
-   this requirement is limited to the field values associated with the
-   listed response header fields. That is, a shared cache &MUST-NOT; store
-   the specified field names(s), whereas it &MAY; store the remainder of the
-   response message.
+   If a qualified private response directive is present, with an argument that
+   lists one or more field names, then only the listed fields are limited to a
+   single user: a shared cache &MUST-NOT; store the listed fields if they
+   are present in the original response, but &MAY; store the remainder of the
+   response message without those fields.
 </t>
 <t>
    The field names given are not limited to the set of header
@@ -1643,7 +1659,7 @@
 <t>
    &Note; This usage of the word "private" only controls
    where the response can be stored; it cannot ensure the privacy of the
-   message content. Also, private response directives with field names are
+   message content. Also, the qualified form of the directive is
    often handled by caches as if an unqualified private directive
    was received; i.e., the special handling for the qualified form is not
    widely implemented.
@@ -1653,9 +1669,18 @@
 <section title="proxy-revalidate" anchor="cache-response-directive.proxy-revalidate">
    <iref item="proxy-revalidate (cache directive)" primary="true" />
 <t>
-   The "proxy-revalidate" response directive has the same meaning as the
-   must-revalidate response directive, except that it does not apply to
-   private caches.
+   The "proxy-revalidate" response directive indicates that once the response
+   has become stale, a shared cache &MUST-NOT; reuse that response to satisfy
+   another request until it has been successfully validated by the origin,
+   as defined by <xref target="validation.model"/>. This is analogous to
+   must-revalidate (<xref target="cache-response-directive.must-revalidate"/>),
+   except that proxy-revalidate does not apply to private caches.
+</t>
+<t>
+   Note that "proxy-revalidate" on its own does not imply that a response is
+   cacheable. For example, it might be combined with the public directive
+   (<xref target="cache-response-directive.public"/>), allowing the response
+   to be cached while requiring only a shared cache to revalidate when stale.
 </t>
 </section>
 
@@ -1688,16 +1713,22 @@
   <li><x:ref>delta-seconds</x:ref> (see <xref target="delta-seconds"/>)</li>
 </ul>
 <t>
-   The "s-maxage" response directive indicates that, in shared caches, the
+   The "s-maxage" response directive indicates that, for a shared cache, the
    maximum age specified by this directive overrides the maximum age
    specified by either the max-age directive or the <x:ref>Expires</x:ref>
-   header field. The s-maxage directive also implies the semantics of the
-   proxy-revalidate response directive.
+   header field.
 </t>
 <t>
-   The s-maxage directive also has the effect of allowing a stored
-   response to be used to satisfy a request with an Authorization header
-   field; see <xref target="caching.authenticated.responses"/>.
+   The s-maxage directive incorporates the
+   proxy-revalidate (<xref target="cache-response-directive.proxy-revalidate"/>)
+   response directive's semantics for a shared cache.
+   A shared cache &MUST-NOT; reuse a stale response with s-maxage to satisfy
+   another request until it has been successfully validated by the origin, as
+   defined by <xref target="validation.model"/>.
+   This directive also permits a shared cache to reuse a response to a
+   request containing an Authorization header field, subject to the above
+   requirements on maximum age and revalidation
+   (<xref target="caching.authenticated.responses"/>).
 </t>
 <t>
    This directive uses the token form of the argument syntax:
@@ -1779,7 +1810,7 @@
 </section>
 
 <section title="Expires" anchor="header.expires">
-   <iref item="Expires header field" primary="true" x:for-anchor="" />
+   <iref primary="true" item="Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Expires" x:for-anchor=""/><iref item="Expires header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Expires"/>
 <t>
    The "Expires" header field gives the date/time after which the
@@ -1833,7 +1864,7 @@
 </section>
 
 <section title="Pragma" anchor="header.pragma">
-   <iref item="Pragma header field" primary="true" x:for-anchor="" />
+   <iref primary="true" item="Fields" subitem="Pragma" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Pragma" x:for-anchor=""/><iref primary="true" item="Fields" subitem="Pragma" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Pragma" x:for-anchor=""/><iref item="Pragma header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="extension-pragma"/>
    <x:anchor-alias value="Pragma"/>
    <x:anchor-alias value="pragma-directive"/>
@@ -1860,7 +1891,7 @@
    <rdf:Description>
      <status xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">obsoleted</status>
    </rdf:Description>
-   <iref item="Warning header field" primary="true" x:for-anchor="" />
+   <iref primary="true" item="Fields" subitem="Warning" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Warning" x:for-anchor=""/><iref item="Warning header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Warning"/>
 <t>
    The "Warning" header field was used to carry additional information
@@ -1978,7 +2009,7 @@
 <section title="Field Registration" anchor="header.field.registration">
 <t>
    Please update the "Hypertext Transfer Protocol (HTTP) Field
-   Registry" registry at <eref
+   Name Registry" at <eref
    target="https://www.iana.org/assignments/http-fields"/> with the
    field names listed in the two tables of <xref
    target="header.field.definitions"/>.
@@ -2056,14 +2087,21 @@
   <reference anchor="RFC2119">
     <front>
       <title>Key words for use in RFCs to Indicate Requirement Levels</title>
-      <author fullname="Scott Bradner" initials="S." surname="Bradner">
-        <organization>Harvard University</organization>
-        <address><email>sob@harvard.edu</email></address>
-      </author>
-      <date month="March" year="1997" />
+      <author initials="S." surname="Bradner" fullname="Scott Bradner"/>
+      <date month="March" year="1997"/>
     </front>
-    <seriesInfo name="BCP" value="14" />
-    <seriesInfo name="RFC" value="2119" />
+    <seriesInfo name="BCP" value="14"/>
+    <seriesInfo name="RFC" value="2119"/>
+  </reference>
+
+  <reference anchor="RFC8174">
+    <front>
+      <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+      <author initials='B.' surname='Leiba' fullname='Barry Leiba'/>
+      <date year="2017" month="May"/>
+    </front>
+    <seriesInfo name='BCP' value='14'/>
+    <seriesInfo name='RFC' value='8174'/>
   </reference>
 
   <reference anchor="RFC3986">
@@ -2281,18 +2319,6 @@
 
 <section title="Changes from RFC 7234" anchor="changes.from.rfc.7234">
 <t>
-   The "public" and "private" cache directives were clarified, so that they
-   do not make responses reusable under any condition.
-   (<xref target="cache-response-directive"/>)
-</t>
-<t>
-   The Warning response header was obsoleted. Much of the information
-   supported by Warning could be gleaned by examining the response), and the
-   remaining warn-codes &mdash; although potentially useful &mdash; were entirely
-   advisory, and in practice were not added by caches or intermediaries.
-   (<xref target="header.warning"/>)
-</t>
-<t>
    Some cache directives defined by this specification now have stronger
    prohibitions against generating the quoted form of their values, since
    this has been found to create interoperability problems. Consumers of
@@ -2302,10 +2328,22 @@
    (<xref target="header.cache-control"/>)
 </t>
 <t>
+   The "public" and "private" cache directives were clarified, so that they
+   do not make responses reusable under any condition.
+   (<xref target="cache-response-directive"/>)
+</t>
+<t>
    The "must-understand" cache directive was introduced; caches are no
    longer required to understand the semantics of new response status codes
    unless it is present.
    (<xref target="cache-response-directive.must-understand"/>)
+</t>
+<t>
+   The Warning response header was obsoleted. Much of the information
+   supported by Warning could be gleaned by examining the response), and the
+   remaining warn-codes &mdash; although potentially useful &mdash; were entirely
+   advisory, and in practice were not added by caches or intermediaries.
+   (<xref target="header.warning"/>)
 </t>
 </section>
 
@@ -2391,8 +2429,10 @@
    <li>In <xref target="cache-response-directive.public"/> and <xref target="cache-response-directive.private"/>, clarify "private" and "public" so that they do not override all other cache directives (<eref target="https://github.com/httpwg/http-core/issues/268"/>)</li>
    <li>In <xref target="response.cacheability"/>, distinguish between private with and without qualifying headers (<eref target="https://github.com/httpwg/http-core/issues/270"/>)</li>
    <li>In <xref target="caching.negotiated.responses"/>, clarify that any "*" as a member of Vary will disable caching (<eref target="https://github.com/httpwg/http-core/issues/286"/>)</li>
+   <li>In <xref target="intro.requirements"/>, reference RFC 8174 as well (<eref target="https://github.com/httpwg/http-core/issues/303"/>)</li>
 </ul>
 </section>
+
 <section title="Since draft-ietf-httpbis-semantics-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
    <li>Throughout, replace "effective request URI", "request-target" and similar with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>

@@ -181,6 +181,18 @@
   </xsl:choose>
 </xsl:template>
 
+<!-- experimental for QUIC tls draft -->
+<xsl:template match="t/contact" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="@asciiFullname">
+      <xsl:value-of select="@asciiFullname"/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="@fullname"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <!-- extensions -->
 
 <xsl:template match="x:abnf-char-sequence" mode="cleanup">
@@ -329,6 +341,19 @@
 </xsl:template>
 
 <xsl:template match="x:blockquote|blockquote" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <blockquote>
+        <xsl:apply-templates select="@*|node()" mode="cleanup"/>
+      </blockquote>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="blockquote-to-v2"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<xsl:template name="blockquote-to-v2">
   <t>
     <xsl:apply-templates select="@anchor" mode="cleanup"/>
     <list>
@@ -1290,6 +1315,11 @@
 
 <xsl:template match="strong" mode="cleanup">
   <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <strong>
+        <xsl:apply-templates select="node()|@*" mode="cleanup" />
+      </strong>
+    </xsl:when>
     <xsl:when test="*">
       <xsl:call-template name="warning">
         <xsl:with-param name="msg">strong not translated when including child elements</xsl:with-param>
@@ -1306,6 +1336,11 @@
 
 <xsl:template match="em" mode="cleanup">
   <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <em>
+        <xsl:apply-templates select="node()|@*" mode="cleanup" />
+      </em>
+    </xsl:when>
     <xsl:when test="*">
       <xsl:call-template name="warning">
         <xsl:with-param name="msg">em not translated when including child elements</xsl:with-param>
@@ -1322,6 +1357,11 @@
 
 <xsl:template match="tt" mode="cleanup">
   <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <tt>
+        <xsl:apply-templates select="node()|@*" mode="cleanup" />
+      </tt>
+    </xsl:when>
     <xsl:when test="*">
       <xsl:call-template name="warning">
         <xsl:with-param name="msg">tt not translated when they include child elements</xsl:with-param>
