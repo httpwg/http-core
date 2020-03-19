@@ -341,6 +341,19 @@
 </xsl:template>
 
 <xsl:template match="x:blockquote|blockquote" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <blockquote>
+        <xsl:apply-templates select="@*|node()" mode="cleanup"/>
+      </blockquote>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="blockquote-to-v2"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<xsl:template name="blockquote-to-v2">
   <t>
     <xsl:apply-templates select="@anchor" mode="cleanup"/>
     <list>
