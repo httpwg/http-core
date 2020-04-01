@@ -31,7 +31,7 @@
 <?rfc-ext html-pretty-print="prettyprint https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"?>
 <?rfc-ext include-references-in-index="yes" ?>
 
-<rfc obsoletes="2818,7230,7231,7232,7233,7235,7538,7615"
+<rfc obsoletes="2818,7230,7231,7232,7233,7235,7538,7615,7694"
      category="std" x:maturity-level="proposed"
      ipr="pre5378Trust200902" docName="draft-ietf-httpbis-semantics-&ID-VERSION;"
      xmlns:x='http://purl.org/net/xml2rfc/ext'
@@ -101,7 +101,7 @@
 </t>
 <t>
    This document obsoletes RFC 2818, RFC 7231, RFC 7232, RFC 7233,
-   RFC 7235, RFC 7538, RFC 7615, and portions of RFC 7230.
+   RFC 7235, RFC 7538, RFC 7615, RFC 7694, and portions of RFC 7230.
 </t>
 </abstract>
 
@@ -222,9 +222,11 @@
    <xref target="RFC7233" x:fmt="none">RFC 7235</xref>
    (see <xref target="changes.from.rfc.7235"/>),
    <xref target="RFC7233" x:fmt="none">RFC 7538</xref>
-   (see <xref target="changes.from.rfc.7538"/>), and
+   (see <xref target="changes.from.rfc.7538"/>),
    <xref target="RFC7615" x:fmt="none">RFC 7615</xref>
-   (see <xref target="changes.from.rfc.7615"/>).
+   (see <xref target="changes.from.rfc.7615"/>), and
+   <xref target="RFC7615" x:fmt="none">RFC 7694</xref>
+   (see <xref target="changes.from.rfc.7694"/>).
 </t>
 
 <section title="Requirements Notation" anchor="intro.requirements">
@@ -4108,12 +4110,14 @@ Content-Range: exampleunit 11.2-14.3/25
    provides mechanisms for <x:ref>content negotiation</x:ref>.
 </t>
 <t>
-   This specification defines two patterns of content negotiation that can
+   This specification defines three patterns of content negotiation that can
    be made visible within the protocol:
-   "proactive", where the server selects the representation based
-   upon the user agent's stated preferences, and "reactive" negotiation,
+   "proactive" negotiation, where the server selects the representation based
+   upon the user agent's stated preferences, "reactive" negotiation,
    where the server provides a list of representations for the user agent to
-   choose from. Other patterns of content negotiation include
+   choose from, and "request payload" negotiation, where the user agent
+   selects the representation for a future request based upon the server's
+   stated preferences in past responses. Other patterns of content negotiation include
    "conditional content", where the representation consists of multiple
    parts that are selectively rendered based on user agent parameters, 
    "active content", where the representation contains a script that
@@ -4129,7 +4133,7 @@ Content-Range: exampleunit 11.2-14.3/25
    and over the varying dimensions of content negotiation, and thus the
    "sameness" of a resource's observed representations over time, is
    determined entirely by whatever entity or algorithm selects or generates
-   those responses. HTTP pays no attention to the man behind the curtain.
+   those responses.
 </t>
 
 <section title="Proactive Negotiation" anchor="proactive.negotiation">
@@ -4246,6 +4250,57 @@ Content-Range: exampleunit 11.2-14.3/25
    to obtain an alternate representation. Furthermore, this specification
    does not define a mechanism for supporting automatic selection, though it
    does not prevent such a mechanism from being developed as an extension.
+</t>
+</section>
+
+<section title="Request Payload Negotiation" anchor="request.payload.negotiation">
+  <x:anchor-alias value="request payload negotiation"/>
+<t>
+   When content negotiation preferences are sent in a server's response, the
+   listed preferences are called <x:dfn>request payload negotiation</x:dfn>
+   because they intend to influence selection of an appropriate payload for
+   subsequent requests to that resource. For example,
+   the <x:ref>Accept-Encoding</x:ref> field
+   (<xref target="header.accept-encoding"/>) can be sent in a response to
+   indicate preferred content codings for subsequent requests to that
+   resource <xref target="RFC7694"/>.
+</t>
+<aside>
+  <t>
+    Similarly, <xref target="RFC5789" x:sec="3.1" x:fmt="of"/> defines
+    the "Accept-Patch" response header field which allows discovery of
+    which content types are accepted in PATCH requests.
+  </t>
+</aside>
+</section>
+
+<section title="Quality Values" anchor="quality.values">
+  <x:anchor-alias value="weight"/>
+  <x:anchor-alias value="qvalue"/>
+<t>
+   The content negotiation fields defined by this specification
+   use a common parameter, named "q" (case-insensitive), to assign a relative
+   "weight" to the preference for that associated kind of content.
+   This weight is referred to as a "quality value" (or "qvalue") because
+   the same parameter name is often used within server configurations to
+   assign a weight to the relative quality of the various representations
+   that can be selected for a resource.
+</t>
+<t>
+   The weight is normalized to a real number in the range 0 through 1,
+   where 0.001 is the least preferred and 1 is the most preferred;
+   a value of 0 means "not acceptable". If no "q" parameter is present,
+   the default weight is 1.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
+  <x:ref>weight</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref>
+  <x:ref>qvalue</x:ref> = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
+         / ( "1" [ "." 0*3("0") ] )
+</sourcecode>
+<t>
+   A sender of qvalue &MUST-NOT; generate more than three digits after the
+   decimal point. User configuration of these values ought to be limited in
+   the same fashion.
 </t>
 </section>
 </section>
@@ -4924,7 +4979,7 @@ Content-Range: exampleunit 11.2-14.3/25
    The CONNECT method requests that the recipient establish a tunnel to the
    destination origin server identified by the request-target and, if
    successful, thereafter restrict its behavior to blind forwarding of
-   packets, in both directions, until the tunnel is closed.
+   data, in both directions, until the tunnel is closed.
    Tunnels are commonly used to create an end-to-end virtual connection,
    through one or more proxies, which can then be secured using TLS
    (Transport Layer Security, <xref target="RFC8446"/>).
@@ -5591,7 +5646,7 @@ Expect: 100-continue
    </li>
 </ol>
 <t>
-   Any extension to HTTP/1.1 that defines additional conditional request
+   Any extension to HTTP that defines additional conditional request
    header fields ought to define its own expectations regarding the order
    for evaluating such fields in relation to those defined in this document
    and other conditionals that might be found in practice.
@@ -6041,9 +6096,9 @@ Expect: 100-continue
 </t>
 </section>
 
-<section title="Content Negotiation" anchor="request.conneg">
+<section title="Negotiation" anchor="request.conneg">
 <t>
-   The following request header fields are sent by a user agent to engage in
+   The following request header fields can be sent by a user agent to engage in
    <x:ref>proactive negotiation</x:ref> of the response content, as defined in
    <xref target="proactive.negotiation"/>. The preferences sent in these
    fields apply to any content in the response, including representations of
@@ -6108,36 +6163,6 @@ Expect: 100-continue
    they still need to be able to handle a different response, since the
    server is allowed to ignore their preference.
 </t>
-
-<section title="Quality Values" anchor="quality.values">
-  <x:anchor-alias value="weight"/>
-  <x:anchor-alias value="qvalue"/>
-<t>
-   Many of the request header fields for <x:ref>proactive negotiation</x:ref>
-   use a common parameter, named "q" (case-insensitive), to assign a relative
-   "weight" to the preference for that associated kind of content.
-   This weight is referred to as a "quality value" (or "qvalue") because
-   the same parameter name is often used within server configurations to
-   assign a weight to the relative quality of the various representations
-   that can be selected for a resource.
-</t>
-<t>
-   The weight is normalized to a real number in the range 0 through 1,
-   where 0.001 is the least preferred and 1 is the most preferred;
-   a value of 0 means "not acceptable". If no "q" parameter is present,
-   the default weight is 1.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
-  <x:ref>weight</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref>
-  <x:ref>qvalue</x:ref> = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
-         / ( "1" [ "." 0*3("0") ] )
-</sourcecode>
-<t>
-   A sender of qvalue &MUST-NOT; generate more than three digits after the
-   decimal point. User configuration of these values ought to be limited in
-   the same fashion.
-</t>
-</section>
 
 <section title="Accept" anchor="header.accept">
   <iref primary="true" item="Fields" subitem="Accept" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Accept" x:for-anchor=""/><iref primary="true" item="Accept header field" x:for-anchor=""/>
@@ -6325,9 +6350,20 @@ Expect: 100-continue
   <x:anchor-alias value="Accept-Encoding"/>
   <x:anchor-alias value="codings"/>
 <t>
-   The "Accept-Encoding" header field can be used by user agents to indicate
-   their preferences regarding response content-codings (<xref
-   target="content.codings"/>). An "identity" token is used as a synonym for
+   The "Accept-Encoding" header field can be used to indicate preferences
+   regarding the use of content codings (<xref target="content.codings"/>).
+</t>
+<t>
+   When sent by a user agent in a request, Accept-Encoding indicates the
+   content codings acceptable in a response.
+</t>
+<t>
+   When sent by a server in a response, Accept-Encoding provides information
+   about what content codings are preferred in the payload of a subsequent
+   request to the same resource. 
+</t>
+<t>   
+   An "identity" token is used as a synonym for
    "no encoding" in order to communicate when no encoding is preferred.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept-Encoding"/><iref primary="true" item="Grammar" subitem="codings"/>
@@ -6375,6 +6411,37 @@ Expect: 100-continue
    available representations for the response have a content-coding that
    is listed as acceptable, the origin server &SHOULD; send a response
    without any content-coding.
+</t>
+<t>
+   When the Accept-Encoding header field is present in a response, it indicates
+   what content codings the resource was willing to accept in the associated
+   request. The field value is evaluated the same way as in a request.
+</t>
+<t>
+   Note that this information is specific to the associated request; the set of
+   supported encodings might be different for other resources on the same
+   server and could change over time or depend on other aspects of the request
+   (such as the request method).
+</t>
+<t>
+   Servers that fail a request due to an unsupported content coding ought to
+   respond with a <x:ref>415 (Unsupported Media Type)</x:ref> status and
+   include an Accept-Encoding header field in that response, allowing
+   clients to distinguish between issues related to content codings and media
+   types. In order to avoid confusion with issues related to media types,
+   servers that fail a request with a 415 status for reasons unrelated to
+   content codings <bcp14>MUST NOT</bcp14> include the Accept-Encoding header
+   field.
+</t>
+<t>
+   The most common use of Accept-Encoding is in responses with a
+   <x:ref>415 (Unsupported Media Type)</x:ref> status code, in response to
+   optimistic use of a content coding by clients. However, the header field
+   can also be used to indicate to clients that content codings are supported,
+   to optimize future interactions. For example, a resource might include it
+   in a <x:ref>2xx (Successful)</x:ref> response when the request payload was
+   big enough to justify use of a compression coding but the client failed do
+   so.
 </t>
 <aside>
   <t>
@@ -8510,9 +8577,15 @@ Content-Range: bytes 7000-7999/8000
    The <x:dfn>415 (Unsupported Media Type)</x:dfn> status code indicates that
    the origin server is refusing to service the request because the payload is
    in a format not supported by this method on the <x:ref>target resource</x:ref>.
+</t>
+<t>
    The format problem might be due to the request's indicated
    <x:ref>Content-Type</x:ref> or <x:ref>Content-Encoding</x:ref>, or as a
-   result of inspecting the data directly.
+   result of inspecting the data directly. If the problem was caused by an 
+   unsupported content coding, the <x:ref>Accept-Encoding</x:ref>
+   response header field (<xref target="header.accept-encoding"/>) ought to be
+   used to indicate what (if any) content codings would have been accepted
+   in the request. 
 </t>
 </section>
 
@@ -11789,6 +11862,20 @@ Content-Encoding: gzip
   <seriesInfo name='RFC' value='7617'/>
 </reference>
 
+<reference anchor='RFC7694'>
+  <front>
+    <title>Hypertext Transfer Protocol (HTTP) Client-Initiated Content-Encoding</title>
+    <author initials="J. F." surname="Reschke" fullname="Julian F. Reschke">
+      <organization abbrev="greenbytes">greenbytes GmbH</organization>
+      <address>
+        <email>julian.reschke@greenbytes.de</email>
+      </address>
+    </author>
+    <date year='2015' month='November' />
+  </front>
+  <seriesInfo name='RFC' value='7694'/>
+</reference>
+
 <reference anchor="RFC8126">
   <front>
     <title>Guidelines for Writing an IANA Considerations Section in RFCs</title>
@@ -12154,6 +12241,11 @@ Content-Encoding: gzip
   from the description of the OPTIONS method.
   (<xref target="OPTIONS"/>)
 </t>
+<t>
+  Allow <x:ref>Accept-Encoding</x:ref> in response messages, as introduced by
+  <xref target="RFC7694"/>.
+  (<xref target="request.conneg"/>)
+</t>
 </section>
 
 <section title="Changes from RFC 7232" anchor="changes.from.rfc.7232">
@@ -12193,6 +12285,13 @@ Content-Encoding: gzip
    None yet.
 </t>
 </section>
+</section>
+
+<section title="Changes from RFC 7694" anchor="changes.from.rfc.7694">
+<t>
+   This specification includes the extension defined in <xref target="RFC7694"/>,
+   but leaves out examples and deployment considerations.
+</t>
 </section>
 
 <section title="Change Log" anchor="change.log" removeInRFC="true">
@@ -12349,6 +12448,8 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="content.negotiation"/>, introduce the concept of request payload negotiation (<xref target="request.payload.negotiation"/>) and define for <x:ref>Accept-Encoding</x:ref> (<eref target="https://github.com/httpwg/http-core/issues/119"/>)</li>
+  <li>In <xref target="CONNECT"/>, correct language about what is forwarded (<eref target="https://github.com/httpwg/http-core/issues/170"/>)</li>
   <li>In <xref target="operation"/>, introduce concept of "complete" messages (<eref target="https://github.com/httpwg/http-core/issues/334"/>)</li>
 </ul>
 </section>
