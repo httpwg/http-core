@@ -167,6 +167,17 @@
 <xsl:template match="rfc/@version" mode="cleanup"/>
 <xsl:template match="@pn" mode="cleanup"/>
 
+<xsl:template match="br" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <xsl:copy-of select="."/>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:text> </xsl:text>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <xsl:template match="x:u-map" mode="cleanup"/>
 <xsl:template match="u" mode="cleanup">
   <xsl:choose>
@@ -555,11 +566,26 @@
   <title>
     <xsl:apply-templates select="@*" mode="cleanup"/>
     <xsl:choose>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+        <xsl:apply-templates select="node()" mode="cleanup"/>
+      </xsl:when>
       <xsl:when test="@ascii!=''">
         <xsl:value-of select="@ascii"/>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:value-of select="text()"/>
+        <xsl:for-each select="node()">
+          <xsl:choose>
+            <xsl:when test="self::br">
+              <xsl:text> </xsl:text>
+            </xsl:when>
+            <xsl:when test="self::*">
+              <xsl:apply-templates select="node()" mode="cleanup"/>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:value-of select="normalize-space(.)"/>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:for-each>
       </xsl:otherwise>
     </xsl:choose>
   </title>
@@ -1528,6 +1554,21 @@
 </xsl:template>
 
 <xsl:template match="front" mode="cleanup">
+  <!-- silence certain xml2rfcv3 warning messages -->
+  <xsl:if test="$xml2rfc-ext-xml2rfc-backend >= 201706 and not(ancestor::reference)">
+    <xsl:if test="not(/rfc/@consensus)">
+      <xsl:text>&#10;</xsl:text>
+      <xsl:comment>see https://trac.tools.ietf.org/tools/xml2rfc/trac/ticket/420</xsl:comment>
+      <xsl:text>&#10;</xsl:text>
+      <xsl:processing-instruction name="v3xml2rfc">silence="Warning: Setting consensus="true" for IETF STD document"</xsl:processing-instruction>
+    </xsl:if>
+    <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3 and substring(/rfc/@docName, string-length(/rfc/@docName)-string-length('-latest')+1)='-latest'">
+      <xsl:text>&#10;</xsl:text>
+      <xsl:comment>see https://trac.tools.ietf.org/tools/xml2rfc/trac/ticket/439</xsl:comment>
+      <xsl:text>&#10;</xsl:text>
+      <xsl:processing-instruction name="v3xml2rfc">silence="The 'docName' attribute of the &lt;rfc/> element"</xsl:processing-instruction>
+    </xsl:if>
+  </xsl:if>
   <front>
     <xsl:apply-templates select="title|author" mode="cleanup"/>
     <xsl:apply-templates select="date" mode="cleanup"/>
@@ -1538,6 +1579,7 @@
     <xsl:apply-templates select="text()|node()[not(self::seriesInfo or self::title or self::author or self::date)]" mode="cleanup"/>
   </front>
 </xsl:template>
+
 <!-- Note titles -->
 <xsl:template match="note" mode="cleanup">
   <note>
@@ -1642,19 +1684,21 @@
       </xsl:when>
       <xsl:otherwise/>
     </xsl:choose>
-    <xsl:attribute name="title">
-      <xsl:choose>
-        <xsl:when test="name">
-          <xsl:variable name="hold">
-            <xsl:apply-templates select="name/node()"/>
-          </xsl:variable>
-          <xsl:value-of select="normalize-space($hold)"/>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:value-of select="@title"/>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:attribute>
+    <xsl:choose>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+        <xsl:apply-templates select="@title" mode="cleanup"/>
+        <xsl:if test="name">
+          <name>
+            <xsl:apply-templates select="name/node()" mode="cleanup"/>
+          </name>
+        </xsl:if>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:attribute name="title">
+          <xsl:call-template name="get-title-as-string"/>
+        </xsl:attribute>
+      </xsl:otherwise>
+    </xsl:choose>
     <xsl:if test="@removeInRFC='true' and (not(t) or t[1]!=$section-removeInRFC)">
       <t><xsl:value-of select="$section-removeInRFC"/></t>
     </xsl:if>
