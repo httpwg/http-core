@@ -164,7 +164,11 @@
 <xsl:template match="boilerplate" mode="cleanup"/>
 <xsl:template match="link" mode="cleanup"/>
 <xsl:template match="rfc/@scripts" mode="cleanup"/>
-<xsl:template match="rfc/@version" mode="cleanup"/>
+<xsl:template match="rfc/@version" mode="cleanup">
+  <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3">
+    <xsl:copy-of select="."/>
+  </xsl:if>
+</xsl:template>
 <xsl:template match="@pn" mode="cleanup"/>
 
 <xsl:template match="br" mode="cleanup">
@@ -1099,6 +1103,11 @@
       <xsl:apply-templates select=".//iref" mode="cleanup"/>
       <xsl:call-template name="insert-markup"/>
     </xsl:when>
+    <xsl:when test="parent::blockquote">
+      <t>
+        <xsl:call-template name="bare-artwork-to-v2"/>
+      </t>
+    </xsl:when>
     <xsl:otherwise>
       <xsl:call-template name="bare-artwork-to-v2"/>
     </xsl:otherwise>
@@ -1211,6 +1220,18 @@
       </xsl:for-each>
     </email>
   </xsl:if>
+</xsl:template>
+
+<!-- cref/@display -->
+<xsl:template match="cref/@display" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <xsl:copy-of select="."/>
+    </xsl:when>
+    <xsl:otherwise>
+      <!-- otherwise just drop -->
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <!-- markup inside cref -->
@@ -1562,6 +1583,11 @@
       <xsl:text>&#10;</xsl:text>
       <xsl:processing-instruction name="v3xml2rfc">silence="Warning: Setting consensus="true" for IETF STD document"</xsl:processing-instruction>
     </xsl:if>
+    <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3 and not(/rfc/@submissionType) and not ($is-rfc)">
+      <!-- issue to be raised -->
+      <xsl:text>&#10;</xsl:text>
+      <xsl:processing-instruction name="v3xml2rfc">silence="Warning: Expected a valid submissionType (stream) setting"</xsl:processing-instruction>
+    </xsl:if>
     <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3 and substring(/rfc/@docName, string-length(/rfc/@docName)-string-length('-latest')+1)='-latest'">
       <xsl:text>&#10;</xsl:text>
       <xsl:comment>see https://trac.tools.ietf.org/tools/xml2rfc/trac/ticket/439</xsl:comment>
@@ -1570,7 +1596,11 @@
     </xsl:if>
   </xsl:if>
   <front>
-    <xsl:apply-templates select="title|author" mode="cleanup"/>
+    <xsl:apply-templates select="title" mode="cleanup"/>
+    <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3 and seriesInfo">
+      <xsl:apply-templates select="seriesInfo" mode="cleanup"/>
+    </xsl:if>
+    <xsl:apply-templates select="author" mode="cleanup"/>
     <xsl:apply-templates select="date" mode="cleanup"/>
     <xsl:if test="not(date)">
       <!-- mandatory in v2 -->
@@ -2017,44 +2047,50 @@
   </xsl:choose>
 </xsl:template>
 
-<!-- Source Code -->
-<xsl:template match="sourcecode" mode="cleanup">
+<xsl:template name="get-content-of-artwork">
   <xsl:variable name="content2"><xsl:apply-templates select="node()"/></xsl:variable>
   <xsl:variable name="content" select="translate($content2,'&#160;&#x2500;&#x2502;&#x2508;&#x250c;&#x2510;&#x2514;&#x2518;&#x251c;&#x2524;',' -|+++++++')"/>
+  <xsl:value-of select="$content"/>
+</xsl:template>
 
+<xsl:template name="insert-sourcecode-as-artwork">
+  <artwork>
+    <xsl:copy-of select="@type"/>
+    <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
+    <xsl:if test="starts-with(.,'&#10;')">
+      <xsl:text>&#10;</xsl:text>
+      <xsl:value-of select="@x:indent-with"/>
+    </xsl:if>
+    <xsl:call-template name="get-content-of-artwork"/>
+    <xsl:if test="@markers='true'">&#10;&lt;CODE ENDS></xsl:if>
+  </artwork>
+</xsl:template>
+
+<!-- Source Code -->
+<xsl:template match="sourcecode" mode="cleanup">
   <xsl:choose>
     <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
       <xsl:apply-templates select=".//iref" mode="cleanup"/>
       <sourcecode>
         <xsl:copy-of select="@*"/>
-        <xsl:value-of select="$content"/>
+        <xsl:call-template name="get-content-of-artwork"/>
       </sourcecode>
     </xsl:when>
     <xsl:when test="parent::figure">
-      <artwork>
-        <xsl:copy-of select="@anchor|@type"/>
-        <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
-        <xsl:if test="starts-with(.,'&#10;')">
-          <xsl:text>&#10;</xsl:text>
-          <xsl:value-of select="@x:indent-with"/>
-        </xsl:if>
-        <xsl:value-of select="$content"/>
-        <xsl:if test="@markers='true'">&#10;&lt;CODE ENDS></xsl:if>
-      </artwork>
+      <xsl:call-template name="insert-sourcecode-as-artwork"/>
+    </xsl:when>
+    <xsl:when test="parent::blockquote">
+      <t>
+        <figure>
+          <xsl:apply-templates select=".//iref" mode="cleanup"/>
+          <xsl:call-template name="insert-sourcecode-as-artwork"/>
+        </figure>
+      </t>
     </xsl:when>
     <xsl:otherwise>
       <figure>
         <xsl:apply-templates select=".//iref" mode="cleanup"/>
-        <artwork>
-          <xsl:copy-of select="@type"/>
-          <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
-          <xsl:if test="starts-with(.,'&#10;')">
-            <xsl:text>&#10;</xsl:text>
-            <xsl:value-of select="@x:indent-with"/>
-          </xsl:if>
-          <xsl:value-of select="$content"/>
-          <xsl:if test="@markers='true'">&#10;&#10;&lt;CODE ENDS></xsl:if>
-        </artwork>
+        <xsl:call-template name="insert-sourcecode-as-artwork"/>
       </figure>
     </xsl:otherwise>
   </xsl:choose>
