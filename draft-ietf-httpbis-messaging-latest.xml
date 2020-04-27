@@ -559,6 +559,27 @@ Host: www.example.org
 GET http://www.example.org/pub/WWW/TheProject.html HTTP/1.1
 </artwork>
 <t>
+   A client &MUST; send a Host header field in an HTTP/1.1 request even
+   if the request-target is in the absolute-form, since this
+   allows the Host information to be forwarded through ancient HTTP/1.0
+   proxies that might not have implemented Host.
+</t>
+<t>
+   When a proxy receives a request with an absolute-form of
+   request-target, the proxy &MUST; ignore the received
+   Host header field (if any) and instead replace it with the host
+   information of the request-target.  A proxy that forwards such a request
+   &MUST; generate a new Host field value based on the received
+   request-target rather than forward the received Host field value.
+</t>
+<t>
+   When an origin server receives a request with an absolute-form of
+   request-target, the origin server &MUST; ignore the received Host header
+   field (if any) and instead use the host information of the request-target.
+   Note that if the request-target does not have an authority component, an
+   empty Host header field will be sent in this case.
+</t>
+<t>
    To allow for transition to the absolute-form for all requests in some
    future version of HTTP, a server &MUST; accept the absolute-form
    in requests, even though HTTP/1.1 clients will only send them in requests
@@ -629,49 +650,48 @@ Host: www.example.org:8001
 </section>
 </section>
 
-<section title="Effective Request URI" anchor="h1.effective.request.uri">
-  <iref primary="false" item="effective request URI"/>
+<section title="Reconstructing the Target URI" anchor="reconstructing.target.uri">
+  <x:anchor-alias value="h1.effective.request.uri"/>
 <t>
    Since the request-target often contains only part of the user agent's
-   target URI, a server reconstructs the intended target as an
-   <x:ref>effective request URI</x:ref> to properly service the request
-   (<xref target="effective.request.uri"/>).
+   target URI, a server constructs its value to properly service the request
+   (<xref target="target.resource"/>).
 </t>
 <t>
    If the <x:ref>request-target</x:ref> is in <x:ref>absolute-form</x:ref>,
-   the effective request URI is the same as the request-target. Otherwise, the
-   effective request URI is constructed as follows:
+   the target URI is the same as the request-target. Otherwise, the
+   target URI is constructed as follows:
 </t>
 <ul empty="true">
 <li>
    If the server's configuration (or outbound gateway) provides a fixed URI
-   scheme, that scheme is used for the effective request URI.
+   scheme, that scheme is used for the target URI.
    Otherwise, if the request is received over a TLS-secured TCP connection,
-   the effective request URI's scheme is "https"; if not, the scheme is "http".
+   the target URI's scheme is "https"; if not, the scheme is "http".
 </li>
 <li>
    If the server's configuration (or outbound gateway) provides a fixed URI
    <x:ref>authority</x:ref> component, that authority is used for the
-   effective request URI. If not, then if the request-target is in
-   <x:ref>authority-form</x:ref>, the effective request URI's authority
+   target URI. If not, then if the request-target is in
+   <x:ref>authority-form</x:ref>, the target URI's authority
    component is the same as the request-target.
    If not, then if a <x:ref>Host</x:ref> header field is supplied with a
    non-empty field-value, the authority component is the same as the
    Host field-value. Otherwise, the authority component is assigned
    the default name configured for the server and, if the connection's
-   incoming TCP port number differs from the default port for the effective
-   request URI's scheme, then a colon (":") and the incoming port number (in
+   incoming TCP port number differs from the default port for the target
+   URI's scheme, then a colon (":") and the incoming port number (in
    decimal form) are appended to the authority component.
 </li>
 <li>
    If the request-target is in <x:ref>authority-form</x:ref> or
-   <x:ref>asterisk-form</x:ref>, the effective request URI's combined
+   <x:ref>asterisk-form</x:ref>, the target URI's combined
    <x:ref>path</x:ref> and <x:ref>query</x:ref> component is empty. Otherwise,
    the combined <x:ref>path</x:ref> and <x:ref>query</x:ref> component is the
    same as the request-target.
 </li>
 <li>
-   The components of the effective request URI, once determined as above, can
+   The components of the target URI, once determined as above, can
    be combined into <x:ref>absolute-URI</x:ref> form by concatenating the
    scheme, "://", authority, and combined path and query component.
 </li>
@@ -684,7 +704,7 @@ GET /pub/WWW/TheProject.html HTTP/1.1
 Host: www.example.org:8080
 </artwork>
 <t>
-  has an effective request URI of
+  has a target URI of
 </t>
 <artwork type="example" x:indent-with="  ">
 http://www.example.org:8080/pub/WWW/TheProject.html
@@ -697,7 +717,7 @@ OPTIONS * HTTP/1.1
 Host: www.example.org
 </artwork>
 <t>
-  has an effective request URI of
+  has a target URI of
 </t>
 <artwork type="example" x:indent-with="  ">
 https://www.example.org
@@ -706,7 +726,7 @@ https://www.example.org
    Recipients of an HTTP/1.0 request that lacks a <x:ref>Host</x:ref> header
    field might need to use heuristics (e.g., examination of the URI path for
    something unique to a particular host) in order to guess the
-   effective request URI's authority component.
+   target URI's authority component.
 </t>
 </section>
 </section>
@@ -2575,7 +2595,6 @@ Upgrade: websocket
     <x:has anchor="routing.inbound"/>
     <x:has anchor="comments"/>
     <x:has anchor="content.codings"/>
-    <x:has anchor="effective.request.uri"/>
     <x:has anchor="field.components"/>
     <x:has anchor="field.extensibility"/>
     <x:has anchor="field.order"/>
@@ -2621,6 +2640,7 @@ Upgrade: websocket
     <x:has anchor="status.414"/>
     <x:has anchor="status.codes"/>
     <x:has anchor="tokens"/>
+    <x:has anchor="target.resource"/>
     <x:has anchor="trailer.fields"/>
     <x:has anchor="uri"/>
     <x:has anchor="uri.comparison"/>
@@ -3495,6 +3515,7 @@ Upgrade: websocket
 
 <section title="Since draft-ietf-httpbis-messaging-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
+   <li>Throughout, replace "effective request URI" with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>
    <li>In <xref target="message.body.length"/>, adjust requirements for handling multiple content-length values (<eref target="https://github.com/httpwg/http-core/issues/59"/>)</li>
 </ul>
 </section>
