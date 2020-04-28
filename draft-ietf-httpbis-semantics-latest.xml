@@ -171,7 +171,7 @@
    Each HTTP message is either a request or a
    response. A server listens on a connection for a request, parses each
    message received, interprets the message semantics in relation to the
-   identified request target, and responds to that request with one or more
+   identified target resource, and responds to that request with one or more
    response messages. A client constructs request messages to communicate
    specific intentions, examines received responses to see if the
    intentions were carried out, and determines how to interpret the results.
@@ -301,14 +301,12 @@
   <x:anchor-alias value="obs-fold"/>
   <x:anchor-alias value="protocol-name"/>
   <x:anchor-alias value="protocol-version"/>
-  <x:anchor-alias value="request-target"/>
   The rules below are defined in <xref target="Messaging"/>:
 </t>
 <sourcecode type="abnf7230">
   <x:ref>obs-fold</x:ref>         = &lt;obs-fold, see <xref target="line.folding"/>&gt;
   <x:ref>protocol-name</x:ref>    = &lt;protocol-name, see <xref target="header.upgrade"/>&gt;
   <x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="header.upgrade"/>&gt;
-  <x:ref>request-target</x:ref>   = &lt;request-target, see <xref target="request.target"/>&gt;
 </sourcecode>
 <t>
    This specification uses the terms
@@ -383,9 +381,8 @@
 <iref primary="true" item="connection"/>
 <t>
    HTTP is a stateless request/response protocol that operates by exchanging
-   <x:dfn>messages</x:dfn> (<xref target="http.message"/>) across a reliable
-   transport- or session-layer
-   "<x:dfn>connection</x:dfn>" (<xref target="connection.management"/>).
+   <x:dfn>messages</x:dfn> across a reliable transport- or session-layer
+   "<x:dfn>connection</x:dfn>".
    An HTTP "<x:dfn>client</x:dfn>" is a program that establishes a connection
    to a server for the purpose of sending one or more HTTP requests.
    An HTTP "<x:dfn>server</x:dfn>" is a program that accepts connections
@@ -429,6 +426,8 @@
 <iref primary="true" item="message"/>
 <iref primary="true" item="request"/>
 <iref primary="true" item="response"/>
+<iref primary="true" item="complete"/>
+<iref primary="true" item="incomplete"/>
 <t>
    Each major version of HTTP defines its own syntax for the inclusion of
    information in messages. Nevertheless, a common abstraction is that a
@@ -451,6 +450,15 @@
    containing server information, resource metadata, and representation
    metadata (<xref target="header.fields"/>), and finally a 
    payload body (if any, <xref target="payload.body"/>).
+</t>
+<t>
+   One of the functions of the message framing mechanism is to assure that
+   messages are <x:dfn>complete</x:dfn>. A message is considered complete
+   when all of the octets indicated by its framing are available. Note that,
+   when no explicit framing is used, a response message that is ended
+   by the transport connection's close is considered complete even though it
+   might be indistinguishable from an incomplete response, unless a
+   transport-level error indicates that it is not complete.
 </t>
 <t>
    A connection might be used for multiple request/response exchanges. The
@@ -709,8 +717,7 @@ Content-Type: text/plain
    (URI-reference), only a URI in absolute form (absolute-URI), only the
    path and optional query components, or some combination of the above.
    Unless otherwise indicated, URI references are parsed
-   relative to the effective request URI
-   (<xref target="effective.request.uri"/>).
+   relative to the target URI (<xref target="target.resource"/>).
 </t>
 <t>
    It is &RECOMMENDED; that all senders and recipients support, at a minimum,
@@ -866,8 +873,8 @@ Content-Type: text/plain
 </t>
 <t>
    If the port is equal to the default port for a scheme, the normal form is
-   to omit the port subcomponent. When not being used in absolute form as the
-   request target of an OPTIONS request, an empty path component is equivalent
+   to omit the port subcomponent. When not being used as the
+   target of an OPTIONS request, an empty path component is equivalent
    to an absolute path of "/", so the normal form is to provide a path of "/"
    instead. The scheme and host are case-insensitive and normally provided in
    lowercase; all other components are compared in a case-sensitive manner.
@@ -903,7 +910,7 @@ Content-Type: text/plain
 <t>
    A sender &MUST-NOT; generate the userinfo subcomponent (and its "@"
    delimiter) when an "http" or "https" URI reference is generated within a
-   message as a request target or field value.
+   message as a target URI or field value.
 </t>
 <t>
    Before making use of an "http" or "https" URI reference received from an untrusted
@@ -1029,7 +1036,7 @@ Content-Type: text/plain
    for those same protocol elements in other messages. For example, an origin
    server that publishes very long URI references to its own resources needs
    to be able to parse and process those same references when received as a
-   request target.
+   target URI.
 </t>
 </section>
 
@@ -1778,6 +1785,14 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
   <li><t>Under what conditions the field can be used; e.g., only in
     responses or requests, in all messages, only on responses to a
     particular request method, etc.</t></li>
+   <li><t>What the scope of applicability for the information conveyed in
+    the field is. By default, fields apply only to the message they are
+    associated with, but some response fields are designed to apply to all
+    representations of a resource, the resource itself, or an even broader
+    scope. Specifications that expand the scope of a response field will
+    need to carefully consider issues such as content negotiation, the time
+    period of applicability, and (in some cases) multi-tenant server
+    deployments.</t></li>
   <li><t>Whether the field should be stored by origin servers that
     understand it upon a PUT request.</t></li>
   <li><t>Whether the field semantics are further refined by the context,
@@ -2202,10 +2217,6 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    access for resolution of the "http" (<xref target="http.uri"/>) and
    "https" (<xref target="https.uri"/>) schemes.
 </t>
-<t>
-   HTTP requirements regarding connection management are defined in
-   <xref target="connection.management"/>.
-</t>
 </section>
 
 <section title="Direct Authoritative Access" anchor="authoritative.access">
@@ -2314,7 +2325,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    for verifying that requests it receives over a connection correspond
    to resources for which it actually wants to be the origin. If a network
    attacker causes connections for port N to be received at port Q, checking
-   the effective request URI is necessary to ensure that the attacker can't cause
+   the target URI is necessary to ensure that the attacker can't cause
    "https://example.com:N/foo" to be replaced by "https://example.com:Q/foo"
    without consent. Likewise, a server might be unwilling to serve as the
    origin for some hosts even when they have the authority to do so.
@@ -2429,9 +2440,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </section>
 </section>
 
-<section title="Effective Request URI" anchor="effective.request.uri">
-  <iref primary="true" item="effective request URI"/>
-  <x:anchor-alias value="effective request URI"/>
+<section title="Reconstructing the Target URI" anchor="reconstructing.target.uri">
 <t>
    Once an inbound connection is obtained,
    the client sends an HTTP request message (<xref target="http.message"/>).
@@ -2441,20 +2450,16 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    split into components and transmitted (or implied) within various parts of
    a request message. These parts are recombined by each recipient, in
    accordance with their local configuration and incoming connection context,
-   to form an "<x:dfn>effective request URI</x:dfn>" for identifying the
-   intended target resource with respect to that server.
+   to determine the target URI.
    <xref target="h1.effective.request.uri"/> defines how a server
-   determines the effective request URI for an HTTP/1.1 request.
+   determines the target URI for an HTTP/1.1 request.
 </t>
 <t>
-   For a user agent, the effective request URI is the target URI.
-</t>
-<t>
-   Once the effective request URI has been constructed, an origin server needs
+   Once the target URI has been reconstructed, an origin server needs
    to decide whether or not to provide service for that URI via the connection
    in which the request was received. For example, the request might have been
    misdirected, deliberately or accidentally, such that the information within
-   a received <x:ref>request-target</x:ref> or <x:ref>Host</x:ref> header
+   a received <x:ref>Host</x:ref> header
    field differs from the host or port upon which the connection has been
    made. If the connection is from a trusted gateway, that inconsistency might
    be expected; otherwise, it might indicate an attempt to bypass security
@@ -2462,6 +2467,13 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    cache. See <xref target="security.considerations"/> for security
    considerations regarding message routing.
 </t>
+<aside anchor="effective.request.uri">
+  <t>
+    <iref primary="true" item="effective request URI"/>
+    &Note; previous specifications defined the recomposed target URI as a
+    distinct concept, the <x:dfn>effective request URI</x:dfn>.
+  </t>
+</aside>
 </section>
 
 <section title="Host" anchor="header.host">
@@ -2498,27 +2510,6 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 GET /pub/WWW/ HTTP/1.1
 Host: www.example.org
 </artwork>
-<t>
-   A client &MUST; send a Host header field in an HTTP/1.1 request even
-   if the request-target is in the absolute-form, since this
-   allows the Host information to be forwarded through ancient HTTP/1.0
-   proxies that might not have implemented Host.
-</t>
-<t>
-   When a proxy receives a request with an absolute-form of
-   request-target, the proxy &MUST; ignore the received
-   Host header field (if any) and instead replace it with the host
-   information of the request-target.  A proxy that forwards such a request
-   &MUST; generate a new Host field value based on the received
-   request-target rather than forward the received Host field value.
-</t>
-<t>
-   When an origin server receives a request with an absolute-form of
-   request-target, the origin server &MUST; ignore the received Host header
-   field (if any) and instead use the host information of the request-target.
-   Note that if the request-target does not have an authority component, an
-   empty Host header field will be sent in this case.
-</t>
 <t>
    Since the Host header field acts as an application-level routing
    mechanism, it is a frequent target for malware seeking to poison
@@ -2697,14 +2688,14 @@ Host: www.example.org
    proxy.
 </t>
 <t>
-   If a proxy receives a request-target with a host name that is not a
+   If a proxy receives a target URI with a host name that is not a
    fully qualified domain name, it &MAY; add its own domain to the host name
    it received when forwarding the request.  A proxy &MUST-NOT; change the
-   host name if the request-target contains a fully qualified domain name.
+   host name if the target URI contains a fully qualified domain name.
 </t>
 <t>
    A proxy &MUST-NOT; modify the "absolute-path" and "query" parts of the
-   received request-target when forwarding it to the next inbound server,
+   received target URI when forwarding it to the next inbound server,
    except as noted above to replace an empty path with "/" or "*".
 </t>
 <t>
@@ -2726,7 +2717,7 @@ Host: www.example.org
 <t>
    A proxy &SHOULD-NOT; modify header fields that provide information about
    the endpoints of the communication chain, the resource state, or the
-   selected representation (other than the payload) unless the field's
+   <x:ref>selected representation</x:ref> (other than the payload) unless the field's
    definition specifically allows such modification or the modification is
    deemed necessary for privacy or security.
 </t>
@@ -2763,7 +2754,8 @@ Host: www.example.org
    to a given request, usually based on <x:ref>content negotiation</x:ref>.
    This "<x:dfn>selected representation</x:dfn>" is used to provide the data
    and metadata for evaluating conditional requests (<xref target="preconditions"/>)
-   and constructing the payload for <x:ref>200 (OK)</x:ref> and
+   and constructing the payload for <x:ref>200 (OK)</x:ref>,
+   <x:ref>206 (Partial Content)</x:ref>, and
    <x:ref>304 (Not Modified)</x:ref> responses to GET (<xref target="GET"/>).
 </t>
 
@@ -2772,7 +2764,7 @@ Host: www.example.org
 <t>
    The representation data associated with an HTTP message is
    either provided as the payload body of the message or
-   referred to by the message semantics and the effective request
+   referred to by the message semantics and the target
    URI.  The representation data is in a format and encoding defined by
    the representation metadata header fields.
 </t>
@@ -3252,7 +3244,7 @@ bytes=500-999
 </ul>
 <t>
    A client can limit the number of bytes requested without knowing the size
-   of the selected representation.
+   of the <x:ref>selected representation</x:ref>.
    If the <x:ref>last-pos</x:ref> value is absent, or if the value is
    greater than or equal to the current length of the representation data, the
    byte range is interpreted as the remainder of the representation (i.e., the
@@ -3642,8 +3634,8 @@ bytes=500-700,601-999
   <x:ref>Content-Location</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
 </sourcecode>
 <t>
-   The Content-Location value is not a replacement for the effective
-   Request URI (<xref target="effective.request.uri"/>).  It is representation metadata.
+   The Content-Location value is not a replacement for the target URI 
+   (<xref target="target.resource"/>).  It is representation metadata.
    It has the same syntax and semantics as the header field of the same name
    defined for MIME body parts in <xref target="RFC2557" x:fmt="of" x:sec="4"/>.
    However, its appearance in an HTTP message has some special implications
@@ -3652,7 +3644,7 @@ bytes=500-700,601-999
 <t>
    If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
    response message and its value refers (after conversion to absolute form)
-   to a URI that is the same as the effective request URI, then
+   to a URI that is the same as the target URI, then
    the recipient &MAY; consider the payload to be a current representation of
    that resource at the time indicated by the message origination date.
    For a GET (<xref target="GET"/>) or HEAD (<xref target="HEAD"/>) request,
@@ -3669,7 +3661,7 @@ bytes=500-700,601-999
 <t>
    If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
    response message and its field value refers to a URI that differs from the
-   effective request URI, then the origin server claims that the URI
+   target URI, then the origin server claims that the URI
    is an identifier for a different resource corresponding to the enclosed
    representation. Such a claim can only be trusted if both identifiers share
    the same resource owner, which cannot be programmatically determined via
@@ -3677,7 +3669,7 @@ bytes=500-700,601-999
 </t>
 <ul>
   <li>For a response to a GET or HEAD request, this is an indication that the
-     effective request URI refers to a resource that is subject to content
+     target URI refers to a resource that is subject to content
      negotiation and the Content-Location field value is a more specific
      identifier for the <x:ref>selected representation</x:ref>.</li>
   <li>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
@@ -3814,18 +3806,17 @@ bytes=500-700,601-999
        <x:ref>206 (Partial Content)</x:ref>, or
        <x:ref>304 (Not Modified)</x:ref>,
        the payload is a representation of the resource identified by the
-       effective request URI (<xref target="effective.request.uri"/>).</li>
+       target URI (<xref target="target.resource"/>).</li>
    <li>If the request method is GET or HEAD and the response status code is
        <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
        a potentially modified or enhanced representation of the
        <x:ref>target resource</x:ref> as provided by an intermediary.</li>
    <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field value is a reference to the same URI as the effective
-       request URI, the payload is a representation of the resource
-       identified by the effective request URI.</li>
+       and its field value is a reference to the same URI as the target URI, 
+       the payload is a representation of the target resource.</li>
    <li>If the response has a <x:ref>Content-Location</x:ref> header field
        and its field value is a reference to a URI different from the
-       effective request URI, then the sender asserts that the payload is a
+       target URI, then the sender asserts that the payload is a
        representation of the resource identified by the Content-Location
        field value. However, such an assertion cannot be trusted unless
        it can be verified by other means (not defined by this specification).</li>
@@ -3885,7 +3876,7 @@ bytes=500-700,601-999
 <t>
    The "Content-Range" header field is sent in a single part
    <x:ref>206 (Partial Content)</x:ref> response to indicate the partial range
-   of the selected representation enclosed as the message payload, sent in
+   of the <x:ref>selected representation</x:ref> enclosed as the message payload, sent in
    each part of a multipart 206 response to indicate the range enclosed within
    each body part, and sent in <x:ref>416 (Range Not Satisfiable)</x:ref>
    responses to provide information about the selected representation.
@@ -4532,8 +4523,8 @@ Content-Range: exampleunit 11.2-14.3/25
    aware of an unsafe action before it is requested.
 </t>
 <t>
-   When a resource is constructed such that parameters within the effective
-   request URI have the effect of selecting an action, it is the resource
+   When a resource is constructed such that parameters within the target URI 
+   have the effect of selecting an action, it is the resource
    owner's responsibility to ensure that the action is consistent with the
    request method semantics.
    For example, it is common for Web-based content editing software
@@ -4625,7 +4616,7 @@ Content-Range: exampleunit 11.2-14.3/25
   </rdf:Description>
   <iref primary="true" item="GET method" x:for-anchor=""/>
 <t>
-   The GET method requests transfer of a current selected representation for
+   The GET method requests transfer of a current <x:ref>selected representation</x:ref> for
    the <x:ref>target resource</x:ref>. GET is the primary mechanism of
    information retrieval and the focus of almost all performance
    optimizations. Hence, when people speak of retrieving some identifiable
@@ -4687,7 +4678,7 @@ Content-Range: exampleunit 11.2-14.3/25
    in response to a HEAD request as it would have sent if the request had been
    a GET, except that the payload header fields (<xref target="payload"/>)
    &MAY; be omitted. This method can be used for obtaining metadata about the
-   selected representation without transferring the representation data and is
+   <x:ref>selected representation</x:ref> without transferring the representation data and is
    often used for testing hypertext links for validity, accessibility, and
    recent modification.
 </t>
@@ -4741,7 +4732,7 @@ Content-Range: exampleunit 11.2-14.3/25
    freshness information (see <xref
    target="calculating.freshness.lifetime"/>) and a
    <x:ref>Content-Location</x:ref> header field that has the same value as
-   the POST's effective request URI (<xref
+   the POST's target URI (<xref
    target="header.content-location"/>). A cached POST response can be reused
    to satisfy a later GET or HEAD request, but not a POST request, since POST
    is required to be written through to the origin server, because it is
@@ -4896,7 +4887,7 @@ Content-Range: exampleunit 11.2-14.3/25
 <t>
    Responses to the PUT method are not cacheable. If a successful PUT request
    passes through a cache that has one or more stored responses for the
-   effective request URI, those stored responses will be invalidated
+   target URI, those stored responses will be invalidated
    (see <xref target="invalidation"/>).
 </t>
 </section>
@@ -4956,7 +4947,7 @@ Content-Range: exampleunit 11.2-14.3/25
 <t>
    Responses to the DELETE method are not cacheable. If a successful DELETE
    request passes through a cache that has one or more stored responses for
-   the effective request URI, those stored responses will be invalidated (see
+   the target URI, those stored responses will be invalidated (see
    <xref target="invalidation"/>).
 </t>
 </section>
@@ -4965,9 +4956,9 @@ Content-Range: exampleunit 11.2-14.3/25
   <iref primary="true" item="CONNECT method" x:for-anchor=""/>
 <t>
    The CONNECT method requests that the recipient establish a tunnel to the
-   destination origin server identified by the request-target and, if
+   destination origin server identified by the target URI and, if
    successful, thereafter restrict its behavior to blind forwarding of
-   packets, in both directions, until the tunnel is closed.
+   data, in both directions, until the tunnel is closed.
    Tunnels are commonly used to create an end-to-end virtual connection,
    through one or more proxies, which can then be secured using TLS
    (Transport Layer Security, <xref target="RFC8446"/>).
@@ -5019,13 +5010,12 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </artwork>
 <t>
    There are significant risks in establishing a tunnel to arbitrary servers,
-   particularly when the destination is a well-known or reserved TCP port that
-   is not intended for Web traffic. For example, a CONNECT to a request-target
-   of "example.com:25" would suggest that the proxy connect to the reserved
-   port for SMTP traffic; if allowed, that could trick the proxy into
-   relaying spam email. Proxies that support CONNECT &SHOULD; restrict its
-   use to a limited set of known ports or a configurable whitelist of safe
-   request targets.
+   particularly when the destination is a well-known or reserved TCP port
+   that is not intended for Web traffic. For example, a CONNECT to
+   "example.com:25" would suggest that the proxy connect to the reserved port
+   for SMTP traffic; if allowed, that could trick the proxy into relaying
+   spam email. Proxies that support CONNECT &SHOULD; restrict its use to a
+   limited set of known ports or a configurable whitelist of safe target URIs.
 </t>
 <t>
    A server &MUST-NOT; send any <x:ref>Transfer-Encoding</x:ref> or
@@ -5460,13 +5450,13 @@ Expect: 100-continue
    the "lost update" problem: one client accidentally overwriting
    the work of another client that has been acting in parallel.
 </t>
-<t><iref primary="true" item="selected representation"/>
+<t><iref primary="false" item="selected representation"/>
    Conditional request preconditions are based on the state of the target
    resource as a whole (its current value set) or the state as observed
    in a previously obtained representation (one value in that set).
    A resource might have multiple current representations, each with its
    own observable state.  The conditional request mechanisms assume that
-   the mapping of requests to a "selected representation" (<xref target="representations"/>)
+   the mapping of requests to a <x:ref>selected representation</x:ref> (<xref target="representations"/>)
    will be consistent over time if the server intends to take advantage of
    conditionals. Regardless, if the mapping is inconsistent and the server is
    unable to select the appropriate representation, then no harm will result
@@ -5479,7 +5469,7 @@ Expect: 100-continue
    precondition evaluates to false. Each precondition defined by this
    specification consists of a comparison between a set of validators obtained
    from prior representations of the target resource to the current state of
-   validators for the <x:ref>selected representation</x:ref>
+   validators for the selected representation
    (<xref target="response.validator"/>). Hence, these preconditions evaluate
    whether the state of the target resource has changed since a given state
    known by the client. The effect of such an evaluation depends on the method
@@ -5622,7 +5612,7 @@ Expect: 100-continue
      evaluate the <x:ref>If-Range</x:ref> precondition:</t>
      <ul>
        <li>if the validator matches and the Range specification is
-           applicable to the selected representation, respond
+           applicable to the <x:ref>selected representation</x:ref>, respond
            <x:ref>206 (Partial Content)</x:ref></li>
      </ul>
    </li>
@@ -5634,7 +5624,7 @@ Expect: 100-continue
    </li>
 </ol>
 <t>
-   Any extension to HTTP/1.1 that defines additional conditional request
+   Any extension to HTTP that defines additional conditional request
    header fields ought to define its own expectations regarding the order
    for evaluating such fields in relation to those defined in this document
    and other conditionals that might be found in practice.
@@ -5680,11 +5670,23 @@ Expect: 100-continue
 <t>
    An origin server that receives an If-Match header field &MUST; evaluate the
    condition prior to performing the method (<xref target="evaluation"/>).
-   If the field value is "*", the condition is false if the origin server
-   does not have a current representation for the target resource.
-   If the field value is a list of entity-tags, the condition is false if
-   none of the listed tags match the entity-tag of the selected representation.
 </t>
+<t>
+   To evaluate a received If-Match header field:
+</t>
+<ol>
+   <li>
+      If the field value is "*", the condition is true if the origin server
+      has a current representation for the target resource.
+   </li>
+   <li>
+      If the field value is a list of entity-tags, the condition is true if
+      any of the listed tags match the entity-tag of the selected representation.
+   </li>
+   <li>
+      Otherwise, the condition is false.
+   </li>
+</ol>
 <t>
    An origin server &MUST-NOT; perform the requested method if a received
    If-Match condition evaluates to false; instead, the origin server &MUST;
@@ -5713,7 +5715,7 @@ Expect: 100-continue
    The "If-None-Match" header field makes the request method conditional on
    a recipient cache or origin server either not having any current
    representation of the target resource, when the field value is "*", or
-   having a selected representation with an entity-tag that does not match any
+   having a <x:ref>selected representation</x:ref> with an entity-tag that does not match any
    of those listed in the field value.
 </t>
 <t>
@@ -5758,11 +5760,23 @@ Expect: 100-continue
    An origin server that receives an If-None-Match header field &MUST;
    evaluate the condition prior to performing the method
    (<xref target="evaluation"/>).
-   If the field value is "*", the condition is false if the origin server
-   has a current representation for the target resource.
-   If the field value is a list of entity-tags, the condition is false if
-   one of the listed tags match the entity-tag of the selected representation.
 </t>
+<t>
+   To evaluate a received If-None-Match header field:
+</t>
+<ol>
+   <li>
+      If the field value is "*", the condition is false if the origin server
+      has a current representation for the target resource.
+   </li>
+   <li>
+      If the field value is a list of entity-tags, the condition is false if
+      one of the listed tags matches the entity-tag of the selected representation.
+   </li>
+   <li>
+      Otherwise, the condition is true.
+   </li>
+</ol>
 <t>
    An origin server &MUST-NOT; perform the requested method if the condition
    evaluates to false; instead, the origin server &MUST; respond with either
@@ -5781,7 +5795,7 @@ Expect: 100-continue
   <x:anchor-alias value="If-Modified-Since"/>
 <t>
    The "If-Modified-Since" header field makes a GET or HEAD request method
-   conditional on the selected representation's modification date being more
+   conditional on the <x:ref>selected representation</x:ref>'s modification date being more
    recent than the date provided in the field value. Transfer of the selected
    representation's data is avoided if that data has not changed.
 </t>
@@ -5861,7 +5875,7 @@ Expect: 100-continue
   <x:anchor-alias value="If-Unmodified-Since"/>
 <t>
    The "If-Unmodified-Since" header field makes the request method conditional
-   on the selected representation's last modification date being earlier than or
+   on the <x:ref>selected representation</x:ref>'s last modification date being earlier than or
    equal to the date provided in the field value. This field accomplishes the
    same purpose as <x:ref>If-Match</x:ref> for cases where the user agent does
    not have an entity-tag for the representation.
@@ -5932,7 +5946,7 @@ Expect: 100-continue
    mechanism that is similar to the <x:ref>If-Match</x:ref> and
    <x:ref>If-Unmodified-Since</x:ref> header fields but that instructs the
    recipient to ignore the <x:ref>Range</x:ref> header field if the validator
-   doesn't match, resulting in transfer of the new selected representation
+   doesn't match, resulting in transfer of the new <x:ref>selected representation</x:ref>
    instead of a <x:ref>412 (Precondition Failed)</x:ref> response.
 </t>
 <t>
@@ -5997,8 +6011,9 @@ Expect: 100-continue
   <x:anchor-alias value="Range"/>
 <t>
    The "Range" header field on a GET request modifies the method semantics to
-   request transfer of only one or more subranges of the selected
-   representation data, rather than the entire selected representation data.
+   request transfer of only one or more subranges of the
+   selected representation data (<xref target="representation.data"/>),
+   rather than the entire <x:ref>selected representation</x:ref>.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Range"/>
   <x:ref>Range</x:ref> = <x:ref>ranges-specifier</x:ref>
@@ -6669,8 +6684,8 @@ Expect: 100-continue
 </t>
 <t>
    A <x:dfn>protection space</x:dfn> is defined by the canonical root URI (the
-   scheme and authority components of the effective request URI; see
-   <xref target="effective.request.uri"/>) of the
+   scheme and authority components of the target URI; see
+   <xref target="target.resource"/>) of the
    server being accessed, in combination with the realm value if present.
    These realms allow the protected resources on a server to be
    partitioned into a set of protection spaces, each with its own
@@ -7000,7 +7015,7 @@ Expect: 100-continue
    changes to specific edits, such as replacing internal domain names with
    pseudonyms or truncating the query and/or path components.
    An intermediary &SHOULD-NOT; modify or delete the Referer header field when
-   the field value shares the same scheme and host as the request target.
+   the field value shares the same scheme and host as the target URI.
 </t>
 </section>
 
@@ -7617,7 +7632,7 @@ Expect: 100-continue
    been fulfilled and has resulted in one or more new resources being created.
    The primary resource created by the request is identified by either a
    <x:ref>Location</x:ref> header field in the response or, if no
-   <x:ref>Location</x:ref> field is received, by the effective request URI.
+   <x:ref>Location</x:ref> field is received, by the target URI.
 </t>
 <t>
    The 201 response payload typically describes and links to the resource(s)
@@ -7735,14 +7750,6 @@ Expect: 100-continue
 <t>
    Since the 205 status code implies that no additional content will be
    provided, a server &MUST-NOT; generate a payload in a 205 response.
-   In other words, a server &MUST; do one of the following for a 205 response:
-   a) indicate a zero-length body for the response by including a
-   <x:ref>Content-Length</x:ref> header field with a value of 0;
-   b) indicate a zero-length payload for the response by including a
-   <x:ref>Transfer-Encoding</x:ref> header field with a value of chunked and
-   a message body consisting of a single chunk of zero-length; or,
-   c) close the connection immediately after sending the blank line
-   terminating the header section.
 </t>
 </section>
 
@@ -7753,7 +7760,7 @@ Expect: 100-continue
 <t>
    The <x:dfn>206 (Partial Content)</x:dfn> status code indicates that the
    server is successfully fulfilling a range request for the target resource
-   by transferring one or more parts of the selected representation.
+   by transferring one or more parts of the <x:ref>selected representation</x:ref>.
 </t>
 <t>
    When a 206 response is generated, the server &MUST; generate the following
@@ -7953,7 +7960,7 @@ Content-Range: bytes 7000-7999/8000
   <li>
     <t>
       Redirection that offers a choice of matching resources, each capable
-      of representing the original request target, as in the
+      of representing the original target resource, as in the
       <x:ref>300 (Multiple Choices)</x:ref> status code.
     </t>
   </li>
@@ -8064,7 +8071,7 @@ Content-Range: bytes 7000-7999/8000
    <x:ref>target resource</x:ref> has been assigned a new permanent URI and
    any future references to this resource ought to use one of the enclosed
    URIs. Clients with link-editing capabilities ought to automatically re-link
-   references to the effective request URI to one or more of the new
+   references to the target URI to one or more of the new
    references sent by the server, where possible.
 </t>
 <t>
@@ -8096,7 +8103,7 @@ Content-Range: bytes 7000-7999/8000
    The <x:dfn>302 (Found)</x:dfn> status code indicates that the target
    resource resides temporarily under a different URI. Since the redirection
    might be altered on occasion, the client ought to continue to use the
-   effective request URI for future requests.
+   target URI for future requests.
 </t>
 <t>
    The server &SHOULD; generate a <x:ref>Location</x:ref> header field in the
@@ -8126,7 +8133,7 @@ Content-Range: bytes 7000-7999/8000
    retrieval request targeting that URI (a GET or HEAD request if using HTTP),
    which might also be redirected, and present the eventual result as an
    answer to the original request. Note that the new URI in the Location
-   header field is not considered equivalent to the effective request URI.
+   header field is not considered equivalent to the target URI.
 </t>
 <t>
    This status code is applicable to any HTTP method.  It is
@@ -8230,7 +8237,7 @@ Content-Range: bytes 7000-7999/8000
    and the user agent &MUST-NOT; change the request method if it performs an
    automatic redirection to that URI.
    Since the redirection can change over time, the client ought to continue
-   using the original effective request URI for future requests.
+   using the original target URI for future requests.
 </t>
 <t>
    The server &SHOULD; generate a <x:ref>Location</x:ref> header field in the
@@ -8250,7 +8257,7 @@ Content-Range: bytes 7000-7999/8000
    <x:ref>target resource</x:ref> has been assigned a new permanent URI and
    any future references to this resource ought to use one of the enclosed
    URIs. Clients with link editing capabilities ought to automatically re-link
-   references to the effective request URI
+   references to the target URI
    to one or more of the new references sent by the server, where possible.
 </t>
 <t>
@@ -8436,9 +8443,6 @@ Content-Range: bytes 7000-7999/8000
    The <x:dfn>408 (Request Timeout)</x:dfn> status code indicates
    that the server did not receive a complete request message within the time
    that it was prepared to wait.
-   A server &SHOULD; send the "<x:ref>close</x:ref>" connection option
-   (<xref target="header.connection"/>) in the response, since 408 implies that the server
-   has decided to close the connection rather than continue waiting.
    If the client has an outstanding request in transit,
    the client &MAY; repeat that request on a new connection.
 </t>
@@ -8527,8 +8531,8 @@ Content-Range: bytes 7000-7999/8000
    The <x:dfn>413 (Payload Too Large)</x:dfn> status code indicates
    that the server is refusing to process a request because the request
    payload is larger than the server is willing or able to process.
-   The server &MAY; close the connection to prevent the client from continuing
-   the request.
+   The server &MAY; terminate the request, if the protocol version in use
+   allows it; otherwise, the server &MAY; close the connection.
 </t>
 <t>
    If the condition is temporary, the server &SHOULD; generate a
@@ -8543,7 +8547,7 @@ Content-Range: bytes 7000-7999/8000
 <t>
    The <x:dfn>414 (URI Too Long)</x:dfn> status code indicates that the server
    is refusing to service the request because the
-   request-target (<xref target="request.target"/>) is longer than the server is willing to
+   target URI is longer than the server is willing to
    interpret. This rare condition is only likely to occur when a client has
    improperly converted a POST request to a GET request with long query
    information, when the client has descended into a "black hole" of
@@ -8583,8 +8587,9 @@ Content-Range: bytes 7000-7999/8000
 <t>
    The <x:dfn>416 (Range Not Satisfiable)</x:dfn> status code indicates that
    none of the ranges in the request's <x:ref>Range</x:ref> header field
-   (<xref target="header.range"/>) overlap the current extent of the selected
-   representation or that the set of ranges requested has been rejected due to
+   (<xref target="header.range"/>) overlap the current extent of the
+   <x:ref>selected representation</x:ref> or that the set of ranges requested
+   has been rejected due to
    invalid ranges or an excessive request of small or overlapping ranges.
 </t>
 <t>
@@ -8842,6 +8847,15 @@ Content-Type: text/plain
    dependencies on response header fields (e.g., what fields are required,
    what fields can modify the semantics, and what field semantics are
    further refined when used with the new status code).
+</t>
+<t>
+   By default, a status code applies only to the request corresponding to the
+   response it occurs within. If a status code applies to a larger scope of
+   applicability &mdash; for example, all requests to the resource in question, or
+   all requests to a server &mdash; this must be explicitly specified. When doing
+   so, it should be noted that not all clients can be expected to
+   consistently apply a larger scope, because they might not understand the
+   new status code.
 </t>
 <t>
    The definition of a new status code ought to specify whether or not it is
@@ -9126,7 +9140,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    The field value consists of a single URI-reference. When it has the form
    of a relative reference (<xref target="RFC3986" x:fmt="," x:sec="4.2"/>),
-   the final value is computed by resolving it against the effective request
+   the final value is computed by resolving it against the target
    URI (<xref target="RFC3986" x:fmt="," x:sec="5"/>).
 </t>
 <t>
@@ -9139,7 +9153,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    If the Location value provided in a <x:ref>3xx (Redirection)</x:ref>
    response does not have a fragment component, a user agent &MUST; process the
    redirection as if the value inherits the fragment component of the URI
-   reference used to generate the request target (i.e., the redirection
+   reference used to generate the target URI (i.e., the redirection
    inherits the original reference's fragment, if any).
 </t>
 <t>
@@ -9236,7 +9250,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    <x:anchor-alias value="Vary"/>
 <t>
    The "Vary" header field in a response describes what parts of a request
-   message, aside from the method, Host header field, and request target,
+   message, aside from the method, Host header field, and target URI,
    might influence the origin server's process for selecting and representing
    this response. The value consists of either a single asterisk ("*") or a
    list of header field names (case-insensitive).
@@ -9296,7 +9310,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    An origin server &SHOULD; send a Vary header field when its algorithm for
    selecting a representation varies based on aspects of the request message
-   other than the method and request target, unless the variance cannot be
+   other than the method and target URI, unless the variance cannot be
    crossed or the origin server has been deliberately configured to prevent
    cache transparency. For example, there is no need to send the Authorization
    field name in Vary because reuse across users is constrained by the field
@@ -9463,7 +9477,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    The "Last-Modified" header field in a response provides a timestamp
    indicating the date and time at which the origin server believes the
-   selected representation was last modified, as determined at the conclusion
+   <x:ref>selected representation</x:ref> was last modified, as determined at the conclusion
    of handling the request.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
@@ -9579,7 +9593,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   <x:anchor-alias value="etagc"/>
 <t>
    The "ETag" field in a response provides the current entity-tag for
-   the selected representation, as determined at the conclusion of handling
+   the <x:ref>selected representation</x:ref>, as determined at the conclusion of handling
    the request.
    An entity-tag is an opaque validator for differentiating between
    multiple representations of the same resource, regardless of whether
@@ -9933,8 +9947,8 @@ Content-Encoding: gzip
 <t>
    The "Proxy-Authenticate" header field consists of at least one
    challenge that indicates the authentication scheme(s) and parameters
-   applicable to the proxy for this effective request URI
-   (<xref target="effective.request.uri"/>).
+   applicable to the proxy for this target URI
+   (<xref target="target.resource"/>).
    A proxy &MUST; send at least one Proxy-Authenticate header field in
    each <x:ref>407 (Proxy Authentication Required)</x:ref> response that it
    generates.
@@ -10294,11 +10308,11 @@ Content-Encoding: gzip
 <section title="Attacks Based on File and Path Names" anchor="attack.pathname">
 <t>
    Origin servers frequently make use of their local file system to manage the
-   mapping from effective request URI to resource representations.
+   mapping from target URI to resource representations.
    Most file systems are not designed to protect against malicious file
    or path names. Therefore, an origin server needs to avoid accessing
    names that have a special significance to the system when mapping the
-   request target to files, folders, or directories.
+   target resource to files, folders, or directories.
 </t>
 <t>
    For example, UNIX, Microsoft Windows, and other operating systems use ".."
@@ -10323,13 +10337,13 @@ Content-Encoding: gzip
    means of identifying system services, selecting database entries, or
    choosing a data source. However, data received in a request cannot be
    trusted. An attacker could construct any of the request data elements
-   (method, request-target, header fields, or body) to contain data that might
+   (method, target URI, header fields, or body) to contain data that might
    be misinterpreted as a command, code, or query when passed through a
    command invocation, language interpreter, or database interface.
 </t>
 <t>
    For example, SQL injection is a common attack wherein additional query
-   language is inserted within some part of the request-target or header
+   language is inserted within some part of the target URI or header
    fields (e.g., <x:ref>Host</x:ref>, <x:ref>Referer</x:ref>, etc.).
    If the received data is used directly within a SELECT statement, the
    query language might be interpreted as a database command instead of a
@@ -10369,7 +10383,7 @@ Content-Encoding: gzip
 </t>
 <t>
    A server can reject a message that
-   has a request-target that is too long (<xref target="status.414"/>) or a request payload
+   has a target URI that is too long (<xref target="status.414"/>) or a request payload
    that is too large (<xref target="status.413"/>). Additional status codes related to
    capacity limits have been defined by extensions to HTTP
    <xref target="RFC6585"/>.
@@ -10431,8 +10445,8 @@ Content-Encoding: gzip
 </t>
 <t>
    Authors of services ought to avoid GET-based forms for the submission of
-   sensitive data because that data will be placed in the request-target. Many
-   existing servers, proxies, and user agents log or display the request-target
+   sensitive data because that data will be placed in the target URI. Many
+   existing servers, proxies, and user agents log or display the target URI
    in places where it might be visible to third parties. Such services ought
    to use POST-based form submission instead.
 </t>
@@ -10829,7 +10843,6 @@ Content-Encoding: gzip
     <x:has anchor="differences.between.http.and.mime"/>
     <x:has anchor="field.parsing"/>
     <x:has anchor="h1.effective.request.uri"/>
-    <x:has anchor="request.target"/>
     <x:has anchor="header.connection"/>
     <x:has anchor="header.te"/>
     <x:has anchor="header.transfer-encoding"/>
@@ -10842,6 +10855,7 @@ Content-Encoding: gzip
     <x:has anchor="persistent.tear-down"/>
     <x:has anchor="request.line"/>
     <x:has anchor="request.smuggling"/>
+    <x:has anchor="request.target"/>
     <x:has anchor="transfer.codings"/>
     <x:has anchor="Messaging-acks" target="acks"/>
     <x:has anchor="Messaging-security.considerations" target="security.considerations"/>
@@ -12113,7 +12127,6 @@ Content-Encoding: gzip
 <x:ref>received-by</x:ref> = pseudonym [ ":" port ]
 <x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
 <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
-<x:ref>request-target</x:ref> = &lt;request-target, see <xref target="Messaging" x:fmt="," x:sec="3.2"/>&gt;
 <x:ref>rfc850-date</x:ref> = day-name-l "," SP date2 SP time-of-day SP GMT
 
 <x:ref>second</x:ref> = 2DIGIT
@@ -12210,6 +12223,10 @@ Content-Encoding: gzip
 <t>
   Minimum URI lengths to be supported by implementations are now recommended.
   (<xref target="resources"/>)
+</t>
+<t>
+  The term "effective request URI" has been replaced with "target URI".
+  (<xref target="target.resource"/>)
 </t>
 <t>
   Range units are compared in a case insensitive fashion.
@@ -12413,6 +12430,7 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-06" anchor="changes.since.06">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="header.range"/>, explicitly reference the definition of representation data as including any content codings (<eref target="https://github.com/httpwg/http-core/issues/11"/>)</li>
   <li>In <xref target="header.via"/>, simplify received-by grammar (and disallow comma character) (<eref target="https://github.com/httpwg/http-core/issues/24"/>)</li>
   <li>In <xref target="field.names"/>, give guidance on interoperable field names (<eref target="https://github.com/httpwg/http-core/issues/30"/>)</li>
   <li>In <xref target="whitespace"/>, define the semantics and possible replacement of whitespace when it is known to occur (<eref target="https://github.com/httpwg/http-core/issues/53"/>)</li>
@@ -12431,12 +12449,20 @@ Content-Encoding: gzip
   <li>In <xref target="header.host"/>, make explicit requirements on origin server to use authority from absolute-form when available (<eref target="https://github.com/httpwg/http-core/issues/191"/>)</li>
   <li>In <xref target="http.uri"/>, <xref target="https.uri"/>, <xref target="origin"/>, and <xref target="authoritative.access"/>, refactored schemes to define origin and authoritative access to an origin server for both "http" and "https" URIs to account for alternative services and secured connections that are not necessarily based on TCP (<eref target="https://github.com/httpwg/http-core/issues/237"/>)</li>
   <li>In <xref target="intro.requirements"/>, reference RFC 8174 as well (<eref target="https://github.com/httpwg/http-core/issues/303"/>)</li>
+  <li>In <xref target="representations"/>, explicitly reference 206 as one of the status codes that provide representation data (<eref target="https://github.com/httpwg/http-core/issues/325"/>)</li>
+  <li>In <xref target="status.205"/>, <xref target="status.408"/>, and <xref target="status.413"/>, remove HTTP/1-specific, connection-related requirements (<eref target="https://github.com/httpwg/http-core/issues/144"/>)</li>
 </ul>
 </section>
 
 <section title="Since draft-ietf-httpbis-semantics-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="header.if-match"/> and <xref target="header.if-none-match"/>, clarified condition evaluation (<eref target="https://github.com/httpwg/http-core/issues/72"/>)</li>
   <li>In <xref target="content.negotiation"/>, introduce the concept of request payload negotiation (<xref target="request.payload.negotiation"/>) and define for <x:ref>Accept-Encoding</x:ref> (<eref target="https://github.com/httpwg/http-core/issues/119"/>)</li>
+  <li>In <xref target="CONNECT"/>, correct language about what is forwarded (<eref target="https://github.com/httpwg/http-core/issues/170"/>)</li>
+  <li>In <xref target="considerations.for.new.header.fields"/> and <xref target="considerations.for.new.status.codes"/>, describe how extensions should consider scope of applicability (<eref target="https://github.com/httpwg/http-core/issues/265"/>)</li>
+  <li>In <xref target="operation"/>, don't rely on the HTTP/1.1 Messaging specification to define "message" (<eref target="https://github.com/httpwg/http-core/issues/311"/>)</li>
+  <li>Throughout, replace "effective request URI", "request-target" and similar with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>
+  <li>In <xref target="operation"/>, introduce concept of "complete" messages (<eref target="https://github.com/httpwg/http-core/issues/334"/>)</li>
 </ul>
 </section>
 </section>
