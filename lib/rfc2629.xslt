@@ -3733,7 +3733,8 @@
     <xsl:choose>
       <xsl:when test="$ref and starts-with($ref/@x:rel,'#') and not($ref/@x:sec) and not($ref/@section)">
         <xsl:variable name="extdoc" select="document($bib/x:source/@href)"/>
-        <xsl:for-each select="$extdoc//*[@anchor=substring-after($ref/@x:rel,'#')]">
+        <xsl:variable name="anch" select="substring-after($ref/@x:rel,'#')"/>
+        <xsl:for-each select="$extdoc//*[@anchor=$anch or x:anchor-alias/@value=$anch]">
           <xsl:call-template name="get-section-number"/>
         </xsl:for-each>
       </xsl:when>
@@ -3891,7 +3892,7 @@
     </xsl:when>
     <xsl:otherwise>
       <xsl:variable name="extdoc" select="document($bib/x:source/@href)"/>
-      <xsl:variable name="nodes" select="$extdoc//*[@anchor=$anch]"/>
+      <xsl:variable name="nodes" select="$extdoc//*[@anchor=$anch or x:anchor-alias/@value=$anch]"/>
       <xsl:if test="not($nodes)">
         <xsl:call-template name="error">
           <xsl:with-param name="msg">Anchor '<xsl:value-of select="$anch"/>' in <xsl:value-of select="$bib/@anchor"/> not found in source file '<xsl:value-of select="$bib/x:source/@href"/>'.</xsl:with-param>
@@ -6225,7 +6226,8 @@
     <xsl:choose>
       <xsl:when test="starts-with($from/@x:rel,'#') and $ssec='' and $to/x:source/@href">
         <xsl:variable name="extdoc" select="document($to/x:source/@href)"/>
-        <xsl:variable name="nodes" select="$extdoc//*[@anchor=substring-after($from//@x:rel,'#')]"/>
+        <xsl:variable name="anch" select="substring-after($from//@x:rel,'#')"/>
+        <xsl:variable name="nodes" select="$extdoc//*[@anchor=$anch or x:anchor-alias/@value=$anch]"/>
         <xsl:if test="not($nodes)">
           <xsl:call-template name="error">
             <xsl:with-param name="msg">Anchor '<xsl:value-of select="substring-after($from//@x:rel,'#')"/>' not found in <xsl:value-of select="$to/x:source/@href"/>.</xsl:with-param>
@@ -11632,11 +11634,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1274 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1274 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1275 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1275 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/04/27 14:56:42 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/04/27 14:56:42 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/04/28 04:24:45 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/04/28 04:24:45 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
