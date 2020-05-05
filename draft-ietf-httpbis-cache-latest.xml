@@ -314,7 +314,7 @@
 <t>
    Most commonly, caches store the successful result of a retrieval
    request: i.e., a <x:ref>200 (OK)</x:ref> response to a GET request, which
-   contains a representation of the resource identified by the request target
+   contains a representation of the target resource
    (<xref target="GET"/>). However, it is also possible to store 
    redirects, negative results (e.g., <x:ref>404 (Not Found)</x:ref>),
    incomplete results (e.g., <x:ref>206 (Partial Content)</x:ref>), and
@@ -339,15 +339,15 @@
   <li><t>the response status code is final (see
          <xref target="status.codes"/>);</t></li>
   <li><t>if the response status code is 206 or 304, or the "must-understand" cache directive (see <xref
-         target="header.cache-control"/>) is present: the cache understands the response status code;</t></li>
+         target="field.cache-control"/>) is present: the cache understands the response status code;</t></li>
   <li><t>the "no-store" cache directive is not present in the response
-         (see <xref target="header.cache-control"/>);</t></li>
+         (see <xref target="field.cache-control"/>);</t></li>
   <li><t>if the cache is shared: the "private" response directive is either not
          present or allows a modified response to be stored by a shared cache;
          see <xref target="cache-response-directive.private" />);</t></li>
   <li><t>if the cache is shared: the <x:ref>Authorization</x:ref> header field
          is not present in the request
-         (see <xref target="header.authorization"/>) or a
+         (see <xref target="field.authorization"/>) or a
          response directive is present that explicitly allows shared caching
          (see <xref target="caching.authenticated.responses" />);
          and,</t></li>
@@ -355,8 +355,10 @@
      <ul>
         <li>a public response directive
             (see <xref target="cache-response-directive.public"/>);</li>
+        <li>a private response directive, if the cache is not shared
+            (see <xref target="cache-response-directive.private"/>);</li>
         <li>an <x:ref>Expires</x:ref> header field
-            (see <xref target="header.expires"/>);</li>
+            (see <xref target="field.expires"/>);</li>
         <li>a max-age response directive
             (see <xref target="cache-response-directive.max-age" />);</li>
         <li>if the cache is shared, an s-maxage response directive
@@ -414,21 +416,10 @@
 
 <section title="Storing Incomplete Responses" anchor="incomplete.responses">
 <t>
-   A response message is considered complete when all of the octets indicated
-   by its framing are available. Note that, when no explicit framing is
-   provided, a response message that is ended by the connection's close is
-   considered complete even though it might be indistinguishable from an
-   incomplete response (see <xref target="Messaging" x:fmt=","
-   x:rel="#message.body.length"/>). A cache &SHOULD; consider a close-terminated
-   response incomplete if the connection termination is detected to be an
-   error. A server that wishes to avoid premature termination resulting in an
-   incorrect cached response &SHOULD; send the response with explicit framing.
-</t>
-<t>
    If the request method is GET, the response status code is <x:ref>200
    (OK)</x:ref>, and the entire response header section has been received, a
-   cache &MAY; store an incomplete response message body if the stored response
-   is recorded as incomplete. Likewise, a <x:ref>206 (Partial
+   cache &MAY; store a response body that is not complete (<xref target="operation"/>) if the stored response
+   is recorded as being incomplete. Likewise, a <x:ref>206 (Partial
    Content)</x:ref> response &MAY; be stored as if it were an incomplete
    <x:ref>200 (OK)</x:ref> response. However, a cache &MUST-NOT; store
    incomplete or partial-content responses if it does not support the
@@ -437,7 +428,7 @@
 </t>
 <t>
    A cache &MAY; complete a stored incomplete response by making a subsequent
-   range request (<xref target="header.range"/>) and combining the successful response with the
+   range request (<xref target="field.range"/>) and combining the successful response with the
    stored response, as defined in <xref target="combining.responses"/>. A cache
    &MUST-NOT; use an incomplete response to answer requests unless the
    response has been made complete or the request is partial and specifies a
@@ -451,7 +442,7 @@
 <section title="Storing Responses to Authenticated Requests" anchor="caching.authenticated.responses">
 <t>
    A shared cache &MUST-NOT; use a cached response to a request with an
-   <x:ref>Authorization</x:ref> header field (<xref target="header.authorization"/>) to
+   <x:ref>Authorization</x:ref> header field (<xref target="field.authorization"/>) to
    satisfy any subsequent request unless the response contains a
    <x:ref>Cache-Control</x:ref> field with a response directive
    (<xref target="cache-response-directive"/>) that allows it to be stored by
@@ -470,7 +461,7 @@
 <t>
    A response might transfer only a partial representation if the
    connection closed prematurely or if the request used one or more Range
-   specifiers (<xref target="header.range"/>).  After several such transfers, a cache might have
+   specifiers (<xref target="field.range"/>).  After several such transfers, a cache might have
    received several ranges of the same representation.  A cache &MAY; combine
    these ranges into a single stored response, and reuse that response to
    satisfy later requests, if they all share the same strong validator and
@@ -493,7 +484,7 @@
    unless:
 </t>
 <ul>
-   <li><t>The presented effective request URI (<xref target="effective.request.uri"/>) and
+   <li><t>The presented target URI (<xref target="target.resource"/>) and
    that of the stored response match, and</t></li>
    <li><t>the request method associated with the stored response allows it to
    be used for the presented request, and</t></li>
@@ -520,7 +511,7 @@
 <t>
    When a stored response is used to satisfy a request without validation, a
    cache &MUST; generate an <x:ref>Age</x:ref> header field (<xref
-   target="header.age"/>), replacing any present in the response with a value
+   target="field.age"/>), replacing any present in the response with a value
    equal to the stored response's current_age; see <xref
    target="age.calculations" />.
 </t>
@@ -548,7 +539,7 @@
 <section title="Calculating Cache Keys with Vary" anchor="caching.negotiated.responses">
 <t>
    When a cache receives a request that can be satisfied by a stored response
-   that has a <x:ref>Vary</x:ref> header field (<xref target="header.vary"/>),
+   that has a <x:ref>Vary</x:ref> header field (<xref target="field.vary"/>),
    it &MUST-NOT; use that response unless all of the selecting header fields
    nominated by the Vary header field match in both the original request
    (i.e., that associated with the stored response), and the presented
@@ -643,7 +634,7 @@
 <t>
    The primary mechanism for determining freshness is for an origin server to
    provide an explicit expiration time in the future, using either the
-   <x:ref>Expires</x:ref> header field (<xref target="header.expires" />) or
+   <x:ref>Expires</x:ref> header field (<xref target="field.expires" />) or
    the max-age response directive (<xref
    target="cache-response-directive.max-age" />). Generally, origin servers
    will assign future explicit expiration times to responses in the belief
@@ -714,7 +705,7 @@
    <li>If the max-age response directive (<xref
    target="cache-response-directive.max-age" />) is present, use its value, or</li>
    <li>If the <x:ref>Expires</x:ref> response header field
-   (<xref target="header.expires" />) is present, use its value minus the
+   (<xref target="field.expires" />) is present, use its value minus the
     value of the <x:ref>Date</x:ref> response header field, or</li>
    <li>Otherwise, no explicit expiration time is present in the response. A
    heuristic freshness lifetime might be applicable; see <xref
@@ -759,7 +750,7 @@
 </t>
 <t>
    If the response has a <x:ref>Last-Modified</x:ref> header field
-   (<xref target="header.last-modified"/>), caches are encouraged to use a heuristic
+   (<xref target="field.last-modified"/>), caches are encouraged to use a heuristic
    expiration value that is no more than some fraction of the interval since
    that time. A typical setting of this fraction might be 10%.
 </t>
@@ -792,14 +783,14 @@
   <dt><x:dfn>age_value</x:dfn></dt>
   <dd>
      The term "age_value" denotes the value of the <x:ref>Age</x:ref>
-     header field (<xref target="header.age"/>), in a form appropriate for
+     header field (<xref target="field.age"/>), in a form appropriate for
      arithmetic operation; or 0, if not available.
   </dd>
   <dt><x:dfn>date_value</x:dfn></dt>
   <dd>
      The term "date_value" denotes the value of
      the Date header field, in a form appropriate for arithmetic
-     operations. See <xref target="header.date"/> for the definition of the Date header
+     operations. See <xref target="field.date"/> for the definition of the Date header
      field, and for requirements regarding responses without it.
   </dd>
   <dt><x:dfn>now</x:dfn></dt>
@@ -902,7 +893,7 @@
    When generating a conditional request for validation, a cache starts with
    either a request it is attempting to satisfy, or &mdash; if it is initiating
    the request independently &mdash; it synthesises a request using a stored
-   response by copying the method, request-target, and request header fields
+   response by copying the method, target URI, and request header fields
    identified by the Vary header field <xref
    target="caching.negotiated.responses"/>.
 </t>
@@ -918,7 +909,7 @@
 </t>
 <t>
    One such validator is the timestamp given in a <x:ref>Last-Modified</x:ref>
-   header field (<xref target="header.last-modified"/>), which can be used in an
+   header field (<xref target="field.last-modified"/>), which can be used in an
    <x:ref>If-Modified-Since</x:ref> header field for response validation, or
    in an <x:ref>If-Unmodified-Since</x:ref> or <x:ref>If-Range</x:ref> header
    field for representation selection (i.e., the client is referring
@@ -926,7 +917,7 @@
 </t>
 <t>
    Another validator is the entity-tag given in an <x:ref>ETag</x:ref>
-   field (<xref target="header.etag"/>). One or more entity-tags, indicating one or more
+   field (<xref target="field.etag"/>). One or more entity-tags, indicating one or more
    stored responses, can be used in an <x:ref>If-None-Match</x:ref> header
    field for response validation, or in an <x:ref>If-Match</x:ref> or
    <x:ref>If-Range</x:ref> header field for representation selection (i.e.,
@@ -964,7 +955,7 @@
 </t>
 <t>
    A request containing an <x:ref>If-None-Match</x:ref> header field
-   (<xref target="header.if-none-match"/>) indicates that the client wants to validate one
+   (<xref target="field.if-none-match"/>) indicates that the client wants to validate one
    or more of its own stored responses in comparison to whichever stored
    response is selected by the cache.
    If the field value is "*", or if the field value is a list of entity-tags
@@ -993,7 +984,7 @@
 <t>
    If an <x:ref>If-None-Match</x:ref> header field is not present, a request
    containing an <x:ref>If-Modified-Since</x:ref> header field
-   (<xref target="header.if-modified-since"/>) indicates that the client wants to validate
+   (<xref target="field.if-modified-since"/>) indicates that the client wants to validate
    one or more of its own stored responses by modification date.
    A cache recipient &SHOULD; generate a <x:ref>304 (Not Modified)</x:ref>
    response (using the metadata of the selected stored response) if one of the
@@ -1009,8 +1000,8 @@
 </t>
 <t>
    A cache that implements partial responses to range requests, as defined in
-   <xref target="header.range"/>, also needs to evaluate a received <x:ref>If-Range</x:ref> header
-   field (<xref target="header.if-range"/>) with respect to its selected stored response.
+   <xref target="field.range"/>, also needs to evaluate a received <x:ref>If-Range</x:ref> header
+   field (<xref target="field.if-range"/>) with respect to its selected stored response.
 </t>
 </section>
 
@@ -1101,7 +1092,7 @@
    changed.
 </t>
 <t>
-   When a cache makes an inbound HEAD request for a given request target and
+   When a cache makes an inbound HEAD request for a given target URI and
    receives a <x:ref>200 (OK)</x:ref> response, the cache &SHOULD; update or
    invalidate each of its stored GET responses that could have been selected
    for that request (see <xref target="caching.negotiated.responses"/>).
@@ -1132,11 +1123,20 @@
 <t>
    Because unsafe request methods (<xref target="safe.methods"/>) such as PUT, POST or DELETE
    have the potential for changing state on the origin server, intervening
-   caches can use them to keep their contents up to date.
+   caches are required to invalidate stored responses to keep their contents up to date.
+   <x:dfn>Invalidate</x:dfn> means that the cache will either remove all
+   stored responses whose target URI matches the given URI, or will mark them
+   as "invalid" and in need of a mandatory validation before they can be sent
+   in response to a subsequent request.
 </t>
 <t>
-   A cache &MUST; invalidate the effective Request URI
-   (<xref target="effective.request.uri"/>) as well as the URI(s) in the
+   Note that this does not guarantee that all appropriate responses are
+   invalidated globally; a state-changing request would only invalidate
+   responses in the caches that it travels through.
+</t>
+<t>
+   A cache &MUST; invalidate the target URI
+   (<xref target="target.resource"/>) as well as the URI(s) in the
    <x:ref>Location</x:ref> and <x:ref>Content-Location</x:ref> response header
    fields (if present) when a non-error status code is received in response to
    an unsafe request method.
@@ -1144,26 +1144,17 @@
 <t>
    However, a cache &MUST-NOT; invalidate a URI from a <x:ref>Location</x:ref>
    or <x:ref>Content-Location</x:ref> response header field if the host part of
-   that URI differs from the host part in the effective request URI
-   (<xref target="effective.request.uri"/>). This helps prevent denial-of-service attacks.
+   that URI differs from the host part in the target URI
+   (<xref target="target.resource"/>). This helps prevent denial-of-service attacks.
 </t>
 <t>
-   A cache &MUST; invalidate the effective request URI 
-   (<xref target="effective.request.uri"/>) when it receives a non-error response 
+   A cache &MUST; invalidate the target URI 
+   (<xref target="target.resource"/>) when it receives a non-error response 
    to a request with a method whose safety is unknown.
 </t>
 <t>
    Here, a "non-error response" is one with a <x:ref>2xx (Successful)</x:ref>
-   or <x:ref>3xx (Redirection)</x:ref> status code. "Invalidate" means that
-   the cache will either remove all stored responses related to the effective
-   request URI or will mark these as "invalid" and in need of a mandatory
-   validation before they can be sent in response to a subsequent request.
-</t>
-<t>
-   Note that this does not guarantee that all appropriate responses are
-   invalidated. For example, a state-changing request might invalidate
-   responses in the caches it travels through, but relevant responses still
-   might be stored in other caches that it has not.
+   or <x:ref>3xx (Redirection)</x:ref> status code.
 </t>
 </section>
 </section>
@@ -1190,35 +1181,35 @@
          <td>Age</td>
          <td>standard</td>
          <td>
-            <xref target="header.age"/>
+            <xref target="field.age"/>
          </td>
       </tr>
       <tr>
          <td>Cache-Control</td>
          <td>standard</td>
          <td>
-            <xref target="header.cache-control"/>
+            <xref target="field.cache-control"/>
          </td>
       </tr>
       <tr>
          <td>Expires</td>
          <td>standard</td>
          <td>
-            <xref target="header.expires"/>
+            <xref target="field.expires"/>
          </td>
       </tr>
       <tr>
          <td>Pragma</td>
          <td>standard</td>
          <td>
-            <xref target="header.pragma"/>
+            <xref target="field.pragma"/>
          </td>
       </tr>
       <tr>
          <td>Warning</td>
          <td>obsoleted</td>
          <td>
-            <xref target="header.warning"/>
+            <xref target="field.warning"/>
          </td>
       </tr>
    </tbody>
@@ -1227,7 +1218,8 @@
 
 <?ENDINC build/draft-ietf-httpbis-cache-latest.iana-headers ?>
 
-<section title="Age" anchor="header.age">
+<section title="Age" anchor="field.age">
+  <x:anchor-alias value="header.age"/>
    <iref primary="true" item="Fields" subitem="Age" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Age" x:for-anchor=""/><iref primary="true" item="Fields" subitem="Age" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Age" x:for-anchor=""/><iref item="Age header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Age"/>
    <x:anchor-alias value="age-value"/>
@@ -1253,7 +1245,8 @@
 </t>
 </section>
 
-<section title="Cache-Control" anchor="header.cache-control">
+<section title="Cache-Control" anchor="field.cache-control">
+  <x:anchor-alias value="header.cache-control"/>
    <iref primary="true" item="Fields" subitem="Cache-Control" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Cache-Control" x:for-anchor=""/><iref item="Cache-Control header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Cache-Control"/>
    <x:anchor-alias value="cache-directive"/>
@@ -1648,14 +1641,19 @@
 <t>
    The "public" response directive indicates that a cache &MAY; store the
    response even if it would otherwise be prohibited, subject to the
-   constraints of any other response directives present. In other words,
+   constraints defined in <xref target="response.cacheability"/>. In other words,
    public explicitly marks the response as cacheable. For example,
    public permits a shared cache to reuse a response to a request containing
    an Authorization header field (<xref target="caching.authenticated.responses"/>).
 </t>
 <t>
-   If no explicit freshness information is provided, the response is
-   is heuristically cacheable (<xref target="heuristic.freshness"/>).
+   Note that it is not necessary to add the public directive to a response that
+   is already cacheable according to <xref target="response.cacheability"/>.
+</t>
+<t>
+   If no explicit freshness information is provided on a response with the
+   public directive, it is heuristically cacheable (<xref
+   target="heuristic.freshness"/>).
 </t>
 </section>
 
@@ -1672,15 +1670,17 @@
    a shared cache &MUST-NOT; store the response (i.e., the response is
    intended for a single user).
    It also indicates that a private cache &MAY; store the response, subject
-   to any other cache directives present, even if the response would not
-   otherwise be heuristically cacheable by a private cache.
+   the constraints defined in <xref target="response.cacheability"/>, even if
+   the response would not otherwise be heuristically cacheable by a private
+   cache.
 </t>
 <t>
    If a qualified private response directive is present, with an argument that
    lists one or more field names, then only the listed fields are limited to a
    single user: a shared cache &MUST-NOT; store the listed fields if they
    are present in the original response, but &MAY; store the remainder of the
-   response message without those fields.
+   response message without those fields, subject
+   the constraints defined in <xref target="response.cacheability"/>.
 </t>
 <t>
    The field names given are not limited to the set of header
@@ -1844,7 +1844,8 @@
 </section>
 </section>
 
-<section title="Expires" anchor="header.expires">
+<section title="Expires" anchor="field.expires">
+  <x:anchor-alias value="header.expires"/>
    <iref primary="true" item="Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Expires" x:for-anchor=""/><iref item="Expires header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Expires"/>
 <t>
@@ -1898,7 +1899,8 @@
 </t>
 </section>
 
-<section title="Pragma" anchor="header.pragma">
+<section title="Pragma" anchor="field.pragma">
+  <x:anchor-alias value="header.pragma"/>
    <iref primary="true" item="Fields" subitem="Pragma" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Pragma" x:for-anchor=""/><iref primary="true" item="Fields" subitem="Pragma" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Pragma" x:for-anchor=""/><iref item="Pragma header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="extension-pragma"/>
    <x:anchor-alias value="Pragma"/>
@@ -1922,7 +1924,8 @@
 </aside>
 </section>
 
-<section title="Warning" anchor="header.warning">
+<section title="Warning" anchor="field.warning">
+  <x:anchor-alias value="header.warning"/>
    <rdf:Description>
      <status xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">obsoleted</status>
    </rdf:Description>
@@ -2058,7 +2061,7 @@
    at <eref target="https://www.iana.org/assignments/http-cache-directives"/>
    with the registration procedure of <xref target="cache.directive.registry"/>
    and the cache directive names summarized in the table of
-   <xref target="header.cache-control"/>.
+   <xref target="field.cache-control"/>.
 </t>
 </section>
 
@@ -2088,28 +2091,29 @@
       <x:has anchor="GET"/>
       <x:has anchor="abnf.extension"/>
       <x:has anchor="combining.byte.ranges"/>
-      <x:has anchor="effective.request.uri"/>
       <x:has anchor="field.components"/>
-      <x:has anchor="header.authorization"/>
-      <x:has anchor="header.date"/>
-      <x:has anchor="header.etag"/>
-      <x:has anchor="header.if-modified-since"/>
-      <x:has anchor="header.if-none-match"/>
-      <x:has anchor="header.if-range"/>
-      <x:has anchor="header.last-modified"/>
-      <x:has anchor="header.range"/>
-      <x:has anchor="header.vary"/>
-      <x:has anchor="header.via"/>
+      <x:has anchor="field.authorization"/>
+      <x:has anchor="field.date"/>
+      <x:has anchor="field.etag"/>
+      <x:has anchor="field.if-modified-since"/>
+      <x:has anchor="field.if-none-match"/>
+      <x:has anchor="field.if-range"/>
+      <x:has anchor="field.last-modified"/>
+      <x:has anchor="field.range"/>
+      <x:has anchor="field.vary"/>
+      <x:has anchor="field.via"/>
       <x:has anchor="http.date"/>
       <x:has anchor="field.names"/>
       <x:has anchor="field.values"/>
       <x:has anchor="message.transformations"/>
+      <x:has anchor="operation"/>
       <x:has anchor="overview.of.status.codes"/>
       <x:has anchor="precedence"/>
       <x:has anchor="preconditions"/>
       <x:has anchor="quoted.strings"/>
       <x:has anchor="safe.methods"/>
       <x:has anchor="status.codes"/>
+      <x:has anchor="target.resource"/>
       <x:has anchor="tokens"/>
       <x:has anchor="uri"/>
       <x:has anchor="weak.and.strong.validators"/>
@@ -2360,7 +2364,7 @@
    extension cache directives are no longer required to accept both token and
    quoted-string forms, but they still need to properly parse them for
    unknown extensions.
-   (<xref target="header.cache-control"/>)
+   (<xref target="field.cache-control"/>)
 </t>
 <t>
    The "public" and "private" cache directives were clarified, so that they
@@ -2378,7 +2382,7 @@
    supported by Warning could be gleaned by examining the response), and the
    remaining warn-codes &mdash; although potentially useful &mdash; were entirely
    advisory, and in practice were not added by caches or intermediaries.
-   (<xref target="header.warning"/>)
+   (<xref target="field.warning"/>)
 </t>
 </section>
 
@@ -2414,7 +2418,7 @@
 <section title="Since draft-ietf-httpbis-cache-01" anchor="changes.since.01">
 <ul>
   <li>Cite RFC 8126 instead of RFC 5226 (<eref target="https://github.com/httpwg/http-core/issues/75"/>)</li>
-  <li>In <xref target="header.pragma"/>, misleading statement about the relation between Pragma and Cache-Control (<eref target="https://github.com/httpwg/http-core/issues/92"/>, <eref target="https://www.rfc-editor.org/errata/eid4674"/>)</li>
+  <li>In <xref target="field.pragma"/>, misleading statement about the relation between Pragma and Cache-Control (<eref target="https://github.com/httpwg/http-core/issues/92"/>, <eref target="https://www.rfc-editor.org/errata/eid4674"/>)</li>
 </ul>
 </section>
 
@@ -2424,7 +2428,7 @@
    <li>In <xref target="cache-response-directive"/>, clarify what responses various directives apply to (<eref target="https://github.com/httpwg/http-core/issues/52"/>)</li>
    <li>In <xref target="validation.sent"/>, clarify the source of validators in conditional requests (<eref target="https://github.com/httpwg/http-core/issues/110"/>)</li>
    <li>Revise <xref target="history.lists"/> to apply to more than just History Lists (<eref target="https://github.com/httpwg/http-core/issues/126"/>)</li>
-   <li>In <xref target="header.warning"/>, deprecated "Warning" header field (<eref target="https://github.com/httpwg/http-core/issues/139"/>)</li>
+   <li>In <xref target="field.warning"/>, deprecated "Warning" header field (<eref target="https://github.com/httpwg/http-core/issues/139"/>)</li>
    <li>In <xref target="caching.authenticated.responses"/>, remove a spurious note (<eref target="https://github.com/httpwg/http-core/issues/141"/>)</li>
 </ul>
 </section>
@@ -2442,7 +2446,7 @@
 
 <section title="Since draft-ietf-httpbis-cache-04" anchor="changes.since.04">
 <ul>
-   <li>In <xref target="header.cache-control"/>, remove the registrations for stale-if-error and stale-while-revalidate which happened in RFC 7234 (<eref target="https://github.com/httpwg/http-core/issues/207"/>)</li>
+   <li>In <xref target="field.cache-control"/>, remove the registrations for stale-if-error and stale-while-revalidate which happened in RFC 7234 (<eref target="https://github.com/httpwg/http-core/issues/207"/>)</li>
 </ul>
 </section>
 
@@ -2459,7 +2463,7 @@
 <section title="Since draft-ietf-httpbis-cache-06" anchor="changes.since.06">
 <ul x:when-empty="None yet.">
    <li>In <xref target="response.cacheability"/> and <xref target="cache-response-directive.must-understand"/>, change response cacheability to only require understanding the response status code if the must-understand cache directive is present (<eref target="https://github.com/httpwg/http-core/issues/120"/>)</li>
-   <li>Change requirements for handling different forms of cache directives in <xref target="header.cache-control"/> (<eref target="https://github.com/httpwg/http-core/issues/128"/>)</li>
+   <li>Change requirements for handling different forms of cache directives in <xref target="field.cache-control"/> (<eref target="https://github.com/httpwg/http-core/issues/128"/>)</li>
    <li>Fix typo in <xref target="cache-response-directive.s-maxage"/> (<eref target="https://github.com/httpwg/http-core/issues/264"/>)</li>
    <li>In <xref target="cache-response-directive.public"/> and <xref target="cache-response-directive.private"/>, clarify "private" and "public" so that they do not override all other cache directives (<eref target="https://github.com/httpwg/http-core/issues/268"/>)</li>
    <li>In <xref target="response.cacheability"/>, distinguish between private with and without qualifying headers (<eref target="https://github.com/httpwg/http-core/issues/270"/>)</li>
@@ -2470,6 +2474,9 @@
 
 <section title="Since draft-ietf-httpbis-cache-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
+   <li>In <xref target="cache-response-directive.public"/> and <xref target="cache-response-directive.private"/>, make it clear that these directives do not ignore other requirements for caching (<eref target="https://github.com/httpwg/http-core/issues/320"/>)</li>
+   <li>Throughout, replace "effective request URI", "request-target" and similar with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>
+   <li>In <xref target="incomplete.responses"/>, move definition of "complete" into semantics (<eref target="https://github.com/httpwg/http-core/issues/334"/>)</li>
 </ul>
 </section>
 </section>
