@@ -76,7 +76,7 @@ diff00:
           egrep -v -- '^<\!-- ' > diffs/diff_auth_since_00.html
 
 %.html: %.xml $(stylesheet)
-	$(saxon) $< $(xreffer) | $(saxon) - $(stylesheet) xml2rfc-ext-maxwidth=900 xml2rfc-ext-styles="ff-noto ffb-sans-serif fft-sans-serif header-bw" xml2rfc-ext-paragraph-links=yes | awk -f lib/html5doctype.awk > $@
+	$(saxon) $< $(xreffer) | $(saxon) - $(stylesheet) xml2rfc-ext-maxwidth=700 xml2rfc-ext-styles="ff-noto ffb-sans-serif fft-sans-serif header-bw" xml2rfc-ext-paragraph-links=yes | awk -f lib/html5doctype.awk > $@
 
 $(bd)/%.redxml: %.xml $(reduction)
 	$(saxon) $< $(xreffer) | $(saxon) - $(reduction) > $@
