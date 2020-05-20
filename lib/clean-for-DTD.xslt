@@ -1554,6 +1554,11 @@
       <!-- special case in RFC formatting since 2015 -->
       <seriesInfo name="Work in Progress," value="{@value}"/>
     </xsl:when>
+    <xsl:when test="@name='DOI' and starts-with(@value,'10.17487/RFC') and $xml2rfc-ext-insert-doi='no'">
+      <xsl:call-template name="info">
+        <xsl:with-param name="msg">Removing DOI <xsl:value-of select="@value"/> from &lt;reference> element</xsl:with-param>
+      </xsl:call-template>
+    </xsl:when>
     <xsl:otherwise>
       <seriesInfo name="{@name}" value="{@value}"/>
     </xsl:otherwise>
@@ -2205,15 +2210,25 @@
   </xsl:attribute>
 </xsl:template>
 
-<!-- x:contributor -->
-<xsl:template match="x:contributor" mode="cleanup">
-  <xsl:variable name="content">
-    <xsl:apply-templates select="."/>
-  </xsl:variable>
-  <t>
-    <xsl:apply-templates select="exslt:node-set($content)/*" mode="text"/>
-  </t>
+<!-- x:contributor/contact -->
+<xsl:template match="x:contributor|contact" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <contact>
+        <xsl:apply-templates select="@*|node()" mode="cleanup"/>
+      </contact>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:variable name="content">
+        <xsl:apply-templates select="."/>
+      </xsl:variable>
+      <t>
+        <xsl:apply-templates select="exslt:node-set($content)/*" mode="text"/>
+      </t>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
+
 <xsl:template match="*" mode="text">
   <xsl:apply-templates mode="text"/>
 </xsl:template>
