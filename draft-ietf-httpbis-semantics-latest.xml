@@ -1167,7 +1167,7 @@ Content-Type: text/plain
 <t>
    <iref item="field value"/>
    Each field name present in a section has a corresponding "<x:dfn>field value</x:dfn>"
-   for that section, composed from all field line values with that given
+   for that section. A field value is a list whose members are composed from all field line values with that given
    field name in that section, concatenated together and separated with
    commas. See <xref target="field.order"/> for further discussion of the
    semantics of field ordering and combination in messages, and <xref
@@ -1406,7 +1406,10 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
   <x:anchor-alias value="field-vchar"/>
   
 <t>
-   HTTP field values typically have their syntax defined using ABNF
+   HTTP field values are comma-separated lists, with zero to many members.
+</t>
+<t>
+   Typically, their syntax is defined using ABNF
    (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
    as necessary, and are usually constrained to the range of US-ASCII characters.
    Fields needing a greater range of characters can use an encoding
@@ -1436,20 +1439,25 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    as quoted-string (<xref target="quoted.strings"/>).
 </t>
 <t>
-   Because commas (",") are used as a generic delimiter between members of a
-   list-based field value, they need to be treated with care if they are
+   Because commas (",") are used as a delimiter between members of a
+   field value, they need to be treated with care if they are
    allowed as data within those members. Typically, list members that might contain a
    comma are enclosed in a quoted-string.
 </t>
 <t>
    For example, a textual date and a URI (either of which might contain a comma)
-   could be safely carried in list-based field values like these:
+   could be safely carried in field values like these:
 </t>
 <artwork type="example">
   Example-URI-Field: "http://example.com/a.html,foo",
                      "http://without-a-comma.example.com/"
-  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+  Example-Date-Field: "Sat, 04 May 1996"
 </artwork>
+<t>
+   Even field values that are intended to carry a single member are considered
+   to be lists by generic HTTP implementations; as a result, field definitions
+   need to disambiguate how to handle multiple values when they are received.
+</t>
 <t>
    Note that double-quote delimiters almost always are used with the
    quoted-string production; using a different syntax inside double-quotes
@@ -1598,7 +1606,7 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 <section title="ABNF List Extension: #rule" anchor="abnf.extension">
 <t>
    A #rule extension to the ABNF rules of <xref target="RFC5234"/> is used to
-   improve readability in the definitions of some list-based field values.
+   improve readability in the definitions of field values.
 </t>
 <t>
    A construct "#" is defined, similar to "*", for defining comma-delimited
@@ -1781,15 +1789,13 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
 </t>
 <ul>
   <li>
-    <t>Whether the field is a single value or whether it can be a list
-    (delimited by commas; see <xref target="field.values"/>).</t>
-    <t>If it is not a list, document how to treat messages
-    where the field occurs multiple times (a sensible default would
+    <t>If only a single value is intended to be conveyed, document how to handle messages
+    where the field value has multiple members (a sensible default would
     be to ignore the field, but this might not always be the right
     choice).</t>
     <t>Note that intermediaries and software libraries might combine
-    multiple field instances into a single one, despite the
-    field's definition not allowing the list syntax. A robust format enables
+    multiple field lines into a single one, despite the
+    field's definition not allowing multiple members. A robust format enables
     recipients to discover these situations (good example: "Content-Type",
     as the comma can only appear inside quoted strings;
     bad example: "Location", as a comma can occur inside a URI).</t>
