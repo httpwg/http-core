@@ -50,6 +50,13 @@ TARGETS = $(TARGETS_HTML) \
 
 all: $(TARGETS)
 
+ci: $(TARGETS_HTML) $(bd)/$(MESSAGING).iana-headers \
+          $(bd)/$(SEMANTICS).iana-headers \
+          $(bd)/$(SEMANTICS).iana-methods	\
+          $(bd)/$(SEMANTICS).iana-status-codes \
+          $(bd)/$(CACHE).iana-headers \
+          $(bd)/$(CACHE).cache-directives
+
 clean:
 	rm -f $(TARGETS)
 
@@ -113,6 +120,9 @@ outlineALL.html: $(TARGETS_XHTML) lib/extractOutline.xslt
 
 httpbis.abnf: $(TARGETS_ABNF)
 	lib/common-abnf.sh $^ > $@
+
+saxonjar:
+	[ -f lib/saxon.jar ] || curl https://repo1.maven.org/maven2/net/sf/saxon/Saxon-HE/10.1/Saxon-HE-10.1.jar -o lib/saxon.jar
 
 consistency.txt: $(TARGETS_XML)
 	rm -f $@
