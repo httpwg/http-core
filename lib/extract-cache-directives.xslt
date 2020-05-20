@@ -33,10 +33,10 @@
   <xsl:text>&#10;</xsl:text>
   
   <!-- check against current version -->
-  <xsl:variable name="oldtable" select="//texttable[@anchor='iana.cache.directive.registration.table']" />
+  <xsl:variable name="oldtable" select="//table[@anchor='iana.cache.directive.registration.table']" />
 
   <xsl:variable name="s">
-    <xsl:apply-templates select="$table//texttable" mode="tostring"/>
+    <xsl:apply-templates select="$table//table" mode="tostring"/>
   </xsl:variable>
   
   <xsl:variable name="s1">
