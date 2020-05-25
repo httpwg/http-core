@@ -1,5 +1,5 @@
 xml2rfc = xml2rfc
-saxpath = "$(HOME)/java/saxon-9-7/saxon9he.jar"
+saxpath = lib/saxon.jar
 saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
 
 rfcdiff = rfcdiff --width 78 --stdout
@@ -50,6 +50,13 @@ TARGETS = $(TARGETS_HTML) \
 
 all: $(TARGETS)
 
+ci: $(TARGETS_HTML) $(bd)/$(MESSAGING).iana-headers \
+          $(bd)/$(SEMANTICS).iana-headers \
+          $(bd)/$(SEMANTICS).iana-methods	\
+          $(bd)/$(SEMANTICS).iana-status-codes \
+          $(bd)/$(CACHE).iana-headers \
+          $(bd)/$(CACHE).cache-directives
+
 clean:
 	rm -f $(TARGETS)
 
@@ -76,7 +83,7 @@ diff00:
           egrep -v -- '^<\!-- ' > diffs/diff_auth_since_00.html
 
 %.html: %.xml $(stylesheet)
-	$(saxon) $< $(xreffer) | $(saxon) - $(stylesheet) xml2rfc-ext-maxwidth=700 xml2rfc-ext-styles="ff-noto ffb-sans-serif fft-sans-serif header-bw" xml2rfc-ext-paragraph-links=yes | awk -f lib/html5doctype.awk > $@
+	$(saxon) $< $(xreffer) | $(saxon) -now:$(shell date -r $< -u +%Y-%m-%dT%H:%M:%SZ) - $(stylesheet) xml2rfc-ext-maxwidth=700 xml2rfc-ext-styles="ff-noto ffb-sans-serif fft-sans-serif header-bw" xml2rfc-ext-paragraph-links=yes | awk -f lib/html5doctype.awk > $@
 
 $(bd)/%.redxml: %.xml $(reduction)
 	$(saxon) $< $(xreffer) | $(saxon) - $(reduction) > $@
@@ -113,6 +120,9 @@ outlineALL.html: $(TARGETS_XHTML) lib/extractOutline.xslt
 
 httpbis.abnf: $(TARGETS_ABNF)
 	lib/common-abnf.sh $^ > $@
+
+saxonjar:
+	[ -f lib/saxon.jar ] || curl https://repo1.maven.org/maven2/net/sf/saxon/Saxon-HE/10.1/Saxon-HE-10.1.jar -o lib/saxon.jar
 
 consistency.txt: $(TARGETS_XML)
 	rm -f $@
