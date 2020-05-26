@@ -1,5 +1,7 @@
 ## Draft HTTP Core Documents
 
+![CI](https://github.com/httpwg/http-core/workflows/CI/badge.svg)
+
 This is the working area for the [IETF HTTP Working Group](https://httpwg.github.io/)'s documents that define the HTTP protocol; see also our [extensions repository](https://github.com/httpwg/http-extensions/). See [our contribution guidelines](CONTRIBUTING.md) for information about how to participate.
 
 **Be aware that all contributions to our work fall under the "NOTE WELL" terms therein.**
