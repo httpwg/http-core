@@ -2061,7 +2061,26 @@
 <xsl:template name="insert-sourcecode-as-artwork">
   <artwork>
     <xsl:copy-of select="@type"/>
-    <xsl:if test="@markers='true'">&lt;CODE BEGINS>&#10;</xsl:if>
+    <xsl:if test="@markers='true'">
+      <xsl:text>&lt;CODE BEGINS></xsl:text>
+      <xsl:if test="self::sourcecode and @name">
+        <xsl:variable name="offending" select="translate(@name,concat($alnum,'-+.,;_~#'),'')"/>
+        <xsl:choose>
+          <xsl:when test="$offending!=''">
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">illegal characters in @name attribute '<xsl:value-of select="@name"/>': '<xsl:value-of select="$offending"/>'</xsl:with-param>
+            </xsl:call-template>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:text> file "</xsl:text>
+            <xsl:value-of select="@name"/>
+            <xsl:text>"</xsl:text>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:if>
+      <xsl:text>&#10;</xsl:text>
+    </xsl:if>
+
     <xsl:if test="starts-with(.,'&#10;')">
       <xsl:text>&#10;</xsl:text>
       <xsl:value-of select="@x:indent-with"/>

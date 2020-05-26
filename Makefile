@@ -1,5 +1,5 @@
 xml2rfc = xml2rfc
-saxpath = "$(HOME)/java/saxon-9-7/saxon9he.jar"
+saxpath = lib/saxon.jar
 saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
 
 rfcdiff = rfcdiff --width 78 --stdout
@@ -83,7 +83,7 @@ diff00:
           egrep -v -- '^<\!-- ' > diffs/diff_auth_since_00.html
 
 %.html: %.xml $(stylesheet)
-	$(saxon) $< $(xreffer) | $(saxon) - $(stylesheet) xml2rfc-ext-maxwidth=700 xml2rfc-ext-styles="ff-noto ffb-sans-serif fft-sans-serif header-bw" xml2rfc-ext-paragraph-links=yes | awk -f lib/html5doctype.awk > $@
+	$(saxon) $< $(xreffer) | $(saxon) -now:$(shell date -r $< -u +%Y-%m-%dT%H:%M:%SZ) - $(stylesheet) xml2rfc-ext-maxwidth=700 xml2rfc-ext-styles="ff-noto ffb-sans-serif fft-sans-serif header-bw" xml2rfc-ext-paragraph-links=yes | awk -f lib/html5doctype.awk > $@
 
 $(bd)/%.redxml: %.xml $(reduction)
 	$(saxon) $< $(xreffer) | $(saxon) - $(reduction) > $@

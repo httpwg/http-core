@@ -117,7 +117,7 @@
     <eref target="https://github.com/httpwg/http-core"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.07"/>.
+    The changes in this draft are summarized in <xref target="changes.since.08"/>.
   </t>
 </note>
 </front>
@@ -436,7 +436,7 @@
 <t>
    A client sends an HTTP request to a server in the form of a
    <x:dfn>request</x:dfn> message, beginning with a method (<xref
-   target="methods"/>) and URI, followed by header fields containing request
+   target="methods"/>) and request target, followed by header fields containing request
    modifiers, client information, and representation metadata (<xref
    target="header.and.trailer.fields"/>), and finally a
    payload body (if any, <xref target="payload.body"/>).
@@ -730,7 +730,7 @@ Content-Type: text/plain
    The target of an HTTP request is called a "<x:dfn>resource</x:dfn>". 
    HTTP does not limit the nature of a resource; it merely
    defines an interface that might be used to interact with resources.
-   Each resource is identified by a Uniform Resource Identifier (URI), as
+   Most resources are identified by a Uniform Resource Identifier (URI), as
    described in <xref target="uri"/>.
 </t>
 <t>
@@ -1218,7 +1218,8 @@ Content-Type: text/plain
    A recipient &MAY; combine multiple field lines with the same field name
    into one field line, without changing the semantics of the message, by
    appending each subsequent field line value to the initial field line value
-   in order, separated by a comma and optional whitespace. For consistency, use comma SP.
+   in order, separated by a comma and <x:ref>OWS</x:ref> (optional whitespace).
+   For consistency, use comma SP.
 </t>
 <t>
    The order in which field lines with the
@@ -2147,16 +2148,35 @@ deployed and not likely to be registered in a timely manner otherwise.</t>
    mechanism and configuration techniques as general-purpose Web browsers.
 </t>
 <t>
-   HTTP communication is initiated by a user agent for some purpose.
-   The purpose is a combination of request semantics
-   and a target resource upon which to apply those
-   semantics.  A URI reference (<xref target="uri"/>) is typically used as
-   an identifier for the "<x:dfn>target resource</x:dfn>", which a user agent
-   would resolve to its absolute form in order to obtain the
-   "<x:dfn>target URI</x:dfn>".  The target URI
-   excludes the reference's fragment component, if any,
-   since fragment identifiers are reserved for client-side processing
-   (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
+   HTTP communication is initiated by a user agent for some purpose. The
+   purpose is a combination of request semantics and a target resource upon
+   which to apply those semantics. The "<x:dfn>request target</x:dfn>" is
+   the protocol element that identifies the "<x:dfn>target resource</x:dfn>".
+</t>
+<t>
+   Typically, the request target is a URI reference (<xref target="uri"/>)
+   which a user agent would resolve to its absolute form in order to obtain
+   the "<x:dfn>target URI</x:dfn>". The target URI excludes the reference's
+   fragment component, if any, since fragment identifiers are reserved for
+   client-side processing (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
+</t>
+<t>
+   However, there are two special, method-specific forms allowed for the
+   request target in specific circumstances:
+</t>
+<ul>   
+   <li>
+      For CONNECT (<xref target="CONNECT"/>), the request target is the host
+      name and port number of the tunnel destination, separated by a colon.
+   </li>
+   <li>
+      For OPTIONS (<xref target="OPTIONS"/>), the request target can be a
+      single asterisk ("*").
+   </li>
+</ul>
+<t>
+   See the respective method definitions for details. These forms &MUST-NOT;
+   be used with other methods.
 </t>
 </section>
 
@@ -4376,7 +4396,7 @@ Content-Range: exampleunit 11.2-14.3/25
     </tr>
     <tr>
       <td>HEAD</td>
-      <td>Same as GET, but only transfer the status line and header section.</td>
+      <td>Same as GET, but do not transfer the response body.</td>
       <td><xref target="HEAD" format="counter"/></td>
     </tr>
     <tr>
@@ -4987,7 +5007,7 @@ Content-Range: exampleunit 11.2-14.3/25
   <iref primary="true" item="CONNECT method" x:for-anchor=""/>
 <t>
    The CONNECT method requests that the recipient establish a tunnel to the
-   destination origin server identified by the target URI and, if
+   destination origin server identified by the request target and, if
    successful, thereafter restrict its behavior to blind forwarding of
    data, in both directions, until the tunnel is closed.
    Tunnels are commonly used to create an end-to-end virtual connection,
@@ -5001,10 +5021,10 @@ Content-Range: exampleunit 11.2-14.3/25
    is established.  However, most origin servers do not implement CONNECT.
 </t>
 <t>
-   A client sending a CONNECT request &MUST; send the authority form of
-   request-target (<xref target="request.target"/>); i.e., the request-target consists
-   of only the host name and port number of the tunnel destination, separated
-   by a colon. For example,
+   A client sending a CONNECT request &MUST; send the authority component
+   (described in Section 3.2 of <xref target="RFC3986"/>) as the request target;
+   i.e., the request target consists of only the host name and port number of the
+   tunnel destination, separated by a colon. For example,
 </t>
 <artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
 CONNECT server.example.com:80 HTTP/1.1
@@ -5013,13 +5033,13 @@ Host: server.example.com:80
 </artwork>
 <t>
    The recipient proxy can establish a tunnel either by directly connecting to
-   the request-target or, if configured to use another proxy, by forwarding
+   the request target or, if configured to use another proxy, by forwarding
    the CONNECT request to the next inbound proxy.
    Any <x:ref>2xx (Successful)</x:ref> response indicates
    that the sender (and all inbound proxies) will switch to tunnel mode
    immediately after the blank line that concludes the successful response's
    header section; data received after that blank line is from the server
-   identified by the request-target.
+   identified by the request target.
    Any response other than a successful response indicates that the tunnel
    has not yet been formed and that the connection remains governed by HTTP.
 </t>
@@ -5041,12 +5061,13 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </artwork>
 <t>
    There are significant risks in establishing a tunnel to arbitrary servers,
-   particularly when the destination is a well-known or reserved TCP port
-   that is not intended for Web traffic. For example, a CONNECT to
-   "example.com:25" would suggest that the proxy connect to the reserved port
-   for SMTP traffic; if allowed, that could trick the proxy into relaying
-   spam email. Proxies that support CONNECT &SHOULD; restrict its use to a
-   limited set of known ports or a configurable whitelist of safe target URIs.
+   particularly when the destination is a well-known or reserved TCP port that
+   is not intended for Web traffic. For example, a CONNECT to
+   "example.com:25" would suggest that the proxy connect to the reserved
+   port for SMTP traffic; if allowed, that could trick the proxy into
+   relaying spam email. Proxies that support CONNECT &SHOULD; restrict its
+   use to a limited set of known ports or a configurable whitelist of safe
+   request targets.
 </t>
 <t>
    A server &MUST-NOT; send any <x:ref>Transfer-Encoding</x:ref> or
@@ -5079,8 +5100,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    of a server, without implying a resource action.
 </t>
 <t>
-   An OPTIONS request with an asterisk ("*") as the request-target
-   (<xref target="request.target"/>) applies to the server in general rather than to a
+   An OPTIONS request with an asterisk ("*") as the request target
+   (<xref target="target.resource"/>) applies to the server in general rather than to a
    specific resource. Since a server's communication options typically depend
    on the resource, the "*" request is only useful as a "ping" or "no-op"
    type of method; it does nothing beyond allowing the client to test
@@ -5088,7 +5109,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    a proxy for HTTP/1.1 conformance (or lack thereof).
 </t>
 <t>
-   If the request-target is not an asterisk, the OPTIONS request applies
+   If the request target is not an asterisk, the OPTIONS request applies
    to the options that are available when communicating with the target
    resource.
 </t>
@@ -5313,7 +5334,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    A <x:dfn>100-continue</x:dfn> expectation informs recipients that the
    client is about to send a (presumably large) message body in this request
    and wishes to receive a <x:ref>100 (Continue)</x:ref> interim response if
-   the request-line and header fields are not sufficient to cause an immediate
+   the method, target URI, and header fields are not sufficient to cause an immediate
    success, redirect, or error response. This allows the client to wait for an
    indication that it is worthwhile to send the message body before actually
    doing so, which can improve efficiency when the message body is huge or
@@ -5394,21 +5415,21 @@ Expect: 100-continue
    </li>
 </ul>
 <t>
-   An origin server &MUST;, upon receiving an HTTP/1.1 (or later) request-line
-   and a complete header section that contains a 100-continue expectation and
+   An origin server &MUST;, upon receiving an HTTP/1.1 (or later) request that has a method, target URI,
+   and complete header section that contains a 100-continue expectation and
    indicates a request message body will follow, either send an immediate
    response with a final status code, if that status can be determined by
-   examining just the request-line and header fields, or send an immediate
+   examining just the method, target URI, and header fields, or send an immediate
    <x:ref>100 (Continue)</x:ref> response to encourage the client to send the
    request's message body. The origin server &MUST-NOT; wait for the message
    body before sending the <x:ref>100 (Continue)</x:ref> response.
 </t>
 <t>
-   A proxy &MUST;, upon receiving an HTTP/1.1 (or later) request-line
-   and a complete header section that contains a 100-continue expectation and
+   A proxy &MUST;, upon receiving an HTTP/1.1 (or later) request that has a method, target URI,
+   and complete header section that contains a 100-continue expectation and
    indicates a request message body will follow, either send an immediate
    response with a final status code, if that status can be determined by
-   examining just the request-line and header fields, or begin forwarding the
+   examining just the method, target URI, and header fields, or begin forwarding the
    request toward the origin server by sending a corresponding request-line
    and header section to the next inbound server. If the proxy believes (from
    configuration or past interaction) that the next inbound server only
@@ -7557,8 +7578,7 @@ Expect: 100-continue
    The <x:dfn>1xx (Informational)</x:dfn> class of status code indicates an
    interim response for communicating connection status or request progress
    prior to completing the requested action and sending a final response.
-   1xx responses are terminated by the first empty line after the
-   status-line (the empty line signaling the end of the header section).
+   1xx responses are terminated by the end of the header section.
    Since HTTP/1.0 did not define any 1xx status codes, a server &MUST-NOT; send
    a 1xx response to an HTTP/1.0 client.
 </t>
@@ -8934,7 +8954,7 @@ Content-Type: text/plain
   <x:anchor-alias value="response-header"/>
 <t>
    The response header fields allow the server to pass additional
-   information about the response beyond what is placed in the status-line.
+   information about the response beyond the status code.
    These header fields give information about the server, about
    further access to the <x:ref>target resource</x:ref>, or about related
    resources.
@@ -10923,7 +10943,6 @@ Content-Encoding: gzip
     <x:has anchor="persistent.tear-down"/>
     <x:has anchor="request.line"/>
     <x:has anchor="request.smuggling"/>
-    <x:has anchor="request.target"/>
     <x:has anchor="transfer.codings"/>
     <x:has anchor="Messaging-acks" target="acks"/>
     <x:has anchor="Messaging-security.considerations" target="security.considerations"/>
@@ -12503,7 +12522,6 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-06" anchor="changes.since.06">
 <ul x:when-empty="None yet.">
-  <li>In <xref target="field.range"/>, explicitly reference the definition of representation data as including any content codings (<eref target="https://github.com/httpwg/http-core/issues/11"/>)</li>
   <li>In <xref target="field.via"/>, simplify received-by grammar (and disallow comma character) (<eref target="https://github.com/httpwg/http-core/issues/24"/>)</li>
   <li>In <xref target="field.names"/>, give guidance on interoperable field names (<eref target="https://github.com/httpwg/http-core/issues/30"/>)</li>
   <li>In <xref target="whitespace"/>, define the semantics and possible replacement of whitespace when it is known to occur (<eref target="https://github.com/httpwg/http-core/issues/53"/>)</li>
@@ -12522,26 +12540,34 @@ Content-Encoding: gzip
   <li>In <xref target="field.host"/>, make explicit requirements on origin server to use authority from absolute-form when available (<eref target="https://github.com/httpwg/http-core/issues/191"/>)</li>
   <li>In <xref target="http.uri"/>, <xref target="https.uri"/>, <xref target="origin"/>, and <xref target="authoritative.access"/>, refactored schemes to define origin and authoritative access to an origin server for both "http" and "https" URIs to account for alternative services and secured connections that are not necessarily based on TCP (<eref target="https://github.com/httpwg/http-core/issues/237"/>)</li>
   <li>In <xref target="intro.requirements"/>, reference RFC 8174 as well (<eref target="https://github.com/httpwg/http-core/issues/303"/>)</li>
-  <li>In <xref target="representations"/>, explicitly reference 206 as one of the status codes that provide representation data (<eref target="https://github.com/httpwg/http-core/issues/325"/>)</li>
-  <li>In <xref target="status.205"/>, <xref target="status.408"/>, and <xref target="status.413"/>, remove HTTP/1-specific, connection-related requirements (<eref target="https://github.com/httpwg/http-core/issues/144"/>)</li>
 </ul>
 </section>
 
 <section title="Since draft-ietf-httpbis-semantics-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="field.range"/>, explicitly reference the definition of representation data as including any content codings (<eref target="https://github.com/httpwg/http-core/issues/11"/>)</li>
   <li>Move TE: trailers from <xref target="Messaging"/> into <xref target="trailers.limitations"/> (<eref target="https://github.com/httpwg/http-core/issues/18"/>)</li>
   <li>In <xref target="field.content-length"/>, adjust requirements for handling multiple content-length values (<eref target="https://github.com/httpwg/http-core/issues/59"/>)</li>
   <li>In <xref target="field.if-match"/> and <xref target="field.if-none-match"/>, clarified condition evaluation (<eref target="https://github.com/httpwg/http-core/issues/72"/>)</li>
   <li>In <xref target="field.values"/>, remove concept of obs-fold, as that is HTTP/1-specific (<eref target="https://github.com/httpwg/http-core/issues/116"/>)</li>
   <li>In <xref target="content.negotiation"/>, introduce the concept of request payload negotiation (<xref target="request.payload.negotiation"/>) and define for <x:ref>Accept-Encoding</x:ref> (<eref target="https://github.com/httpwg/http-core/issues/119"/>)</li>
+  <li>In <xref target="status.205"/>, <xref target="status.408"/>, and <xref target="status.413"/>, remove HTTP/1-specific, connection-related requirements (<eref target="https://github.com/httpwg/http-core/issues/144"/>)</li>
   <li>In <xref target="CONNECT"/>, correct language about what is forwarded (<eref target="https://github.com/httpwg/http-core/issues/170"/>)</li>
   <li>Throughout, replace "effective request URI", "request-target" and similar with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>
   <li>In <xref target="considerations.for.new.header.fields"/> and <xref target="considerations.for.new.status.codes"/>, describe how extensions should consider scope of applicability (<eref target="https://github.com/httpwg/http-core/issues/265"/>)</li>
   <li>In <xref target="operation"/>, don't rely on the HTTP/1.1 Messaging specification to define "message" (<eref target="https://github.com/httpwg/http-core/issues/311"/>)</li>
   <li>In <xref target="field.content-location"/> and <xref target="field.referer"/>, note that URL resolution is necessary (<eref target="https://github.com/httpwg/http-core/issues/321"/>)</li>
+  <li>In <xref target="representations"/>, explicitly reference 206 as one of the status codes that provide representation data (<eref target="https://github.com/httpwg/http-core/issues/325"/>)</li>
   <li>In <xref target="field.if-unmodified-since"/>, refine requirements so that they don't apply to resources without a concept of modification time (<eref target="https://github.com/httpwg/http-core/issues/326"/>)</li>
   <li>In <xref target="field.proxy-authenticate"/>, specify the scope as a request, not a target resource (<eref target="https://github.com/httpwg/http-core/issues/331"/>)</li>
   <li>In <xref target="operation"/>, introduce concept of "complete" messages (<eref target="https://github.com/httpwg/http-core/issues/334"/>)</li>
+  <li>In <xref target="target.resource"/>, <xref target="CONNECT"/>, and <xref target="OPTIONS"/>, refine use of "request target" (<eref target="https://github.com/httpwg/http-core/issues/340"/>)</li>
+  <li>Throughout, remove "status-line" and "request-line", as these are HTTP/1.1-specific (<eref target="https://github.com/httpwg/http-core/issues/361"/>)</li>
+</ul>
+</section>
+
+<section title="Since draft-ietf-httpbis-semantics-08" anchor="changes.since.08">
+<ul x:when-empty="None yet.">
   <li>In <xref target="field.values"/>, disallow bare CRs (<eref target="https://github.com/httpwg/http-core/issues/31"/>)</li>
 </ul>
 </section>

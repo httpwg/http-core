@@ -3,8 +3,16 @@ name: CI
 on:
   push:
     branches: [ master ]
+    paths:
+        - '*.xml'
+        - 'Makefile'
+        - 'lib/*'
   pull_request:
     branches: [ master ]
+    paths:
+        - '*.xml'
+        - 'Makefile'
+        - 'lib/*'
 
 jobs:
   build:
@@ -18,3 +26,12 @@ jobs:
 
     - name: Run Makefile
       run: make ci saxpath=lib/saxon.jar
+
+    - name: Push HTML
+      if: ${{ github.event_name == 'push' }}
+      run: |
+        git status --short draft-ietf-httpbis*.html | fgrep -s " M " || exit 0
+        git config --global user.name "Julian's HTML Bot"
+        git config --global user.email "julian.reschke@gmx.de"
+        git commit -m "generated HTML" draft-ietf-httpbis*.html
+        git push
