@@ -843,6 +843,10 @@
   </xsl:if>
 </xsl:template>
 
+
+<!-- workaround for https://tools.ietf.org/tools/ietfdb/ticket/2900 -->
+<xsl:template match="iref/comment()" mode="cleanup"/>
+
 <!-- drop index gen extension -->
 <xsl:template match="iref" mode="cleanup">
   <xsl:if test="$xml2rfc-ext-include-index='yes'">

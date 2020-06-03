@@ -1413,7 +1413,8 @@
   <!--<xsl:message> Orig: "<xsl:value-of select="."/>"</xsl:message>
   <xsl:message>Start: "<xsl:value-of select="$starts-with-ws"/>"</xsl:message>
   <xsl:message>  End: "<xsl:value-of select="$ends-with-ws"/>"</xsl:message> -->
-  <xsl:if test="$starts-with-ws and (preceding-sibling::node() | parent::ed:ins | parent::ed:del)">
+  <xsl:variable name="before" select="preceding-sibling::*[1]"/>
+  <xsl:if test="$starts-with-ws and (preceding-sibling::node() | parent::ed:ins | parent::ed:del) and not($before/self::x:anchor-alias)">
     <xsl:text> </xsl:text>
   </xsl:if>
   <xsl:value-of select="$normalized"/>
@@ -1825,13 +1826,27 @@
 <xsl:template name="emit-postal-line">
   <xsl:param name="prefix"/>
   <xsl:param name="value"/>
+  <xsl:param name="values"/>
   <xsl:param name="link"/>
   <xsl:param name="annotation"/>
 
-  <xsl:if test="normalize-space($value)!=''">
+  <xsl:if test="normalize-space($value)!='' or $values">
     <br/>
     <xsl:if test="$prefix!=''"><xsl:value-of select="$prefix"/>: </xsl:if>
     <xsl:choose>
+      <xsl:when test="$values">
+        <xsl:for-each select="exslt:node-set($values)/*">
+          <xsl:choose>
+            <xsl:when test="@href">
+              <a href="{@href}"><xsl:value-of select="normalize-space(.)"/></a>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:value-of select="normalize-space(.)"/>
+            </xsl:otherwise>
+          </xsl:choose>
+          <xsl:if test="position()!=last()">, </xsl:if>
+        </xsl:for-each>
+      </xsl:when>
       <xsl:when test="$link!=''">
         <a href="{$link}"><xsl:value-of select="normalize-space($value)"/></a>
       </xsl:when>
@@ -2015,7 +2030,7 @@
         <xsl:if test="$city!=''">
           <xsl:text>, </xsl:text>
         </xsl:if>
-        <xsl:value-of select="$region-and-code"/>
+        <xsl:value-of select="normalize-space($region-and-code)"/>
       </xsl:if>
     </xsl:with-param>
   </xsl:call-template>
@@ -2550,10 +2565,7 @@
       <xsl:with-param name="link" select="concat('fax:',translate($facsimile,' ',''))"/>
     </xsl:call-template>
   </xsl:if>
-  <xsl:for-each select="email">
-    <xsl:variable name="email">
-      <xsl:call-template name="extract-email"/>
-    </xsl:variable>
+  <xsl:if test="email">
     <xsl:call-template name="emit-postal-line">
       <xsl:with-param name="prefix">
         <xsl:choose>
@@ -2561,14 +2573,23 @@
           <xsl:otherwise>EMail</xsl:otherwise>
         </xsl:choose>
       </xsl:with-param>
-      <xsl:with-param name="value" select="$email"/>
-      <xsl:with-param name="link">
-        <xsl:if test="$xml2rfc-linkmailto!='no'">
-          <xsl:value-of select="concat('mailto:',$email)"/>
-        </xsl:if>
+      <xsl:with-param name="values">
+        <xsl:for-each select="email">
+          <xsl:variable name="e">
+            <xsl:call-template name="extract-email"/>
+          </xsl:variable>
+          <v>
+            <xsl:if test="$xml2rfc-linkmailto!='no'">
+              <xsl:attribute name="href">
+                <xsl:value-of select="concat('mailto:',normalize-space($e))"/>
+              </xsl:attribute>
+            </xsl:if>
+            <xsl:value-of select="normalize-space($e)"/>
+          </v>
+        </xsl:for-each>
       </xsl:with-param>
     </xsl:call-template>
-  </xsl:for-each>
+  </xsl:if>
   <xsl:for-each select="uri">
     <xsl:variable name="uri">
       <xsl:call-template name="extract-uri"/>
@@ -10091,8 +10112,8 @@ dd, li, p {
 
 <xsl:template name="sluggy-anchor">
   <xsl:if test="self::section and (not(@anchor) or @anchor='')">
-    <xsl:variable name="fr">ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.'"()+-_ :%,/=@&lt;&gt;</xsl:variable>
-    <xsl:variable name="to">abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789.__----_---------</xsl:variable>
+    <xsl:variable name="fr">ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.'"()+-_ :%,/=@&lt;&gt;*</xsl:variable>
+    <xsl:variable name="to">abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789.__----_----------</xsl:variable>
     <xsl:variable name="canslug" select="translate(normalize-space(concat(@title,name)),$fr,'')=''"/>
     <xsl:if test="$canslug">
       <xsl:variable name="slug" select="translate(normalize-space(concat(@title,name)),$fr,$to)"/>
@@ -11691,11 +11712,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1281 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1281 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1286 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1286 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/05/22 14:02:02 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/05/22 14:02:02 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/05/29 12:41:38 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/05/29 12:41:38 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
