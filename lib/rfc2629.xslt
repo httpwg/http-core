@@ -4549,6 +4549,34 @@
       <xsl:apply-templates />
     </xsl:for-each>
   </dd>
+  
+  <!-- sanity check on x:source/x:has -->
+  <xsl:for-each select="x:source/x:has">
+    <xsl:variable name="doc" select="document(../@href)"/>
+    <xsl:variable name="anch" select="@anchor"/>
+    <xsl:variable name="targ" select="@target"/>
+    <xsl:if test="not(//*[@target=$anch])">
+      <xsl:call-template name="info">
+        <xsl:with-param name="msg">x:has with anchor '<xsl:value-of select="$anch"/>' in <xsl:value-of select="../@href"/> is unused</xsl:with-param>
+      </xsl:call-template>
+    </xsl:if>
+    <xsl:choose>
+      <xsl:when test="@target">
+        <xsl:if test="not($doc//*[@anchor=$targ]) and not($doc//x:anchor-alias/@value=$targ)">
+          <xsl:call-template name="error">
+            <xsl:with-param name="msg">x:has with target '<xsl:value-of select="$targ"/>' not defined in <xsl:value-of select="../@href"/></xsl:with-param>
+          </xsl:call-template>
+        </xsl:if>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:if test="not($doc//*[@anchor=$anch]) and not($doc//x:anchor-alias/@value=$anch)">
+          <xsl:call-template name="error">
+            <xsl:with-param name="msg">x:has with anchor '<xsl:value-of select="$anch"/>' not defined in <xsl:value-of select="../@href"/></xsl:with-param>
+          </xsl:call-template>
+        </xsl:if>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:for-each>
 </xsl:template>
 
 <xsl:template name="insert-pub-date">
@@ -11735,11 +11763,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1291 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1291 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1292 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1292 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/06/09 09:35:42 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/06/09 09:35:42 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/06/11 07:37:42 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/06/11 07:37:42 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
