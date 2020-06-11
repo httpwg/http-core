@@ -5338,7 +5338,18 @@
         </xsl:choose>
       </xsl:variable>
 
-      <xsl:variable name="name" select="substring-after(@title,'Since ')"/>
+      <xsl:variable name="name">
+        <xsl:choose>
+          <xsl:when test="starts-with(@title,'Since ')">
+            <xsl:value-of select="substring-after(@title,'Since ')"/>
+          </xsl:when>
+          <xsl:when test="starts-with(@title,'draft-')">
+            <xsl:value-of select="@title"/>
+          </xsl:when>
+          <xsl:otherwise/>
+        </xsl:choose>
+      </xsl:variable>
+      
       <xsl:variable name="basename">
         <xsl:call-template name="draft-base-name">
           <xsl:with-param name="name" select="$name"/>
@@ -5350,11 +5361,18 @@
         </xsl:call-template>
       </xsl:variable>
 
+      <xsl:variable name="offset">
+        <xsl:choose>
+          <xsl:when test="starts-with(@title,'Since ')">1</xsl:when>        
+          <xsl:otherwise>0</xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      
       <xsl:variable name="smells-like-change-log" select="ancestor-or-self::section[@removeInRFC='true'] or ancestor::section[@title='Changes'] or ancestor::section[@title='Change Log']"/>
       
       <xsl:variable name="diff-uri">
         <xsl:if test="$smells-like-change-log and $basename!=''">
-          <xsl:variable name="next" select="concat($basename,'-',format-number(1 + $seq,'00'))"/>
+          <xsl:variable name="next" select="concat($basename,'-',format-number($offset + $seq,'00'))"/>
           <xsl:choose>
             <!-- check whether the "next" draft exists (is mentioned in a sibling section -->
             <xsl:when test="../section[contains(@title,$next)]">
@@ -6065,10 +6083,13 @@
           <xsl:apply-templates select="$to/node()"/>
         </xsl:when>
         <xsl:when test="$to/@hangText">
-          <xsl:value-of select="$to/@hangText"/>
+          <xsl:value-of select="normalize-space($to/@hangText)"/>
+        </xsl:when>
+        <xsl:when test="$to/@title">
+          <xsl:value-of select="normalize-space($to/@title)"/>
         </xsl:when>
         <xsl:otherwise>
-          <xsl:value-of select="$to/@title" />
+          <xsl:value-of select="$to/@anchor"/>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:when>
@@ -6126,7 +6147,7 @@
           <!-- Nothing to do -->
         </xsl:when>
         <xsl:when test="$from/@format='title'">
-          <xsl:value-of select="$to/@title" />
+          <xsl:value-of select="$to/@anchor"/>
         </xsl:when>
         <xsl:otherwise>
           <xsl:value-of select="normalize-space(concat('Comment ',$name))"/>
@@ -6397,7 +6418,7 @@
           <xsl:when test="$is-xref and $from/@format='title'">
             <xsl:choose>
               <xsl:when test="$to/self::referencegroup">
-                <xsl:value-of select="$val"/>
+                <xsl:value-of select="$to/@anchor"/>
               </xsl:when>
               <xsl:otherwise>
                 <xsl:apply-templates select="$front[1]/title/node()" mode="get-text-content"/>
@@ -11515,10 +11536,12 @@ dd, li, p {
             <xsl:value-of select="$cid"/>
           </xsl:attribute>
           <xsl:text>[</xsl:text>
-          <a href="#{$cid}" class="smpl">
-            <xsl:value-of select="$cid"/>
-          </a>
-          <xsl:text>: </xsl:text>
+          <xsl:if test="@anchor or (not(/rfc/@version) or /rfc/@version &lt; 3)">
+            <a href="#{$cid}" class="smpl">
+              <xsl:value-of select="$cid"/>
+            </a>
+            <xsl:text>: </xsl:text>
+          </xsl:if>
           <xsl:apply-templates select="text()|eref|xref"/>
           <xsl:if test="@source"> --<xsl:value-of select="@source"/></xsl:if>
           <xsl:text>]</xsl:text>
@@ -11712,11 +11735,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1286 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1286 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1291 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1291 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/05/29 12:41:38 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/05/29 12:41:38 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/06/09 09:35:42 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/06/09 09:35:42 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
