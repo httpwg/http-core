@@ -2066,192 +2066,6 @@ https://www.example.org
    incomplete close on the client side.
 </t>
 </section>
-
-<section title="Upgrade" anchor="field.upgrade">
-  <x:anchor-alias value="header.upgrade"/>
-  <iref primary="true" item="Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Upgrade header field" x:for-anchor=""/>
-  <x:anchor-alias value="Upgrade"/>
-  <x:anchor-alias value="protocol"/>
-  <x:anchor-alias value="protocol-name"/>
-  <x:anchor-alias value="protocol-version"/>
-<t>
-   The "Upgrade" header field is intended to provide a simple mechanism
-   for transitioning from HTTP/1.1 to some other protocol on the same
-   connection.
-</t>
-<t>
-   A client &MAY; send a list of protocol names in the Upgrade header field
-   of a request to invite the server to switch to one or more of the named
-   protocols, in order of descending preference, before sending
-   the final response. A server &MAY; ignore a received Upgrade header field
-   if it wishes to continue using the current protocol on that connection.
-   Upgrade cannot be used to insist on a protocol change.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Upgrade"/>
-  <x:ref>Upgrade</x:ref>          = 1#<x:ref>protocol</x:ref>
-
-  <x:ref>protocol</x:ref>         = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
-  <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
-  <x:ref>protocol-version</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Although protocol names are registered with a preferred case,
-   recipients &SHOULD; use case-insensitive comparison when matching each
-   protocol-name to supported protocols.
-</t>
-<t>
-   A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
-   &MUST; send an Upgrade header field to indicate the new protocol(s) to
-   which the connection is being switched; if multiple protocol layers are
-   being switched, the sender &MUST; list the protocols in layer-ascending
-   order. A server &MUST-NOT; switch to a protocol that was not indicated by
-   the client in the corresponding request's Upgrade header field.
-   A server &MAY; choose to ignore the order of preference indicated by the
-   client and select the new protocol(s) based on other factors, such as the
-   nature of the request or the current load on the server.
-</t>
-<t>
-   A server that sends a <x:ref>426 (Upgrade Required)</x:ref> response
-   &MUST; send an Upgrade header field to indicate the acceptable protocols,
-   in order of descending preference.
-</t>
-<t>
-   A server &MAY; send an Upgrade header field in any other response to
-   advertise that it implements support for upgrading to the listed protocols,
-   in order of descending preference, when appropriate for a future request.
-</t>
-<t>
-   The following is a hypothetical example sent by a client:
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET /hello HTTP/1.1
-Host: www.example.com
-Connection: upgrade
-Upgrade: websocket, IRC/6.9, RTA/x11
-
-</artwork>
-<t>
-   The capabilities and nature of the
-   application-level communication after the protocol change is entirely
-   dependent upon the new protocol(s) chosen. However, immediately after
-   sending the <x:ref>101 (Switching Protocols)</x:ref> response, the server is expected to continue responding to
-   the original request as if it had received its equivalent within the new
-   protocol (i.e., the server still has an outstanding request to satisfy
-   after the protocol has been changed, and is expected to do so without
-   requiring the request to be repeated).
-</t>
-<t>
-   For example, if the Upgrade header field is received in a GET request
-   and the server decides to switch protocols, it first responds
-   with a <x:ref>101 (Switching Protocols)</x:ref> message in HTTP/1.1 and
-   then immediately follows that with the new protocol's equivalent of a
-   response to a GET on the target resource.  This allows a connection to be
-   upgraded to protocols with the same semantics as HTTP without the
-   latency cost of an additional round trip.  A server &MUST-NOT; switch
-   protocols unless the received message semantics can be honored by the new
-   protocol; an OPTIONS request can be honored by any protocol.
-</t>
-<t>
-   The following is an example response to the above hypothetical request:
-</t>
-<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
-HTTP/1.1 101 Switching Protocols
-Connection: upgrade
-Upgrade: websocket
-
-[... data stream switches to websocket with an appropriate response
-(as defined by new protocol) to the "GET /hello" request ...]
-</artwork>
-<t>
-   When Upgrade is sent, the sender &MUST; also send a
-   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
-   that contains an "upgrade" connection option, in order to prevent Upgrade
-   from being accidentally forwarded by intermediaries that might not implement
-   the listed protocols.  A server &MUST; ignore an Upgrade header field that
-   is received in an HTTP/1.0 request.
-</t>
-<t>
-   A client cannot begin using an upgraded protocol on the connection until
-   it has completely sent the request message (i.e., the client can't change
-   the protocol it is sending in the middle of a message).
-   If a server receives both an Upgrade and an <x:ref>Expect</x:ref> header field
-   with the "100-continue" expectation (<xref target="field.expect"/>), the
-   server &MUST; send a <x:ref>100 (Continue)</x:ref> response before sending
-   a <x:ref>101 (Switching Protocols)</x:ref> response.
-</t>
-<t>
-   The Upgrade header field only applies to switching protocols on top of the
-   existing connection; it cannot be used to switch the underlying connection
-   (transport) protocol, nor to switch the existing communication to a
-   different connection. For those purposes, it is more appropriate to use a
-   <x:ref>3xx (Redirection)</x:ref> response (<xref target="status.3xx"/>).
-</t>
-
-<section title="Upgrade Protocol Names" anchor="upgrade.protocol.names">
-<t>
-   This specification only defines the protocol name "HTTP" for use by
-   the family of Hypertext Transfer Protocols, as defined by the HTTP
-   version rules of <xref target="protocol.version"/> and future updates to this
-   specification. Additional protocol names ought to be registered using the
-   registration procedure defined in <xref target="upgrade.token.registry"/>.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Description</th>
-      <th>Expected Version Tokens</th>
-      <th>Reference</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>HTTP</td>
-      <td>Hypertext Transfer Protocol</td>
-      <td>any DIGIT.DIGIT (e.g, "2.0")</td>
-      <td><xref target="protocol.version"/></td>
-    </tr>
-  </tbody>
-</table>
-</section>
-
-<section title="Upgrade Token Registry" anchor="upgrade.token.registry">
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" defines
-   the namespace for protocol-name tokens used to identify protocols in the
-   <x:ref>Upgrade</x:ref> header field. The registry is maintained at
-   <eref target="https://www.iana.org/assignments/http-upgrade-tokens"/>.
-</t>
-<t>
-   Each registered protocol name is associated with contact information
-   and an optional set of specifications that details how the connection
-   will be processed after it has been upgraded.
-</t>
-<t>
-   Registrations happen on a "First Come First Served" basis (see
-   <xref target="RFC8126" x:sec="4.4" x:fmt="of"/>) and are subject to the
-   following rules:
-</t>
-<ol>
-   <li>A protocol-name token, once registered, stays registered forever.</li>
-   <li>A protocol-name token is case-insensitive and registered with the
-       preferred case to be generated by senders.</li>
-   <li>The registration &MUST; name a responsible party for the
-       registration.</li>
-   <li>The registration &MUST; name a point of contact.</li>
-   <li>The registration &MAY; name a set of specifications associated with
-       that token. Such specifications need not be publicly available.</li>
-   <li>The registration &SHOULD; name a set of expected "protocol-version"
-       tokens associated with that token at the time of registration.</li>
-   <li>The responsible party &MAY; change the registration at any time.
-       The IANA will keep a record of all such changes, and make them
-       available upon request.</li>
-   <li>The IESG &MAY; reassign responsibility for a protocol token.
-       This will normally only be used in the case when a
-       responsible party cannot be contacted.</li>
-</ol>
-</section>
-</section>
 </section>
 
 <section title="Enclosing Messages as Data" anchor="enclosing.messages">
@@ -2621,6 +2435,7 @@ Upgrade: websocket
     <x:has anchor="field.expect"/>
     <x:has anchor="field.host"/>
     <x:has anchor="field.trailer"/>
+    <x:has anchor="field.upgrade"/>
     <x:has anchor="header.and.trailer.fields"/>
     <x:has anchor="http.date"/>
     <x:has anchor="http.uri"/>
@@ -2642,6 +2457,8 @@ Upgrade: websocket
     <x:has anchor="tokens"/>
     <x:has anchor="target.resource"/>
     <x:has anchor="trailer.fields"/>
+    <x:has anchor="upgrade.protocol.names"/>
+    <x:has anchor="upgrade.token.registry"/>
     <x:has anchor="uri"/>
     <x:has anchor="whitespace"/>
     <x:has anchor="Semantics-acks" target="acks"/>
