@@ -108,7 +108,7 @@
     <eref target="https://github.com/httpwg/http-core"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.07"/>.
+    The changes in this draft are summarized in <xref target="changes.since.08"/>.
   </t>
 </note>
 </front>
@@ -314,6 +314,13 @@
    Although the line terminator for the start-line and header
    fields is the sequence CRLF, a recipient &MAY; recognize a
    single LF as a line terminator and ignore any preceding CR.
+</t>
+<t>
+   A sender &MUST-NOT; generate a bare CR (a CR character not immediately
+   followed by LF) within any protocol elements other than the payload body.
+   A recipient of such a bare CR &MUST; consider that element to be invalid or
+   replace each bare CR with SP before processing the element or forwarding
+   the message.
 </t>
 <t>
    Older HTTP/1.0 user agent implementations might send an extra CRLF
@@ -867,19 +874,21 @@ https://www.example.org
 <table align="left">
   <thead>
     <tr>
-     <th>Header Field Name</th>
-     <th>Protocol</th>
+     <th>Field Name</th>
      <th>Status</th>
      <th>Reference</th>
+     <th>Comments</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>Close</td>
-      <td>http</td>
-      <td>reserved</td>
+      <td>standard</td>
       <td>
         <xref target="header.field.syntax"/>
+      </td>
+      <td>
+        (reserved)
       </td>
     </tr>
   </tbody>
@@ -1066,11 +1075,11 @@ https://www.example.org
    implementations advertising only HTTP/1.0 support will not understand
    how to process a transfer-encoded payload.
    A client &MUST-NOT; send a request containing Transfer-Encoding unless it
-   knows the server will handle HTTP/1.1 (or later) requests; such knowledge
+   knows the server will handle HTTP/1.1 requests (or later minor revisions); such knowledge
    might be in the form of specific user configuration or by remembering the
    version of a prior received response.
    A server &MUST-NOT; send a response containing Transfer-Encoding unless
-   the corresponding request indicates HTTP/1.1 (or later).
+   the corresponding request indicates HTTP/1.1 (or later minor revisions).
 </t>
 <t>
    A server that receives a request message with a transfer coding it does
@@ -1347,6 +1356,11 @@ https://www.example.org
    A recipient &MUST; be able to parse and decode the chunked transfer coding.
 </t>
 <t>
+   Note that HTTP/1.1 does not define any means to limit the size of a
+   chunked response such that an intermediary can be assured of buffering the
+   entire response.
+</t>
+<t>
    The chunked encoding does not define any parameters. Their presence
    &SHOULD; be treated as an error.
 </t>
@@ -1541,19 +1555,6 @@ https://www.example.org
   TE: trailers, deflate;q=0.5
 </artwork>
 <t>
-   The presence of the keyword "trailers" indicates that the client is willing
-   to accept trailer fields in a chunked transfer coding, as defined in
-   <xref target="chunked.trailer.section"/>, on behalf of itself and any downstream
-   clients. For requests from an intermediary, this implies that either:
-   (a) all downstream clients are willing to accept trailer fields in the
-   forwarded response; or,
-   (b) the intermediary will attempt to buffer the response on behalf of
-   downstream recipients.
-   Note that HTTP/1.1 does not define any means to limit the size of a
-   chunked response such that an intermediary can be assured of buffering the
-   entire response.
-</t>
-<t>
    When multiple transfer codings are acceptable, the client &MAY; rank the
    codings by preference using a case-insensitive "q" parameter (similar to
    the qvalues used in content negotiation fields, <xref target="quality.values"/>). The rank value
@@ -1564,6 +1565,10 @@ https://www.example.org
    If the TE field value is empty or if no TE field is present, the only
    acceptable transfer coding is chunked. A message with no transfer coding
    is always acceptable.
+</t>
+<t>
+   The keyword "trailers" indicates that the sender will not discard trailer fields,
+   as described in <xref target="trailer.fields"/>.
 </t>
 <t>
    Since the TE header field only applies to the immediate connection,
@@ -1648,15 +1653,15 @@ https://www.example.org
   <x:anchor-alias value="close"/>
 <t>
    The "Connection" header field allows the sender to list desired
-   control options for the current connection.  In order to avoid confusing
-   downstream recipients, a proxy or gateway &MUST; remove or replace any
-   received connection options before forwarding the message.
+   control options for the current connection.
 </t>
 <t>
    When a field aside from Connection is used to supply control
    information for or about the current connection, the sender &MUST; list
    the corresponding field name within the Connection header field.
-   A proxy or gateway &MUST; parse a received Connection
+</t>
+<t>
+   Intermediaries &MUST; parse a received Connection
    header field before a message is forwarded and, for each
    connection-option in this field, remove any header or trailer field(s) from
    the message with the same name as the connection-option, and then
@@ -1672,6 +1677,19 @@ https://www.example.org
    extensions to be deployed without fear that they will be blindly
    forwarded by older intermediaries.
 </t>
+<t>
+   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
+   semantics are known to require removal before forwarding, whether or not they appear as a Connection
+   option, after applying those fields' semantics. This includes but is not limited to:
+</t>
+<ul>
+   <li><t>Proxy-Connection <xref target="compatibility.with.http.1.0.persistent.connections"/></t></li>
+   <li><t>Keep-Alive <xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/></t></li>
+   <li><t>TE <xref target="field.te"/></t></li>
+   <li><t>Trailer <xref target="field.trailer"/></t></li>
+   <li><t>Transfer-Encoding <xref target="field.transfer-encoding"/></t></li>
+   <li><t>Upgrade <xref target="field.upgrade"/></t></li>
+</ul>
 <t>
    The Connection header field's value has the following grammar:
 </t>
@@ -2590,69 +2608,44 @@ Upgrade: websocket
     <x:defines>port</x:defines>
     <x:defines>uri-host</x:defines>
     <x:has anchor="CONNECT"/>
-    <x:has anchor="GET"/>
-    <x:has anchor="HEAD"/>
     <x:has anchor="OPTIONS"/>
     <x:has anchor="abnf.extension"/>
-    <x:has anchor="architecture"/>
-    <x:has anchor="caches"/>
     <x:has anchor="canonicalization.and.text.defaults"/>
     <x:has anchor="routing.inbound"/>
     <x:has anchor="comments"/>
     <x:has anchor="content.codings"/>
-    <x:has anchor="field.components"/>
-    <x:has anchor="field.extensibility"/>
-    <x:has anchor="field.order"/>
-    <x:has anchor="field.limits"/>
     <x:has anchor="field.names"/>
     <x:has anchor="field.name.registry"/>
     <x:has anchor="field.values"/>
     <x:has anchor="field.content-length"/>
-    <x:has anchor="field.date"/>
     <x:has anchor="field.expect"/>
     <x:has anchor="field.host"/>
     <x:has anchor="field.trailer"/>
-    <x:has anchor="field.via"/>
     <x:has anchor="header.and.trailer.fields"/>
     <x:has anchor="http.date"/>
     <x:has anchor="http.uri"/>
     <x:has anchor="https.uri"/>
     <x:has anchor="idempotent.methods"/>
-    <x:has anchor="implementation-diversity"/>
-    <x:has anchor="intermediaries"/>
     <x:has anchor="message.forwarding"/>
-    <x:has anchor="message.transformations"/>
     <x:has anchor="methods"/>
     <x:has anchor="multipart.byteranges"/>
-    <x:has anchor="operation"/>
-    <x:has anchor="payload"/>
     <x:has anchor="payload.body"/>
     <x:has anchor="protocol.version"/>
     <x:has anchor="quality.values"/>
     <x:has anchor="quoted.strings"/>
-    <x:has anchor="representation.metadata"/>
-    <x:has anchor="representations"/>
-    <x:has anchor="request.auth"/>
-    <x:has anchor="request.header.fields"/>
-    <x:has anchor="resources"/>
-    <x:has anchor="response.control.data"/>
     <x:has anchor="safe.methods"/>
     <x:has anchor="status.1xx"/>
-    <x:has anchor="status.203"/>
     <x:has anchor="status.3xx"/>
     <x:has anchor="status.304"/>
-    <x:has anchor="status.413"/>
     <x:has anchor="status.414"/>
     <x:has anchor="status.codes"/>
     <x:has anchor="tokens"/>
     <x:has anchor="target.resource"/>
     <x:has anchor="trailer.fields"/>
     <x:has anchor="uri"/>
-    <x:has anchor="uri.comparison"/>
     <x:has anchor="whitespace"/>
     <x:has anchor="Semantics-acks" target="acks"/>
     <x:has anchor="Semantics-conformance" target="conformance"/>
-    <x:has anchor="Semantics-security.considerations" target="security.considerations"/>
     <x:has anchor="compress.coding"/>
     <x:has anchor="deflate.coding"/>
     <x:has anchor="gzip.coding"/>
@@ -2661,11 +2654,8 @@ Upgrade: websocket
 
 <reference anchor="Caching">
   <x:source href="draft-ietf-httpbis-cache-latest.xml" basename="draft-ietf-httpbis-cache-latest">
-    <x:has anchor="caching.overview"/>
     <x:has anchor="field.cache-control"/>
-    <x:has anchor="field.warning"/>
     <x:has anchor="response.cacheability"/>
-    <x:has anchor="Caching-security.considerations" target="security.considerations"/>
   </x:source>
 </reference>
 
@@ -3398,6 +3388,10 @@ Upgrade: websocket
    connection management requirements specific to HTTP/1.1.
 </t>
 <t>
+   Prohibited generation of bare CRs outside of payload body.
+   (<xref target="message.parsing"/>)
+</t>
+<t>
    In the ABNF for chunked extensions, re-introduced (bad) whitespace around
    ";" and "=". Whitespace was removed
    in <xref target="RFC7230"/>, but that change was found to break existing
@@ -3520,8 +3514,17 @@ Upgrade: websocket
 
 <section title="Since draft-ietf-httpbis-messaging-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
+   <li>Move TE: trailers into <xref target="Semantics"/> (<eref target="https://github.com/httpwg/http-core/issues/18"/>)</li>
    <li>In <xref target="message.body.length"/>, adjust requirements for handling multiple content-length values (<eref target="https://github.com/httpwg/http-core/issues/59"/>)</li>
    <li>Throughout, replace "effective request URI" with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>
+   <li>In <xref target="field.transfer-encoding"/>, don't claim Transfer-Encoding is supported by HTTP/2 or later (<eref target="https://github.com/httpwg/http-core/issues/297"/>)</li>
+</ul>
+</section>
+
+<section title="Since draft-ietf-httpbis-messaging-08" anchor="changes.since.08">
+<ul x:when-empty="None yet.">
+   <li>In <xref target="message.parsing"/>, disallow bare CRs (<eref target="https://github.com/httpwg/http-core/issues/31"/>)</li>
+   <li>In <xref target="header.field.syntax"/>, adjust IANA "Close" entry for new registry format (<eref target="https://github.com/httpwg/http-core/issues/273"/>)</li>
 </ul>
 </section>
 </section>

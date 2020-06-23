@@ -107,7 +107,7 @@
     <eref target="https://github.com/httpwg/http-core"/>.
   </t>
   <t>
-    The changes in this draft are summarized in <xref target="changes.since.07"/>.
+    The changes in this draft are summarized in <xref target="changes.since.08"/>.
   </t>
 </note>
 
@@ -385,6 +385,35 @@
    responses are not usually useful to store. However, caches are not
    prohibited from storing such responses.
 </t>
+
+<section title="Storing Header and Trailer Fields" anchor="storing.fields">
+<t>
+   Caches &MUST; include all received header fields &mdash; including
+   unrecognised ones &mdash; when storing a response; this assures that new HTTP
+   header fields can be successfully deployed. However, the following exceptions
+   are made:
+</t>
+<ul>
+   <li>The Connection header field and fields whose names are listed in it are
+   required by <xref target="field.connection"/> to be removed before
+   forwarding the message. This &MAY; be implemented by doing so
+   before storage.</li>
+   <li>Likewise, some fields' semantics require them to be removed
+   before forwarding the message, and this &MAY; be implemented by doing so
+   before storage; see <xref target="field.connection"/> for some
+   examples.</li>
+   <li>Header fields that are specific to a client's proxy configuration
+   &MUST-NOT; be stored, unless the cache incorporates the identity of the
+   proxy into the cache key. Effectively, this is limited to Proxy-Authenticate
+   (<xref target="field.proxy-authenticate"/>), Proxy-Authentication-Info
+   (<xref target="field.proxy-authentication-info"/>), and Proxy-Authorization
+   (<xref target="field.proxy-authorization"/>).</li>
+</ul>
+<t>
+   Caches &MAY; either store trailer fields separately from header fields, or
+   discard them. Caches &MUST-NOT; combine trailer fields with header fields.
+</t>
+</section>
 
 <section title="Storing Incomplete Responses" anchor="incomplete.responses">
 <t>
@@ -1043,8 +1072,16 @@
    For each stored response identified for update, the cache &MUST; use the
    header fields provided in the <x:ref>304 (Not Modified)</x:ref> response
    to replace all instances of the corresponding header fields in the stored
-   response.
+   response, with the following exceptions:
 </t>
+<ul>
+   <li>The exceptions to header field storage in <xref
+   target="storing.fields"/> also apply to header field updates.</li>
+   <li>Caches &MUST-NOT; update the following header fields:
+   <x:ref>Content-Encoding</x:ref>, <x:ref>Content-Length</x:ref>,
+   Content-MD5 (<xref target="RFC2616" x:fmt="of" x:sec="14.15"/>),
+   <x:ref>Content-Range</x:ref>, <x:ref>ETag</x:ref>.</li>
+</ul>
 </section>
 
 <section title="Freshening Responses with HEAD" anchor="head.effects">
@@ -1076,8 +1113,9 @@
    If a cache updates a stored response with the metadata provided in a HEAD
    response, the cache &MUST; use the header fields provided in the HEAD
    response to replace all instances of the corresponding header fields in
-   the stored response and append new header fields to the stored response's
-   header section unless otherwise restricted by the
+   the stored response (subject to the exceptions in <xref
+   target="freshening.responses"/>) and append new header fields to the
+   stored response's header section unless otherwise restricted by the
    <x:ref>Cache-Control</x:ref> header field.
 </t>
 </section>
@@ -2046,6 +2084,7 @@
 
   <reference anchor="Messaging">
     <x:source basename="draft-ietf-httpbis-messaging-latest" href="draft-ietf-httpbis-messaging-latest.xml">
+      <x:has anchor="field.connection"/>
       <x:has anchor="message.body.length"/>
     </x:source>
   </reference>
@@ -2056,7 +2095,6 @@
       <x:has anchor="GET"/>
       <x:has anchor="abnf.extension"/>
       <x:has anchor="combining.byte.ranges"/>
-      <x:has anchor="field.components"/>
       <x:has anchor="field.authorization"/>
       <x:has anchor="field.date"/>
       <x:has anchor="field.etag"/>
@@ -2064,9 +2102,11 @@
       <x:has anchor="field.if-none-match"/>
       <x:has anchor="field.if-range"/>
       <x:has anchor="field.last-modified"/>
+      <x:has anchor="field.proxy-authenticate"/>
+      <x:has anchor="field.proxy-authentication-info"/>
+      <x:has anchor="field.proxy-authorization"/>
       <x:has anchor="field.range"/>
       <x:has anchor="field.vary"/>
-      <x:has anchor="field.via"/>
       <x:has anchor="http.date"/>
       <x:has anchor="field.names"/>
       <x:has anchor="field.values"/>
@@ -2080,7 +2120,6 @@
       <x:has anchor="status.codes"/>
       <x:has anchor="target.resource"/>
       <x:has anchor="tokens"/>
-      <x:has anchor="uri"/>
       <x:has anchor="weak.and.strong.validators"/>
       <x:has anchor="whitespace"/>
       <x:has anchor="Semantics-acks" target="acks"/>
@@ -2344,9 +2383,9 @@
 </t>
 <t>
    The Warning response header was obsoleted. Much of the information
-   supported by Warning could be gleaned by examining the response), and the
+   supported by Warning could be gleaned by examining the response, and the
    remaining warn-codes &mdash; although potentially useful &mdash; were entirely
-   advisory, and in practice were not added by caches or intermediaries.
+   advisory. In practice, Warning was not added by caches or intermediaries.
    (<xref target="field.warning"/>)
 </t>
 </section>
@@ -2439,9 +2478,14 @@
 
 <section title="Since draft-ietf-httpbis-cache-07" anchor="changes.since.07">
 <ul x:when-empty="None yet.">
-   <li>In <xref target="cache-response-directive.public"/> and <xref target="cache-response-directive.private"/>, make it clear that these directives do not ignore other requirements for caching (<eref target="https://github.com/httpwg/http-core/issues/320"/>)</li>
    <li>Throughout, replace "effective request URI", "request-target" and similar with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>
+   <li>In <xref target="cache-response-directive.public"/> and <xref target="cache-response-directive.private"/>, make it clear that these directives do not ignore other requirements for caching (<eref target="https://github.com/httpwg/http-core/issues/320"/>)</li>
    <li>In <xref target="incomplete.responses"/>, move definition of "complete" into semantics (<eref target="https://github.com/httpwg/http-core/issues/334"/>)</li>
+</ul>
+</section>
+
+<section title="Since draft-ietf-httpbis-cache-08" anchor="changes.since.08">
+<ul x:when-empty="None yet.">
 </ul>
 </section>
 </section>
