@@ -1448,7 +1448,7 @@
     <front>
       <title>
         <xsl:text>Consisting of: </xsl:text>
-        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/*[self::reference or self::referencegroup]"/>
+        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rfc2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/*[self::reference or self::referencegroup]"/>
         <xsl:for-each select="reference|$included">
           <xsl:value-of select="concat('[',@anchor,']')"/>
           <xsl:choose>
