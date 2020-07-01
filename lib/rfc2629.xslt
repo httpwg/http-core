@@ -37,7 +37,7 @@
                 xmlns:exslt="http://exslt.org/common"
                 xmlns:fo="http://www.w3.org/1999/XSL/Format"
                 xmlns:msxsl="urn:schemas-microsoft-com:xslt"
-                xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt"
+                xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rfc2629.xslt"
                 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                 xmlns:saxon="http://saxon.sf.net/"
                 xmlns:saxon-old="http://icl.com/saxon"
@@ -7091,10 +7091,6 @@
           <xsl:copy-of select="@*|node()" />
         </xsl:element>
       </xsl:when>
-      <!-- workaround for opera, remove when Opera > 9.0.x comes out -->
-      <xsl:when test="self::text()">
-        <xsl:value-of select="."/>
-      </xsl:when>
       <xsl:otherwise>
         <xsl:copy-of select="." />
       </xsl:otherwise>
@@ -11763,11 +11759,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1292 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1292 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1295 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1295 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/06/11 07:37:42 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/06/11 07:37:42 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/06/17 13:29:16 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/06/17 13:29:16 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
@@ -11943,12 +11939,12 @@ dd, li, p {
 
 <xsl:template name="get-figure-number">
   <xsl:choose>
-    <xsl:when test="@anchor!=''">
-      <xsl:number level="any" count="figure[@anchor!='']" />
+    <xsl:when test="@anchor!='' or @title or name">
+      <xsl:number level="any" count="figure[@anchor!='' or @title or name]" />
     </xsl:when>
     <xsl:otherwise>
       <xsl:text>u.</xsl:text>
-      <xsl:number level="any" count="figure[not(@anchor) or @anchor='']" />
+      <xsl:number level="any" count="figure[(not(@anchor) or @anchor='') and not(@title) and not(name)]" />
     </xsl:otherwise>
   </xsl:choose>
 </xsl:template>
@@ -12080,7 +12076,7 @@ prev: <xsl:value-of select="$prev"/>
 </xsl:template>
 
 <!-- see https://chromium-i18n.appspot.com/ssl-address -->
-<countries xmlns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt">
+<countries xmlns="mailto:julian.reschke@greenbytes.de?subject=rfc2629.xslt">
   <c c2="AR" c3="ARG" sn="Argentina" fmt="%A%n%Z %C%n%S"/>
   <c c2="AU" c3="AUS" sn="Australia" fmt="%A%n%C %S %Z"/>
   <c c2="AT" c3="AUT" sn="Austria" fmt="%A%n%Z %C"/>
