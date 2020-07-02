@@ -114,7 +114,7 @@ int qflag = 0;		/* quiet */
 int canon = 1;		/* canonify */
 int asxml = 0;    /* output XML */
 int olenlimit = 0;   /* 0 for unlimited, might be any other value */
-int listrulex = 0;   /* 0 for RFC 7320-style, 1 for 2019 experimental */
+int listrulex = 0;   /* 0 for RFC 7320-style, 1 for 2019 experimental (recipient), 2 for 2019 experimental (sender) */
 
 int yyparse(void);
 
@@ -228,7 +228,7 @@ main(int argc, char **argv)
 
     case 'L':
       listrulex = atoi(optarg);
-      if (listrulex != 0 && listrulex != 1) {
+      if (listrulex != 0 && listrulex != 1l && listrulex != 2) {
         fprintf(stderr, "-L: illegal argument %d\n", listrulex);
         exit(2);
       }
@@ -462,10 +462,10 @@ p_listrule_rfc7230(object *o)
   }
 }
 
-// code to emit #rule (2019)
-// #element =&gt; *( OWS "," ) *( [ OWS element ] OWS "," )
+// code to emit #rule (2019, for recipients)
+// #element => [ element ] *( OWS "," OWS [ element ] )
 static void
-p_listrule_2019(object *o)
+p_listrule_2019_recipient(object *o)
 {
   local_printf("[ ");
   if (o->u.e.e.rule.rule) {
@@ -479,6 +479,31 @@ p_listrule_2019(object *o)
     o->u.e.e.rule.rule->name :
     o->u.e.e.rule.name);
   local_printf(" ] )");
+}
+
+// code to emit #rule (2019, for sender)
+// 1#element => element *( OWS "," OWS element )
+// #element => [ 1#element ]
+static void
+p_listrule_2019_sender(object *o)
+{
+  if (o->u.e.repetition.lo == 0) {
+    local_printf("[ ");
+  }
+  if (o->u.e.e.rule.rule) {
+    local_printf("%s", o->u.e.e.rule.rule->name);
+    o->u.e.e.rule.rule->used = 1;
+  } else {
+    local_printf("%s", o->u.e.e.rule.name);
+  }
+  local_printf(" *( OWS \",\" OWS ");
+  local_printf("%s", (o->u.e.e.rule.rule) ?
+    o->u.e.e.rule.rule->name :
+    o->u.e.e.rule.name);
+  local_printf(" )");
+  if (o->u.e.repetition.lo == 0) {
+    local_printf(" ]");
+  }
 }
 
 static void
@@ -510,8 +535,10 @@ printobj_r(object *o, int parenttype, int tflag)
       if (o->u.e.islist) {
         if (listrulex == 0) {
           p_listrule_rfc7230(o);
+        } else if (listrulex == 1) {
+          p_listrule_2019_recipient(o);
         } else {
-          p_listrule_2019(o);
+          p_listrule_2019_sender(o);
         }
       } else {
 	printrep(&o->u.e.repetition);
