@@ -95,7 +95,7 @@ $(bd)/%.abnf: %.xml lib/extract-artwork.xslt
 	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf7230" >$@
 
 $(bd)/%.parsed-abnf: $(bd)/%.abnf
-	$(bap)/bap -i $(bap)/core.abnf -L1 -X rfc7405 < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -L1 -X rfc7405 -l 69 >$@
+	$(bap)/bap -i $(bap)/core.abnf -L2 -X rfc7405 < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -X rfc7405 -l 69 >$@
 
 $(bd)/%.abnf-appendix: $(bd)/%.parsed-abnf
 	$(saxon) $*.xml lib/abnf2xml2rfc.xslt abnf="../$<" >$@
