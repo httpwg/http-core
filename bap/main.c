@@ -432,29 +432,49 @@ p_listrule_rfc7230(object *o)
 {
   if (o->u.e.repetition.lo == 0) {
     local_printf("[ ( \",\" / ");
-    if (o->u.e.e.rule.rule) {
+    if (o->type == T_GROUP) {
+      local_printf("( ");
+      printobj_r(o->u.e.e.group, o->type, tflag);
+      local_printf(" )");
+    } else if (o->u.e.e.rule.rule) {
       local_printf("%s", o->u.e.e.rule.rule->name);
       o->u.e.e.rule.rule->used = 1;
     } else {
       local_printf("%s", o->u.e.e.rule.name);
     }
     local_printf(" ) *( OWS \",\" [ OWS ");
-    local_printf("%s", (o->u.e.e.rule.rule) ?
+    if (o->type == T_GROUP) {
+      local_printf("( ");
+      printobj_r(o->u.e.e.group, o->type, tflag);
+      local_printf(" )");
+    } else {
+      local_printf("%s", (o->u.e.e.rule.rule) ?
       o->u.e.e.rule.rule->name :
       o->u.e.e.rule.name);
-      local_printf(" ] ) ]");
+      }
+    local_printf(" ] ) ]");
   } else if (o->u.e.repetition.lo == 1) {
     local_printf(" *( \",\" OWS ) ");
-    if (o->u.e.e.rule.rule) {
+    if (o->type == T_GROUP) {
+      local_printf("( ");
+      printobj_r(o->u.e.e.group, o->type, tflag);
+      local_printf(" )");
+    } else if (o->u.e.e.rule.rule) {
       local_printf("%s", o->u.e.e.rule.rule->name);
       o->u.e.e.rule.rule->used = 1;
     } else {
       local_printf("%s", o->u.e.e.rule.name);
     }
     local_printf(" *( OWS \",\" [ OWS ");
-    local_printf("%s", (o->u.e.e.rule.rule) ?
+    if (o->type == T_GROUP) {
+      local_printf("( ");
+      printobj_r(o->u.e.e.group, o->type, tflag);
+      local_printf(" )");
+    } else {
+      local_printf("%s", (o->u.e.e.rule.rule) ?
       o->u.e.e.rule.rule->name :
       o->u.e.e.rule.name);
+    }
     local_printf(" ] )");
   }
   else {
@@ -468,16 +488,26 @@ static void
 p_listrule_2019_recipient(object *o)
 {
   local_printf("[ ");
-  if (o->u.e.e.rule.rule) {
+  if (o->type == T_GROUP) {
+    local_printf("( ");
+    printobj_r(o->u.e.e.group, o->type, tflag);
+    local_printf(" )");
+  } else if (o->u.e.e.rule.rule) {
     local_printf("%s", o->u.e.e.rule.rule->name);
     o->u.e.e.rule.rule->used = 1;
   } else {
     local_printf("%s", o->u.e.e.rule.name);
   }
   local_printf(" ] *( OWS \",\" OWS [ ");
-  local_printf("%s", (o->u.e.e.rule.rule) ?
+  if (o->type == T_GROUP) {
+    local_printf("( ");
+    printobj_r(o->u.e.e.group, o->type, tflag);
+    local_printf(" )");
+  } else {
+    local_printf("%s", (o->u.e.e.rule.rule) ?
     o->u.e.e.rule.rule->name :
     o->u.e.e.rule.name);
+  }
   local_printf(" ] )");
 }
 
@@ -490,16 +520,26 @@ p_listrule_2019_sender(object *o)
   if (o->u.e.repetition.lo == 0) {
     local_printf("[ ");
   }
-  if (o->u.e.e.rule.rule) {
+  if (o->type == T_GROUP) {
+    local_printf("( ");
+    printobj_r(o->u.e.e.group, o->type, tflag);
+    local_printf(" )");
+  } else if (o->u.e.e.rule.rule) {
     local_printf("%s", o->u.e.e.rule.rule->name);
     o->u.e.e.rule.rule->used = 1;
   } else {
     local_printf("%s", o->u.e.e.rule.name);
   }
   local_printf(" *( OWS \",\" OWS ");
-  local_printf("%s", (o->u.e.e.rule.rule) ?
+  if (o->type == T_GROUP) {
+    local_printf("( ");
+    printobj_r(o->u.e.e.group, o->type, tflag);
+    local_printf(") ");
+  } else {
+    local_printf("%s", (o->u.e.e.rule.rule) ?
     o->u.e.e.rule.rule->name :
     o->u.e.e.rule.name);
+  }
   local_printf(" )");
   if (o->u.e.repetition.lo == 0) {
     local_printf(" ]");
@@ -555,23 +595,13 @@ printobj_r(object *o, int parenttype, int tflag)
       if (tflag)
 	local_printf("{GROUP}");
       if (o->u.e.islist) {
-	if (o->u.e.repetition.lo == 0) {
-	  local_printf("[ ( \",\" / ( ");
-	  printobj_r(o->u.e.e.group, o->type, tflag);
-	  local_printf(" ) ) *( OWS \",\" [ OWS ( ");
-	  printobj_r(o->u.e.e.group, o->type, tflag);
-	  local_printf(" ) ] ) ]");
-	}
-	else if (o->u.e.repetition.lo == 1) {
-	  local_printf("*( \",\" OWS ) ( ");
-	  printobj_r(o->u.e.e.group, o->type, tflag);
-	  local_printf(" ) *( OWS \",\" [ OWS ( ");
-	  printobj_r(o->u.e.e.group, o->type, tflag);
-	  local_printf(" ) ] )");
-	}
-	else {
-	  local_printf("TODO: something is wrong");
-	} 
+        if (listrulex == 0) {
+          p_listrule_rfc7230(o);
+        } else if (listrulex == 1) {
+          p_listrule_2019_recipient(o);
+        } else {
+          p_listrule_2019_sender(o);
+        }
       } else {
 	if (o->u.e.repetition.lo == 0 &&
 	    o->u.e.repetition.hi == 1) {
