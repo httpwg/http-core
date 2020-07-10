@@ -1067,6 +1067,56 @@ Content-Type: text/plain
    <xref target="idempotent.methods"/>.
 </t>
 </section>
+</section>
+
+<section title="Extending and Versioning HTTP" anchor="extending.versioning">
+
+<t>
+   While HTTP's core semantics don't change between protocol versions, the
+   expression of them "on the wire" can change, and so the
+   HTTP version number changes when incompatible changes are made to the wire
+   format. Additionally, HTTP allows incremental, backwards-compatible
+   changes to be made to the protocol without changing its version through
+   the use of defined extension points.
+</t>
+
+<section title="Extending HTTP" anchor="extending">
+<t>
+   HTTP defines a number of generic extension points that can be used to
+   introduce capabilities to the protocol without introducing a new version,
+   including methods (<xref target="method.extensibility"/>), status codes
+   (<xref target="status.code.extensibility"/>), header and trailer fields
+   (<xref target="considerations.for.new.header.fields"/>), and further
+   extensibility points within defined fields (such as Cache-Control in <xref
+   target="cache.control.extensions"/>). Because the semantics of HTTP are
+   not versioned, these extension points are persistent; the version of the
+   protocol in use does not affect their semantics.
+</t>
+<t>
+   Version-independent extensions are discouraged from depending on or
+   interacting with the specific version of the protocol in use. When this is
+   unavoidable, careful consideration needs to be given to how the extension
+   can interoperate across versions.
+</t>
+<t>
+   Additionally, specific versions of HTTP might have their own extensibility
+   points, such as transfer-codings in HTTP/1.1 (<xref
+   target="field.transfer-encoding"/>) and HTTP/2 (<xref target="RFC7540"/>)
+   SETTINGS or frame types. These extension points are specific to the
+   version of the protocol they occur within.
+</t>
+<t>
+   Version-specific extensions cannot override or modify the semantics of
+   a version-independent mechanism or extension point (like a method or
+   header field) without explicitly being allowed by that protocol element. For
+   example, the CONNECT method (<xref target="CONNECT"/>) allows this.
+</t>
+<t>
+   These guidelines assure that the protocol operates correctly and
+   predictably, even when parts of the path implement different versions of
+   HTTP.
+</t>
+</section>
 
 <section title="Protocol Versioning" anchor="protocol.version">
 <t>
@@ -1619,6 +1669,143 @@ Content-Type: text/plain
   <t>
     &Note; Parameters do not allow whitespace (not even "bad" whitespace)
     around the "=" character.
+  </t>
+</aside>
+</section>
+
+<section title="Date/Time Formats" anchor="http.date">
+  <x:anchor-alias value="HTTP-date"/>
+<t>
+   Prior to 1995, there were three different formats commonly used by servers
+   to communicate timestamps.  For compatibility with old implementations, all
+   three are defined here. The preferred format is a fixed-length and
+   single-zone subset of the date and time specification used by the
+   Internet Message Format <xref target="RFC5322"/>.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
+  <x:ref>HTTP-date</x:ref>    = <x:ref>IMF-fixdate</x:ref> / <x:ref>obs-date</x:ref>
+</sourcecode>
+<t>
+   An example of the preferred format is
+</t>
+<artwork type="example" x:indent-with="  ">
+Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate
+</artwork>
+<t>
+   Examples of the two obsolete formats are
+</t>
+<artwork type="example" x:indent-with="  ">
+Sunday, 06-Nov-94 08:49:37 GMT   ; obsolete RFC 850 format
+Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
+</artwork>
+<t>
+   A recipient that parses a timestamp value in an HTTP field &MUST;
+   accept all three HTTP-date formats. When a sender generates a field
+   that contains one or more timestamps defined as HTTP-date,
+   the sender &MUST; generate those timestamps in the IMF-fixdate format.
+</t>
+<t>
+   An HTTP-date value represents time as an instance of Coordinated Universal
+   Time (UTC). The first two formats indicate UTC by the three-letter
+   abbreviation for Greenwich Mean Time, "GMT", a predecessor of the UTC name;
+   values in the asctime format are assumed to be in UTC.
+   A sender that generates HTTP-date values from a local clock ought to use
+   NTP (<xref target="RFC5905"/>) or some similar protocol to synchronize its
+   clock to UTC.
+</t>
+<t anchor="preferred.date.format">
+  <x:anchor-alias value="IMF-fixdate"/>
+  <x:anchor-alias value="time-of-day"/>
+  <x:anchor-alias value="hour"/>
+  <x:anchor-alias value="minute"/>
+  <x:anchor-alias value="second"/>
+  <x:anchor-alias value="day-name"/>
+  <x:anchor-alias value="day"/>
+  <x:anchor-alias value="month"/>
+  <x:anchor-alias value="year"/>
+  <x:anchor-alias value="GMT"/>
+  Preferred format:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="IMF-fixdate"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
+  <x:ref>IMF-fixdate</x:ref>  = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
+  ; fixed length/zone/capitalization subset of the format
+  ; see <xref target="RFC5322" x:fmt="of" x:sec="3.3"/>
+  
+  <x:ref>day-name</x:ref>     = %s"Mon" / %s"Tue" / %s"Wed"
+               / %s"Thu" / %s"Fri" / %s"Sat" / %s"Sun"
+               
+  <x:ref>date1</x:ref>        = <x:ref>day</x:ref> <x:ref>SP</x:ref> <x:ref>month</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
+               ; e.g., 02 Jun 1982
+
+  <x:ref>day</x:ref>          = 2<x:ref>DIGIT</x:ref>
+  <x:ref>month</x:ref>        = %s"Jan" / %s"Feb" / %s"Mar" / %s"Apr"
+               / %s"May" / %s"Jun" / %s"Jul" / %s"Aug"
+               / %s"Sep" / %s"Oct" / %s"Nov" / %s"Dec"
+  <x:ref>year</x:ref>         = 4<x:ref>DIGIT</x:ref>
+
+  <x:ref>GMT</x:ref>          = %s"GMT"
+
+  <x:ref>time-of-day</x:ref>  = <x:ref>hour</x:ref> ":" <x:ref>minute</x:ref> ":" <x:ref>second</x:ref>
+               ; 00:00:00 - 23:59:60 (leap second)
+                 
+  <x:ref>hour</x:ref>         = 2<x:ref>DIGIT</x:ref>               
+  <x:ref>minute</x:ref>       = 2<x:ref>DIGIT</x:ref>               
+  <x:ref>second</x:ref>       = 2<x:ref>DIGIT</x:ref>               
+</sourcecode>
+<t anchor="obsolete.date.formats">
+  <x:anchor-alias value="obs-date"/>
+  <x:anchor-alias value="rfc850-date"/>
+  <x:anchor-alias value="asctime-date"/>
+  <x:anchor-alias value="date1"/>
+  <x:anchor-alias value="date2"/>
+  <x:anchor-alias value="date3"/>
+  <x:anchor-alias value="day-name-l"/>
+  Obsolete formats:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="obs-date"/>
+  <x:ref>obs-date</x:ref>     = <x:ref>rfc850-date</x:ref> / <x:ref>asctime-date</x:ref> 
+</sourcecode>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
+  <x:ref>rfc850-date</x:ref>  = <x:ref>day-name-l</x:ref> "," <x:ref>SP</x:ref> <x:ref>date2</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
+  <x:ref>date2</x:ref>        = <x:ref>day</x:ref> "-" <x:ref>month</x:ref> "-" 2<x:ref>DIGIT</x:ref>
+               ; e.g., 02-Jun-82
+
+  <x:ref>day-name-l</x:ref>   = %s"Monday" / %s"Tuesday" / %s"Wednesday"
+         / %s"Thursday" / %s"Friday" / %s"Saturday" / %s"Sunday"
+</sourcecode>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="asctime-date"/>
+  <x:ref>asctime-date</x:ref> = <x:ref>day-name</x:ref> <x:ref>SP</x:ref> <x:ref>date3</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
+  <x:ref>date3</x:ref>        = <x:ref>month</x:ref> <x:ref>SP</x:ref> ( 2<x:ref>DIGIT</x:ref> / ( <x:ref>SP</x:ref> 1<x:ref>DIGIT</x:ref> ))
+               ; e.g., Jun  2
+</sourcecode>
+<t>
+   HTTP-date is case sensitive.
+   A sender &MUST-NOT; generate additional whitespace in an HTTP-date beyond
+   that specifically included as SP in the grammar.
+   The semantics of <x:ref>day-name</x:ref>, <x:ref>day</x:ref>,
+   <x:ref>month</x:ref>, <x:ref>year</x:ref>, and <x:ref>time-of-day</x:ref>
+   are the same as those defined for the Internet Message Format constructs
+   with the corresponding name (<xref target="RFC5322" x:fmt="," x:sec="3.3"/>).
+</t>
+<t>
+   Recipients of a timestamp value in rfc850-date format, which uses a
+   two-digit year, &MUST; interpret a timestamp that appears to be more
+   than 50 years in the future as representing the most recent year in the
+   past that had the same last two digits.
+</t>
+<t>
+   Recipients of timestamp values are encouraged to be robust in parsing
+   timestamps unless otherwise restricted by the field definition.
+   For example, messages are occasionally forwarded over HTTP from a non-HTTP
+   source that might generate any of the date and time specifications defined
+   by the Internet Message Format.
+</t>
+<aside>
+  <t>
+    &Note; HTTP requirements for the date/time stamp format apply only
+    to their usage within the protocol stream. Implementations are
+    not required to use these formats for user presentation, request
+    logging, etc.
   </t>
 </aside>
 </section>
@@ -3313,8 +3500,8 @@ bytes=500-999
    is one less than the current length of the selected representation).
 </t>
 <t>
-   A client can request the last N bytes of the selected representation using
-   a <x:ref>suffix-range</x:ref>.
+   A client can request the last N bytes (N &gt; 0) of the selected
+   representation using a <x:ref>suffix-range</x:ref>.
    If the selected representation is shorter than the specified
    <x:ref>suffix-length</x:ref>, the entire representation is used.
 </t>
@@ -3353,9 +3540,14 @@ bytes=500-700,601-999
    If a valid bytes <x:ref>range-set</x:ref> includes at least one
    <x:ref>range-spec</x:ref> with a <x:ref>first-pos</x:ref> that is
    less than the current length of the representation, or at least one
-   <x:ref>suffix-range</x:ref> with a non-zero
-   <x:ref>suffix-length</x:ref>, then the bytes <x:ref>range-set</x:ref> is
-   satisfiable. Otherwise, the bytes <x:ref>range-set</x:ref> is unsatisfiable.
+   <x:ref>suffix-range</x:ref> with a non-zero <x:ref>suffix-length</x:ref>,
+   then the bytes <x:ref>range-set</x:ref> is satisfiable. Otherwise,
+   the bytes <x:ref>range-set</x:ref> is unsatisfiable.
+</t>
+<t>
+   If the selected representation has zero length, the only satisfiable form of
+   <x:ref>range-spec</x:ref> is a <x:ref>suffix-range</x:ref> with a non-zero
+   <x:ref>suffix-length</x:ref>.
 </t>
 <t>
    In the byte-range syntax, <x:ref>first-pos</x:ref>,
@@ -5040,6 +5232,11 @@ Content-Range: exampleunit 11.2-14.3/25
    (Transport Layer Security, <xref target="RFC8446"/>).
 </t>
 <t>
+   Because CONNECT changes the request/response nature of an HTTP connection,
+   specific HTTP versions might have different ways of mapping its semantics
+   into the protocol's wire format.
+</t>
+<t>
    CONNECT is intended only for use in requests to a proxy.
    An origin server that receives a CONNECT request for itself &MAY;
    respond with a <x:ref>2xx (Successful)</x:ref> status code to indicate that a connection
@@ -5786,6 +5983,10 @@ Expect: 100-continue
    The If-Match header field can be ignored by caches and intermediaries
    because it is not applicable to a stored response.
 </t>
+<t>
+   Note that an If-Match header field with a list value containing "*" and
+   other values (including other instances of "*") is unlikely to be interoperable.
+</t>
 </section>
 
 <section title="If-None-Match" anchor="field.if-none-match">
@@ -5867,6 +6068,10 @@ Expect: 100-continue
 <t>
    Requirements on cache handling of a received If-None-Match header field
    are defined in <xref target="validation.received"/>.
+</t>
+<t>
+   Note that an If-None-Match header field with a list value containing "*" and
+   other values (including other instances of "*") is unlikely to be interoperable.
 </t>
 </section>
 
@@ -6149,6 +6354,11 @@ Expect: 100-continue
    same data.
 </t>
 <t>
+   A server that supports range requests &MAY; ignore a <x:ref>Range</x:ref>
+   header field when the selected representation has no body
+   (i.e., the selected representation data is of zero length).
+</t>
+<t>
    A client that is requesting multiple ranges &SHOULD; list those ranges in
    ascending order (the order in which they would typically be received in a
    complete representation) unless there is a specific need to request a later
@@ -6352,8 +6562,8 @@ Expect: 100-continue
    that matches the type. For example,
 </t>
 <artwork type="example">
-  Accept: text/*;q=0.3, text/html;q=0.7, text/html;level=1,
-          text/html;level=2;q=0.4, */*;q=0.5
+  Accept: text/*;q=0.3, text/plain;q=0.7, text/plain;format=flowed,
+          text/plain;format=fixed;q=0.4, */*;q=0.5
 </artwork>
 <t>
    would cause the following values to be associated:
@@ -6367,15 +6577,15 @@ Expect: 100-continue
   </thead>
   <tbody>
     <tr>
-      <td>text/html;level=1</td>
+      <td>text/plain;format=flowed</td>
       <td>1</td>
     </tr>
     <tr>
-      <td>text/html</td>
+      <td>text/plain</td>
       <td>0.7</td>
     </tr>
     <tr>
-      <td>text/plain</td>
+      <td>text/html</td>
       <td>0.3</td>
     </tr>
     <tr>
@@ -6383,7 +6593,7 @@ Expect: 100-continue
       <td>0.5</td>
     </tr>
     <tr>
-      <td>text/html;level=2</td>
+      <td>text/plain;format=fixed</td>
       <td>0.4</td>
     </tr>
     <tr>
@@ -8698,16 +8908,18 @@ Content-Range: bytes 7000-7999/8000
   <x:anchor-alias value="416 (Range Not Satisfiable)"/>
 <t>
    The <x:dfn>416 (Range Not Satisfiable)</x:dfn> status code indicates that
-   none of the ranges in the request's <x:ref>Range</x:ref> header field
-   (<xref target="field.range"/>) overlap the current extent of the
-   <x:ref>selected representation</x:ref> or that the set of ranges requested
-   has been rejected due to
-   invalid ranges or an excessive request of small or overlapping ranges.
+   the set of ranges in the request's <x:ref>Range</x:ref> header field
+   (<xref target="field.range"/>) has been rejected either because none of
+   the requested ranges are satisfiable or because the client has requested
+   an excessive number of small or overlapping ranges (a potential denial of
+   service attack).
 </t>
 <t>
-   For byte ranges, failing to overlap the current extent means that the
-   <x:ref>first-pos</x:ref> of all of the <x:ref>range-spec</x:ref>
-   values were greater than or equal to the current length of the selected representation.
+   Each range unit defines what is required for its own range sets to be
+   satisfiable. For example, <xref target="byte.ranges"/> defines what makes
+   a bytes range set satisfiable.
+</t>
+<t>
    When this status code is generated in response to a byte-range request, the
    sender &SHOULD; generate a <x:ref>Content-Range</x:ref> header field
    specifying the current length of the selected representation
@@ -8724,7 +8936,7 @@ Content-Range: bytes */47022
 <aside>
   <t>
     &Note; Because servers are free to ignore <x:ref>Range</x:ref>, many
-    implementations will simply respond with the entire selected representation
+    implementations will respond with the entire selected representation
     in a <x:ref>200 (OK)</x:ref> response. That is partly because
     most clients are prepared to receive a <x:ref>200 (OK)</x:ref> to
     complete the task (albeit less efficiently) and partly because clients
@@ -9049,144 +9261,6 @@ Content-Type: text/plain
   </tbody>
 </table>
 
-<section title="Origination Date" anchor="origination.date">
-
-<section title="Date/Time Formats" anchor="http.date">
-  <x:anchor-alias value="HTTP-date"/>
-<t>
-   Prior to 1995, there were three different formats commonly used by servers
-   to communicate timestamps.  For compatibility with old implementations, all
-   three are defined here. The preferred format is a fixed-length and
-   single-zone subset of the date and time specification used by the
-   Internet Message Format <xref target="RFC5322"/>.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="HTTP-date"/>
-  <x:ref>HTTP-date</x:ref>    = <x:ref>IMF-fixdate</x:ref> / <x:ref>obs-date</x:ref>
-</sourcecode>
-<t>
-   An example of the preferred format is
-</t>
-<artwork type="example" x:indent-with="  ">
-Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate
-</artwork>
-<t>
-   Examples of the two obsolete formats are
-</t>
-<artwork type="example" x:indent-with="  ">
-Sunday, 06-Nov-94 08:49:37 GMT   ; obsolete RFC 850 format
-Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
-</artwork>
-<t>
-   A recipient that parses a timestamp value in an HTTP field &MUST;
-   accept all three HTTP-date formats. When a sender generates a field
-   that contains one or more timestamps defined as HTTP-date,
-   the sender &MUST; generate those timestamps in the IMF-fixdate format.
-</t>
-<t>
-   An HTTP-date value represents time as an instance of Coordinated Universal
-   Time (UTC). The first two formats indicate UTC by the three-letter
-   abbreviation for Greenwich Mean Time, "GMT", a predecessor of the UTC name;
-   values in the asctime format are assumed to be in UTC.
-   A sender that generates HTTP-date values from a local clock ought to use
-   NTP (<xref target="RFC5905"/>) or some similar protocol to synchronize its
-   clock to UTC.
-</t>
-<t anchor="preferred.date.format">
-  <x:anchor-alias value="IMF-fixdate"/>
-  <x:anchor-alias value="time-of-day"/>
-  <x:anchor-alias value="hour"/>
-  <x:anchor-alias value="minute"/>
-  <x:anchor-alias value="second"/>
-  <x:anchor-alias value="day-name"/>
-  <x:anchor-alias value="day"/>
-  <x:anchor-alias value="month"/>
-  <x:anchor-alias value="year"/>
-  <x:anchor-alias value="GMT"/>
-  Preferred format:
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="IMF-fixdate"/><iref primary="true" item="Grammar" subitem="date1"/><iref primary="true" item="Grammar" subitem="time-of-day"/><iref primary="true" item="Grammar" subitem="hour"/><iref primary="true" item="Grammar" subitem="minute"/><iref primary="true" item="Grammar" subitem="second"/><iref primary="true" item="Grammar" subitem="day-name"/><iref primary="true" item="Grammar" subitem="day-name-l"/><iref primary="true" item="Grammar" subitem="day"/><iref primary="true" item="Grammar" subitem="month"/><iref primary="true" item="Grammar" subitem="year"/><iref primary="true" item="Grammar" subitem="GMT"/>
-  <x:ref>IMF-fixdate</x:ref>  = <x:ref>day-name</x:ref> "," <x:ref>SP</x:ref> date1 <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
-  ; fixed length/zone/capitalization subset of the format
-  ; see <xref target="RFC5322" x:fmt="of" x:sec="3.3"/>
-  
-  <x:ref>day-name</x:ref>     = %s"Mon" / %s"Tue" / %s"Wed"
-               / %s"Thu" / %s"Fri" / %s"Sat" / %s"Sun"
-               
-  <x:ref>date1</x:ref>        = <x:ref>day</x:ref> <x:ref>SP</x:ref> <x:ref>month</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
-               ; e.g., 02 Jun 1982
-
-  <x:ref>day</x:ref>          = 2<x:ref>DIGIT</x:ref>
-  <x:ref>month</x:ref>        = %s"Jan" / %s"Feb" / %s"Mar" / %s"Apr"
-               / %s"May" / %s"Jun" / %s"Jul" / %s"Aug"
-               / %s"Sep" / %s"Oct" / %s"Nov" / %s"Dec"
-  <x:ref>year</x:ref>         = 4<x:ref>DIGIT</x:ref>
-
-  <x:ref>GMT</x:ref>          = %s"GMT"
-
-  <x:ref>time-of-day</x:ref>  = <x:ref>hour</x:ref> ":" <x:ref>minute</x:ref> ":" <x:ref>second</x:ref>
-               ; 00:00:00 - 23:59:60 (leap second)
-                 
-  <x:ref>hour</x:ref>         = 2<x:ref>DIGIT</x:ref>               
-  <x:ref>minute</x:ref>       = 2<x:ref>DIGIT</x:ref>               
-  <x:ref>second</x:ref>       = 2<x:ref>DIGIT</x:ref>               
-</sourcecode>
-<t anchor="obsolete.date.formats">
-  <x:anchor-alias value="obs-date"/>
-  <x:anchor-alias value="rfc850-date"/>
-  <x:anchor-alias value="asctime-date"/>
-  <x:anchor-alias value="date1"/>
-  <x:anchor-alias value="date2"/>
-  <x:anchor-alias value="date3"/>
-  <x:anchor-alias value="day-name-l"/>
-  Obsolete formats:
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="obs-date"/>
-  <x:ref>obs-date</x:ref>     = <x:ref>rfc850-date</x:ref> / <x:ref>asctime-date</x:ref> 
-</sourcecode>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="rfc850-date"/>
-  <x:ref>rfc850-date</x:ref>  = <x:ref>day-name-l</x:ref> "," <x:ref>SP</x:ref> <x:ref>date2</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>GMT</x:ref>
-  <x:ref>date2</x:ref>        = <x:ref>day</x:ref> "-" <x:ref>month</x:ref> "-" 2<x:ref>DIGIT</x:ref>
-               ; e.g., 02-Jun-82
-
-  <x:ref>day-name-l</x:ref>   = %s"Monday" / %s"Tuesday" / %s"Wednesday"
-         / %s"Thursday" / %s"Friday" / %s"Saturday" / %s"Sunday"
-</sourcecode>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="asctime-date"/>
-  <x:ref>asctime-date</x:ref> = <x:ref>day-name</x:ref> <x:ref>SP</x:ref> <x:ref>date3</x:ref> <x:ref>SP</x:ref> <x:ref>time-of-day</x:ref> <x:ref>SP</x:ref> <x:ref>year</x:ref>
-  <x:ref>date3</x:ref>        = <x:ref>month</x:ref> <x:ref>SP</x:ref> ( 2<x:ref>DIGIT</x:ref> / ( <x:ref>SP</x:ref> 1<x:ref>DIGIT</x:ref> ))
-               ; e.g., Jun  2
-</sourcecode>
-<t>
-   HTTP-date is case sensitive.
-   A sender &MUST-NOT; generate additional whitespace in an HTTP-date beyond
-   that specifically included as SP in the grammar.
-   The semantics of <x:ref>day-name</x:ref>, <x:ref>day</x:ref>,
-   <x:ref>month</x:ref>, <x:ref>year</x:ref>, and <x:ref>time-of-day</x:ref>
-   are the same as those defined for the Internet Message Format constructs
-   with the corresponding name (<xref target="RFC5322" x:fmt="," x:sec="3.3"/>).
-</t>
-<t>
-   Recipients of a timestamp value in rfc850-date format, which uses a
-   two-digit year, &MUST; interpret a timestamp that appears to be more
-   than 50 years in the future as representing the most recent year in the
-   past that had the same last two digits.
-</t>
-<t>
-   Recipients of timestamp values are encouraged to be robust in parsing
-   timestamps unless otherwise restricted by the field definition.
-   For example, messages are occasionally forwarded over HTTP from a non-HTTP
-   source that might generate any of the date and time specifications defined
-   by the Internet Message Format.
-</t>
-<aside>
-  <t>
-    &Note; HTTP requirements for the date/time stamp format apply only
-    to their usage within the protocol stream. Implementations are
-    not required to use these formats for user presentation, request
-    logging, etc.
-  </t>
-</aside>
-</section>
 
 <section title="Date" anchor="field.date">
   <x:anchor-alias value="header.date"/>
@@ -9236,7 +9310,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    the server is expected to adjust its interpretation of the user's request
    based on differences between the user agent and server clocks.
 </t>
-</section>
 </section>
 
 <section title="Location" anchor="field.location">
@@ -9368,25 +9441,23 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    The "Vary" header field in a response describes what parts of a request
    message, aside from the method, Host header field, and target URI,
    might influence the origin server's process for selecting and representing
-   this response. The value consists of either a single asterisk ("*") or a
-   list of header field names (case-insensitive).
+   this response.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Vary"/>
-  <x:ref>Vary</x:ref> = "*" / 1#<x:ref>field-name</x:ref>
+  <x:ref>Vary</x:ref> = 1#( "*" / <x:ref>field-name</x:ref> )
 </sourcecode>
 <t>
-   A Vary field value of "*" signals that anything about the request might
+   A Vary field value is a list of request field names, known as the selecting header fields,
+   that might have a role in selecting the representation for this response. Potential selecting
+   header fields are not limited to those defined by this specification.
+</t>
+<t>
+   If the list contains "*", it signals that other aspects of the request might
    play a role in selecting the response representation, possibly including
    elements outside the message syntax (e.g., the client's network address).
    A recipient will not be able to determine whether this response is
    appropriate for a later request without forwarding the request to the
-   origin server. A proxy &MUST-NOT; generate a Vary field with a "*" value.
-</t>
-<t>
-   A Vary field value consisting of a list of field names indicates
-   that the named request header fields, known as the selecting header fields,
-   might have a role in selecting the representation. The potential selecting
-   header fields are not limited to those defined by this specification.
+   origin server. A proxy &MUST-NOT; generate "*" in a Vary field value.
 </t>
 <t>
   For example, a response that contains
@@ -10986,6 +11057,7 @@ Content-Encoding: gzip
   <x:source href="draft-ietf-httpbis-cache-latest.xml" basename="draft-ietf-httpbis-cache-latest">
     <x:has anchor="constructing.responses.from.caches"/>
     <x:has anchor="cache-response-directive.private"/>
+    <x:has anchor="cache.control.extensions"/>
     <x:has anchor="caching.authenticated.responses"/>
     <x:has anchor="caching.negotiated.responses"/>
     <x:has anchor="caching.overview"/>
@@ -11675,6 +11747,23 @@ Content-Encoding: gzip
   <seriesInfo name='RFC' value='4918' />
 </reference>
 
+<reference anchor="RFC7540">
+   <front>
+      <title>Hypertext Transfer Protocol Version 2 (HTTP/2)</title>
+      <author initials="M." surname="Belshe" fullname="M. Belshe">
+         <organization/>
+      </author>
+      <author initials="R." surname="Peon" fullname="R. Peon">
+         <organization/>
+      </author>
+      <author initials="M." surname="Thomson" fullname="M. Thomson" role="editor">
+         <organization/>
+      </author>
+      <date year="2015" month="May"/>
+   </front>
+   <seriesInfo name="RFC" value="7540"/>
+</reference>
+
 <reference anchor="RFC8446">
    <front>
       <title>The Transport Layer Security (TLS) Protocol Version 1.3</title>
@@ -12050,14 +12139,14 @@ Content-Encoding: gzip
 
 <?BEGININC build/draft-ietf-httpbis-semantics-latest.abnf-appendix ?>
 <section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf"><t>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension.sender"/>.</t><sourcecode type="abnf" name="draft-ietf-httpbis-semantics-latest.parsed-abnf">
-<x:ref>Accept</x:ref> = [ ( "," / ( media-range [ accept-params ] ) ) *( OWS "," [
- OWS ( media-range [ accept-params ] ) ] ) ]
-<x:ref>Accept-Charset</x:ref> = *( "," OWS ) ( ( charset / "*" ) [ weight ] ) *( OWS
- "," [ OWS ( ( charset / "*" ) [ weight ] ) ] )
-<x:ref>Accept-Encoding</x:ref> = [ ( "," / ( codings [ weight ] ) ) *( OWS "," [ OWS
- ( codings [ weight ] ) ] ) ]
-<x:ref>Accept-Language</x:ref> = *( "," OWS ) ( language-range [ weight ] ) *( OWS
- "," [ OWS ( language-range [ weight ] ) ] )
+<x:ref>Accept</x:ref> = [ ( media-range [ accept-params ] ) *( OWS "," OWS (
+ media-range [ accept-params ] ) ) ]
+<x:ref>Accept-Charset</x:ref> = ( ( charset / "*" ) [ weight ] ) *( OWS "," OWS ( (
+ charset / "*" ) [ weight ] ) )
+<x:ref>Accept-Encoding</x:ref> = [ ( codings [ weight ] ) *( OWS "," OWS ( codings [
+ weight ] ) ) ]
+<x:ref>Accept-Language</x:ref> = ( language-range [ weight ] ) *( OWS "," OWS (
+ language-range [ weight ] ) )
 <x:ref>Accept-Ranges</x:ref> = acceptable-ranges
 <x:ref>Allow</x:ref> = [ method *( OWS "," OWS method ) ]
 <x:ref>Authentication-Info</x:ref> = [ auth-param *( OWS "," OWS auth-param ) ]
@@ -12115,10 +12204,9 @@ Content-Encoding: gzip
 <x:ref>URI-reference</x:ref> = &lt;URI-reference, see <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
 <x:ref>User-Agent</x:ref> = product *( RWS ( product / comment ) )
 
-<x:ref>Vary</x:ref> = "*" / ( field-name *( OWS "," OWS field-name ) )
-<x:ref>Via</x:ref> = *( "," OWS ) ( received-protocol RWS received-by [ RWS comment
- ] ) *( OWS "," [ OWS ( received-protocol RWS received-by [ RWS
- comment ] ) ] )
+<x:ref>Vary</x:ref> = ( "*" / field-name ) *( OWS "," OWS ( "*" / field-name ) )
+<x:ref>Via</x:ref> = ( received-protocol RWS received-by [ RWS comment ] ) *( OWS
+ "," OWS ( received-protocol RWS received-by [ RWS comment ] ) )
 
 <x:ref>WWW-Authenticate</x:ref> = challenge *( OWS "," OWS challenge )
 
@@ -12599,11 +12687,17 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-08" anchor="changes.since.08">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="status.416"/>, remove duplicate definition of what makes a range satisfiable and refer instead to each range unit's definition (<eref target="https://github.com/httpwg/http-core/issues/12"/>)</li>
+  <li>In <xref target="byte.ranges"/> and <xref target="field.range"/>, clarify that a selected representation of zero length can only be satisfiable as a suffix range and that a server can still ignore Range for that case (<eref target="https://github.com/httpwg/http-core/issues/12"/>)</li>
   <li>In <xref target="field.accept"/> and <xref target="status.415"/>, allow "Accept" as response field (<eref target="https://github.com/httpwg/http-core/issues/48"/>)</li>
   <li><xref target="collected.abnf"/> now uses the sender variant of the "#" list expansion (<eref target="https://github.com/httpwg/http-core/issues/192"/>)</li>
+  <li>In <xref target="field.vary"/>, make the field list-based even when "*" is present (<eref target="https://github.com/httpwg/http-core/issues/272"/>)</li>
   <li>In <xref target="field.name.registry"/>, add optional "Comments" entry (<eref target="https://github.com/httpwg/http-core/issues/273"/>)</li>
+  <li>In <xref target="field.if-match"/> and <xref target="field.if-none-match"/>, state that multiple "*" is unlikely to be interoperable (<eref target="https://github.com/httpwg/http-core/issues/305"/>)</li>
+  <li>In <xref target="field.accept"/>, avoid use of obsolete media type parameter on text/html (<eref target="https://github.com/httpwg/http-core/issues/375"/>, <eref target="https://www.rfc-editor.org/errata/eid6149"/>)</li>
   <li>In <xref target="field.values"/>, instruct recipients how to deal with control characters in field values (<eref target="https://github.com/httpwg/http-core/issues/377"/>)</li>
-  <li>In <xref target="field.values"/>, update note about field ABNF  (<eref target="https://github.com/httpwg/http-core/issues/380"/>)</li>
+  <li>In <xref target="field.values"/>, update note about field ABNF (<eref target="https://github.com/httpwg/http-core/issues/380"/>)</li>
+  <li>Add <xref target="extending.versioning"/> about Extending and Versioning HTTP (<eref target="https://github.com/httpwg/http-core/issues/384"/>)</li>
   <li>In <xref target="overview.of.status.codes"/>, include status 308 in list of heuristically cacheable status codes (<eref target="https://github.com/httpwg/http-core/issues/385"/>)</li>
   <li>In <xref target="field.content-encoding"/>, make it clearer that "identity" is not to be included (<eref target="https://github.com/httpwg/http-core/issues/388"/>)</li>
 </ul>
