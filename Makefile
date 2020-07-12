@@ -89,7 +89,7 @@ $(bd)/%.redxml: %.xml $(reduction)
 	$(saxon) $< $(xreffer) | $(saxon) - $(reduction) > $@
 
 %.txt: $(bd)/%.redxml
-	$(xml2rfc) --v3 --legacy-list-symbols --legacy-date-format $< -o $@
+	$(xml2rfc) --v3 --legacy-list-symbols --legacy-date-format --table-borders=light $< -o $@
 
 $(bd)/%.abnf: %.xml lib/extract-artwork.xslt
 	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf7230" >$@
