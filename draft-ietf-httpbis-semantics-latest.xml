@@ -304,14 +304,11 @@
    <xref target="field.components"/> defines some generic syntactic
    components for field values.
 </t>
-<t anchor="imported.rules">
-  <x:anchor-alias value="protocol-name"/>
-  <x:anchor-alias value="protocol-version"/>
-  The rules below are defined in <xref target="Messaging"/>:
+<t>
+   The rule below is defined in <xref target="Messaging"/>; 
 </t>
 <sourcecode type="abnf7230">
-  <x:ref>protocol-name</x:ref>    = &lt;protocol-name, see <xref target="field.upgrade"/>&gt;
-  <x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="field.upgrade"/>&gt;
+  <x:ref>transfer-coding</x:ref> = &lt;transfer-coding, see <xref target="Messaging" x:rel="#transfer.codings"/>&gt;
 </sourcecode>
 <t>
    This specification uses the terms
@@ -1995,6 +1992,35 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    trailers.
 </t>
 </section>
+
+<section title="TE" anchor="field.te">
+  <x:anchor-alias value="header.te"/>
+  <iref primary="true" item="Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="TE header field" x:for-anchor=""/>
+  <x:anchor-alias value="TE"/>
+  <x:anchor-alias value="t-codings"/>
+  <x:anchor-alias value="t-ranking"/>
+  <x:anchor-alias value="rank"/>
+<t>
+   The "TE" header field in a request can be used to indicate that the sender
+   will not discard trailer fields when it contains a "trailers" member, as
+   described in <xref target="trailer.fields"/>.
+</t>
+<t>
+   Additionally, specific HTTP versions can use it to indicate the transfer
+   codings the client is willing to accept in the response.
+</t>
+<t>
+   The TE field-value consists of a list of tokens, each allowing for
+   optional parameters (as described in <xref target="parameter"/>).
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="t-ranking"/><iref primary="true" item="Grammar" subitem="rank"/>
+  <x:ref>TE</x:ref>        = #<x:ref>t-codings</x:ref>
+  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-coding</x:ref> [ <x:ref>t-ranking</x:ref> ] )
+  <x:ref>t-ranking</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>rank</x:ref>
+  <x:ref>rank</x:ref>      = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
+             / ( "1" [ "." 0*3("0") ] )
+</sourcecode>
+</section>
 </section>
 
 <section title="Considerations for New HTTP Fields" anchor="considerations.for.new.header.fields">
@@ -2307,10 +2333,24 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
          </td>
       </tr>
       <tr>
+         <td>TE</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.te"/>
+         </td>
+      </tr>
+      <tr>
          <td>Trailer</td>
          <td>standard</td>
          <td>
             <xref target="field.trailer"/>
+         </td>
+      </tr>
+      <tr>
+         <td>Upgrade</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.upgrade"/>
          </td>
       </tr>
       <tr>
@@ -3008,6 +3048,193 @@ Host: www.example.org
    definition specifically allows such modification or the modification is
    deemed necessary for privacy or security.
 </t>
+</section>
+</section>
+
+
+<section title="Upgrading HTTP" anchor="field.upgrade">
+  <x:anchor-alias value="header.upgrade"/>
+  <iref primary="true" item="Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Upgrade header field" x:for-anchor=""/>
+  <x:anchor-alias value="Upgrade"/>
+  <x:anchor-alias value="protocol"/>
+  <x:anchor-alias value="protocol-name"/>
+  <x:anchor-alias value="protocol-version"/>
+<t>
+   The "Upgrade" header field is intended to provide a simple mechanism
+   for transitioning from HTTP/1.1 to some other protocol on the same
+   connection.
+</t>
+<t>
+   A client &MAY; send a list of protocol names in the Upgrade header field
+   of a request to invite the server to switch to one or more of the named
+   protocols, in order of descending preference, before sending
+   the final response. A server &MAY; ignore a received Upgrade header field
+   if it wishes to continue using the current protocol on that connection.
+   Upgrade cannot be used to insist on a protocol change.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Upgrade"/>
+  <x:ref>Upgrade</x:ref>          = 1#<x:ref>protocol</x:ref>
+
+  <x:ref>protocol</x:ref>         = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
+  <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
+  <x:ref>protocol-version</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Although protocol names are registered with a preferred case,
+   recipients &SHOULD; use case-insensitive comparison when matching each
+   protocol-name to supported protocols.
+</t>
+<t>
+   A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the new protocol(s) to
+   which the connection is being switched; if multiple protocol layers are
+   being switched, the sender &MUST; list the protocols in layer-ascending
+   order. A server &MUST-NOT; switch to a protocol that was not indicated by
+   the client in the corresponding request's Upgrade header field.
+   A server &MAY; choose to ignore the order of preference indicated by the
+   client and select the new protocol(s) based on other factors, such as the
+   nature of the request or the current load on the server.
+</t>
+<t>
+   A server that sends a <x:ref>426 (Upgrade Required)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the acceptable protocols,
+   in order of descending preference.
+</t>
+<t>
+   A server &MAY; send an Upgrade header field in any other response to
+   advertise that it implements support for upgrading to the listed protocols,
+   in order of descending preference, when appropriate for a future request.
+</t>
+<t>
+   The following is a hypothetical example sent by a client:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /hello HTTP/1.1
+Host: www.example.com
+Connection: upgrade
+Upgrade: websocket, IRC/6.9, RTA/x11
+
+</artwork>
+<t>
+   The capabilities and nature of the
+   application-level communication after the protocol change is entirely
+   dependent upon the new protocol(s) chosen. However, immediately after
+   sending the <x:ref>101 (Switching Protocols)</x:ref> response, the server is expected to continue responding to
+   the original request as if it had received its equivalent within the new
+   protocol (i.e., the server still has an outstanding request to satisfy
+   after the protocol has been changed, and is expected to do so without
+   requiring the request to be repeated).
+</t>
+<t>
+   For example, if the Upgrade header field is received in a GET request
+   and the server decides to switch protocols, it first responds
+   with a <x:ref>101 (Switching Protocols)</x:ref> message in HTTP/1.1 and
+   then immediately follows that with the new protocol's equivalent of a
+   response to a GET on the target resource.  This allows a connection to be
+   upgraded to protocols with the same semantics as HTTP without the
+   latency cost of an additional round trip.  A server &MUST-NOT; switch
+   protocols unless the received message semantics can be honored by the new
+   protocol; an OPTIONS request can be honored by any protocol.
+</t>
+<t>
+   The following is an example response to the above hypothetical request:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 101 Switching Protocols
+Connection: upgrade
+Upgrade: websocket
+
+[... data stream switches to websocket with an appropriate response
+(as defined by new protocol) to the "GET /hello" request ...]
+</artwork>
+<t>
+   When Upgrade is sent, the sender &MUST; also send a
+   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
+   that contains an "upgrade" connection option, in order to prevent Upgrade
+   from being accidentally forwarded by intermediaries that might not implement
+   the listed protocols.  A server &MUST; ignore an Upgrade header field that
+   is received in an HTTP/1.0 request.
+</t>
+<t>
+   A client cannot begin using an upgraded protocol on the connection until
+   it has completely sent the request message (i.e., the client can't change
+   the protocol it is sending in the middle of a message).
+   If a server receives both an Upgrade and an <x:ref>Expect</x:ref> header field
+   with the "100-continue" expectation (<xref target="field.expect"/>), the
+   server &MUST; send a <x:ref>100 (Continue)</x:ref> response before sending
+   a <x:ref>101 (Switching Protocols)</x:ref> response.
+</t>
+<t>
+   The Upgrade header field only applies to switching protocols on top of the
+   existing connection; it cannot be used to switch the underlying connection
+   (transport) protocol, nor to switch the existing communication to a
+   different connection. For those purposes, it is more appropriate to use a
+   <x:ref>3xx (Redirection)</x:ref> response (<xref target="status.3xx"/>).
+</t>
+
+<section title="Upgrade Protocol Names" anchor="upgrade.protocol.names">
+<t>
+   This specification only defines the protocol name "HTTP" for use by
+   the family of Hypertext Transfer Protocols, as defined by the HTTP
+   version rules of <xref target="protocol.version"/> and future updates to this
+   specification. Additional protocol names ought to be registered using the
+   registration procedure defined in <xref target="upgrade.token.registry"/>.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Expected Version Tokens</th>
+      <th>Reference</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>HTTP</td>
+      <td>Hypertext Transfer Protocol</td>
+      <td>any DIGIT.DIGIT (e.g, "2.0")</td>
+      <td><xref target="protocol.version"/></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Upgrade Token Registry" anchor="upgrade.token.registry">
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" defines
+   the namespace for protocol-name tokens used to identify protocols in the
+   <x:ref>Upgrade</x:ref> header field. The registry is maintained at
+   <eref target="https://www.iana.org/assignments/http-upgrade-tokens"/>.
+</t>
+<t>
+   Each registered protocol name is associated with contact information
+   and an optional set of specifications that details how the connection
+   will be processed after it has been upgraded.
+</t>
+<t>
+   Registrations happen on a "First Come First Served" basis (see
+   <xref target="RFC8126" x:sec="4.4" x:fmt="of"/>) and are subject to the
+   following rules:
+</t>
+<ol>
+   <li>A protocol-name token, once registered, stays registered forever.</li>
+   <li>A protocol-name token is case-insensitive and registered with the
+       preferred case to be generated by senders.</li>
+   <li>The registration &MUST; name a responsible party for the
+       registration.</li>
+   <li>The registration &MUST; name a point of contact.</li>
+   <li>The registration &MAY; name a set of specifications associated with
+       that token. Such specifications need not be publicly available.</li>
+   <li>The registration &SHOULD; name a set of expected "protocol-version"
+       tokens associated with that token at the time of registration.</li>
+   <li>The responsible party &MAY; change the registration at any time.
+       The IANA will keep a record of all such changes, and make them
+       available upon request.</li>
+   <li>The IESG &MAY; reassign responsibility for a protocol token.
+       This will normally only be used in the case when a
+       responsible party cannot be contacted.</li>
+</ol>
 </section>
 </section>
 </section>
@@ -11092,9 +11319,7 @@ Content-Encoding: gzip
     <x:has anchor="field.parsing"/>
     <x:has anchor="h1.effective.request.uri"/>
     <x:has anchor="field.connection"/>
-    <x:has anchor="field.te"/>
     <x:has anchor="field.transfer-encoding"/>
-    <x:has anchor="field.upgrade"/>
     <x:has anchor="http.message"/>
     <x:has anchor="media.type.message.http"/>
     <x:has anchor="line.folding"/>
@@ -12253,9 +12478,11 @@ Content-Encoding: gzip
 
 <x:ref>Server</x:ref> = product *( RWS ( product / comment ) )
 
+<x:ref>TE</x:ref> = [ t-codings *( OWS "," OWS t-codings ) ]
 <x:ref>Trailer</x:ref> = field-name *( OWS "," OWS field-name )
 
 <x:ref>URI-reference</x:ref> = &lt;URI-reference, see <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
+<x:ref>Upgrade</x:ref> = protocol *( OWS "," OWS protocol )
 <x:ref>User-Agent</x:ref> = product *( RWS ( product / comment ) )
 
 <x:ref>Vary</x:ref> = ( "*" / field-name ) *( OWS "," OWS ( "*" / field-name ) )
@@ -12365,8 +12592,9 @@ Content-Encoding: gzip
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
 <x:ref>product</x:ref> = token [ "/" product-version ]
 <x:ref>product-version</x:ref> = token
-<x:ref>protocol-name</x:ref> = &lt;protocol-name, see <xref target="Messaging" x:fmt="," x:sec="9.9"/>&gt;
-<x:ref>protocol-version</x:ref> = &lt;protocol-version, see <xref target="Messaging" x:fmt="," x:sec="9.9"/>&gt;
+<x:ref>protocol</x:ref> = protocol-name [ "/" protocol-version ]
+<x:ref>protocol-name</x:ref> = token
+<x:ref>protocol-version</x:ref> = token
 <x:ref>pseudonym</x:ref> = token
 
 <x:ref>qdtext</x:ref> = HTAB / SP / "!" / %x23-5B ; '#'-'['
@@ -12382,6 +12610,7 @@ Content-Encoding: gzip
 <x:ref>range-spec</x:ref> = int-range / suffix-range / other-range
 <x:ref>range-unit</x:ref> = token
 <x:ref>ranges-specifier</x:ref> = range-unit "=" range-set
+<x:ref>rank</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 <x:ref>received-by</x:ref> = pseudonym [ ":" port ]
 <x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
 <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
@@ -12393,12 +12622,15 @@ Content-Encoding: gzip
 <x:ref>suffix-length</x:ref> = 1*DIGIT
 <x:ref>suffix-range</x:ref> = "-" suffix-length
 
+<x:ref>t-codings</x:ref> = "trailers" / ( transfer-coding [ t-ranking ] )
+<x:ref>t-ranking</x:ref> = OWS ";" OWS "q=" rank
 <x:ref>tchar</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "." /
  "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
 <x:ref>time-of-day</x:ref> = hour ":" minute ":" second
 <x:ref>token</x:ref> = 1*tchar
 <x:ref>token68</x:ref> = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" )
  *"="
+transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:sec="7"/>&gt;
 <x:ref>type</x:ref> = token
 
 <x:ref>unsatisfied-range</x:ref> = "*/" complete-length
@@ -12768,6 +13000,7 @@ Content-Encoding: gzip
 
 <section title="Since draft-ietf-httpbis-semantics-10" anchor="changes.since.10">
 <ul x:when-empty="None yet.">
+  <li>Moved definitions of "TE" and "Upgrade" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/392"/>)</li>
 </ul>
 </section>
 </section>
