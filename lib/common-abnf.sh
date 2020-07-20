@@ -12,7 +12,7 @@ echo ""
 
 for i in "$@"
 do
-  $bap/bap -i $bap/core.abnf -L 1 -X rfc7405 -n "$i" 
+  $bap/bap -i $bap/core.abnf -L 2 -X rfc7405 -n "$i" 
 done | \
 	fgrep -v ", defined in [Part" | \
 	fgrep -v ", defined in [Messaging" | \

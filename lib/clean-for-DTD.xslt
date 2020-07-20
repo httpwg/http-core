@@ -1226,6 +1226,21 @@
   </xsl:if>
 </xsl:template>
 
+<!-- defaults for <eref> brackets -->
+<xsl:template match="eref[not(node())]" mode="cleanup">
+  <eref>
+    <xsl:copy-of select="@target"/>
+    <xsl:choose>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and not(@brackets)">
+        <xsl:attribute name="brackets">angle</xsl:attribute>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:copy-of select="@brackets"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </eref>
+</xsl:template>
+
 <!-- cref/@display -->
 <xsl:template match="cref/@display" mode="cleanup">
   <xsl:choose>
@@ -1448,7 +1463,7 @@
     <front>
       <title>
         <xsl:text>Consisting of: </xsl:text>
-        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rcf2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/*[self::reference or self::referencegroup]"/>
+        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rfc2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/*[self::reference or self::referencegroup]"/>
         <xsl:for-each select="reference|$included">
           <xsl:value-of select="concat('[',@anchor,']')"/>
           <xsl:choose>

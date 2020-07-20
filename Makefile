@@ -4,7 +4,7 @@ saxon = java -classpath $(saxpath) net.sf.saxon.Transform -l -versionmsg:off
 
 rfcdiff = rfcdiff --width 78 --stdout
 stylesheet = lib/myxml2rfc.xslt
-reduction  = lib/clean-for-DTD.xslt
+reduction  = lib/clean-for-xml2rfc-v3.xslt
 xreffer    = lib/xreffer.xslt
 bap = bap
 bd  = build
@@ -89,13 +89,13 @@ $(bd)/%.redxml: %.xml $(reduction)
 	$(saxon) $< $(xreffer) | $(saxon) - $(reduction) > $@
 
 %.txt: $(bd)/%.redxml
-	$(xml2rfc) $< -o $@
+	$(xml2rfc) --v3 --legacy-list-symbols --legacy-date-format --table-borders=minimal --bom $< -o $@
 
 $(bd)/%.abnf: %.xml lib/extract-artwork.xslt
 	$(saxon) $< lib/xreffer.xslt | $(saxon) - lib/extract-artwork.xslt type="abnf7230" >$@
 
 $(bd)/%.parsed-abnf: $(bd)/%.abnf
-	$(bap)/bap -i $(bap)/core.abnf -L1 -X rfc7405 < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -L1 -X rfc7405 -l 69 >$@
+	$(bap)/bap -i $(bap)/core.abnf -L2 -X rfc7405 < $< | LC_COLLATE=C sort | $(bap)/bap -k -i $(bap)/core.abnf -X rfc7405 -l 69 >$@
 
 $(bd)/%.abnf-appendix: $(bd)/%.parsed-abnf
 	$(saxon) $*.xml lib/abnf2xml2rfc.xslt abnf="../$<" >$@
