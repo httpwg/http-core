@@ -44,8 +44,8 @@
 >
 
 <xsl:import href="clean-for-DTD.xslt"/>
-<xsl:strip-space elements="abstract aside author address back dl front list middle note ol postal references reference rfc section table tbody thead tr ul"/>                                
-<xsl:output doctype-system="" doctype-public="" method="xml" version="1.0" encoding="UTF-8" cdata-section-elements="artwork sourcecode" indent="yes"/>
+<xsl:strip-space elements="abstract address artset aside author back boilerplate dl figure front list middle note ol postal reference references rfc section table tbody thead tr texttable ul svg:svg"/>
+<xsl:output method="xml" version="1.0" encoding="UTF-8" cdata-section-elements="artwork sourcecode" indent="yes"/>
 <xsl:param name="xml2rfc-ext-xml2rfc-voc">3</xsl:param>
 
 </xsl:transform>
