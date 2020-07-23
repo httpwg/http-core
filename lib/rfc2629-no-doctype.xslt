@@ -51,7 +51,6 @@
 
 <xsl:strip-space elements="abstract address artset aside author back boilerplate dl figure front list middle note ol postal reference references rfc section table tbody thead tr texttable ul svg:svg"/>
 
-<xsl:output method="html" encoding="utf-8" doctype-system="about:legacy-compat" indent="no"/>
 
 <!-- PIs outside the root element, or inside the root element but before <front> -->
 <xsl:variable name="global-std-pis" select="/processing-instruction('rfc') | /*/processing-instruction('rfc')[following-sibling::front]"/>
