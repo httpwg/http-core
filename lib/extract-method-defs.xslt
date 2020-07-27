@@ -15,7 +15,7 @@
           <th>Method</th>
           <th>Safe</th>
           <th>Idempotent</th>
-          <th>Reference</th>
+          <th>See</th>
         </tr>
       </thead>
       <tbody>
@@ -105,7 +105,7 @@
     <td><xsl:value-of select="$text"/></td>
     <td><xsl:value-of select="$safe"/></td>
     <td><xsl:value-of select="$idempotent"/></td>
-    <td><xref target="{@anchor}"/></td>
+    <td><xref target="{@anchor}" format="counter"/></td>
   </tr>
 </xsl:template>
 

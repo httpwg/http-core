@@ -18,7 +18,7 @@
         <tr>
           <th>Field Name</th>
           <th>Status</th>
-          <th>Reference</th>
+          <th>See</th>
         </tr>
       </thead>
       <xsl:text>&#10;</xsl:text>
@@ -98,7 +98,7 @@
   <tr>
     <td><xsl:value-of select="$t"/></td>
     <td><xsl:value-of select="$status"/></td>
-    <td><xref target="{@anchor}"/></td>
+    <td><xref target="{@anchor}" format="counter"/></td>
   </tr>  
 </xsl:template>
 

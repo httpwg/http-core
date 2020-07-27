@@ -14,7 +14,7 @@
         <tr>
           <th>Value</th>
           <th>Description</th>
-          <th>Reference</th>
+          <th>See</th>
         </tr>
       </thead>
       <tbody>
@@ -91,7 +91,7 @@
     <tr>
       <td><xsl:value-of select="substring-before($text,' ')"/></td>
       <td><xsl:value-of select="substring($text,2+string-length(substring-before($text,' ')))"/></td>
-      <td><xref target="{@anchor}"/></td>
+      <td><xref target="{@anchor}" format="counter"/></td>
     </tr>
   </xsl:if>
 </xsl:template>
