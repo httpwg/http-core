@@ -767,6 +767,16 @@
   </xsl:call-template>
 </xsl:param>
 
+<!-- extension for excluding generator information -->
+
+<xsl:param name="xml2rfc-ext-include-generator">
+  <xsl:call-template name="parse-pis">
+    <xsl:with-param name="nodes" select="/processing-instruction('rfc-ext')"/>
+    <xsl:with-param name="attr" select="'include-generator'"/>
+    <xsl:with-param name="default" select="'yes'"/>
+  </xsl:call-template>
+</xsl:param>
+
 <!-- extension for specifying the value for <vspace> after which it's taken as a page break -->
 
 <xsl:param name="xml2rfc-ext-vspace-pagebreak">
@@ -1412,13 +1422,44 @@
   <!--<xsl:message> Orig: "<xsl:value-of select="."/>"</xsl:message>
   <xsl:message>Start: "<xsl:value-of select="$starts-with-ws"/>"</xsl:message>
   <xsl:message>  End: "<xsl:value-of select="$ends-with-ws"/>"</xsl:message> -->
-  <xsl:variable name="before" select="preceding-sibling::*[1]"/>
-  <xsl:if test="$starts-with-ws and (preceding-sibling::node() | parent::ed:ins | parent::ed:del) and not($before/self::x:anchor-alias)">
-    <xsl:text> </xsl:text>
+  <xsl:if test="$starts-with-ws">
+    <xsl:variable name="t">
+      <xsl:for-each select="preceding-sibling::node()">
+        <xsl:choose>
+          <xsl:when test="self::text()">
+            <xsl:value-of select="."/>
+          </xsl:when>
+          <xsl:when test="self::*">
+            <xsl:apply-templates select="."/>
+          </xsl:when>
+          <xsl:otherwise/>
+        </xsl:choose>
+      </xsl:for-each>
+    </xsl:variable>
+    <xsl:variable name="text-before" select="normalize-space($t)"/>
+    <xsl:if test="$text-before!=''">
+      <xsl:text> </xsl:text>
+    </xsl:if>
   </xsl:if>
   <xsl:value-of select="$normalized"/>
-  <xsl:if test="$ends-with-ws and $normalized!='' and (following-sibling::node() | parent::ed:ins | parent::ed:del)">
-    <xsl:text> </xsl:text>
+  <xsl:if test="$ends-with-ws and $normalized!=''">
+    <xsl:variable name="t">
+      <xsl:for-each select="following-sibling::node()">
+        <xsl:choose>
+          <xsl:when test="self::text()">
+            <xsl:value-of select="."/>
+          </xsl:when>
+          <xsl:when test="self::*">
+            <xsl:apply-templates select="."/>
+          </xsl:when>
+          <xsl:otherwise/>
+        </xsl:choose>
+      </xsl:for-each>
+    </xsl:variable>
+    <xsl:variable name="text-after" select="normalize-space($t)"/>
+    <xsl:if test="$text-after!='' and substring($t,1,1)!=' '">
+      <xsl:text> </xsl:text>
+    </xsl:if>
   </xsl:if>
 </xsl:template>
 
@@ -4963,10 +5004,12 @@
       <meta name="viewport" content="initial-scale=1"/>
 
       <!-- generator -->
-      <xsl:variable name="gen">
-        <xsl:call-template name="get-generator" />
-      </xsl:variable>
-      <meta name="generator" content="{$gen}" />
+      <xsl:if test="$xml2rfc-ext-include-generator!='no'">
+        <xsl:variable name="gen">
+          <xsl:call-template name="get-generator" />
+        </xsl:variable>
+        <meta name="generator" content="{$gen}" />
+      </xsl:if>
 
       <!-- keywords -->
       <xsl:if test="front/keyword">
@@ -8203,6 +8246,10 @@ table.v3 tr {
 table.v3 th {
   background-color: #e9e9e9;
   vertical-align: top;
+  padding: 0.25em 0.5em;
+}
+table.v3 td {
+  padding: 0.25em 0.5em;
 }
 table.v3 tr:nth-child(2n) > td {
   background-color: #f5f5f5;
@@ -10964,7 +11011,7 @@ dd, li, p {
 
   <!-- check ABNF syntax references -->
   <xsl:if test="//artwork[@type='abnf2616' or @type='abnf7230']|//sourcecode[@type='abnf2616' or type='abnf7320']">
-    <xsl:if test="not($all-refs//seriesInfo[@name='RFC' and (@value='2068' or @value='2616' or @value='7230')]) and not($all-refs//seriesInfo[@name='Internet-Draft' and (starts-with(@value, 'draft-ietf-httpbis-p1-messaging-'))])">
+    <xsl:if test="not($all-refs//seriesInfo[@name='RFC' and (@value='2068' or @value='2616' or @value='7230')]) and not($all-refs//seriesInfo[@name='Internet-Draft' and (starts-with(@value, 'draft-ietf-httpbis-p1-messaging-') or starts-with(@value, 'draft-ietf-httpbis-semantics-'))])">
       <!-- check for draft-ietf-httpbis-p1-messaging- is for backwards compat -->
       <xsl:call-template name="warning">
         <xsl:with-param name="msg">document uses HTTP-style ABNF syntax, but doesn't reference RFC 2068, RFC 2616, or RFC 7230.</xsl:with-param>
@@ -11758,11 +11805,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1297 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1297 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1301 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1301 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/07/20 12:48:21 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/07/20 12:48:21 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/07/28 13:09:10 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/07/28 13:09:10 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
