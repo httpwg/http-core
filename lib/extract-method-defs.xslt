@@ -15,7 +15,7 @@
           <th>Method</th>
           <th>Safe</th>
           <th>Idempotent</th>
-          <th>See</th>
+          <th>Ref.</th>
         </tr>
       </thead>
       <tbody>

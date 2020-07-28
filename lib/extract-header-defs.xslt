@@ -18,7 +18,7 @@
         <tr>
           <th>Field Name</th>
           <th>Status</th>
-          <th>See</th>
+          <th>Ref.</th>
         </tr>
       </thead>
       <xsl:text>&#10;</xsl:text>
