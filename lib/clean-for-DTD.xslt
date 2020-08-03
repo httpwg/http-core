@@ -43,13 +43,13 @@
 >
 
 <!-- re-use some of the default RFC2629.xslt rules -->
-<xsl:import href="rfc2629.xslt"/>
+<xsl:import href="rfc2629-no-doctype.xslt"/>
 
 <!-- undo strip-space decls -->
 <xsl:preserve-space elements="*"/>
 
-<!-- generate DTD-valid output, override all values imported from rfc2629.xslt -->
-<xsl:output doctype-system="rfc2629.dtd" doctype-public="" method="xml" version="1.0" encoding="UTF-8" cdata-section-elements="artwork sourcecode" />
+<!-- generate UTF-8 XML with no doctype decl and artwork/sourcecode serialized as CDATA -->
+<xsl:output method="xml" version="1.0" encoding="UTF-8" cdata-section-elements="artwork sourcecode" />
 
 <!-- Workaround for http://trac.tools.ietf.org/tools/xml2rfc/trac/ticket/297 -->
 <xsl:param name="xml2rfc-ext-strip-vbare">false</xsl:param>
