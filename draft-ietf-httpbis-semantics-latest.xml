@@ -1567,6 +1567,8 @@ Content-Type: text/plain
   <x:anchor-alias value="field-value"/>
   <x:anchor-alias value="field-content"/>
   <x:anchor-alias value="field-vchar"/>
+  <x:anchor-alias value="singleton.field"/>
+  <x:anchor-alias value="list.field"/>
   
 <t>
    HTTP field values typically have their syntax defined using ABNF
@@ -1604,11 +1606,21 @@ Content-Type: text/plain
    whitespace in values is significant will have to use a container syntax such
    as quoted-string (<xref target="quoted.strings"/>).
 </t>
+<t><iref item="list-based field"/><iref item="singleton field"/>
+   Commas (",") often are used to separate members in field values.
+   Fields that allow multiple members are referred to as
+   <x:dfn>list-based fields</x:dfn>. Fields that only anticipate a single
+   member are referred to as <x:dfn>singleton fields</x:dfn>.
+</t>
 <t>
-   Because commas (",") are used as a generic delimiter between members of a
-   list-based field value, they need to be treated with care if they are
-   allowed as data within those members. Typically, list members that might contain a
-   comma are enclosed in a quoted-string.
+   Because commas are used as a generic delimiter between members, they need
+   to be treated with care if they are allowed as data within a member. This
+   is true for both list-based and singleton fields, since a singleton field
+   might be sent with multiple members erroneously; being able to detect
+   this condition improves interoperability. Fields that expect to contain a
+   comma within a member, such as an <x:ref>HTTP-date</x:ref> or <x:ref>URI-reference</x:ref>
+   element, ought to be defined with delimiters around that element to
+   distinguish any comma within that data from potential list separators.
 </t>
 <t>
    For example, a textual date and a URI (either of which might contain a comma)
@@ -2117,15 +2129,15 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 <ul>
   <li>
-    <t>Whether the field is a single value or whether it can be a list
-    (delimited by commas; see <xref target="field.values"/>).</t>
-    <t>If it is not a list, document how to treat messages
-    where the field occurs multiple times (a sensible default would
+    <t>Whether the field has a singleton or list-based value
+    (see <xref target="field.values"/>).</t>
+    <t>If it is a singleton field, document how to treat messages
+    where the multiple members are present (a sensible default would
     be to ignore the field, but this might not always be the right
     choice).</t>
     <t>Note that intermediaries and software libraries might combine
     multiple field instances into a single one, despite the
-    field's definition not allowing the list syntax. A robust format enables
+    field being defined as a singleton. A robust format enables
     recipients to discover these situations (good example: "Content-Type",
     as the comma can only appear inside quoted strings;
     bad example: "Location", as a comma can occur inside a URI).</t>
@@ -2930,9 +2942,8 @@ Host: www.example.org
 </t>
 <t>
    A server &MUST; respond with a <x:ref>400 (Bad Request)</x:ref> status code
-   to any HTTP/1.1 request message that lacks a Host header field and
-   to any request message that contains more than one Host header field
-   or a Host header field with an invalid field value.
+   to any HTTP/1.1 request message that lacks a Host header field,
+   or a Host header field with an invalid field value (including a value that constitutes a list of members).
 </t>
 </section>
 
@@ -6454,8 +6465,8 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Modified-Since header field if the
-   received field value is not a valid HTTP-date, or if the request method
-   is neither GET nor HEAD.
+   received field value is not a valid HTTP-date, the field value has more than
+   one member, or if the request method is neither GET nor HEAD.
 </t>
 <t>
    A recipient &MUST; interpret an If-Modified-Since field value's timestamp
@@ -6535,7 +6546,8 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Unmodified-Since header field if the
-   received field value is not a valid HTTP-date.
+   received field value is not a valid HTTP-date, or if the field value has
+   more than one member.
 </t>
 <t>
    A recipient &MUST; interpret an If-Unmodified-Since field value's timestamp
@@ -9730,6 +9742,11 @@ Content-Type: text/plain
     &Note; Some recipients attempt to recover from Location fields
     that are not valid URI references. This specification does not mandate or
     define such processing, but does allow it for the sake of robustness.
+    A Location field value cannot allow a list of members because the comma list separator
+    is a valid data character within a URI-reference. If an invalid message is sent with multiple
+    Location field instances, a recipient along the path might combine the field instances into
+    one value. Recovery of a valid Location field value from that situation is difficult and not
+    interoperable across implementations.
   </t>
 </aside>
 <aside>
@@ -13107,6 +13124,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
 <section title="Since draft-ietf-httpbis-semantics-10" anchor="changes.since.10">
 <ul x:when-empty="None yet.">
   <li>In <xref target="introduction"/>, revise the introduction and introduce HTTP/2 and HTTP/3 (<eref target="https://github.com/httpwg/http-core/issues/64"/>)</li>
+  <li>In <xref target="field.values"/>, introduce the terms "singleton field" and "list-based field" (also  - in various places - discuss what to do when a singleton field is received as a list) (<eref target="https://github.com/httpwg/http-core/issues/193"/>)</li>
   <li>In <xref target="field.trailer"/> (<x:ref>Trailer</x:ref>),
          <xref target="field.via"/> (<x:ref>Via</x:ref>),
          <xref target="field.upgrade"/> (<x:ref>Upgrade</x:ref>),
