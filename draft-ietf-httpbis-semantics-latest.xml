@@ -1567,6 +1567,8 @@ Content-Type: text/plain
   <x:anchor-alias value="field-value"/>
   <x:anchor-alias value="field-content"/>
   <x:anchor-alias value="field-vchar"/>
+  <x:anchor-alias value="singleton.field"/>
+  <x:anchor-alias value="list.field"/>
   
 <t>
    HTTP field values typically have their syntax defined using ABNF
@@ -1604,11 +1606,21 @@ Content-Type: text/plain
    whitespace in values is significant will have to use a container syntax such
    as quoted-string (<xref target="quoted.strings"/>).
 </t>
+<t><iref item="list-based field"/><iref item="singleton field"/>
+   Commas (",") often are used to separate members in field values.
+   Fields that allow multiple members are referred to as
+   <x:dfn>list-based fields</x:dfn>. Fields that only anticipate a single
+   member are referred to as <x:dfn>singleton fields</x:dfn>.
+</t>
 <t>
-   Because commas (",") are used as a generic delimiter between members of a
-   list-based field value, they need to be treated with care if they are
-   allowed as data within those members. Typically, list members that might contain a
-   comma are enclosed in a quoted-string.
+   Because commas are used as a generic delimiter between members, they need
+   to be treated with care if they are allowed as data within a member. This
+   is true for both list-based and singleton fields, since a singleton field
+   might be sent with multiple members erroneously; being able to detect
+   this condition improves interoperability. Fields that expect to contain a
+   comma within a member, such as an <x:ref>HTTP-date</x:ref> or <x:ref>URI-reference</x:ref>
+   element, ought to be defined with delimiters around that element to
+   distinguish any comma within that data from potential list separators.
 </t>
 <t>
    For example, a textual date and a URI (either of which might contain a comma)
@@ -2119,15 +2131,15 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 <ul>
   <li>
-    <t>Whether the field is a single value or whether it can be a list
-    (delimited by commas; see <xref target="field.values"/>).</t>
-    <t>If it is not a list, document how to treat messages
-    where the field occurs multiple times (a sensible default would
+    <t>Whether the field has a singleton or list-based value
+    (see <xref target="field.values"/>).</t>
+    <t>If it is a singleton field, document how to treat messages
+    where the multiple members are present (a sensible default would
     be to ignore the field, but this might not always be the right
     choice).</t>
     <t>Note that intermediaries and software libraries might combine
     multiple field instances into a single one, despite the
-    field's definition not allowing the list syntax. A robust format enables
+    field being defined as a singleton. A robust format enables
     recipients to discover these situations (good example: "Content-Type",
     as the comma can only appear inside quoted strings;
     bad example: "Location", as a comma can occur inside a URI).</t>
@@ -2232,6 +2244,13 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
          <td>standard</td>
          <td>
             <xref target="field.authorization" format="counter"/>
+         </td>
+      </tr>
+      <tr>
+         <td>Connection</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.connection" format="counter"/>
          </td>
       </tr>
       <tr>
@@ -2932,9 +2951,8 @@ Host: www.example.org
 </t>
 <t>
    A server &MUST; respond with a <x:ref>400 (Bad Request)</x:ref> status code
-   to any HTTP/1.1 request message that lacks a Host header field and
-   to any request message that contains more than one Host header field
-   or a Host header field with an invalid field value.
+   to any HTTP/1.1 request message that lacks a Host header field,
+   or a Host header field with an invalid field value (including a value that constitutes a list of members).
 </t>
 </section>
 
@@ -3318,6 +3336,87 @@ Upgrade: websocket
        responsible party cannot be contacted.</li>
 </ol>
 </section>
+</section>
+
+<section title="Connection-Specific Fields" anchor="field.connection">
+  <x:anchor-alias value="header.connection"/>
+  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
+  <iref primary="true" item="close" x:for-anchor=""/>
+  <x:anchor-alias value="Connection"/>
+  <x:anchor-alias value="connection-option"/>
+  <x:anchor-alias value="close"/>
+<t>
+   The "Connection" header field allows the sender to list desired
+   control options for the current connection.
+</t>
+<t>
+   When a field aside from Connection is used to supply control
+   information for or about the current connection, the sender &MUST; list
+   the corresponding field name within the Connection header field.
+   Note that some versions of HTTP prohibit the use of fields for such
+   information, and therefore do not allow the Connection field.
+</t>
+<t>
+   Intermediaries &MUST; parse a received Connection
+   header field before a message is forwarded and, for each
+   connection-option in this field, remove any header or trailer field(s) from
+   the message with the same name as the connection-option, and then
+   remove the Connection header field itself (or replace it with the
+   intermediary's own connection options for the forwarded message).
+</t>
+<t>
+   Hence, the Connection header field provides a declarative way of
+   distinguishing fields that are only intended for the
+   immediate recipient ("hop-by-hop") from those fields that are
+   intended for all recipients on the chain ("end-to-end"), enabling the
+   message to be self-descriptive and allowing future connection-specific
+   extensions to be deployed without fear that they will be blindly
+   forwarded by older intermediaries.
+</t>
+<t>
+   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
+   semantics are known to require removal before forwarding, whether or not they appear as a Connection
+   option, after applying those fields' semantics. This includes but is not limited to:
+</t>
+<ul>
+   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
+   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
+   <li>TE (<xref target="field.te"/>)</li>
+   <li>Trailer (<xref target="field.trailer"/>)</li>
+   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
+   <li>Upgrade (<xref target="field.upgrade"/>)</li>
+</ul>
+<t>
+   The Connection header field's value has the following grammar:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
+  <x:ref>Connection</x:ref>        = 1#<x:ref>connection-option</x:ref>
+  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Connection options are case-insensitive.
+</t>
+<t>
+   A sender &MUST-NOT; send a connection option corresponding to a
+   field that is intended for all recipients of the payload.
+   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
+   connection option (<xref target="field.cache-control"/>).
+</t>
+<t>
+   The connection options do not always correspond to a field
+   present in the message, since a connection-specific field
+   might not be needed if there are no parameters associated with a
+   connection option. In contrast, a connection-specific field that
+   is received without a corresponding connection option usually indicates
+   that the field has been improperly forwarded by an intermediary and
+   ought to be ignored by the recipient.
+</t>
+<t>
+   When defining new connection options, specification authors ought to
+   document it as reserved field name and register that definition in the
+   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
+   target="field.name.registry"/>), to avoid collisions.
+</t>
 </section>
 </section>
 
@@ -6455,8 +6554,8 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Modified-Since header field if the
-   received field value is not a valid HTTP-date, or if the request method
-   is neither GET nor HEAD.
+   received field value is not a valid HTTP-date, the field value has more than
+   one member, or if the request method is neither GET nor HEAD.
 </t>
 <t>
    A recipient &MUST; interpret an If-Modified-Since field value's timestamp
@@ -6536,7 +6635,8 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Unmodified-Since header field if the
-   received field value is not a valid HTTP-date.
+   received field value is not a valid HTTP-date, or if the field value has
+   more than one member.
 </t>
 <t>
    A recipient &MUST; interpret an If-Unmodified-Since field value's timestamp
@@ -9731,6 +9831,11 @@ Content-Type: text/plain
     &Note; Some recipients attempt to recover from Location fields
     that are not valid URI references. This specification does not mandate or
     define such processing, but does allow it for the sake of robustness.
+    A Location field value cannot allow a list of members because the comma list separator
+    is a valid data character within a URI-reference. If an invalid message is sent with multiple
+    Location field instances, a recipient along the path might combine the field instances into
+    one value. Recovery of a valid Location field value from that situation is difficult and not
+    interoperable across implementations.
   </t>
 </aside>
 <aside>
@@ -11399,11 +11504,11 @@ Content-Encoding: gzip
 
 <reference anchor="Messaging">
   <x:source href="draft-ietf-httpbis-messaging-latest.xml" basename="draft-ietf-httpbis-messaging-latest">
+    <x:has anchor="compatibility.with.http.1.0.persistent.connections"/>
     <x:has anchor="chunked.trailer.section"/>
     <x:has anchor="differences.between.http.and.mime"/>
     <x:has anchor="field.parsing"/>
     <x:has anchor="h1.effective.request.uri"/>
-    <x:has anchor="field.connection"/>
     <x:has anchor="field.transfer-encoding"/>
     <x:has anchor="http.message"/>
     <x:has anchor="media.type.message.http"/>
@@ -12526,8 +12631,8 @@ Content-Encoding: gzip
 
 <x:ref>BWS</x:ref> = OWS
 
-<x:ref>Content-Encoding</x:ref> = [ content-coding *( OWS "," OWS content-coding )
- ]
+<x:ref>Connection</x:ref> = [ connection-option *( OWS "," OWS connection-option ) ]
+<x:ref>Content-Encoding</x:ref> = [ content-coding *( OWS "," OWS content-coding ) ]
 <x:ref>Content-Language</x:ref> = [ language-tag *( OWS "," OWS language-tag ) ]
 <x:ref>Content-Length</x:ref> = 1*DIGIT
 <x:ref>Content-Location</x:ref> = absolute-URI / partial-URI
@@ -12603,6 +12708,7 @@ Content-Encoding: gzip
 <x:ref>codings</x:ref> = content-coding / "identity" / "*"
 <x:ref>comment</x:ref> = "(" *( ctext / quoted-pair / comment ) ")"
 <x:ref>complete-length</x:ref> = 1*DIGIT
+<x:ref>connection-option</x:ref> = token
 <x:ref>content-coding</x:ref> = token
 <x:ref>credentials</x:ref> = auth-scheme [ 1*SP ( token68 / [ auth-param *( OWS ","
  OWS auth-param ) ] ) ]
@@ -13108,9 +13214,11 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
 <section title="Since draft-ietf-httpbis-semantics-10" anchor="changes.since.10">
 <ul x:when-empty="None yet.">
   <li>In <xref target="introduction"/>, revise the introduction and introduce HTTP/2 and HTTP/3 (<eref target="https://github.com/httpwg/http-core/issues/64"/>)</li>
+  <li>In <xref target="field.values"/>, introduce the terms "singleton field" and "list-based field" (also  - in various places - discuss what to do when a singleton field is received as a list) (<eref target="https://github.com/httpwg/http-core/issues/193"/>)</li>
   <li>In <xref target="field.trailer"/> (<x:ref>Trailer</x:ref>),
          <xref target="field.via"/> (<x:ref>Via</x:ref>),
          <xref target="field.upgrade"/> (<x:ref>Upgrade</x:ref>),
+         <xref target="field.connection"/> (<x:ref>Connection</x:ref>),
          <xref target="field.content-encoding"/> (<x:ref>Content-Encoding</x:ref>),
          <xref target="field.content-language"/> (<x:ref>Content-Language</x:ref>),
          <xref target="field.expect"/> (<x:ref>Expect</x:ref>),
@@ -13124,6 +13232,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
          adjust ABNF to allow empty lists (<eref target="https://github.com/httpwg/http-core/issues/210"/>)</li>
   <li>In <xref target="field.expect"/>, change the ABNF back to be a list of expectations, as defined in RFC 2616 (<eref target="https://github.com/httpwg/http-core/issues/203"/>)</li>
   <li>Moved definitions of "TE" and "Upgrade" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/392"/>)</li>
+  <li>Moved definition of "Connection" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/407"/>)</li>
   <li>In <xref target="parameter"/>, introduced the "parameters" ABNF rule, allowing trailing semicolons (<eref target="https://github.com/httpwg/http-core/issues/33"/>)</li>
 </ul>
 </section>
