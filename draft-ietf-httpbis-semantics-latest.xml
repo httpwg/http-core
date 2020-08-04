@@ -2245,6 +2245,13 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
          </td>
       </tr>
       <tr>
+         <td>Connection</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.connection" format="counter"/>
+         </td>
+      </tr>
+      <tr>
          <td>Content-Encoding</td>
          <td>standard</td>
          <td>
@@ -3327,6 +3334,87 @@ Upgrade: websocket
        responsible party cannot be contacted.</li>
 </ol>
 </section>
+</section>
+
+<section title="Connection-Specific Fields" anchor="field.connection">
+  <x:anchor-alias value="header.connection"/>
+  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
+  <iref primary="true" item="close" x:for-anchor=""/>
+  <x:anchor-alias value="Connection"/>
+  <x:anchor-alias value="connection-option"/>
+  <x:anchor-alias value="close"/>
+<t>
+   The "Connection" header field allows the sender to list desired
+   control options for the current connection.
+</t>
+<t>
+   When a field aside from Connection is used to supply control
+   information for or about the current connection, the sender &MUST; list
+   the corresponding field name within the Connection header field.
+   Note that some versions of HTTP prohibit the use of fields for such
+   information, and therefore do not allow the Connection field.
+</t>
+<t>
+   Intermediaries &MUST; parse a received Connection
+   header field before a message is forwarded and, for each
+   connection-option in this field, remove any header or trailer field(s) from
+   the message with the same name as the connection-option, and then
+   remove the Connection header field itself (or replace it with the
+   intermediary's own connection options for the forwarded message).
+</t>
+<t>
+   Hence, the Connection header field provides a declarative way of
+   distinguishing fields that are only intended for the
+   immediate recipient ("hop-by-hop") from those fields that are
+   intended for all recipients on the chain ("end-to-end"), enabling the
+   message to be self-descriptive and allowing future connection-specific
+   extensions to be deployed without fear that they will be blindly
+   forwarded by older intermediaries.
+</t>
+<t>
+   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
+   semantics are known to require removal before forwarding, whether or not they appear as a Connection
+   option, after applying those fields' semantics. This includes but is not limited to:
+</t>
+<ul>
+   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
+   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
+   <li>TE (<xref target="field.te"/>)</li>
+   <li>Trailer (<xref target="field.trailer"/>)</li>
+   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
+   <li>Upgrade (<xref target="field.upgrade"/>)</li>
+</ul>
+<t>
+   The Connection header field's value has the following grammar:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
+  <x:ref>Connection</x:ref>        = 1#<x:ref>connection-option</x:ref>
+  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Connection options are case-insensitive.
+</t>
+<t>
+   A sender &MUST-NOT; send a connection option corresponding to a
+   field that is intended for all recipients of the payload.
+   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
+   connection option (<xref target="field.cache-control"/>).
+</t>
+<t>
+   The connection options do not always correspond to a field
+   present in the message, since a connection-specific field
+   might not be needed if there are no parameters associated with a
+   connection option. In contrast, a connection-specific field that
+   is received without a corresponding connection option usually indicates
+   that the field has been improperly forwarded by an intermediary and
+   ought to be ignored by the recipient.
+</t>
+<t>
+   When defining new connection options, specification authors ought to
+   document it as reserved field name and register that definition in the
+   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
+   target="field.name.registry"/>), to avoid collisions.
+</t>
 </section>
 </section>
 
@@ -11415,11 +11503,11 @@ Content-Encoding: gzip
 
 <reference anchor="Messaging">
   <x:source href="draft-ietf-httpbis-messaging-latest.xml" basename="draft-ietf-httpbis-messaging-latest">
+    <x:has anchor="compatibility.with.http.1.0.persistent.connections"/>
     <x:has anchor="chunked.trailer.section"/>
     <x:has anchor="differences.between.http.and.mime"/>
     <x:has anchor="field.parsing"/>
     <x:has anchor="h1.effective.request.uri"/>
-    <x:has anchor="field.connection"/>
     <x:has anchor="field.transfer-encoding"/>
     <x:has anchor="http.message"/>
     <x:has anchor="media.type.message.http"/>
@@ -12542,8 +12630,8 @@ Content-Encoding: gzip
 
 <x:ref>BWS</x:ref> = OWS
 
-<x:ref>Content-Encoding</x:ref> = [ content-coding *( OWS "," OWS content-coding )
- ]
+<x:ref>Connection</x:ref> = [ connection-option *( OWS "," OWS connection-option ) ]
+<x:ref>Content-Encoding</x:ref> = [ content-coding *( OWS "," OWS content-coding ) ]
 <x:ref>Content-Language</x:ref> = [ language-tag *( OWS "," OWS language-tag ) ]
 <x:ref>Content-Length</x:ref> = 1*DIGIT
 <x:ref>Content-Location</x:ref> = absolute-URI / partial-URI
@@ -12619,6 +12707,7 @@ Content-Encoding: gzip
 <x:ref>codings</x:ref> = content-coding / "identity" / "*"
 <x:ref>comment</x:ref> = "(" *( ctext / quoted-pair / comment ) ")"
 <x:ref>complete-length</x:ref> = 1*DIGIT
+<x:ref>connection-option</x:ref> = token
 <x:ref>content-coding</x:ref> = token
 <x:ref>credentials</x:ref> = auth-scheme [ 1*SP ( token68 / [ auth-param *( OWS ","
  OWS auth-param ) ] ) ]
@@ -13128,6 +13217,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="field.trailer"/> (<x:ref>Trailer</x:ref>),
          <xref target="field.via"/> (<x:ref>Via</x:ref>),
          <xref target="field.upgrade"/> (<x:ref>Upgrade</x:ref>),
+         <xref target="field.connection"/> (<x:ref>Connection</x:ref>),
          <xref target="field.content-encoding"/> (<x:ref>Content-Encoding</x:ref>),
          <xref target="field.content-language"/> (<x:ref>Content-Language</x:ref>),
          <xref target="field.expect"/> (<x:ref>Expect</x:ref>),
@@ -13141,6 +13231,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
          adjust ABNF to allow empty lists (<eref target="https://github.com/httpwg/http-core/issues/210"/>)</li>
   <li>In <xref target="field.expect"/>, change the ABNF back to be a list of expectations, as defined in RFC 2616 (<eref target="https://github.com/httpwg/http-core/issues/203"/>)</li>
   <li>Moved definitions of "TE" and "Upgrade" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/392"/>)</li>
+  <li>Moved definition of "Connection" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/407"/>)</li>
 </ul>
 </section>
 </section>
