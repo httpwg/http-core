@@ -134,7 +134,7 @@
 <section title="Purpose" anchor="intro.purpose">
 <t>
    The Hypertext Transfer Protocol (HTTP) is a family of stateless,
-   application-level, request/response protocols that use a generic interface,
+   application-level, request/response protocols that share a generic interface,
    extensible semantics, and self-descriptive messages to enable flexible
    interaction with network-based hypertext information systems.
 </t>
@@ -195,8 +195,9 @@
    HTTP/2 (<xref target="RFC7540"/>) introduced a multiplexed session layer
    on top of the existing TLS and TCP protocols for exchanging concurrent
    HTTP messages with efficient header field compression and server push.
-   HTTP/3 (<xref target="HTTP3"/>) has gone even further, guiding the
-   development of QUIC as a secure multiplexing transport over UDP.
+   HTTP/3 (<xref target="HTTP3"/>) provides greater independence for concurrent
+   messages by using QUIC as a secure multiplexed transport over UDP instead of
+   TCP.
 </t>
 <t>
    All three major versions of HTTP rely on the semantics defined by
@@ -1567,6 +1568,8 @@ Content-Type: text/plain
   <x:anchor-alias value="field-value"/>
   <x:anchor-alias value="field-content"/>
   <x:anchor-alias value="field-vchar"/>
+  <x:anchor-alias value="singleton.field"/>
+  <x:anchor-alias value="list.field"/>
   
 <t>
    HTTP field values typically have their syntax defined using ABNF
@@ -1604,11 +1607,21 @@ Content-Type: text/plain
    whitespace in values is significant will have to use a container syntax such
    as quoted-string (<xref target="quoted.strings"/>).
 </t>
+<t><iref item="list-based field"/><iref item="singleton field"/>
+   Commas (",") often are used to separate members in field values.
+   Fields that allow multiple members are referred to as
+   <x:dfn>list-based fields</x:dfn>. Fields that only anticipate a single
+   member are referred to as <x:dfn>singleton fields</x:dfn>.
+</t>
 <t>
-   Because commas (",") are used as a generic delimiter between members of a
-   list-based field value, they need to be treated with care if they are
-   allowed as data within those members. Typically, list members that might contain a
-   comma are enclosed in a quoted-string.
+   Because commas are used as a generic delimiter between members, they need
+   to be treated with care if they are allowed as data within a member. This
+   is true for both list-based and singleton fields, since a singleton field
+   might be sent with multiple members erroneously; being able to detect
+   this condition improves interoperability. Fields that expect to contain a
+   comma within a member, such as an <x:ref>HTTP-date</x:ref> or <x:ref>URI-reference</x:ref>
+   element, ought to be defined with delimiters around that element to
+   distinguish any comma within that data from potential list separators.
 </t>
 <t>
    For example, a textual date and a URI (either of which might contain a comma)
@@ -1731,13 +1744,15 @@ Content-Type: text/plain
 
 <section title="Parameters" anchor="parameter">
 <t anchor="rule.parameter">
+   <x:anchor-alias value="parameters"/>
    <x:anchor-alias value="parameter-name"/>
    <x:anchor-alias value="parameter-value"/>
-   A parameter is a name=value pair that is often defined within field
+   Parameters are zero or more instances of a name=value pair; they are often used in field
    values as a common syntax for appending auxiliary information to an item.
    Each parameter is usually delimited by an immediately preceding semicolon.
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="parameter-name"/><iref primary="true" item="Grammar" subitem="parameter-value"/>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="parameters"/><iref primary="true" item="Grammar" subitem="parameter"/><iref primary="true" item="Grammar" subitem="parameter-name"/><iref primary="true" item="Grammar" subitem="parameter-value"/>
+  <x:ref>parameters</x:ref>      = *( OWS ";" OWS [ <x:ref>parameter</x:ref> ] )
   <x:ref>parameter</x:ref>       = <x:ref>parameter-name</x:ref> "=" <x:ref>parameter-value</x:ref>
   <x:ref>parameter-name</x:ref>  = <x:ref>token</x:ref>
   <x:ref>parameter-value</x:ref> = ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
@@ -2059,7 +2074,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    processing the body.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
-  <x:ref>Trailer</x:ref> = 1#<x:ref>field-name</x:ref>
+  <x:ref>Trailer</x:ref> = #<x:ref>field-name</x:ref>
 </sourcecode>
 <t>
    For example, a sender might indicate that a message integrity check will
@@ -2117,15 +2132,15 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 <ul>
   <li>
-    <t>Whether the field is a single value or whether it can be a list
-    (delimited by commas; see <xref target="field.values"/>).</t>
-    <t>If it is not a list, document how to treat messages
-    where the field occurs multiple times (a sensible default would
+    <t>Whether the field has a singleton or list-based value
+    (see <xref target="field.values"/>).</t>
+    <t>If it is a singleton field, document how to treat messages
+    where the multiple members are present (a sensible default would
     be to ignore the field, but this might not always be the right
     choice).</t>
     <t>Note that intermediaries and software libraries might combine
     multiple field instances into a single one, despite the
-    field's definition not allowing the list syntax. A robust format enables
+    field being defined as a singleton. A robust format enables
     recipients to discover these situations (good example: "Content-Type",
     as the comma can only appear inside quoted strings;
     bad example: "Location", as a comma can occur inside a URI).</t>
@@ -2230,6 +2245,13 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
          <td>standard</td>
          <td>
             <xref target="field.authorization" format="counter"/>
+         </td>
+      </tr>
+      <tr>
+         <td>Connection</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.connection" format="counter"/>
          </td>
       </tr>
       <tr>
@@ -2897,18 +2919,8 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="uri"/>
 </sourcecode>
 <t>
-   A client &MUST; send a Host header field in all HTTP/1.1 request messages.
-   If the target URI includes an authority component, then a client &MUST;
-   send a field value for Host that is identical to that authority
-   component, excluding any userinfo subcomponent and its "@" delimiter
-   (<xref target="http.uri"/>).
-   If the authority component is missing or undefined for the target URI,
-   then a client &MUST; send a Host header field with an empty field value.
-</t>
-<t>
    Since the Host field value is critical information for handling a request,
-   a user agent &SHOULD; generate Host as the first header field following the
-   request-line.
+   a user agent &SHOULD; generate Host as the first field in the header section.
 </t>
 <t>
    For example, a GET request to the origin server for
@@ -2927,12 +2939,6 @@ Host: www.example.org
    servers, or for use as a cache key in a shared cache, without
    first verifying that the intercepted connection is targeting a
    valid IP address for that host.
-</t>
-<t>
-   A server &MUST; respond with a <x:ref>400 (Bad Request)</x:ref> status code
-   to any HTTP/1.1 request message that lacks a Host header field and
-   to any request message that contains more than one Host header field
-   or a Host header field with an invalid field value.
 </t>
 </section>
 
@@ -2984,7 +2990,7 @@ Host: www.example.org
    senders along the request/response chain.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
-  <x:ref>Via</x:ref> = 1#( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+  <x:ref>Via</x:ref> = #( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
 
   <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
                     ; see <xref target="field.upgrade"/>
@@ -3153,7 +3159,7 @@ Host: www.example.org
    Upgrade cannot be used to insist on a protocol change.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Upgrade"/>
-  <x:ref>Upgrade</x:ref>          = 1#<x:ref>protocol</x:ref>
+  <x:ref>Upgrade</x:ref>          = #<x:ref>protocol</x:ref>
 
   <x:ref>protocol</x:ref>         = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
   <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
@@ -3317,6 +3323,87 @@ Upgrade: websocket
 </ol>
 </section>
 </section>
+
+<section title="Connection-Specific Fields" anchor="field.connection">
+  <x:anchor-alias value="header.connection"/>
+  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
+  <iref primary="true" item="close" x:for-anchor=""/>
+  <x:anchor-alias value="Connection"/>
+  <x:anchor-alias value="connection-option"/>
+  <x:anchor-alias value="close"/>
+<t>
+   The "Connection" header field allows the sender to list desired
+   control options for the current connection.
+</t>
+<t>
+   When a field aside from Connection is used to supply control
+   information for or about the current connection, the sender &MUST; list
+   the corresponding field name within the Connection header field.
+   Note that some versions of HTTP prohibit the use of fields for such
+   information, and therefore do not allow the Connection field.
+</t>
+<t>
+   Intermediaries &MUST; parse a received Connection
+   header field before a message is forwarded and, for each
+   connection-option in this field, remove any header or trailer field(s) from
+   the message with the same name as the connection-option, and then
+   remove the Connection header field itself (or replace it with the
+   intermediary's own connection options for the forwarded message).
+</t>
+<t>
+   Hence, the Connection header field provides a declarative way of
+   distinguishing fields that are only intended for the
+   immediate recipient ("hop-by-hop") from those fields that are
+   intended for all recipients on the chain ("end-to-end"), enabling the
+   message to be self-descriptive and allowing future connection-specific
+   extensions to be deployed without fear that they will be blindly
+   forwarded by older intermediaries.
+</t>
+<t>
+   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
+   semantics are known to require removal before forwarding, whether or not they appear as a Connection
+   option, after applying those fields' semantics. This includes but is not limited to:
+</t>
+<ul>
+   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
+   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
+   <li>TE (<xref target="field.te"/>)</li>
+   <li>Trailer (<xref target="field.trailer"/>)</li>
+   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
+   <li>Upgrade (<xref target="field.upgrade"/>)</li>
+</ul>
+<t>
+   The Connection header field's value has the following grammar:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
+  <x:ref>Connection</x:ref>        = 1#<x:ref>connection-option</x:ref>
+  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Connection options are case-insensitive.
+</t>
+<t>
+   A sender &MUST-NOT; send a connection option corresponding to a
+   field that is intended for all recipients of the payload.
+   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
+   connection option (<xref target="field.cache-control"/>).
+</t>
+<t>
+   The connection options do not always correspond to a field
+   present in the message, since a connection-specific field
+   might not be needed if there are no parameters associated with a
+   connection option. In contrast, a connection-specific field that
+   is received without a corresponding connection option usually indicates
+   that the field has been improperly forwarded by an intermediary and
+   ought to be ignored by the recipient.
+</t>
+<t>
+   When defining new connection options, specification authors ought to
+   document it as reserved field name and register that definition in the
+   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
+   target="field.name.registry"/>), to avoid collisions.
+</t>
+</section>
 </section>
 
 <section title="Representations" anchor="representations">
@@ -3385,7 +3472,7 @@ Upgrade: websocket
    is received.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
-  <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
+  <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> <x:ref>parameters</x:ref>
   <x:ref>type</x:ref>       = <x:ref>token</x:ref>
   <x:ref>subtype</x:ref>    = <x:ref>token</x:ref>
 </sourcecode>
@@ -4046,7 +4133,7 @@ bytes=500-700,601-999
    compressed without losing the identity of its underlying media type.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
-  <x:ref>Content-Encoding</x:ref> = 1#<x:ref>content-coding</x:ref>
+  <x:ref>Content-Encoding</x:ref> = #<x:ref>content-coding</x:ref>
 </sourcecode>
 <t>
    An example of its use is
@@ -4103,7 +4190,7 @@ bytes=500-700,601-999
    not be equivalent to all the languages used within the representation.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Language"/>
-  <x:ref>Content-Language</x:ref> = 1#<x:ref>language-tag</x:ref>
+  <x:ref>Content-Language</x:ref> = #<x:ref>language-tag</x:ref>
 </sourcecode>
 <t>
    Language tags are defined in <xref target="language.tags"/>. The primary purpose of
@@ -5885,9 +5972,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    order to properly handle this request.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Expect"/>
-  <x:ref>Expect</x:ref> =      1#<x:ref>expectation</x:ref>
-  <x:ref>expectation</x:ref> = <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
-                        *( OWS ";" OWS <x:ref>parameter</x:ref> ) ]
+  <x:ref>Expect</x:ref> =      #<x:ref>expectation</x:ref>
+  <x:ref>expectation</x:ref> = <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) parameters ]
 </sourcecode>
 <t>
    The Expect field value is case-insensitive.
@@ -6276,7 +6362,7 @@ Expect: 100-continue
    applied if there have been any changes to the representation data.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-Match"/>
-  <x:ref>If-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
+  <x:ref>If-Match</x:ref> = "*" / #<x:ref>entity-tag</x:ref>
 </sourcecode>
 <t>
    Examples:
@@ -6357,7 +6443,7 @@ Expect: 100-continue
    been changes to the representation data.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="If-None-Match"/>
-  <x:ref>If-None-Match</x:ref> = "*" / 1#<x:ref>entity-tag</x:ref>
+  <x:ref>If-None-Match</x:ref> = "*" / #<x:ref>entity-tag</x:ref>
 </sourcecode>
 <t>
    Examples:
@@ -6454,8 +6540,8 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Modified-Since header field if the
-   received field value is not a valid HTTP-date, or if the request method
-   is neither GET nor HEAD.
+   received field value is not a valid HTTP-date, the field value has more than
+   one member, or if the request method is neither GET nor HEAD.
 </t>
 <t>
    A recipient &MUST; interpret an If-Modified-Since field value's timestamp
@@ -6535,7 +6621,8 @@ Expect: 100-continue
 </t>
 <t>
    A recipient &MUST; ignore the If-Unmodified-Since header field if the
-   received field value is not a valid HTTP-date.
+   received field value is not a valid HTTP-date, or if the field value has
+   more than one member.
 </t>
 <t>
    A recipient &MUST; interpret an If-Unmodified-Since field value's timestamp
@@ -6837,7 +6924,7 @@ Expect: 100-continue
   <x:ref>media-range</x:ref>    = ( "*/*"
                      / ( <x:ref>type</x:ref> "/" "*" )
                      / ( <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> )
-                   ) *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>parameter</x:ref> )
+                   ) parameters
   <x:ref>accept-params</x:ref>  = <x:ref>weight</x:ref> *( <x:ref>accept-ext</x:ref> )
   <x:ref>accept-ext</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) ]
 </sourcecode>
@@ -6975,7 +7062,7 @@ Expect: 100-continue
    that is capable of representing information in those charsets.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept-Charset"/>
-  <x:ref>Accept-Charset</x:ref> = 1#( ( <x:ref>charset</x:ref> / "*" ) [ <x:ref>weight</x:ref> ] )
+  <x:ref>Accept-Charset</x:ref> = #( ( <x:ref>charset</x:ref> / "*" ) [ <x:ref>weight</x:ref> ] )
 </sourcecode>
 <t>
    Charset names are defined in <xref target="charset"/>.
@@ -7119,7 +7206,7 @@ Expect: 100-continue
    Language tags are defined in <xref target="language.tags"/>.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept-Language"/><iref primary="true" item="Grammar" subitem="language-range"/>
-  <x:ref>Accept-Language</x:ref> = 1#( <x:ref>language-range</x:ref> [ <x:ref>weight</x:ref> ] )
+  <x:ref>Accept-Language</x:ref> = #( <x:ref>language-range</x:ref> [ <x:ref>weight</x:ref> ] )
   <x:ref>language-range</x:ref>  = 
             &lt;language-range, see <xref target="RFC4647" x:fmt="," x:sec="2.1"/>&gt;
 </sourcecode>
@@ -9769,6 +9856,11 @@ Content-Type: text/plain
     &Note; Some recipients attempt to recover from Location fields
     that are not valid URI references. This specification does not mandate or
     define such processing, but does allow it for the sake of robustness.
+    A Location field value cannot allow a list of members because the comma list separator
+    is a valid data character within a URI-reference. If an invalid message is sent with multiple
+    Location field instances, a recipient along the path might combine the field instances into
+    one value. Recovery of a valid Location field value from that situation is difficult and not
+    interoperable across implementations.
   </t>
 </aside>
 <aside>
@@ -9828,12 +9920,12 @@ Content-Type: text/plain
    <x:anchor-alias value="Vary"/>
 <t>
    The "Vary" header field in a response describes what parts of a request
-   message, aside from the method, Host header field, and target URI,
+   message, aside from the method and target URI,
    might influence the origin server's process for selecting and representing
    this response.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Vary"/>
-  <x:ref>Vary</x:ref> = 1#( "*" / <x:ref>field-name</x:ref> )
+  <x:ref>Vary</x:ref> = #( "*" / <x:ref>field-name</x:ref> )
 </sourcecode>
 <t>
    A Vary field value is a list of request field names, known as the selecting header fields,
@@ -10476,7 +10568,7 @@ Content-Encoding: gzip
    and parameters applicable to the target resource.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="WWW-Authenticate"/>
-  <x:ref>WWW-Authenticate</x:ref> = 1#<x:ref>challenge</x:ref>
+  <x:ref>WWW-Authenticate</x:ref> = #<x:ref>challenge</x:ref>
 </sourcecode>
 <t>
    A server generating a <x:ref>401 (Unauthorized)</x:ref> response
@@ -10533,7 +10625,7 @@ Content-Encoding: gzip
    generates.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authenticate"/>
-  <x:ref>Proxy-Authenticate</x:ref> = 1#<x:ref>challenge</x:ref>
+  <x:ref>Proxy-Authenticate</x:ref> = #<x:ref>challenge</x:ref>
 </sourcecode>
 <t>
    Unlike <x:ref>WWW-Authenticate</x:ref>, the Proxy-Authenticate header field
@@ -11437,11 +11529,11 @@ Content-Encoding: gzip
 
 <reference anchor="Messaging">
   <x:source href="draft-ietf-httpbis-messaging-latest.xml" basename="draft-ietf-httpbis-messaging-latest">
+    <x:has anchor="compatibility.with.http.1.0.persistent.connections"/>
     <x:has anchor="chunked.trailer.section"/>
     <x:has anchor="differences.between.http.and.mime"/>
     <x:has anchor="field.parsing"/>
     <x:has anchor="h1.effective.request.uri"/>
-    <x:has anchor="field.connection"/>
     <x:has anchor="field.transfer-encoding"/>
     <x:has anchor="http.message"/>
     <x:has anchor="media.type.message.http"/>
@@ -12551,12 +12643,12 @@ Content-Encoding: gzip
 <section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf"><t>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension.sender"/>.</t><sourcecode type="abnf" name="draft-ietf-httpbis-semantics-latest.parsed-abnf">
 <x:ref>Accept</x:ref> = [ ( media-range [ accept-params ] ) *( OWS "," OWS (
  media-range [ accept-params ] ) ) ]
-<x:ref>Accept-Charset</x:ref> = ( ( charset / "*" ) [ weight ] ) *( OWS "," OWS ( (
- charset / "*" ) [ weight ] ) )
+<x:ref>Accept-Charset</x:ref> = [ ( ( charset / "*" ) [ weight ] ) *( OWS "," OWS (
+ ( charset / "*" ) [ weight ] ) ) ]
 <x:ref>Accept-Encoding</x:ref> = [ ( codings [ weight ] ) *( OWS "," OWS ( codings [
  weight ] ) ) ]
-<x:ref>Accept-Language</x:ref> = ( language-range [ weight ] ) *( OWS "," OWS (
- language-range [ weight ] ) )
+<x:ref>Accept-Language</x:ref> = [ ( language-range [ weight ] ) *( OWS "," OWS (
+ language-range [ weight ] ) ) ]
 <x:ref>Accept-Ranges</x:ref> = acceptable-ranges
 <x:ref>Allow</x:ref> = [ method *( OWS "," OWS method ) ]
 <x:ref>Authentication-Info</x:ref> = [ auth-param *( OWS "," OWS auth-param ) ]
@@ -12564,8 +12656,9 @@ Content-Encoding: gzip
 
 <x:ref>BWS</x:ref> = OWS
 
-<x:ref>Content-Encoding</x:ref> = content-coding *( OWS "," OWS content-coding )
-<x:ref>Content-Language</x:ref> = language-tag *( OWS "," OWS language-tag )
+<x:ref>Connection</x:ref> = [ connection-option *( OWS "," OWS connection-option ) ]
+<x:ref>Content-Encoding</x:ref> = [ content-coding *( OWS "," OWS content-coding ) ]
+<x:ref>Content-Language</x:ref> = [ language-tag *( OWS "," OWS language-tag ) ]
 <x:ref>Content-Length</x:ref> = 1*DIGIT
 <x:ref>Content-Location</x:ref> = absolute-URI / partial-URI
 <x:ref>Content-Range</x:ref> = range-unit SP ( range-resp / unsatisfied-range )
@@ -12574,7 +12667,7 @@ Content-Encoding: gzip
 <x:ref>Date</x:ref> = HTTP-date
 
 <x:ref>ETag</x:ref> = entity-tag
-<x:ref>Expect</x:ref> = expectation *( OWS "," OWS expectation )
+<x:ref>Expect</x:ref> = [ expectation *( OWS "," OWS expectation ) ]
 
 <x:ref>From</x:ref> = mailbox
 
@@ -12584,9 +12677,9 @@ Content-Encoding: gzip
 <x:ref>Host</x:ref> = uri-host [ ":" port ]
 
 <x:ref>IMF-fixdate</x:ref> = day-name "," SP date1 SP time-of-day SP GMT
-<x:ref>If-Match</x:ref> = "*" / ( entity-tag *( OWS "," OWS entity-tag ) )
+<x:ref>If-Match</x:ref> = "*" / [ entity-tag *( OWS "," OWS entity-tag ) ]
 <x:ref>If-Modified-Since</x:ref> = HTTP-date
-<x:ref>If-None-Match</x:ref> = "*" / ( entity-tag *( OWS "," OWS entity-tag ) )
+<x:ref>If-None-Match</x:ref> = "*" / [ entity-tag *( OWS "," OWS entity-tag ) ]
 <x:ref>If-Range</x:ref> = entity-tag / HTTP-date
 <x:ref>If-Unmodified-Since</x:ref> = HTTP-date
 
@@ -12597,7 +12690,7 @@ Content-Encoding: gzip
 
 <x:ref>OWS</x:ref> = *( SP / HTAB )
 
-<x:ref>Proxy-Authenticate</x:ref> = challenge *( OWS "," OWS challenge )
+<x:ref>Proxy-Authenticate</x:ref> = [ challenge *( OWS "," OWS challenge ) ]
 <x:ref>Proxy-Authentication-Info</x:ref> = [ auth-param *( OWS "," OWS auth-param )
  ]
 <x:ref>Proxy-Authorization</x:ref> = credentials
@@ -12610,17 +12703,18 @@ Content-Encoding: gzip
 <x:ref>Server</x:ref> = product *( RWS ( product / comment ) )
 
 <x:ref>TE</x:ref> = [ t-codings *( OWS "," OWS t-codings ) ]
-<x:ref>Trailer</x:ref> = field-name *( OWS "," OWS field-name )
+<x:ref>Trailer</x:ref> = [ field-name *( OWS "," OWS field-name ) ]
 
 <x:ref>URI-reference</x:ref> = &lt;URI-reference, see <xref target="RFC3986" x:fmt="," x:sec="4.1"/>&gt;
-<x:ref>Upgrade</x:ref> = protocol *( OWS "," OWS protocol )
+<x:ref>Upgrade</x:ref> = [ protocol *( OWS "," OWS protocol ) ]
 <x:ref>User-Agent</x:ref> = product *( RWS ( product / comment ) )
 
-<x:ref>Vary</x:ref> = ( "*" / field-name ) *( OWS "," OWS ( "*" / field-name ) )
-<x:ref>Via</x:ref> = ( received-protocol RWS received-by [ RWS comment ] ) *( OWS
- "," OWS ( received-protocol RWS received-by [ RWS comment ] ) )
+<x:ref>Vary</x:ref> = [ ( "*" / field-name ) *( OWS "," OWS ( "*" / field-name ) )
+ ]
+<x:ref>Via</x:ref> = [ ( received-protocol RWS received-by [ RWS comment ] ) *( OWS
+ "," OWS ( received-protocol RWS received-by [ RWS comment ] ) ) ]
 
-<x:ref>WWW-Authenticate</x:ref> = challenge *( OWS "," OWS challenge )
+<x:ref>WWW-Authenticate</x:ref> = [ challenge *( OWS "," OWS challenge ) ]
 
 <x:ref>absolute-URI</x:ref> = &lt;absolute-URI, see <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
 <x:ref>absolute-path</x:ref> = 1*( "/" segment )
@@ -12639,6 +12733,7 @@ Content-Encoding: gzip
 <x:ref>codings</x:ref> = content-coding / "identity" / "*"
 <x:ref>comment</x:ref> = "(" *( ctext / quoted-pair / comment ) ")"
 <x:ref>complete-length</x:ref> = 1*DIGIT
+<x:ref>connection-option</x:ref> = token
 <x:ref>content-coding</x:ref> = token
 <x:ref>credentials</x:ref> = auth-scheme [ 1*SP ( token68 / [ auth-param *( OWS ","
  OWS auth-param ) ] ) ]
@@ -12670,8 +12765,7 @@ Content-Encoding: gzip
 <x:ref>entity-tag</x:ref> = [ weak ] opaque-tag
 <x:ref>etagc</x:ref> = "!" / %x23-7E ; '#'-'~'
  / obs-text
-<x:ref>expectation</x:ref> = token [ "=" ( token / quoted-string ) *( OWS ";" OWS
- parameter ) ]
+<x:ref>expectation</x:ref> = token [ "=" ( token / quoted-string ) parameters ]
 
 <x:ref>field-content</x:ref> = field-vchar [ 1*( SP / HTAB / field-vchar )
  field-vchar ]
@@ -12692,9 +12786,9 @@ Content-Encoding: gzip
 <x:ref>last-pos</x:ref> = 1*DIGIT
 
 <x:ref>mailbox</x:ref> = &lt;mailbox, see <xref target="RFC5322" x:fmt="," x:sec="3.4"/>&gt;
-<x:ref>media-range</x:ref> = ( "*/*" / ( type "/*" ) / ( type "/" subtype ) ) *( OWS
- ";" OWS parameter )
-<x:ref>media-type</x:ref> = type "/" subtype *( OWS ";" OWS parameter )
+<x:ref>media-range</x:ref> = ( "*/*" / ( type "/*" ) / ( type "/" subtype ) )
+ parameters
+<x:ref>media-type</x:ref> = type "/" subtype parameters
 <x:ref>method</x:ref> = token
 <x:ref>minute</x:ref> = 2DIGIT
 <x:ref>month</x:ref> = %x4A.61.6E ; Jan
@@ -12720,6 +12814,7 @@ Content-Encoding: gzip
 <x:ref>parameter</x:ref> = parameter-name "=" parameter-value
 <x:ref>parameter-name</x:ref> = token
 <x:ref>parameter-value</x:ref> = ( token / quoted-string )
+<x:ref>parameters</x:ref> = *( OWS ";" OWS [ parameter ] )
 <x:ref>partial-URI</x:ref> = relative-part [ "?" query ]
 <x:ref>path-abempty</x:ref> = &lt;path-abempty, see <xref target="RFC3986" x:fmt="," x:sec="3.3"/>&gt;
 <x:ref>port</x:ref> = &lt;port, see <xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>&gt;
@@ -13144,8 +13239,26 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
 <section title="Since draft-ietf-httpbis-semantics-10" anchor="changes.since.10">
 <ul x:when-empty="None yet.">
   <li>In <xref target="introduction"/>, revise the introduction and introduce HTTP/2 and HTTP/3 (<eref target="https://github.com/httpwg/http-core/issues/64"/>)</li>
+  <li>In <xref target="field.values"/>, introduce the terms "singleton field" and "list-based field" (also  - in various places - discuss what to do when a singleton field is received as a list) (<eref target="https://github.com/httpwg/http-core/issues/193"/>)</li>
+  <li>In <xref target="field.trailer"/> (<x:ref>Trailer</x:ref>),
+         <xref target="field.via"/> (<x:ref>Via</x:ref>),
+         <xref target="field.upgrade"/> (<x:ref>Upgrade</x:ref>),
+         <xref target="field.connection"/> (<x:ref>Connection</x:ref>),
+         <xref target="field.content-encoding"/> (<x:ref>Content-Encoding</x:ref>),
+         <xref target="field.content-language"/> (<x:ref>Content-Language</x:ref>),
+         <xref target="field.expect"/> (<x:ref>Expect</x:ref>),
+         <xref target="field.if-match"/> (<x:ref>If-Match</x:ref>),
+         <xref target="field.if-none-match"/> (<x:ref>If-None-Match</x:ref>),
+         <xref target="field.accept-charset"/> (<x:ref>Accept-Charset</x:ref>),
+         <xref target="field.accept-language"/> (<x:ref>Accept-Language</x:ref>),
+         <xref target="field.vary"/> (<x:ref>Vary</x:ref>),
+         <xref target="field.www-authenticate"/> (<x:ref>WWW-Authenticate</x:ref>), and
+         <xref target="field.proxy-authenticate"/> (<x:ref>Proxy-Authenticate</x:ref>),
+         adjust ABNF to allow empty lists (<eref target="https://github.com/httpwg/http-core/issues/210"/>)</li>
   <li>In <xref target="field.expect"/>, change the ABNF back to be a list of expectations, as defined in RFC 2616 (<eref target="https://github.com/httpwg/http-core/issues/203"/>)</li>
   <li>Moved definitions of "TE" and "Upgrade" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/392"/>)</li>
+  <li>Moved definition of "Connection" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/407"/>)</li>
+  <li>In <xref target="parameter"/>, introduced the "parameters" ABNF rule, allowing trailing semicolons (<eref target="https://github.com/httpwg/http-core/issues/33"/>)</li>
 </ul>
 </section>
 </section>

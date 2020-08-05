@@ -510,6 +510,21 @@
    since the invalid request-line might be deliberately crafted to bypass
    security filters along the request chain.
 </t>
+<t>
+   A client &MUST; send a Host header field in all HTTP/1.1 request messages.
+   If the target URI includes an authority component, then a client &MUST;
+   send a field value for Host that is identical to that authority
+   component, excluding any userinfo subcomponent and its "@" delimiter
+   (<xref target="http.uri"/>).
+   If the authority component is missing or undefined for the target URI,
+   then a client &MUST; send a Host header field with an empty field value.
+</t>
+<t>
+   A server &MUST; respond with a <x:ref>400 (Bad Request)</x:ref> status code
+   to any HTTP/1.1 request message that lacks a Host header field and
+   to any request message that contains more than one Host header field
+   or a Host header field with an invalid field value.
+</t>
 
 <section title="origin-form" anchor="origin-form">
    <iref item="origin-form (of request-target)"/>
@@ -833,13 +848,6 @@ https://www.example.org
    </thead>
    <tbody>
       <tr>
-         <td>Connection</td>
-         <td>standard</td>
-         <td>
-            <xref target="field.connection" format="counter"/>
-         </td>
-      </tr>
-      <tr>
          <td>MIME-Version</td>
          <td>standard</td>
          <td>
@@ -1000,7 +1008,7 @@ https://www.example.org
    Transfer codings are defined in <xref target="transfer.codings"/>.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
-  <x:ref>Transfer-Encoding</x:ref> = 1#<x:ref>transfer-coding</x:ref>
+  <x:ref>Transfer-Encoding</x:ref> = #<x:ref>transfer-coding</x:ref>
 </sourcecode>
 <t>
    Transfer-Encoding is analogous to the Content-Transfer-Encoding field of
@@ -1620,107 +1628,6 @@ https://www.example.org
    denial-of-service attacks.
 </t>
 
-<section title="Connection" anchor="field.connection">
-  <x:anchor-alias value="header.connection"/>
-  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
-  <iref primary="true" item="close" x:for-anchor=""/>
-  <x:anchor-alias value="Connection"/>
-  <x:anchor-alias value="connection-option"/>
-  <x:anchor-alias value="close"/>
-<t>
-   The "Connection" header field allows the sender to list desired
-   control options for the current connection.
-</t>
-<t>
-   When a field aside from Connection is used to supply control
-   information for or about the current connection, the sender &MUST; list
-   the corresponding field name within the Connection header field.
-</t>
-<t>
-   Intermediaries &MUST; parse a received Connection
-   header field before a message is forwarded and, for each
-   connection-option in this field, remove any header or trailer field(s) from
-   the message with the same name as the connection-option, and then
-   remove the Connection header field itself (or replace it with the
-   intermediary's own connection options for the forwarded message).
-</t>
-<t>
-   Hence, the Connection header field provides a declarative way of
-   distinguishing fields that are only intended for the
-   immediate recipient ("hop-by-hop") from those fields that are
-   intended for all recipients on the chain ("end-to-end"), enabling the
-   message to be self-descriptive and allowing future connection-specific
-   extensions to be deployed without fear that they will be blindly
-   forwarded by older intermediaries.
-</t>
-<t>
-   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
-   semantics are known to require removal before forwarding, whether or not they appear as a Connection
-   option, after applying those fields' semantics. This includes but is not limited to:
-</t>
-<ul>
-   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
-   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
-   <li>TE (<xref target="field.te"/>)</li>
-   <li>Trailer (<xref target="field.trailer"/>)</li>
-   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
-   <li>Upgrade (<xref target="field.upgrade"/>)</li>
-</ul>
-<t>
-   The Connection header field's value has the following grammar:
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
-  <x:ref>Connection</x:ref>        = 1#<x:ref>connection-option</x:ref>
-  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Connection options are case-insensitive.
-</t>
-<t>
-   A sender &MUST-NOT; send a connection option corresponding to a
-   field that is intended for all recipients of the payload.
-   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
-   connection option (<xref target="field.cache-control"/>).
-</t>
-<t>
-   The connection options do not always correspond to a field
-   present in the message, since a connection-specific field
-   might not be needed if there are no parameters associated with a
-   connection option. In contrast, a connection-specific field that
-   is received without a corresponding connection option usually indicates
-   that the field has been improperly forwarded by an intermediary and
-   ought to be ignored by the recipient.
-</t>
-<t>
-   When defining new connection options, specification authors ought to
-   document it as reserved field name and register that definition in the
-   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
-   target="field.name.registry"/>), to avoid collisions.
-</t>
-<t>
-   The "<x:dfn>close</x:dfn>" connection option is defined for a
-   sender to signal that this connection will be closed after completion of
-   the response. For example,
-</t>
-<artwork type="example">
-  Connection: close
-</artwork>
-<t>
-   in either the request or the response header fields indicates that the
-   sender is going to close the connection after the current request/response
-   is complete (<xref target="persistent.tear-down"/>).
-</t>
-<t>
-   A client that does not support <x:ref>persistent connections</x:ref> &MUST;
-   send the "close" connection option in every request message.
-</t>
-<t>
-   A server that does not support <x:ref>persistent connections</x:ref> &MUST;
-   send the "close" connection option in every response message that
-   does not have a <x:ref>1xx (Informational)</x:ref> status code.
-</t>
-</section>
-
 <section title="Establishment" anchor="persistent.establishment">
 <t>
    It is beyond the scope of this specification to describe how connections
@@ -1767,7 +1674,7 @@ https://www.example.org
 <t>
    A recipient determines whether a connection is persistent or not based on
    the most recently received message's protocol version and
-   <x:ref>Connection</x:ref> header field (if any):
+   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>), if any:
 </t>
 <ul>
    <li>If the "<x:ref>close</x:ref>" connection option is present, the
@@ -1781,6 +1688,15 @@ https://www.example.org
        the current response; otherwise,</li>
    <li>The connection will close after the current response.</li>
 </ul>
+<t>
+   A client that does not support <x:ref>persistent connections</x:ref> &MUST;
+   send the "close" connection option in every request message.
+</t>
+<t>
+   A server that does not support <x:ref>persistent connections</x:ref> &MUST;
+   send the "close" connection option in every response message that
+   does not have a <x:ref>1xx (Informational)</x:ref> status code.
+</t>
 <t>
    A client &MAY; send additional requests on a persistent connection until it
    sends or receives a "<x:ref>close</x:ref>" connection option or receives an
@@ -2407,6 +2323,7 @@ https://www.example.org
     <x:has anchor="field.names"/>
     <x:has anchor="field.name.registry"/>
     <x:has anchor="field.values"/>
+    <x:has anchor="field.connection"/>
     <x:has anchor="field.content-length"/>
     <x:has anchor="field.expect"/>
     <x:has anchor="field.host"/>
@@ -2861,8 +2778,6 @@ https://www.example.org
 <section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf"><t>In the collected ABNF below, list rules are expanded as per <xref target="Semantics" x:rel="#abnf.extension.sender"/>.</t><sourcecode type="abnf" name="draft-ietf-httpbis-messaging-latest.parsed-abnf">
 <x:ref>BWS</x:ref> = &lt;BWS, see <xref target="Semantics" x:fmt="," x:sec="1.6.1"/>&gt;
 
-<x:ref>Connection</x:ref> = connection-option *( OWS "," OWS connection-option )
-
 <x:ref>HTTP-message</x:ref> = start-line CRLF *( field-line CRLF ) CRLF [
  message-body ]
 <x:ref>HTTP-name</x:ref> = %x48.54.54.50 ; HTTP
@@ -2872,7 +2787,8 @@ https://www.example.org
 
 <x:ref>RWS</x:ref> = &lt;RWS, see <xref target="Semantics" x:fmt="," x:sec="1.6.1"/>&gt;
 
-<x:ref>Transfer-Encoding</x:ref> = transfer-coding *( OWS "," OWS transfer-coding )
+<x:ref>Transfer-Encoding</x:ref> = [ transfer-coding *( OWS "," OWS transfer-coding
+ ) ]
 
 <x:ref>absolute-URI</x:ref> = &lt;absolute-URI, see <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
 <x:ref>absolute-form</x:ref> = absolute-URI
@@ -2890,7 +2806,6 @@ https://www.example.org
 <x:ref>chunk-size</x:ref> = 1*HEXDIG
 <x:ref>chunked-body</x:ref> = *chunk last-chunk trailer-section CRLF
 <x:ref>comment</x:ref> = &lt;comment, see <xref target="Semantics" x:fmt="," x:sec="5.4.1.3"/>&gt;
-<x:ref>connection-option</x:ref> = token
 
 <x:ref>field-line</x:ref> = field-name ":" OWS field-value OWS
 <x:ref>field-name</x:ref> = &lt;field-name, see <xref target="Semantics" x:fmt="," x:sec="5.3"/>&gt;
@@ -3320,7 +3235,9 @@ https://www.example.org
 
 <section title="Since draft-ietf-httpbis-messaging-10" anchor="changes.since.10">
 <ul x:when-empty="None yet.">
+   <li>In <xref target="field.transfer-encoding"/> (<x:ref>Transfer-Encoding</x:ref>), adjust ABNF to allow empty lists (<eref target="https://github.com/httpwg/http-core/issues/210"/>)</li>
    <li>Moved definitions of "TE" and "Upgrade" into <xref target="Semantics"/> (<eref target="https://github.com/httpwg/http-core/issues/392"/>)</li>
+   <li>Moved definition of "Connection" into <xref target="Semantics"/> (<eref target="https://github.com/httpwg/http-core/issues/407"/>)</li>
 </ul>
 </section>
 </section>
