@@ -391,6 +391,14 @@
   </xsl:if>
 </xsl:param>
 
+<xsl:param name="xml2rfc-ext-dark-mode">
+  <xsl:call-template name="parse-pis">
+    <xsl:with-param name="nodes" select="/processing-instruction('rfc-ext')"/>
+    <xsl:with-param name="attr" select="'dark-mode'"/>
+    <xsl:with-param name="default" select="'no'"/>
+  </xsl:call-template>
+</xsl:param>
+
 <xsl:template name="ff-list">
   <xsl:param name="s"/>
   <xsl:choose>
@@ -3510,7 +3518,37 @@
 <xsl:template match="li">
   <li>
     <xsl:call-template name="copy-anchor"/>
-    <xsl:apply-templates />
+    <xsl:choose>
+      <xsl:when test="artset|artwork|blockquote|dl|figure|ol|sourcecode|t|ul">
+        <xsl:choose>
+          <xsl:when test="bcp14|cref|em|eref|iref|relref|strong|sub|sup|tt|xref|text()[normalize-space(.)!='']">
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">unexpected content in &lt;li&gt;: can not mix block-level and phrase-level elements</xsl:with-param>
+            </xsl:call-template>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:apply-templates/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:when test="bcp14|cref|em|eref|iref|relref|strong|sub|sup|tt|xref|text()[normalize-space(.)!='']">
+        <xsl:choose>
+          <xsl:when test="artset|artwork|blockquote|dl|figure|ol|sourcecode|t|ul">
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">unexpected content in &lt;li&gt;: can not mix phrase-level and block-level elements</xsl:with-param>
+            </xsl:call-template>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:apply-templates/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="error">
+          <xsl:with-param name="msg">unexpected content in &lt;li&gt;</xsl:with-param>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
     <xsl:if test="not(following-sibling::li)">
       <xsl:variable name="l">
         <xsl:for-each select="..">
@@ -7985,11 +8023,31 @@ PR['registerLangHandler'](
 <xsl:template name="insertCss">
 <style title="rfc2629.xslt">
 <xsl:value-of select="$xml2rfc-ext-webfonts"/>
+:root {
+  --col-bg: white;
+  --col-bg-error: red;
+  --col-bg-highlight: yellow;
+  --col-bg-highligh2: lime;
+  --col-bg-light: gray;
+  --col-bg-pre: lightyellow;
+  --col-bg-pre1: #f8f8f8;
+  --col-bg-pre2: #f0f0f0;
+  --col-bg-th: #e9e9e9;
+  --col-bg-tr: #f5f5f5;
+  --col-fg: black;
+  --col-fg-del: red;
+  --col-fg-error: red;
+  --col-fg-ins: green;
+  --col-fg-light: gray;
+  --col-fg-link: blue;
+  --col-fg-title: green;
+}
 a {
+  color: var(--col-fg-link);
   text-decoration: none;
 }
 a.smpl {
-  color: black;
+  color: var(--col-fg);
 }
 a:hover {
   text-decoration: underline;
@@ -8004,14 +8062,15 @@ address {
 }<xsl:if test="//x:blockquote|//blockquote">
 blockquote {
   border-style: solid;
-  border-color: gray;
+  border-color: var(--col-fg-light);
   border-width: 0 0 0 .25em;
   font-style: italic;
   padding-left: 0.5em;
 }</xsl:if>
 body {<xsl:if test="$xml2rfc-background!=''">
-  background: url(<xsl:value-of select="$xml2rfc-background" />) #ffffff left top;</xsl:if>
-  color: black;
+  background: url(<xsl:value-of select="$xml2rfc-background" />) var(--col-bg) left top;</xsl:if>
+  background-color: var(--col-bg);
+  color: var(--col-fg);
   font-family: <xsl:value-of select="$xml2rfc-ext-ff-body"/>;
   font-size: 16px;
   line-height: 1.5;
@@ -8070,7 +8129,7 @@ dl.<xsl:value-of select="$css-reference"/> > dd {
   margin-left: <xsl:choose><xsl:when test="$xml2rfc-symrefs='no'">3.5</xsl:when><xsl:otherwise>6</xsl:otherwise></xsl:choose>em;
 }
 h1 {
-  color: green;
+  color: var(--col-fg-title);
   font-size: 150%;
   font-weight: bold;
   text-align: center;
@@ -8097,7 +8156,7 @@ h5, h6 {
   page-break-after: avoid;
 }
 h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
-  color: black;
+  color: var(--col-fg);
 }
 img {
   margin-left: 3em;
@@ -8120,13 +8179,13 @@ p {
 pre {
   font-size: 90%;
   margin-left: 3em;
-  background-color: lightyellow;
+  background-color: var(--col-bg-pre);
   padding: .25em;
   page-break-inside: avoid;
 }<xsl:if test="//artwork[@x:is-code-component='yes']|//sourcecode[@markers='true']"><!-- support "<CODE BEGINS>" and "<CODE ENDS>" markers-->
 pre.ccmarker {
-  background-color: white;
-  color: gray;
+  background-color: var(--col-bg);
+  color: var(--col-fg-light);
 }
 pre.ccmarker > span {
   font-size: small;
@@ -8140,10 +8199,10 @@ pre.ccb {
 pre.text2 {
   border-style: dotted;
   border-width: 1px;
-  background-color: #f0f0f0;
+  background-color: var(--col-bg-pre2);
 }
 pre.inline {
-  background-color: white;
+  background-color: var(--col-bg);
   padding: 0em;
   page-break-inside: auto;<xsl:if test="$prettyprint-script!=''">
   border: none !important;</xsl:if>
@@ -8151,12 +8210,12 @@ pre.inline {
 pre.text {
   border-style: dotted;
   border-width: 1px;
-  background-color: #f8f8f8;
+  background-color: var(--col-bg-pre1);
 }
 pre.drawing {
   border-style: solid;
   border-width: 1px;
-  background-color: #f8f8f8;
+  background-color: var(--col-bg-pre1);
   padding: 2em;
 }<xsl:if test="//x:q">
 q {
@@ -8177,16 +8236,16 @@ div.<xsl:value-of select="$css-tt"/> {
 } 
 table.<xsl:value-of select="$css-tt"/> {
   border-collapse: collapse;
-  border-color: gray;
+  border-color: var(--col-fg-light);
   border-spacing: 0; 
   vertical-align: top;
  }
 table.<xsl:value-of select="$css-tt"/> th {
-  border-color: gray;
+  border-color: var(--col-fg-light);
   padding: 3px;
 }
 table.<xsl:value-of select="$css-tt"/> td {
-  border-color: gray;
+  border-color: var(--col-fg-light);
   padding: 3px;
 }
 table.all {
@@ -8245,7 +8304,7 @@ table.v3 tr {
     vertical-align: top;
 }
 table.v3 th {
-  background-color: #e9e9e9;
+  background-color: var(--col-bg-th);
   vertical-align: top;
   padding: 0.25em 0.5em;
 }
@@ -8253,7 +8312,7 @@ table.v3 td {
   padding: 0.25em 0.5em;
 }
 table.v3 tr:nth-child(2n) > td {
-  background-color: #f5f5f5;
+  background-color: var(--col-bg-tr);
   vertical-align: top;
 }
 tr p {
@@ -8277,7 +8336,7 @@ table.<xsl:value-of select="$css-header"/> {
   border-spacing: 1px;
   width: 95%;
   font-size: 90%;<xsl:if test="not(contains($styles,' header-bw '))">
-  color: white;</xsl:if>
+  color: var(--col-bg);</xsl:if>
 }
 td.top {
   vertical-align: top;
@@ -8288,11 +8347,11 @@ td.topnowrap {
 }
 table.<xsl:value-of select="$css-header"/> td {
   vertical-align: top;<xsl:if test="not(contains($styles,' header-bw '))">
-  background-color: gray;</xsl:if>
+  background-color: var(--col-bg-light);</xsl:if>
   width: 50%;
 }<xsl:if test="/rfc/@obsoletes | /rfc/@updates">
 table.<xsl:value-of select="$css-header"/> a {
-  color: <xsl:choose><xsl:when test="not(contains($styles,' header-bw '))">white</xsl:when><xsl:otherwise>black</xsl:otherwise></xsl:choose>;
+  color: <xsl:choose><xsl:when test="not(contains($styles,' header-bw '))">var(--col-bg)</xsl:when><xsl:otherwise>var(--col-fg)</xsl:otherwise></xsl:choose>;
 }</xsl:if>
 ul.toc, ul.toc ul {
   list-style: none;
@@ -8368,16 +8427,16 @@ blockquote > * .bcp14 {
   font-style: italic;
 }</xsl:if>
 .comment {
-  background-color: yellow;
+  background-color: var(--col-bg-highlight);
 }<xsl:if test="$xml2rfc-editing='yes'">
 .editingmark {
-  background-color: khaki;
+  background-color: var(--col-bg-highlight);
 }</xsl:if>
 .<xsl:value-of select="$css-center"/> {
   text-align: center;
 }
 .<xsl:value-of select="$css-error"/> {
-  color: red;
+  color: var(--col-fg-error);
   font-style: italic;
   font-weight: bold;
 }
@@ -8387,7 +8446,6 @@ blockquote > * .bcp14 {
   font-size: 80%;
 }
 .filename {
-  color: #333333;
   font-size: 112%;
   font-weight: bold;
   line-height: 21pt;
@@ -8405,10 +8463,10 @@ blockquote > * .bcp14 {
 }
 .warning {
   font-size: 130%;
-  background-color: yellow;
+  background-color: var(--col-bg-highlight);
 }<xsl:if test="$xml2rfc-ext-paragraph-links='yes'">
 .self {
-    color: #999999;
+    color: var(--col-fg-light);
     margin-left: .3em;
     text-decoration: none;
     visibility: hidden;
@@ -8422,36 +8480,36 @@ blockquote > * .bcp14 {
 h1:hover > a.self, h2:hover > a.self, h3:hover > a.self, li:hover > a.self, p:hover > a.self {
     visibility: visible;
 }</xsl:if><xsl:if test="$has-edits">del {
-  color: red;
+  color: var(--col-fg-del);
   text-decoration: line-through;
 }
 .del {
-  color: red;
+  color: var(--col-fg-del);
   text-decoration: line-through;
 }
 ins {
-  color: green;
+  color: var(--col-fg-ins);
   text-decoration: underline;
 }
 .ins {
-  color: green;
+  color: var(--col-fg-ins);
   text-decoration: underline;
 }
 div.issuepointer {
   float: left;
 }</xsl:if><xsl:if test="//ed:issue">
 table.openissue {
-  background-color: khaki;
+  background-color: var(--col-bg-highlight);
   border-width: thin;
   border-style: solid;
-  border-color: black;
+  border-color: var(--col-fg);
 }
 table.closedissue {
-  background-color: white;
+  background-color: var(--col-bg);
   border-width: thin;
   border-style: solid;
-  border-color: gray;
-  color: gray;
+  border-color: var(--col-fg-light);
+  color: var(--col-fg-light);
 }
 thead th {
   text-align: left;
@@ -8464,21 +8522,21 @@ thead th {
 .closed-issue {
   border: solid;
   border-width: thin;
-  background-color: lime;
+  background-color: var(--col-bg-highlight2);
   font-size: smaller;
   font-weight: bold;
 }
 .open-issue {
   border: solid;
   border-width: thin;
-  background-color: red;
+  background-color: var(--col-bg-error);
   font-size: smaller;
   font-weight: bold;
 }
 .editor-issue {
   border: solid;
   border-width: thin;
-  background-color: yellow;
+  background-color: var(--col-bg-highlight);
   font-size: smaller;
   font-weight: bold;
 }</xsl:if><xsl:if test="$xml2rfc-ext-refresh-from!=''">.refreshxmlerror {
@@ -8486,22 +8544,22 @@ thead th {
   top: 1%;
   right: 1%;
   padding: 5px 5px;
-  color: yellow;
-  background: black;
+  color: var(--col-bg-highlight);
+  background: var(--col-fg);
 }
 .refreshbrowsererror {
   position: fixed;
   top: 1%;
   left: 1%;
   padding: 5px 5px;
-  color: red;
-  background: black;
+  color: var(--col-bg-error);
+  background: var(--col-fg);
 }</xsl:if><xsl:if test="/rfc/x:feedback">.<xsl:value-of select="$css-feedback"/> {
   position: fixed;
   bottom: 1%;
   right: 1%;
   padding: 3px 5px;
-  color: white;
+  color: var(--col-bg);
   border-radius: 5px;
   background: #006400;
   border: 1px solid silver;
@@ -8526,7 +8584,7 @@ dd, li, p {
   text-align: justify;
 }</xsl:if><xsl:if test="$xml2rfc-ext-insert-metadata='yes' and $rfcno!=''">
 .<xsl:value-of select="$css-docstatus"/> {
-  border: 1px solid black;
+  border: 1px solid var(--col-fg);
   display: none;
   float: right;
   margin: 2em;
@@ -8550,11 +8608,19 @@ dd, li, p {
   }
 }</xsl:if></xsl:if><xsl:if test="$published-as-rfc">
 .<xsl:value-of select="$css-publishedasrfc"/> {
-  background-color: yellow;
-  color: green;
+  background-color: var(--col-bg-highlight);
+  color: var(--col-fg);
   font-size: 115%;
   text-align: center;
-}</xsl:if>
+}</xsl:if><xsl:if test="$prettyprint-class='prettyprint' and contains($prettyprint-script,'prettify') and not(contains($prettyprint-script,'skin='))">
+  pre.prettyprint .pln { color: #000; }
+  pre.prettyprint .str, pre.prettyprint .atv { color: #080; }
+  pre.prettyprint .kwd, pre.prettyprint .tag { color: #008; }
+  pre.prettyprint .com { color: #800; }
+  pre.prettyprint .typ, pre.prettyprint .atn, pre.prettyprint .dec, pre.prettyprint .var { color: #606; }
+  pre.prettyprint .lit { color: #066; }
+  pre.prettyprint .pun, pre.prettyprint .opn, pre.prettyprint .clo { color: #660; }
+</xsl:if>
 
 @media screen {
   pre.text, pre.text2, pre.drawing {
@@ -8656,6 +8722,37 @@ dd, li, p {
       content: normal;
     }
 }
+<xsl:if test="$xml2rfc-ext-dark-mode!='no'">
+@media (prefers-color-scheme: dark) {
+  :root {
+    --col-bg: black;
+    --col-bg-error: red;
+    --col-bg-highlight: #9e9e20;
+    --col-bg-highligh2: lime;
+    --col-bg-light: gray;
+    --col-bg-pre: #202000;
+    --col-bg-pre1: #080808;
+    --col-bg-pre2: #101010;
+    --col-bg-th: #303030;
+    --col-bg-tr: #202020;
+    --col-fg: white;
+    --col-fg-del: red;
+    --col-fg-error: red;
+    --col-fg-ins: green;
+    --col-fg-light: gray;
+    --col-fg-link: lightblue;
+    --col-fg-title: green;
+  }
+  
+  pre.prettyprint .pln { color: #fff; }
+  pre.prettyprint .str, pre.prettyprint .atv { color: #8f8; }
+  pre.prettyprint .kwd, pre.prettyprint .tag { color: #88f; }
+  pre.prettyprint .com { color: #f88; }
+  pre.prettyprint .typ, pre.prettyprint .atn, pre.prettyprint .dec, pre.prettyprint .var { color: #f8f; }
+  pre.prettyprint .lit { color: #8ff; }
+  pre.prettyprint .pun, pre.prettyprint .opn, pre.prettyprint .clo { color: #ff8; }
+}
+</xsl:if>
 </style>
 </xsl:template>
 
@@ -11806,11 +11903,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1301 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1301 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1306 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1306 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/07/28 13:09:10 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/07/28 13:09:10 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/08/14 17:35:07 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/08/14 17:35:07 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
