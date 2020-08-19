@@ -1943,85 +1943,69 @@
   </xsl:if>
 </xsl:template>
 
-<xsl:template match="li/ol" mode="cleanup">
-  <list style="numbers">
-    <xsl:apply-templates mode="cleanup"/>
-  </list>
-  <xsl:if test="position()!=last()">
-    <vspace blankLines="1"/>
-  </xsl:if>
-</xsl:template>
-
 <!-- Ordered Lists -->
-<xsl:template match="ol[not(@type) or string-length(@type)=1]" mode="cleanup">
+<xsl:template match="ol" mode="cleanup">
   <xsl:choose>
     <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
       <ol>
         <xsl:apply-templates select="@*|node()" mode="cleanup"/>
       </ol>
     </xsl:when>
-    <xsl:otherwise>
+    <xsl:when test="parent::li">
       <xsl:call-template name="ol-to-v2"/>
+      <xsl:if test="position()!=last()">
+        <vspace blankLines="1"/>
+      </xsl:if>
+    </xsl:when>
+    <xsl:otherwise>
+      <t>
+        <xsl:call-template name="ol-to-v2"/>
+      </t>
     </xsl:otherwise>
   </xsl:choose>
 </xsl:template>
 
 <xsl:template name="ol-to-v2">
-  <t>
-    <xsl:copy-of select="@anchor"/>
-    <xsl:if test="@start and @start!='1'">
-      <xsl:call-template name="error">
-        <xsl:with-param name="inline">no</xsl:with-param>
-        <xsl:with-param name="msg">list start != 1 not supported</xsl:with-param>
-      </xsl:call-template>
-    </xsl:if>
+  <xsl:copy-of select="@anchor"/>
+  <xsl:if test="@start and @start!='1'">
+    <xsl:call-template name="error">
+      <xsl:with-param name="inline">no</xsl:with-param>
+      <xsl:with-param name="msg">list start != 1 not supported</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+  <xsl:if test="@group">
+    <xsl:call-template name="error">
+      <xsl:with-param name="inline">no</xsl:with-param>
+      <xsl:with-param name="msg">ol/@group not supported</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+  <xsl:variable name="style">
+    <xsl:choose>
+      <xsl:when test="not(@type) or @type='1'">numbers</xsl:when>
+      <xsl:when test="@type='a'">letters</xsl:when>
+      <xsl:when test="@type='A'">
+        <xsl:call-template name="error">
+          <xsl:with-param name="inline">no</xsl:with-param>
+          <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to 'a')</xsl:with-param>
+        </xsl:call-template>
+        <xsl:text>letters</xsl:text>
+      </xsl:when>
+      <xsl:when test="string-length(@type)>1">format <xsl:value-of select="@type"/></xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="error">
+          <xsl:with-param name="inline">no</xsl:with-param>
+          <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to '1')</xsl:with-param>
+        </xsl:call-template>
+        <xsl:text>numbers</xsl:text>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  <list style="{$style}">
     <xsl:if test="@group">
-      <xsl:call-template name="error">
-        <xsl:with-param name="inline">no</xsl:with-param>
-        <xsl:with-param name="msg">ol/@group not supported</xsl:with-param>
-      </xsl:call-template>
+      <xsl:attribute name="counter"><xsl:value-of select="@group"/></xsl:attribute>
     </xsl:if>
-    <xsl:variable name="style">
-      <xsl:choose>
-        <xsl:when test="not(@type) or @type='1'">numbers</xsl:when>
-        <xsl:when test="@type='a'">letters</xsl:when>
-        <xsl:when test="@type='A'">
-          <xsl:call-template name="error">
-            <xsl:with-param name="inline">no</xsl:with-param>
-            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to 'a')</xsl:with-param>
-          </xsl:call-template>
-          <xsl:text>letters</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:call-template name="error">
-            <xsl:with-param name="inline">no</xsl:with-param>
-            <xsl:with-param name="msg">ol/@type=<xsl:value-of select="@type"/> not supported (defaulting to '1')</xsl:with-param>
-          </xsl:call-template>
-          <xsl:text>numbers</xsl:text>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-    <list style="{$style}">
-      <xsl:apply-templates mode="cleanup"/>
-    </list>
-  </t>
-</xsl:template>
-
-<xsl:template match="ol[string-length(@type)>1]" mode="cleanup">
-  <t>
-    <xsl:if test="@start and @start!='1'">
-      <xsl:call-template name="error">
-        <xsl:with-param name="inline">no</xsl:with-param>
-        <xsl:with-param name="msg">list start != 1 not supported</xsl:with-param>
-      </xsl:call-template>
-    </xsl:if>
-    <list style="format {@type}">
-      <xsl:if test="@group">
-        <xsl:attribute name="counter"><xsl:value-of select="@group"/></xsl:attribute>
-      </xsl:if>
-      <xsl:apply-templates mode="cleanup"/>
-    </list>
-  </t>
+    <xsl:apply-templates mode="cleanup"/>
+  </list>
 </xsl:template>
 
 <!-- Unordered Lists -->
