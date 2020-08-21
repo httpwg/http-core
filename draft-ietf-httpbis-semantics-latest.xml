@@ -2699,21 +2699,44 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <section title="https origins" anchor="https.origin">
 <t>
    The "https" scheme associates authority based on the ability
-   of a server to use a private key associated with a certificate that
-   the client considers to be trustworthy for the identified host.
-   If a server presents a certificate that verifiably applies to the host,
-   along with proof that it controls the corresponding private key, then a
-   client will accept a secured connection to that server as being
-   authoritative for all origins with the same scheme and host.
+   of a server to use the private key corresponding to a certificate that
+   the client considers to be trustworthy for the identified origin server.
+   The client usually relies upon a chain of trust, conveyed from some
+   prearranged or configured trust anchor, to deem a certificate
+   trustworthy. The handshake and certificate validation in
+   <xref target="https.initiation"/> describe how that certificate can
+   be used to initiate a secured connection.
 </t>
 <t>
-   A client is therefore relying upon a chain of trust, conveyed from some
-   trust anchor (which is usually prearranged or configured), through a
-   chain of certificates (e.g., <xref target="RFC5280"/>) to a final
-   certificate that binds a private key to the host name of the origin.
-   The handshake and certificate validation in
-   <xref target="https.initiation"/> describe how that final certificate can
-   be used to initiate a secured connection.
+   In HTTP/1.1 and earlier, the only URIs for which a client will attribute
+   authority to a server are those for which a secured connection is
+   specifically established toward the origin's host. Only the
+   characteristics of the connection establishment and certificate are used.
+</t>
+<t>
+   In HTTP/2 and HTTP/3, a client will associate authority to all names that
+   are present in the certificate. However, a client will only do that if it
+   concludes that it could open a connection to the origin for that URI. In
+   practice, a client will make a DNS query and see that it contains the same
+   server IP address. A server sending the ORIGIN frame removes this
+   restriction <xref target="RFC8336"/>.
+</t>
+<t>
+   The request target's host and port value are passed within each HTTP
+   request, identifying the origin and distinguishing it from other namespaces
+   that might be controlled by the same server.
+   It is the origin's responsibility to ensure that any services provided with
+   control over its certificate's private key are equally responsible for
+   managing the corresponding "https" namespaces, or at least prepared to
+   reject requests that appear to have been misdirected. A server might be
+   unwilling to serve as the origin for some hosts even when they have the
+   authority to do so.
+</t>
+<t>
+   For example, if a network attacker causes connections for port N to be
+   received at port Q, checking the target URI is necessary to ensure that the
+   attacker can't cause "https://example.com:N/foo" to be replaced by
+   "https://example.com:Q/foo" without consent.
 </t>
 <t>
    Note that the "https" scheme does not rely on TCP and the connected port
@@ -2721,37 +2744,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    communication and thus cannot be trusted as definitive. Hence, the HTTP
    communication might take place over any channel that has been secured,
    as defined in <xref target="https.uri"/>, including protocols that don't
-   use TCP. It is the origin's responsibility to ensure that any services
-   provided with control over its certificate's private key are equally
-   responsible for managing the corresponding "https" namespaces, or at least
-   prepared to reject requests that appear to have been misdirected.
-   Regardless, the origin's host and port value are passed within each HTTP
-   request, identifying the target resource and distinguishing it from other
-   namespaces that might be controlled by the same server.
-</t>
-<t>
-   In HTTP/1.1 and earlier, the only URIs for which a client will attribute
-   authority to a server are those for which a TLS connection is
-   specifically established toward the origin's host. Only the
-   characteristics of the connection establishment and certificate are used.
-</t>
-<t>
-   In HTTP/2, a client will associate authority to all names that are present
-   in the certificate. However, a client will only do that if it concludes
-   that it could open a connection to the origin for that URI. In practice, a
-   client will make a DNS query and see that it contains the same server IP
-   address. A server sending the ORIGIN frame removes this restriction
-   <xref target="RFC8336"/>.
-</t>
-<t>
-   In addition to the client's verification, an origin server is responsible
-   for verifying that requests it receives over a connection correspond
-   to resources for which it actually wants to be the origin. If a network
-   attacker causes connections for port N to be received at port Q, checking
-   the target URI is necessary to ensure that the attacker can't cause
-   "https://example.com:N/foo" to be replaced by "https://example.com:Q/foo"
-   without consent. Likewise, a server might be unwilling to serve as the
-   origin for some hosts even when they have the authority to do so.
+   use TCP.
 </t>
 <t>
    When an "https" URI is used within a context that calls for access to the
@@ -11756,20 +11749,6 @@ Content-Encoding: gzip
   </front>
   <seriesInfo name="STD" value="68"/>
   <seriesInfo name="RFC" value="5234"/>
-</reference>
-
-<reference anchor="RFC5280">
-   <front>
-      <title>Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile</title>
-      <author initials="D." surname="Cooper" fullname="D. Cooper"/>
-      <author initials="S." surname="Santesson" fullname="S. Santesson"/>
-      <author initials="S." surname="Farrell" fullname="S. Farrell"/>
-      <author initials="S." surname="Boeyen" fullname="S. Boeyen"/>
-      <author initials="R." surname="Housley" fullname="R. Housley"/>
-      <author initials="W." surname="Polk" fullname="W. Polk"/>
-      <date year="2008" month="May"/>
-   </front>
-   <seriesInfo name="RFC" value="5280"/>
 </reference>
 
 <reference anchor='RFC5646'>
