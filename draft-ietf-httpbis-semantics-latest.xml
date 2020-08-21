@@ -513,14 +513,15 @@
 <iref primary="true" item="complete"/>
 <iref primary="true" item="incomplete"/>
 <t>
-   Each major version of HTTP defines its own syntax for the inclusion of
-   information in messages. Nevertheless, a common abstraction is that a
-   message includes some form of envelope/framing, a potential set of named
-   fields up front (a header section), a potential body, and a
-   potential following set of named fields (a trailer section).
+   Each major version of HTTP defines its own syntax for the communication of
+   messages. Nevertheless, a common abstraction is that each message contains
+   some form of envelope/framing with self-descriptive control data that
+   indicates its semantics and routing, a potential set of named fields
+   up front (a header section), a potential body, and potential fields
+   sent after the body begins (trailer sections).
 </t>
 <t>
-   A client sends an HTTP request to a server in the form of a
+   A client sends requests to a server in the form of a
    <x:dfn>request</x:dfn> message with a method (<xref
    target="methods"/>) and request target. The request might also
    contain header fields for request modifiers, client information, and
@@ -530,8 +531,8 @@
    collected while sending the payload.
 </t>
 <t>
-   A server responds to a client's request by sending one or more HTTP
-   <x:dfn>response</x:dfn> messages, each including a success or error
+   A server responds to a client's request by sending one or more
+   <x:dfn>response</x:dfn> messages, each including a status
    code (<xref target="status.codes"/>). The response might also contain
    header fields for server information, resource metadata, and representation
    metadata (<xref target="header.and.trailer.fields"/>),
@@ -540,7 +541,7 @@
    collected while sending the payload.
 </t>
 <t>
-   One of the functions of the message framing mechanism is to assure that
+   One of the functions of message framing is to assure that
    messages are <x:dfn>complete</x:dfn>. A message is considered complete
    when all of the octets indicated by its framing are available. Note that,
    when no explicit framing is used, a response message that is ended
@@ -555,7 +556,8 @@
    messages, while others use an explicit identifier.
 </t>
 <t>
-   Responses (both <x:ref>final</x:ref> and <x:ref>interim</x:ref>) can be sent at any time after a
+   Responses (both <x:ref>final</x:ref> and <x:ref>interim</x:ref>) can be sent
+   at any time after a
    request is received, even if it is not yet complete. However, clients
    (including intermediaries) might abandon a request if the response is not
    forthcoming within a reasonable period of time.
@@ -1281,28 +1283,34 @@ Content-Type: text/plain
 <t>
    <iref item="field"/>
    HTTP messages use key/value pairs to convey data about the
-   message, its payload, the target resource, or the connection (i.e.,
-   control data). They are called "HTTP fields" or just "<x:dfn>fields</x:dfn>".
+   message, its payload, the target resource, or the connection.
+   They are called "HTTP fields" or just "<x:dfn>fields</x:dfn>".
 </t>
 <t>
    <iref item="header section"/>
+   Fields that are sent/received before the message body are referred to as
+   "header fields" (or just "headers", colloquially) and are located within the
+   "<x:dfn>header section</x:dfn>" of a message. We refer to some named fields
+   specifically as a "header field" when they are only allowed to be sent in
+   the header section.
+</t>
+<t>
    <iref item="trailer section"/>
-   Every message can have two separate areas that such fields can occur
-   within; the "<x:dfn>header field section</x:dfn>" (or just "header section") preceding
-   the message body and containing "header fields" (or just "headers",
-   colloquially) and the "<x:dfn>trailer field section</x:dfn>" (or just "trailer
-   section") after the message body containing "trailer fields" (or just
-   "trailers" colloquially). Header fields are more common; see <xref
-   target="trailer.fields"/> for discussion of the applicability and
-   limitations of trailer fields.
+   Fields that are sent/received after the header section has ended (usually
+   after the message body begins to stream) are referred to as
+   "trailer fields" (or just "trailers", colloquially) and located within a
+   "<x:dfn>trailer section</x:dfn>". One or more trailer sections are only
+   possible when supported by the version of HTTP in use and enabled by an
+   extensible mechanism for framing message sections.
 </t>
 <t>
    <iref item="field line"/>
    <iref item="field name"/>
    <iref item="field line value"/>
-   Both sections are composed of any number of "<x:dfn>field lines</x:dfn>", each with a
-   "<x:dfn>field name</x:dfn>" (see <xref target="field.names"/>) identifying the field,
-   and a "<x:dfn>field line value</x:dfn>" that conveys data for the field.
+   Both sections are composed of any number of "<x:dfn>field lines</x:dfn>",
+   each with a "<x:dfn>field name</x:dfn>" (see <xref target="field.names"/>)
+   identifying the field, and a "<x:dfn>field line value</x:dfn>" that conveys
+   data for the field.
 </t>
 <t>
    <iref item="field value"/>
@@ -1394,7 +1402,7 @@ Content-Type: text/plain
   <x:anchor-alias value="header.limits"/>
 <t>
    HTTP does not place a predefined limit on the length of each field line, field value, 
-   or on the length of the header or trailer section as a whole, as described in
+   or on the length of a header or trailer section as a whole, as described in
    <xref target="conformance"/>. Various ad hoc limitations on individual
    lengths are found in practice, often depending on the specific
    field's semantics.
@@ -2053,13 +2061,50 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    downstream clients are willing to accept trailer fields in the forwarded
    response. Note that the presence of "trailers" does not mean that the
    client(s) will process any particular trailer field in the response; only
-   that the trailer section as a whole will not be dropped by any of the
-   clients.
+   that the trailer section(s) will not be dropped by any of the clients.
 </t>
 <t>
    Because of the potential for trailer fields to be discarded in transit, a
    server &SHOULD-NOT; generate trailer fields that it believes are necessary
    for the user agent to receive.
+</t>
+</section>
+
+<section title="Processing" anchor="trailers.processing">
+<t>
+   Like header fields, trailer fields with the same name are processed in the
+   order received; multiple trailer field lines with the same name have the
+   equivalent semantics as appending the multiple values as a list of members,
+   even when the field lines are received in separate trailer sections.
+   Trailer fields that might be generated more than once during a message
+   &MUST; be defined as a list value even if each member value is only
+   processed once per field line received.
+</t>
+<t>
+   Trailer fields are expected (but not required) to be processed one trailer
+   section at a time. That is, for each trailer section received, a recipient
+   that is looking for trailer fields will parse the received section into
+   fields, invoke any associated processing for those fields at that point
+   in the message processing, and then append those fields to the set of
+   trailer fields received for the overall message.
+</t>
+<t>
+   This behavior allows for iterative processing of trailer fields that contain
+   incremental signatures or mid-stream status information, and fields that
+   might refer to each other's values within the same section. However,
+   there is no guarantee that trailer sections won't shift in relation to the
+   message body stream, or won't be recombined (or dropped) in transit, so
+   trailer fields that refer to data outside the present trailer section need
+   to use self-descriptive references (i.e., refer to the data by name,
+   ordinal position, or an octet range) rather than assume it is the data
+   most recently received.
+</t>
+<t>
+   Likewise, at the end of a message, a recipient &MAY; treat the entire set
+   of received trailer fields as one data structure to be considered as the
+   message concludes. Additional processing expectations, if any, can be
+   defined within the field specification for a field intended for use in
+   trailers.
 </t>
 </section>
 
@@ -10737,7 +10782,8 @@ Content-Encoding: gzip
    way. 
 </t>
 <t>  
-   Authentication-Info can be used inside trailers (<xref target="trailer.fields"/>)
+   Authentication-Info can be sent as a trailer field
+   (<xref target="trailer.fields"/>)
    when the authentication scheme explicitly allows this.
 </t>
 
@@ -13015,6 +13061,12 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    (<xref target="trailers.limitations"/>)
 </t>
 <t>
+   Trailer fields can now potentially appear as multiple trailer sections,
+   if allowed by the HTTP version and framing in use, with processing
+   described as being iterative as each section is received.
+   (<xref target="trailers.processing"/>)
+</t>
+<t>
    Made the priority of the absolute form of the request URI over the Host
    header by origin servers explicit, to align with proxy handling.
    (<xref target="field.host"/>)
@@ -13374,6 +13426,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="introduction"/>, revise the introduction and introduce HTTP/2 and HTTP/3 (<eref target="https://github.com/httpwg/http-core/issues/64"/>)</li>
   <li>In <xref target="field.content-length"/>, added a definition for <x:ref>Content-Length</x:ref> that encompasses its various roles in describing message payload or selected representation length; in <xref target="status.206"/>, noted that <x:ref>Content-Length</x:ref> counts only the message body (not the selected representation) and that the complete length is in each <x:ref>Content-Range</x:ref> (<eref target="https://github.com/httpwg/http-core/issues/118"/>)</li>
   <li>Noted that "WWW-Authenticate" with more than one value on a line is sometimes not interoperable <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/136"/>)</li>
+  <li>In <xref target="header.and.trailer.fields"/> and <xref target="trailers.processing"/>, allow for trailer fields in multiple trailer sections, depending on the HTTP version and framing in use, with processing being iterative as each section is received (<eref target="https://github.com/httpwg/http-core/issues/313"/>)</li>
   <li>In <xref target="field.if-match"/> and <xref target="field.if-unmodified-since"/>, removed requirement that a validator not be sent in a 2xx response when validation fails and the server decides that the same change request has already been applied  (<eref target="https://github.com/httpwg/http-core/issues/166"/>)</li>
   <li>Moved requirements specific to HTTP/1.1 from <xref target="field.host"/> to <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/182"/>)</li>
   <li>In <xref target="field.values"/>, introduce the terms "singleton field" and "list-based field" (also  - in various places - discuss what to do when a singleton field is received as a list) (<eref target="https://github.com/httpwg/http-core/issues/193"/>)</li>
