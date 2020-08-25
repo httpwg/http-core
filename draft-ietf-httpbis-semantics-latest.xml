@@ -2624,11 +2624,16 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    a network request is necessary to accomplish the desired semantics and,
    if so, where that request is to be directed.
 </t>
+
+<section title="To a Cache" anchor="routing.cache">
 <t>
    If the client has a cache <xref target="Caching"/> and the request can be
    satisfied by it, then the request is
    usually directed there first.
 </t>
+</section>
+
+<section title="To a Proxy" anchor="routing.proxy">
 <t>
    If the request is not satisfied by a cache, then a typical client will
    check its configuration to determine whether a proxy is to be used to
@@ -2638,22 +2643,22 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    "https" URI.  If a proxy is applicable, the client connects inbound by
    establishing (or reusing) a connection to that proxy.
 </t>
+</section>
+
+<section title="To the Origin" anchor="routing.origin">
 <t>
    If no proxy is applicable, a typical client will invoke a handler routine,
    usually specific to the target URI's scheme, to connect directly
    to an origin for the target resource.  How that is accomplished is
    dependent on the target URI scheme and defined by its associated
-   specification, similar to how this specification defines origin server
-   access for resolution of the "http" (<xref target="http.uri"/>) and
-   "https" (<xref target="https.uri"/>) schemes.
+   specification.
 </t>
-</section>
 
-<section title="Direct Authoritative Access" anchor="authoritative.access">
 <section title="http origins" anchor="http.origin">
 <t>
    Although HTTP is independent of the transport protocol, the "http" scheme
-   is specific to associating authority with whomever controls the origin
+   (<xref target="http.uri"/>) is specific to associating authority with
+   whomever controls the origin
    server listening for TCP connections on the indicated port of whatever
    host is identified within the authority component. This is a very weak
    sense of authority because it depends on both client-specific name
@@ -2698,28 +2703,28 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <section title="https origins" anchor="https.origin">
 <t>
-   The "https" scheme associates authority based on the ability
-   of a server to use the private key corresponding to a certificate that
-   the client considers to be trustworthy for the identified origin server.
-   The client usually relies upon a chain of trust, conveyed from some
-   prearranged or configured trust anchor, to deem a certificate
-   trustworthy. The handshake and certificate validation in
-   <xref target="https.initiation"/> describe how that certificate can
-   be used to initiate a secured connection.
+   The "https" scheme (<xref target="https.uri"/>) associates authority based
+   on the ability of a server to use the private key corresponding to a
+   certificate that the client considers to be trustworthy for the identified
+   origin server. The client usually relies upon a chain of trust, conveyed
+   from some prearranged or configured trust anchor, to deem a certificate
+   trustworthy (<xref target="https.verify"/>).
 </t>
 <t>
-   In HTTP/1.1 and earlier, the only URIs for which a client will attribute
-   authority to a server are those for which a secured connection is
-   specifically established toward the origin's host. Only the
-   characteristics of the connection establishment and certificate are used.
+   In HTTP/1.1 and earlier, a client will only attribute authority to a server
+   when they are communicating over a successfully established and secured
+   connection specifically to that URI origin's host. The connection
+   establishment and certificate verification are used as proof of authority.
 </t>
 <t>
-   In HTTP/2 and HTTP/3, a client will attribute authority to a server for all
-   origin names present in the certificate for which it believes it could open
-   a connection to that same server for that URI. In practice, a client will
-   make a DNS query and see that it contains the same server IP address. This
-   restriction can be removed by the origin server sending an equivalent
-   ORIGIN frame <xref target="RFC8336"/>.
+   In HTTP/2 and HTTP/3, a client will attribute authority to a server when
+   they are communicating over a successfully established and secured
+   connection if the URI origin's host matches any of the hosts present in the
+   server's certificate and the client believes that it could open a connection
+   to that host for that URI. In practice, a client will make a DNS query to
+   check that the origin's host contains the same server IP address as the
+   established connection. This restriction can be removed by the origin server
+   sending an equivalent ORIGIN frame <xref target="RFC8336"/>.
 </t>
 <t>
    The request target's host and port value are passed within each HTTP
@@ -2752,8 +2757,8 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    identifier to an IP address, establishing a TCP connection to that address
    on the indicated port, securing the connection end-to-end by successfully
    initiating TLS over TCP with confidentiality and integrity protection, and
-   sending an HTTP request message to the server over that secured connection
-   containing the URI's identifying data (<xref target="operation"/>).
+   sending an HTTP request message over that connection containing the URI's
+   identifying data (<xref target="operation"/>).
 </t>
 <t>
    If the server responds to such a request with a non-interim HTTP response
@@ -2767,21 +2772,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 </section>
 
-<section title="Initiating HTTP Over TLS" anchor="https.initiation">
-<t>
-   Conceptually, HTTP/TLS is simply sending HTTP messages over a connection
-   secured via TLS <xref target="RFC8446"/>.
-</t>
-<t>
-   The HTTP client also acts as the TLS client. It initiates a connection to
-   the server on the appropriate port and sends the TLS ClientHello to begin
-   the TLS handshake. When the TLS handshake has finished, the client may then
-   initiate the first HTTP request. All HTTP data &MUST; be sent as TLS
-   "application data", but is otherwise treated like a normal connection for
-   HTTP (including potential reuse as a persistent connection).
-</t>
-
-<section title="Identifying HTTPS Servers" anchor="https.identify.server">
+<section title="https certificate verification" anchor="https.verify">
 <t>
    To establish a <x:ref>secured</x:ref> connection to dereference a URI,
    a client &MUST; verify that the service's identity is an acceptable
@@ -2804,7 +2795,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    In special cases, it might be appropriate for
    a client to simply ignore the server's identity, but it must be
-   understood that this leaves the connection open to active attack.
+   understood that this leaves a connection open to active attack.
 </t>
 <t>
    If the certificate is not valid for the URI's origin server,
@@ -2815,16 +2806,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    and &SHOULD; terminate the connection (with a bad certificate error).
    Automated clients &MAY; provide a configuration setting that disables
    this check, but &MUST; provide a setting which enables it.
-</t>
-</section>
-
-<section title="Identifying HTTPS Clients" anchor="https.identify.client">
-<t>
-   Typically, the server has no external knowledge of what the client's
-   identity ought to be; checks (other than that the client has a
-   certificate chain rooted in an appropriate CA) are not possible. If a
-   server has such knowledge (typically from some source external to
-   HTTP or TLS), it &SHOULD; check the identity as described above.
 </t>
 </section>
 </section>
@@ -10935,10 +10916,10 @@ Content-Encoding: gzip
 <t>
    The "https" scheme (<xref target="https.uri"/>) is intended to prevent
    (or at least reveal) many of these potential attacks on establishing
-   authority, provided that the negotiated TLS connection is secured and
+   authority, provided that the negotiated connection is secured and
    the client properly verifies that the communicating server's identity
    matches the target URI's authority component
-   (<xref target="https.identify.server"/>). Correctly implementing such verification
+   (<xref target="https.verify"/>). Correctly implementing such verification
    can be difficult (see <xref target="Georgiev"/>).
 </t>
 <t>
@@ -12987,7 +12968,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    been extended for both "http" and "https" URIs to account for alternative
    services and secured connections that are not necessarily based on TCP.
    (<xref target="http.uri"/>, <xref target="https.uri"/>,
-   <xref target="origin"/>, <xref target="authoritative.access"/>)
+   <xref target="origin"/>, <xref target="routing.origin"/>)
 </t>
 </section>
 
@@ -13251,7 +13232,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="http.userinfo"/>, be more correct about what was deprecated by RFC 3986 (<eref target="https://github.com/httpwg/http-core/issues/278"/>, <eref target="https://www.rfc-editor.org/errata/eid5964"/>)</li>
   <li>In <xref target="field.order"/>, recommend comma SP when combining field lines (<eref target="https://github.com/httpwg/http-core/issues/148"/>)</li>
   <li>In <xref target="field.host"/>, make explicit requirements on origin server to use authority from absolute-form when available (<eref target="https://github.com/httpwg/http-core/issues/191"/>)</li>
-  <li>In <xref target="http.uri"/>, <xref target="https.uri"/>, <xref target="origin"/>, and <xref target="authoritative.access"/>, refactored schemes to define origin and authoritative access to an origin server for both "http" and "https" URIs to account for alternative services and secured connections that are not necessarily based on TCP (<eref target="https://github.com/httpwg/http-core/issues/237"/>)</li>
+  <li>In <xref target="http.uri"/>, <xref target="https.uri"/>, <xref target="origin"/>, and <xref target="routing.origin"/>, refactored schemes to define origin and authoritative access to an origin server for both "http" and "https" URIs to account for alternative services and secured connections that are not necessarily based on TCP (<eref target="https://github.com/httpwg/http-core/issues/237"/>)</li>
   <li>In <xref target="intro.requirements"/>, reference RFC 8174 as well (<eref target="https://github.com/httpwg/http-core/issues/303"/>)</li>
 </ul>
 </section>
@@ -13335,7 +13316,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
          adjust ABNF to allow empty lists (<eref target="https://github.com/httpwg/http-core/issues/210"/>)</li>
   <li>In <xref target="field.expect"/>, change the ABNF back to be a list of expectations, as defined in RFC 2616 (<eref target="https://github.com/httpwg/http-core/issues/203"/>)</li>
   <li>Moved definitions of "TE" and "Upgrade" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/392"/>)</li>
-  <li>Rewrote <xref target="https.identify.server"/> to refer to RFC6125 (<eref target="https://github.com/httpwg/http-core/issues/404"/>)</li>
+  <li>Moved 1.1-specific discussion of TLS to Messaging and rewrote <xref target="https.verify"/> to refer to RFC6125 (<eref target="https://github.com/httpwg/http-core/issues/404"/>)</li>
   <li>Moved definition of "Connection" from <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/407"/>)</li>
 </ul>
 </section>
