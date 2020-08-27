@@ -199,6 +199,11 @@
 <!-- experimental for QUIC tls draft -->
 <xsl:template match="t/contact" mode="cleanup">
   <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <contact>
+        <xsl:apply-templates select="node()|@*" mode="cleanup" />
+      </contact>
+    </xsl:when>
     <xsl:when test="@asciiFullname">
       <xsl:value-of select="@asciiFullname"/>
     </xsl:when>
