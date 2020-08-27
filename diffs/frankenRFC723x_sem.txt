@@ -1393,7 +1393,41 @@ X.X.X.  Deprecated userinfo
    intermediaries to forward a de-chunked message to an HTTP/1.0
    recipient without buffering the entire response.
 
-5.6.3.  Trailer
+5.6.3.  Processing
+
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+
+5.6.4.  Trailer
 
      Trailer = 1#field-name
 
@@ -1405,6 +1439,25 @@ X.X.X.  Deprecated userinfo
    recipient to prepare for receipt of that metadata before it starts
    processing the body, which is useful if the message is being streamed
    and the recipient wishes to confirm an integrity check on the fly.
+
+5.6.5.  TE
+
+   The "TE" header field in a request indicates what transfer codings,
+   besides chunked, the client is willing to accept in response, and
+   whether or not the client is willing to accept trailer fields in a
+   chunked transfer coding.
+
+   The TE field-value consists of a comma-separated list of transfer
+   coding names, each allowing for optional parameters (as described in
+   Section 4), and/or the keyword "trailers".  A client MUST NOT send
+   the chunked transfer coding name in TE; chunked is always acceptable
+   for HTTP/1.1 recipients.
+
+     TE        = #t-codings
+     t-codings = "trailers" / ( transfer-coding [ t-ranking ] )
+     t-ranking = OWS ";" OWS "q=" rank
+     rank      = ( "0" [ "." 0*3DIGIT ] )
+                / ( "1" [ "." 0*3("0") ] )
 
 5.7.  Considerations for New HTTP Fields
 
@@ -1472,6 +1525,7 @@ X.X.X.  Deprecated userinfo
    | Accept-Ranges     | http     | standard | Section 2.3 |
    | Allow             | http     | standard | Section 7.4.1   |
    | Authorization       | http     | standard | Section 4.2 |
+   | Connection        | http     | standard | Section 6.1   |
    | Content-Encoding  | http     | standard | Section 3.1.2.2 |
    | Content-Language  | http     | standard | Section 3.1.3.2 |
    | Content-Length    | http     | standard | Section 3.3.2 |
@@ -1497,7 +1551,9 @@ X.X.X.  Deprecated userinfo
    | Referer           | http     | standard | Section 5.5.2   |
    | Retry-After       | http     | standard | Section 7.1.3   |
    | Server            | http     | standard | Section 7.4.2   |
+   | TE                | http     | standard | Section 4.3   |
    | Trailer           | http     | standard | Section 4.4   |
+   | Upgrade           | http     | standard | Section 6.7   |
    | User-Agent        | http     | standard | Section 5.5.3   |
    | Vary              | http     | standard | Section 7.1.4   |
    | Via               | http     | standard | Section 5.7.1 |
@@ -1560,9 +1616,7 @@ X.X.X.  Deprecated userinfo
    HTTP requirements regarding connection management are defined in
    Section 6.
 
-X.X.  [Direct Authoritative Access]
-
-5.4.1.  http origins
+6.3.3.1.  http origins
 
    Although HTTP is independent of the transport protocol, the "http"
    scheme is specific to TCP-based services because the name delegation
@@ -1593,24 +1647,9 @@ X.X.  [Direct Authoritative Access]
    See Section 9.1 for security considerations related to establishing
    authority.
 
-5.4.2.  https origins
+6.3.3.2.  https origins
 
    [new section]
-
-5.4.3.  Initiating HTTP Over TLS
-
-   Conceptually, HTTP/TLS is very simple. Simply use HTTP over TLS
-   precisely as you would use HTTP over TCP.
-
-2.1.  Connection Initiation
-
-   The agent acting as the HTTP client should also act as the TLS
-   client.  It should initiate a connection to the server on the
-   appropriate port and then send the TLS ClientHello to begin the TLS
-   handshake. When the TLS handshake has finished. The client may then
-   initiate the first HTTP request.  All HTTP data MUST be sent as TLS
-   "application data".  Normal HTTP behavior, including retained
-   connections should be followed.
 
 3.1.  Server Identity
 
@@ -1908,7 +1947,229 @@ X.X.  [Direct Authoritative Access]
    field's definition specifically allows such modification or the
    modification is deemed necessary for privacy or security.
 
-3.  Representations
+6.7.  Upgrade
+
+   The "Upgrade" header field is intended to provide a simple mechanism
+   for transitioning from HTTP/1.1 to some other protocol on the same
+   connection.  A client MAY send a list of protocols in the Upgrade
+   header field of a request to invite the server to switch to one or
+   more of those protocols, in order of descending preference, before
+   sending the final response.  A server MAY ignore a received Upgrade
+   header field if it wishes to continue using the current protocol on
+   that connection.  Upgrade cannot be used to insist on a protocol
+   change.
+
+     Upgrade          = 1#protocol
+
+     protocol         = protocol-name ["/" protocol-version]
+     protocol-name    = token
+     protocol-version = token
+
+   A server that sends a 101 (Switching Protocols) response MUST send an
+   Upgrade header field to indicate the new protocol(s) to which the
+   connection is being switched; if multiple protocol layers are being
+   switched, the sender MUST list the protocols in layer-ascending
+   order.  A server MUST NOT switch to a protocol that was not indicated
+   by the client in the corresponding request's Upgrade header field.  A
+   server MAY choose to ignore the order of preference indicated by the
+   client and select the new protocol(s) based on other factors, such as
+   the nature of the request or the current load on the server.
+
+   A server that sends a 426 (Upgrade Required) response MUST send an
+   Upgrade header field to indicate the acceptable protocols, in order
+   of descending preference.
+
+   A server MAY send an Upgrade header field in any other response to
+   advertise that it implements support for upgrading to the listed
+   protocols, in order of descending preference, when appropriate for a
+   future request.
+
+   The following is a hypothetical example sent by a client:
+
+     GET /hello.txt HTTP/1.1
+     Host: www.example.com
+     Connection: upgrade
+     Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11
+
+
+   The capabilities and nature of the application-level communication
+   after the protocol change is entirely dependent upon the new
+   protocol(s) chosen.  However, immediately after sending the 101
+   (Switching Protocols) response, the server is expected to continue
+   responding to the original request as if it had received its
+   equivalent within the new protocol (i.e., the server still has an
+   outstanding request to satisfy after the protocol has been changed,
+   and is expected to do so without requiring the request to be
+   repeated).
+
+   For example, if the Upgrade header field is received in a GET request
+   and the server decides to switch protocols, it first responds with a
+   101 (Switching Protocols) message in HTTP/1.1 and then immediately
+   follows that with the new protocol's equivalent of a response to a
+   GET on the target resource.  This allows a connection to be upgraded
+   to protocols with the same semantics as HTTP without the latency cost
+   of an additional round trip.  A server MUST NOT switch protocols
+   unless the received message semantics can be honored by the new
+   protocol; an OPTIONS request can be honored by any protocol.
+
+   The following is an example response to the above hypothetical
+   request:
+
+     HTTP/1.1 101 Switching Protocols
+     Connection: upgrade
+     Upgrade: HTTP/2.0
+
+     [... data stream switches to HTTP/2.0 with an appropriate response
+     (as defined by new protocol) to the "GET /hello.txt" request ...]
+
+   When Upgrade is sent, the sender MUST also send a Connection header
+   field (Section 6.1) that contains an "upgrade" connection option, in
+   order to prevent Upgrade from being accidentally forwarded by
+   intermediaries that might not implement the listed protocols.  A
+   server MUST ignore an Upgrade header field that is received in an
+   HTTP/1.0 request.
+
+   A client cannot begin using an upgraded protocol on the connection
+   until it has completely sent the request message (i.e., the client
+   can't change the protocol it is sending in the middle of a message).
+   If a server receives both an Upgrade and an Expect header field with
+   the "100-continue" expectation (Section 5.1.1 of [RFC7231]), the
+   server MUST send a 100 (Continue) response before sending a 101
+   (Switching Protocols) response.
+
+   The Upgrade header field only applies to switching protocols on top
+   of the existing connection; it cannot be used to switch the
+   underlying connection (transport) protocol, nor to switch the
+   existing communication to a different connection.  For those
+   purposes, it is more appropriate to use a 3xx (Redirection) response
+   (Section 6.4 of [RFC7231]).
+
+   This specification only defines the protocol name "HTTP" for use by
+   the family of Hypertext Transfer Protocols, as defined by the HTTP
+   version rules of Section 2.6 and future updates to this
+   specification.  Additional tokens ought to be registered with IANA
+   using the registration procedure defined in Section 8.6.
+
+   +-------+----------------------+----------------------+-------------+
+   | Value | Description          | Expected Version     | Reference   |
+   |       |                      | Tokens               |             |
+   +-------+----------------------+----------------------+-------------+
+   | HTTP  | Hypertext Transfer   | any DIGIT.DIGIT      | Section 2.6 |
+   |       | Protocol             | (e.g, "2.0")         |             |
+   +-------+----------------------+----------------------+-------------+
+
+8.6.  Upgrade Token Registry
+
+   The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry"
+   defines the namespace for protocol-name tokens used to identify
+   protocols in the Upgrade header field.  The registry is maintained at
+   <http://www.iana.org/assignments/http-upgrade-tokens>.
+
+8.6.1.  Procedure
+
+   Each registered protocol name is associated with contact information
+   and an optional set of specifications that details how the connection
+   will be processed after it has been upgraded.
+
+   Registrations happen on a "First Come First Served" basis (see
+   Section 4.1 of [RFC5226]) and are subject to the following rules:
+
+   1.  A protocol-name token, once registered, stays registered forever.
+
+   2.  The registration MUST name a responsible party for the
+       registration.
+
+   3.  The registration MUST name a point of contact.
+
+   4.  The registration MAY name a set of specifications associated with
+       that token.  Such specifications need not be publicly available.
+
+   5.  The registration SHOULD name a set of expected "protocol-version"
+       tokens associated with that token at the time of registration.
+
+   6.  The responsible party MAY change the registration at any time.
+       The IANA will keep a record of all such changes, and make them
+       available upon request.
+
+   7.  The IESG MAY reassign responsibility for a protocol token.  This
+       will normally only be used in the case when a responsible party
+       cannot be contacted.
+
+   This registration procedure for HTTP Upgrade Tokens replaces that
+   previously defined in Section 7.2 of [RFC2817].
+
+6.8.  Connection
+
+   The "Connection" header field allows the sender to indicate desired
+   control options for the current connection.  In order to avoid
+   confusing downstream recipients, a proxy or gateway MUST remove or
+   replace any received connection options before forwarding the
+   message.
+
+   When a header field aside from Connection is used to supply control
+   information for or about the current connection, the sender MUST list
+   the corresponding field-name within the Connection header field.  A
+   proxy or gateway MUST parse a received Connection header field before
+   a message is forwarded and, for each connection-option in this field,
+   remove any header field(s) from the message with the same name as the
+   connection-option, and then remove the Connection header field itself
+   (or replace it with the intermediary's own connection options for the
+   forwarded message).
+
+   Hence, the Connection header field provides a declarative way of
+   distinguishing header fields that are only intended for the immediate
+   recipient ("hop-by-hop") from those fields that are intended for all
+   recipients on the chain ("end-to-end"), enabling the message to be
+   self-descriptive and allowing future connection-specific extensions
+   to be deployed without fear that they will be blindly forwarded by
+   older intermediaries.
+
+   The Connection header field's value has the following grammar:
+
+     Connection        = 1#connection-option
+     connection-option = token
+
+   Connection options are case-insensitive.
+
+   A sender MUST NOT send a connection option corresponding to a header
+   field that is intended for all recipients of the payload.  For
+   example, Cache-Control is never appropriate as a connection option
+   (Section 5.2 of [RFC7234]).
+
+   The connection options do not always correspond to a header field
+   present in the message, since a connection-specific header field
+   might not be needed if there are no parameters associated with a
+   connection option.  In contrast, a connection-specific header field
+   that is received without a corresponding connection option usually
+   indicates that the field has been improperly forwarded by an
+   intermediary and ought to be ignored by the recipient.
+
+   When defining new connection options, specification authors ought to
+   survey existing header field names and ensure that the new connection
+   option does not share the same name as an already deployed header
+   field.  Defining a new connection option essentially reserves that
+   potential field-name for carrying additional information related to
+   the connection option, since it would be unwise for senders to use
+   that field-name for anything else.
+
+   The "close" connection option is defined for a sender to signal that
+   this connection will be closed after completion of the response.  For
+   example,
+
+     Connection: close
+
+   in either the request or the response header fields indicates that
+   the sender is going to close the connection after the current
+   request/response is complete (Section 6.6).
+
+   A client that does not support persistent connections MUST send the
+   "close" connection option in every request message.
+
+   A server that does not support persistent connections MUST send the
+   "close" connection option in every response message that does not
+   have a 1xx (Informational) status code.
+
+7.  Representations
 
    Considering that a resource could be anything, and that the uniform
    interface provided by HTTP is similar to a window through which one
@@ -1934,7 +2195,7 @@ X.X.  [Direct Authoritative Access]
    constructing the payload for 200 (OK) and 304 (Not Modified)
    responses to GET (Section 4.3.1).
 
-3.2.  Representation Data
+7.1.  Representation Data
 
    The representation data associated with an HTTP message is either
    provided as the payload body of the message or referred to by the
@@ -3256,7 +3517,7 @@ Appendix A.  Internet Media Type multipart/byteranges
    satisfy subsequent GET and HEAD requests unless otherwise indicated
    by the Cache-Control header field (Section 5.2 of [RFC7234]).
 
-4.3.2.  HEAD
+8.3.2.  HEAD
 
    The HEAD method is identical to GET except that the server MUST NOT
    send a message body in the response (i.e., the response terminates at
@@ -3278,7 +3539,7 @@ Appendix A.  Internet Media Type multipart/byteranges
    response might also have an effect on previously cached responses to
    GET; see Section 4.3.5 of [RFC7234].
 
-4.3.3.  POST
+8.3.3.  POST
 
    The POST method requests that the target resource process the
    representation enclosed in the request according to the resource's
@@ -3328,7 +3589,7 @@ Appendix A.  Internet Media Type multipart/byteranges
    shared caching, though at the cost of an extra request if the user
    agent does not already have the representation cached.
 
-4.3.4.  PUT
+8.3.4.  PUT
 
    The PUT method requests that the state of the target resource be
    created or replaced with the state defined by the representation
@@ -3452,7 +3713,7 @@ Appendix A.  Internet Media Type multipart/byteranges
    for the effective request URI, those stored responses will be
    invalidated (see Section 4.4 of [RFC7234]).
 
-4.3.5.  DELETE
+8.3.5.  DELETE
 
    The DELETE method requests that the origin server remove the
    association between the target resource and its current
@@ -3500,7 +3761,7 @@ Appendix A.  Internet Media Type multipart/byteranges
    for the effective request URI, those stored responses will be
    invalidated (see Section 4.4 of [RFC7234]).
 
-4.3.6.  CONNECT
+8.3.6.  CONNECT
 
    The CONNECT method requests that the recipient establish a tunnel to
    the destination origin server identified by the request-target and,
@@ -3567,7 +3828,7 @@ Appendix A.  Internet Media Type multipart/byteranges
 
    Responses to the CONNECT method are not cacheable.
 
-4.3.7.  OPTIONS
+8.3.7.  OPTIONS
 
    The OPTIONS method requests information about the communication
    options available for the target resource, at either the origin
@@ -3614,7 +3875,7 @@ Appendix A.  Internet Media Type multipart/byteranges
 
    Responses to the OPTIONS method are not cacheable.
 
-4.3.8.  TRACE
+8.3.8.  TRACE
 
    The TRACE method requests a remote, application-level loop-back of
    the request message.  The final recipient of the request SHOULD
