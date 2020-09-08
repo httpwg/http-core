@@ -1183,6 +1183,834 @@ Content-Type: text/plain
 </section>
 </section>
 
+<section title="Message Routing" anchor="message.routing">
+<t>
+   HTTP request message routing is determined by each client based on the
+   target resource, the client's proxy configuration, and
+   establishment or reuse of an inbound connection.  The corresponding
+   response routing follows the same connection chain back to the client.
+</t>
+
+<section title="Identifying a Target Resource" anchor="target.resource">
+  <iref primary="true" item="target resource"/>
+  <iref primary="true" item="target URI"/>
+  <x:anchor-alias value="target resource"/>
+  <x:anchor-alias value="target URI"/>
+<t>
+   HTTP is used in a wide variety of applications, ranging from
+   general-purpose computers to home appliances.  In some cases,
+   communication options are hard-coded in a client's configuration.
+   However, most HTTP clients rely on the same resource identification
+   mechanism and configuration techniques as general-purpose Web browsers.
+</t>
+<t>
+   HTTP communication is initiated by a user agent for some purpose. The
+   purpose is a combination of request semantics and a target resource upon
+   which to apply those semantics. The "<x:dfn>request target</x:dfn>" is
+   the protocol element that identifies the "<x:dfn>target resource</x:dfn>".
+</t>
+<t>
+   Typically, the request target is a URI reference (<xref target="uri"/>)
+   which a user agent would resolve to its absolute form in order to obtain
+   the "<x:dfn>target URI</x:dfn>". The target URI excludes the reference's
+   fragment component, if any, since fragment identifiers are reserved for
+   client-side processing (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
+</t>
+<t>
+   However, there are two special, method-specific forms allowed for the
+   request target in specific circumstances:
+</t>
+<ul>   
+   <li>
+      For CONNECT (<xref target="CONNECT"/>), the request target is the host
+      name and port number of the tunnel destination, separated by a colon.
+   </li>
+   <li>
+      For OPTIONS (<xref target="OPTIONS"/>), the request target can be a
+      single asterisk ("*").
+   </li>
+</ul>
+<t>
+   See the respective method definitions for details. These forms &MUST-NOT;
+   be used with other methods.
+</t>
+</section>
+
+<section title="Determining Origin" anchor="origin">
+  <iref primary="true" item="origin"/>
+  <iref primary="true" item="URI" subitem="origin"/>
+<t>
+   The "<x:dfn>origin</x:dfn>" for a given URI is the triple of scheme, host,
+   and port after normalizing the scheme and host to lowercase and
+   normalizing the port to remove any leading zeros. If port is elided from
+   the URI, the default port for that scheme is used. For example, the URI
+</t>
+<artwork type="example">
+   https://Example.Com/happy.js
+</artwork>
+<t>
+   would have the origin
+</t>
+<artwork type="example">
+   { "https", "example.com", "443" }
+</artwork>
+<t>
+   which can also be described as the normalized URI prefix with port always
+   present:
+</t>
+<artwork type="example">
+   https://example.com:443
+</artwork>
+<t>
+   Each origin defines its own namespace and controls how identifiers
+   within that namespace are mapped to resources. In turn, how the origin
+   responds to valid requests, consistently over time, determines the
+   semantics that users will associate with a URI, and the usefulness of
+   those semantics is what ultimately transforms these mechanisms into a
+   "resource" for users to reference and access in the future.
+</t>
+<t>
+   Two origins are distinct if they differ in scheme, host, or port. Even
+   when it can be verified that the same entity controls two distinct origins,
+   the two namespaces under those origins are distinct unless explicitly
+   aliased by a server authoritative for that origin.
+</t>
+<t>
+   Origin is also used within HTML and related Web protocols, beyond the
+   scope of this document, as described in <xref target="RFC6454"/>.
+</t>
+</section>
+
+<section title="Routing Inbound" anchor="routing.inbound">
+<t>
+   Once the target URI and its origin are determined, a client decides whether
+   a network request is necessary to accomplish the desired semantics and,
+   if so, where that request is to be directed.
+</t>
+
+<section title="To a Cache" anchor="routing.cache">
+<t>
+   If the client has a cache <xref target="Caching"/> and the request can be
+   satisfied by it, then the request is
+   usually directed there first.
+</t>
+</section>
+
+<section title="To a Proxy" anchor="routing.proxy">
+<t>
+   If the request is not satisfied by a cache, then a typical client will
+   check its configuration to determine whether a proxy is to be used to
+   satisfy the request.  Proxy configuration is implementation-dependent,
+   but is often based on URI prefix matching, selective authority matching,
+   or both, and the proxy itself is usually identified by an "http" or
+   "https" URI.  If a proxy is applicable, the client connects inbound by
+   establishing (or reusing) a connection to that proxy.
+</t>
+</section>
+
+<section title="To the Origin" anchor="routing.origin">
+<t>
+   If no proxy is applicable, a typical client will invoke a handler routine,
+   usually specific to the target URI's scheme, to connect directly
+   to an origin for the target resource.  How that is accomplished is
+   dependent on the target URI scheme and defined by its associated
+   specification.
+</t>
+
+<section title="http origins" anchor="http.origin">
+<t>
+   Although HTTP is independent of the transport protocol, the "http" scheme
+   (<xref target="http.uri"/>) is specific to associating authority with
+   whomever controls the origin
+   server listening for TCP connections on the indicated port of whatever
+   host is identified within the authority component. This is a very weak
+   sense of authority because it depends on both client-specific name
+   resolution mechanisms and communication that might not be secured from
+   an on-path attacker. Nevertheless, it is a sufficient minimum for
+   binding "http" identifiers to an origin server for consistent resolution
+   within a trusted environment.
+</t>
+<t>
+   If the host identifier is provided as an IP address, the origin server is
+   the listener (if any) on the indicated TCP port at that IP address.
+   If host is a registered name, the registered name is an indirect identifier
+   for use with a name resolution service, such as DNS, to find an address for
+   an appropriate origin server.
+</t>
+<t>
+   When an "http" URI is used within a context that calls for access to the
+   indicated resource, a client &MAY; attempt access by resolving the host
+   identifier to an IP address, establishing a TCP connection to that address
+   on the indicated port, and sending an HTTP request message to the server
+   containing the URI's identifying data.
+</t>
+<t>
+   If the server responds to such a request with a non-interim HTTP response
+   message, as described in <xref target="status.codes"/>, then that response
+   is considered an authoritative answer to the client's request.
+</t>
+<t>
+   Note, however, that the above is not the only means for obtaining an
+   authoritative response, nor does it imply that an authoritative response
+   is always necessary (see <xref target="Caching"/>).
+   For example, the Alt-Svc header field <xref target="RFC7838"/> allows an
+   origin server to identify other services that are also authoritative for
+   that origin. Access to "http" identified resources might also be provided
+   by protocols outside the scope of this document.
+</t>
+<t>
+   See <xref target="establishing.authority"/> for security considerations
+   related to establishing authority.
+</t>
+</section>
+
+<section title="https origins" anchor="https.origin">
+<t>
+   The "https" scheme (<xref target="https.uri"/>) associates authority based
+   on the ability of a server to use the private key corresponding to a
+   certificate that the client considers to be trustworthy for the identified
+   origin server. The client usually relies upon a chain of trust, conveyed
+   from some prearranged or configured trust anchor, to deem a certificate
+   trustworthy (<xref target="https.verify"/>).
+</t>
+<t>
+   In HTTP/1.1 and earlier, a client will only attribute authority to a server
+   when they are communicating over a successfully established and secured
+   connection specifically to that URI origin's host. The connection
+   establishment and certificate verification are used as proof of authority.
+</t>
+<t>
+   In HTTP/2 and HTTP/3, a client will attribute authority to a server when
+   they are communicating over a successfully established and secured
+   connection if the URI origin's host matches any of the hosts present in the
+   server's certificate and the client believes that it could open a connection
+   to that host for that URI. In practice, a client will make a DNS query to
+   check that the origin's host contains the same server IP address as the
+   established connection. This restriction can be removed by the origin server
+   sending an equivalent ORIGIN frame <xref target="RFC8336"/>.
+</t>
+<t>
+   The request target's host and port value are passed within each HTTP
+   request, identifying the origin and distinguishing it from other namespaces
+   that might be controlled by the same server.
+   It is the origin's responsibility to ensure that any services provided with
+   control over its certificate's private key are equally responsible for
+   managing the corresponding "https" namespaces, or at least prepared to
+   reject requests that appear to have been misdirected. A server might be
+   unwilling to serve as the origin for some hosts even when they have the
+   authority to do so.
+</t>
+<t>
+   For example, if a network attacker causes connections for port N to be
+   received at port Q, checking the target URI is necessary to ensure that the
+   attacker can't cause "https://example.com:N/foo" to be replaced by
+   "https://example.com:Q/foo" without consent.
+</t>
+<t>
+   Note that the "https" scheme does not rely on TCP and the connected port
+   number for associating authority, since both are outside the secured
+   communication and thus cannot be trusted as definitive. Hence, the HTTP
+   communication might take place over any channel that has been secured,
+   as defined in <xref target="https.uri"/>, including protocols that don't
+   use TCP.
+</t>
+<t>
+   When an "https" URI is used within a context that calls for access to the
+   indicated resource, a client &MAY; attempt access by resolving the host
+   identifier to an IP address, establishing a TCP connection to that address
+   on the indicated port, securing the connection end-to-end by successfully
+   initiating TLS over TCP with confidentiality and integrity protection, and
+   sending an HTTP request message over that connection containing the URI's
+   identifying data.
+</t>
+<t>
+   If the server responds to such a request with a non-interim HTTP response
+   message, as described in <xref target="status.codes"/>, then that response
+   is considered an authoritative answer to the client's request.
+</t>
+<t>
+   Note, however, that the above is not the only means for obtaining an
+   authoritative response, nor does it imply that an authoritative response
+   is always necessary (see <xref target="Caching"/>).
+</t>
+</section>
+
+<section title="https certificate verification" anchor="https.verify">
+<t>
+   To establish a <x:ref>secured</x:ref> connection to dereference a URI,
+   a client &MUST; verify that the service's identity is an acceptable
+   match for the URI's origin server. Certificate verification is used to
+   prevent server impersonation by an on-path attacker or by an attacker
+   that controls name resolution. This process requires that a client be
+   configured with a set of trust anchors. 
+</t>
+<t>
+   In general, a client &MUST; verify the service identity using the
+   verification process defined in
+   <xref target="RFC6125" x:fmt="of" x:sec="6"/> (for a reference identifier of
+   type URI-ID) unless the client has been specifically configured to accept
+   some other form of verification. For example, a client might be connecting
+   to a server whose address and hostname are dynamic, with an expectation that
+   the service will present a specific certificate (or a certificate matching
+   some externally defined reference identity) rather than one matching the
+   dynamic URI's origin server identifier.
+</t>
+<t>
+   In special cases, it might be appropriate for
+   a client to simply ignore the server's identity, but it must be
+   understood that this leaves a connection open to active attack.
+</t>
+<t>
+   If the certificate is not valid for the URI's origin server,
+   a user agent &MUST; either notify the user (user agents &MAY; give the
+   user an option to continue with the connection in any case) or
+   terminate the connection with a bad certificate error. Automated
+   clients &MUST; log the error to an appropriate audit log (if available)
+   and &SHOULD; terminate the connection (with a bad certificate error).
+   Automated clients &MAY; provide a configuration setting that disables
+   this check, but &MUST; provide a setting which enables it.
+</t>
+</section>
+</section>
+</section>
+
+<section title="Reconstructing the Target URI" anchor="reconstructing.target.uri">
+<t>
+   Once an inbound connection is obtained,
+   the client sends an HTTP request message.
+</t>
+<t>
+   Depending on the nature of the request, the client's target URI might be
+   split into components and transmitted (or implied) within various parts of
+   a request message. These parts are recombined by each recipient, in
+   accordance with their local configuration and incoming connection context,
+   to determine the target URI.
+   <xref target="h1.effective.request.uri"/> defines how a server
+   determines the target URI for an HTTP/1.1 request.
+</t>
+<t>
+   Once the target URI has been reconstructed, an origin server needs
+   to decide whether or not to provide service for that URI via the connection
+   in which the request was received. For example, the request might have been
+   misdirected, deliberately or accidentally, such that the information within
+   a received <x:ref>Host</x:ref> header
+   field differs from the host or port upon which the connection has been
+   made. If the connection is from a trusted gateway, that inconsistency might
+   be expected; otherwise, it might indicate an attempt to bypass security
+   filters, trick the server into delivering non-public content, or poison a
+   cache. See <xref target="security.considerations"/> for security
+   considerations regarding message routing.
+</t>
+<aside anchor="effective.request.uri">
+  <t>
+    <iref primary="true" item="effective request URI"/>
+    &Note; previous specifications defined the recomposed target URI as a
+    distinct concept, the <x:dfn>effective request URI</x:dfn>.
+  </t>
+</aside>
+</section>
+
+<section title="Host" anchor="field.host">
+  <x:anchor-alias value="header.host"/>
+  <iref primary="true" item="Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Host header field" x:for-anchor=""/>
+  <x:anchor-alias value="Host"/>
+<t>
+   The "Host" header field in a request provides the host and port
+   information from the target URI, enabling the origin
+   server to distinguish among resources while servicing requests
+   for multiple host names on a single IP address.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Host"/>
+  <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="uri"/>
+</sourcecode>
+<t>
+   Since the Host field value is critical information for handling a request,
+   a user agent &SHOULD; generate Host as the first field in the header section.
+</t>
+<t>
+   For example, a GET request to the origin server for
+   &lt;http://www.example.org/pub/WWW/&gt; would begin with:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /pub/WWW/ HTTP/1.1
+Host: www.example.org
+</artwork>
+<t>
+   Since the Host header field acts as an application-level routing
+   mechanism, it is a frequent target for malware seeking to poison
+   a shared cache or redirect a request to an unintended server.
+   An interception proxy is particularly vulnerable if it relies on
+   the Host field value for redirecting requests to internal
+   servers, or for use as a cache key in a shared cache, without
+   first verifying that the intercepted connection is targeting a
+   valid IP address for that host.
+</t>
+</section>
+
+<section title="Message Forwarding" anchor="message.forwarding">
+<t>
+   As described in <xref target="intermediaries"/>, intermediaries can serve
+   a variety of roles in the processing of HTTP requests and responses.
+   Some intermediaries are used to improve performance or availability.
+   Others are used for access control or to filter content.
+   Since an HTTP stream has characteristics similar to a pipe-and-filter
+   architecture, there are no inherent limits to the extent an intermediary
+   can enhance (or interfere) with either direction of the stream.
+</t>
+<t>
+   An intermediary not acting as a tunnel &MUST; implement the
+   <x:ref>Connection</x:ref> header field, as specified in
+   <xref target="field.connection"/>, and exclude fields from being forwarded
+   that are only intended for the incoming connection.
+</t>
+<t>
+   An intermediary &MUST-NOT; forward a message to itself unless it is
+   protected from an infinite request loop. In general, an intermediary ought
+   to recognize its own server names, including any aliases, local variations,
+   or literal IP addresses, and respond to such requests directly.
+</t>
+<t>
+   An HTTP message can be parsed as a stream for incremental processing or
+   forwarding downstream.  However, recipients cannot rely on incremental
+   delivery of partial messages, since some implementations will buffer or
+   delay message forwarding for the sake of network efficiency, security
+   checks, or payload transformations.
+</t>
+
+<section title="Via" anchor="field.via">
+  <x:anchor-alias value="header.via"/>
+  <iref primary="true" item="Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Via header field" x:for-anchor=""/>
+  <x:anchor-alias value="pseudonym"/>
+  <x:anchor-alias value="received-by"/>
+  <x:anchor-alias value="received-protocol"/>
+  <x:anchor-alias value="Via"/>
+<t>
+   The "Via" header field indicates the presence of intermediate protocols and
+   recipients between the user agent and the server (on requests) or between
+   the origin server and the client (on responses), similar to the
+   "Received" header field in email
+   (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>).
+   Via can be used for tracking message forwards,
+   avoiding request loops, and identifying the protocol capabilities of
+   senders along the request/response chain.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
+  <x:ref>Via</x:ref> = #( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+
+  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
+                    ; see <xref target="field.upgrade"/>
+  <x:ref>received-by</x:ref>       = <x:ref>pseudonym</x:ref> [ ":" <x:ref>port</x:ref> ]
+  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Each member of the Via field value represents a proxy or gateway that has
+   forwarded the message. Each intermediary appends its own information
+   about how the message was received, such that the end result is ordered
+   according to the sequence of forwarding recipients.
+</t>
+<t>
+   A proxy &MUST; send an appropriate Via header field, as described below, in
+   each message that it forwards.
+   An HTTP-to-HTTP gateway &MUST; send an appropriate Via header field in
+   each inbound request message and &MAY; send a Via header field in
+   forwarded response messages.
+</t>
+<t>
+   For each intermediary, the received-protocol indicates the protocol and
+   protocol version used by the upstream sender of the message. Hence, the
+   Via field value records the advertised protocol capabilities of the
+   request/response chain such that they remain visible to downstream
+   recipients; this can be useful for determining what backwards-incompatible
+   features might be safe to use in response, or within a later request, as
+   described in <xref target="protocol.version"/>. For brevity, the protocol-name
+   is omitted when the received protocol is HTTP.
+</t>
+<t>
+   The received-by portion is normally the host and optional
+   port number of a recipient server or client that subsequently forwarded the
+   message.
+   However, if the real host is considered to be sensitive information, a
+   sender &MAY; replace it with a pseudonym. If a port is not provided,
+   a recipient &MAY; interpret that as meaning it was received on the default
+   TCP port, if any, for the received-protocol.
+</t>
+<t>
+   A sender &MAY; generate comments to identify the
+   software of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
+   <x:ref>Server</x:ref> header fields. However, comments in Via
+   are optional, and a recipient &MAY; remove them prior to forwarding the
+   message.
+</t>
+<t>
+   For example, a request message could be sent from an HTTP/1.0 user
+   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
+   forward the request to a public proxy at p.example.net, which completes
+   the request by forwarding it to the origin server at www.example.com.
+   The request received by www.example.com would then have the following
+   Via header field:
+</t>
+<artwork type="example">
+  Via: 1.0 fred, 1.1 p.example.net
+</artwork>
+<t>
+   An intermediary used as a portal through a network firewall
+   &SHOULD-NOT; forward the names and ports of hosts within the firewall
+   region unless it is explicitly enabled to do so. If not enabled, such an
+   intermediary &SHOULD; replace each received-by host of any host behind the
+   firewall by an appropriate pseudonym for that host.
+</t>
+<t>
+   An intermediary &MAY; combine an ordered subsequence of Via header
+   field list members into a single member if the entries have identical
+   received-protocol values. For example,
+</t>
+<artwork type="example">
+  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
+</artwork>
+<t>
+  could be collapsed to
+</t>
+<artwork type="example">
+  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
+</artwork>
+<t>
+   A sender &SHOULD-NOT; combine multiple list members unless they are all
+   under the same organizational control and the hosts have already been
+   replaced by pseudonyms. A sender &MUST-NOT; combine members that
+   have different received-protocol values.
+</t>
+</section>
+
+<section title="Transformations" anchor="message.transformations">
+   <iref primary="true" item="transforming proxy"/>
+   <iref primary="true" item="non-transforming proxy"/>
+<t>
+   Some intermediaries include features for transforming messages and their
+   payloads. A proxy might, for example, convert between image formats in
+   order to save cache space or to reduce the amount of traffic on a slow
+   link. However, operational problems might occur when these transformations
+   are applied to payloads intended for critical applications, such as medical
+   imaging or scientific data analysis, particularly when integrity checks or
+   digital signatures are used to ensure that the payload received is
+   identical to the original.
+</t>
+<t>
+   An HTTP-to-HTTP proxy is called a "<x:dfn>transforming proxy</x:dfn>"
+   if it is designed or configured to modify messages in a semantically
+   meaningful way (i.e., modifications, beyond those required by normal
+   HTTP processing, that change the message in a way that would be
+   significant to the original sender or potentially significant to
+   downstream recipients).  For example, a transforming proxy might be
+   acting as a shared annotation server (modifying responses to include
+   references to a local annotation database), a malware filter, a
+   format transcoder, or a privacy filter. Such transformations are presumed
+   to be desired by whichever client (or client organization) selected the
+   proxy.
+</t>
+<t>
+   If a proxy receives a target URI with a host name that is not a
+   fully qualified domain name, it &MAY; add its own domain to the host name
+   it received when forwarding the request.  A proxy &MUST-NOT; change the
+   host name if the target URI contains a fully qualified domain name.
+</t>
+<t>
+   A proxy &MUST-NOT; modify the "absolute-path" and "query" parts of the
+   received target URI when forwarding it to the next inbound server,
+   except as noted above to replace an empty path with "/" or "*".
+</t>
+<t>
+   A proxy &MUST-NOT; transform the payload (<xref target="payload"/>) of a message that
+   contains a no-transform cache-control response directive (<xref target="field.cache-control"/>).
+   Note that this does not include changes to the message body that do not affect
+   the payload, such as transfer codings (<xref target="transfer.codings"/>).
+</t>
+<t>
+   A proxy &MAY; transform the payload of a message
+   that does not contain a no-transform cache-control directive.
+   A proxy that transforms the payload of a <x:ref>200 (OK)</x:ref> response
+   can inform downstream recipients that a transformation has been
+   applied by changing the response status code to
+   <x:ref>203 (Non-Authoritative Information)</x:ref> (<xref target="status.203"/>).
+</t>
+<t>
+   A proxy &SHOULD-NOT; modify header fields that provide information about
+   the endpoints of the communication chain, the resource state, or the
+   <x:ref>selected representation</x:ref> (other than the payload) unless the field's
+   definition specifically allows such modification or the modification is
+   deemed necessary for privacy or security.
+</t>
+</section>
+</section>
+
+
+<section title="Upgrading HTTP" anchor="field.upgrade">
+  <x:anchor-alias value="header.upgrade"/>
+  <iref primary="true" item="Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Upgrade header field" x:for-anchor=""/>
+  <x:anchor-alias value="Upgrade"/>
+  <x:anchor-alias value="protocol"/>
+  <x:anchor-alias value="protocol-name"/>
+  <x:anchor-alias value="protocol-version"/>
+<t>
+   The "Upgrade" header field is intended to provide a simple mechanism
+   for transitioning from HTTP/1.1 to some other protocol on the same
+   connection.
+</t>
+<t>
+   A client &MAY; send a list of protocol names in the Upgrade header field
+   of a request to invite the server to switch to one or more of the named
+   protocols, in order of descending preference, before sending
+   the final response. A server &MAY; ignore a received Upgrade header field
+   if it wishes to continue using the current protocol on that connection.
+   Upgrade cannot be used to insist on a protocol change.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Upgrade"/>
+  <x:ref>Upgrade</x:ref>          = #<x:ref>protocol</x:ref>
+
+  <x:ref>protocol</x:ref>         = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
+  <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
+  <x:ref>protocol-version</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Although protocol names are registered with a preferred case,
+   recipients &SHOULD; use case-insensitive comparison when matching each
+   protocol-name to supported protocols.
+</t>
+<t>
+   A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the new protocol(s) to
+   which the connection is being switched; if multiple protocol layers are
+   being switched, the sender &MUST; list the protocols in layer-ascending
+   order. A server &MUST-NOT; switch to a protocol that was not indicated by
+   the client in the corresponding request's Upgrade header field.
+   A server &MAY; choose to ignore the order of preference indicated by the
+   client and select the new protocol(s) based on other factors, such as the
+   nature of the request or the current load on the server.
+</t>
+<t>
+   A server that sends a <x:ref>426 (Upgrade Required)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the acceptable protocols,
+   in order of descending preference.
+</t>
+<t>
+   A server &MAY; send an Upgrade header field in any other response to
+   advertise that it implements support for upgrading to the listed protocols,
+   in order of descending preference, when appropriate for a future request.
+</t>
+<t>
+   The following is a hypothetical example sent by a client:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /hello HTTP/1.1
+Host: www.example.com
+Connection: upgrade
+Upgrade: websocket, IRC/6.9, RTA/x11
+
+</artwork>
+<t>
+   The capabilities and nature of the
+   application-level communication after the protocol change is entirely
+   dependent upon the new protocol(s) chosen. However, immediately after
+   sending the <x:ref>101 (Switching Protocols)</x:ref> response, the server is expected to continue responding to
+   the original request as if it had received its equivalent within the new
+   protocol (i.e., the server still has an outstanding request to satisfy
+   after the protocol has been changed, and is expected to do so without
+   requiring the request to be repeated).
+</t>
+<t>
+   For example, if the Upgrade header field is received in a GET request
+   and the server decides to switch protocols, it first responds
+   with a <x:ref>101 (Switching Protocols)</x:ref> message in HTTP/1.1 and
+   then immediately follows that with the new protocol's equivalent of a
+   response to a GET on the target resource.  This allows a connection to be
+   upgraded to protocols with the same semantics as HTTP without the
+   latency cost of an additional round trip.  A server &MUST-NOT; switch
+   protocols unless the received message semantics can be honored by the new
+   protocol; an OPTIONS request can be honored by any protocol.
+</t>
+<t>
+   The following is an example response to the above hypothetical request:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 101 Switching Protocols
+Connection: upgrade
+Upgrade: websocket
+
+[... data stream switches to websocket with an appropriate response
+(as defined by new protocol) to the "GET /hello" request ...]
+</artwork>
+<t>
+   When Upgrade is sent, the sender &MUST; also send a
+   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
+   that contains an "upgrade" connection option, in order to prevent Upgrade
+   from being accidentally forwarded by intermediaries that might not implement
+   the listed protocols.  A server &MUST; ignore an Upgrade header field that
+   is received in an HTTP/1.0 request.
+</t>
+<t>
+   A client cannot begin using an upgraded protocol on the connection until
+   it has completely sent the request message (i.e., the client can't change
+   the protocol it is sending in the middle of a message).
+   If a server receives both an Upgrade and an <x:ref>Expect</x:ref> header field
+   with the "100-continue" expectation (<xref target="field.expect"/>), the
+   server &MUST; send a <x:ref>100 (Continue)</x:ref> response before sending
+   a <x:ref>101 (Switching Protocols)</x:ref> response.
+</t>
+<t>
+   The Upgrade header field only applies to switching protocols on top of the
+   existing connection; it cannot be used to switch the underlying connection
+   (transport) protocol, nor to switch the existing communication to a
+   different connection. For those purposes, it is more appropriate to use a
+   <x:ref>3xx (Redirection)</x:ref> response (<xref target="status.3xx"/>).
+</t>
+
+<section title="Upgrade Protocol Names" anchor="upgrade.protocol.names">
+<t>
+   This specification only defines the protocol name "HTTP" for use by
+   the family of Hypertext Transfer Protocols, as defined by the HTTP
+   version rules of <xref target="protocol.version"/> and future updates to this
+   specification. Additional protocol names ought to be registered using the
+   registration procedure defined in <xref target="upgrade.token.registry"/>.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Expected Version Tokens</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>HTTP</td>
+      <td>Hypertext Transfer Protocol</td>
+      <td>any DIGIT.DIGIT (e.g, "2.0")</td>
+      <td><xref target="protocol.version" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Upgrade Token Registry" anchor="upgrade.token.registry">
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" defines
+   the namespace for protocol-name tokens used to identify protocols in the
+   <x:ref>Upgrade</x:ref> header field. The registry is maintained at
+   <eref target="https://www.iana.org/assignments/http-upgrade-tokens"/>.
+</t>
+<t>
+   Each registered protocol name is associated with contact information
+   and an optional set of specifications that details how the connection
+   will be processed after it has been upgraded.
+</t>
+<t>
+   Registrations happen on a "First Come First Served" basis (see
+   <xref target="RFC8126" x:sec="4.4" x:fmt="of"/>) and are subject to the
+   following rules:
+</t>
+<ol>
+   <li>A protocol-name token, once registered, stays registered forever.</li>
+   <li>A protocol-name token is case-insensitive and registered with the
+       preferred case to be generated by senders.</li>
+   <li>The registration &MUST; name a responsible party for the
+       registration.</li>
+   <li>The registration &MUST; name a point of contact.</li>
+   <li>The registration &MAY; name a set of specifications associated with
+       that token. Such specifications need not be publicly available.</li>
+   <li>The registration &SHOULD; name a set of expected "protocol-version"
+       tokens associated with that token at the time of registration.</li>
+   <li>The responsible party &MAY; change the registration at any time.
+       The IANA will keep a record of all such changes, and make them
+       available upon request.</li>
+   <li>The IESG &MAY; reassign responsibility for a protocol token.
+       This will normally only be used in the case when a
+       responsible party cannot be contacted.</li>
+</ol>
+</section>
+</section>
+
+<section title="Connection-Specific Fields" anchor="field.connection">
+  <x:anchor-alias value="header.connection"/>
+  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
+  <iref primary="true" item="close" x:for-anchor=""/>
+  <x:anchor-alias value="Connection"/>
+  <x:anchor-alias value="connection-option"/>
+  <x:anchor-alias value="close"/>
+<t>
+   The "Connection" header field allows the sender to list desired
+   control options for the current connection.
+</t>
+<t>
+   When a field aside from Connection is used to supply control
+   information for or about the current connection, the sender &MUST; list
+   the corresponding field name within the Connection header field.
+   Note that some versions of HTTP prohibit the use of fields for such
+   information, and therefore do not allow the Connection field.
+</t>
+<t>
+   Intermediaries &MUST; parse a received Connection
+   header field before a message is forwarded and, for each
+   connection-option in this field, remove any header or trailer field(s) from
+   the message with the same name as the connection-option, and then
+   remove the Connection header field itself (or replace it with the
+   intermediary's own connection options for the forwarded message).
+</t>
+<t>
+   Hence, the Connection header field provides a declarative way of
+   distinguishing fields that are only intended for the
+   immediate recipient ("hop-by-hop") from those fields that are
+   intended for all recipients on the chain ("end-to-end"), enabling the
+   message to be self-descriptive and allowing future connection-specific
+   extensions to be deployed without fear that they will be blindly
+   forwarded by older intermediaries.
+</t>
+<t>
+   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
+   semantics are known to require removal before forwarding, whether or not they appear as a Connection
+   option, after applying those fields' semantics. This includes but is not limited to:
+</t>
+<ul>
+   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
+   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
+   <li>TE (<xref target="field.te"/>)</li>
+   <li>Trailer (<xref target="field.trailer"/>)</li>
+   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
+   <li>Upgrade (<xref target="field.upgrade"/>)</li>
+</ul>
+<t>
+   The Connection header field's value has the following grammar:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
+  <x:ref>Connection</x:ref>        = #<x:ref>connection-option</x:ref>
+  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Connection options are case-insensitive.
+</t>
+<t>
+   A sender &MUST-NOT; send a connection option corresponding to a
+   field that is intended for all recipients of the payload.
+   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
+   connection option (<xref target="field.cache-control"/>).
+</t>
+<t>
+   The connection options do not always correspond to a field
+   present in the message, since a connection-specific field
+   might not be needed if there are no parameters associated with a
+   connection option. In contrast, a connection-specific field that
+   is received without a corresponding connection option usually indicates
+   that the field has been improperly forwarded by an intermediary and
+   ought to be ignored by the recipient.
+</t>
+<t>
+   When defining new connection options, specification authors ought to
+   document it as reserved field name and register that definition in the
+   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
+   target="field.name.registry"/>), to avoid collisions.
+</t>
+</section>
+</section>
+
 <section title="Extending and Versioning HTTP" anchor="extending.versioning">
 <t>
    While HTTP's core semantics don't change between protocol versions, the
@@ -2622,834 +3450,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
     </tr>
   </tbody>
 </table>
-</section>
-</section>
-
-<section title="Message Routing" anchor="message.routing">
-<t>
-   HTTP request message routing is determined by each client based on the
-   target resource, the client's proxy configuration, and
-   establishment or reuse of an inbound connection.  The corresponding
-   response routing follows the same connection chain back to the client.
-</t>
-
-<section title="Identifying a Target Resource" anchor="target.resource">
-  <iref primary="true" item="target resource"/>
-  <iref primary="true" item="target URI"/>
-  <x:anchor-alias value="target resource"/>
-  <x:anchor-alias value="target URI"/>
-<t>
-   HTTP is used in a wide variety of applications, ranging from
-   general-purpose computers to home appliances.  In some cases,
-   communication options are hard-coded in a client's configuration.
-   However, most HTTP clients rely on the same resource identification
-   mechanism and configuration techniques as general-purpose Web browsers.
-</t>
-<t>
-   HTTP communication is initiated by a user agent for some purpose. The
-   purpose is a combination of request semantics and a target resource upon
-   which to apply those semantics. The "<x:dfn>request target</x:dfn>" is
-   the protocol element that identifies the "<x:dfn>target resource</x:dfn>".
-</t>
-<t>
-   Typically, the request target is a URI reference (<xref target="uri"/>)
-   which a user agent would resolve to its absolute form in order to obtain
-   the "<x:dfn>target URI</x:dfn>". The target URI excludes the reference's
-   fragment component, if any, since fragment identifiers are reserved for
-   client-side processing (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
-</t>
-<t>
-   However, there are two special, method-specific forms allowed for the
-   request target in specific circumstances:
-</t>
-<ul>   
-   <li>
-      For CONNECT (<xref target="CONNECT"/>), the request target is the host
-      name and port number of the tunnel destination, separated by a colon.
-   </li>
-   <li>
-      For OPTIONS (<xref target="OPTIONS"/>), the request target can be a
-      single asterisk ("*").
-   </li>
-</ul>
-<t>
-   See the respective method definitions for details. These forms &MUST-NOT;
-   be used with other methods.
-</t>
-</section>
-
-<section title="Determining Origin" anchor="origin">
-  <iref primary="true" item="origin"/>
-  <iref primary="true" item="URI" subitem="origin"/>
-<t>
-   The "<x:dfn>origin</x:dfn>" for a given URI is the triple of scheme, host,
-   and port after normalizing the scheme and host to lowercase and
-   normalizing the port to remove any leading zeros. If port is elided from
-   the URI, the default port for that scheme is used. For example, the URI
-</t>
-<artwork type="example">
-   https://Example.Com/happy.js
-</artwork>
-<t>
-   would have the origin
-</t>
-<artwork type="example">
-   { "https", "example.com", "443" }
-</artwork>
-<t>
-   which can also be described as the normalized URI prefix with port always
-   present:
-</t>
-<artwork type="example">
-   https://example.com:443
-</artwork>
-<t>
-   Each origin defines its own namespace and controls how identifiers
-   within that namespace are mapped to resources. In turn, how the origin
-   responds to valid requests, consistently over time, determines the
-   semantics that users will associate with a URI, and the usefulness of
-   those semantics is what ultimately transforms these mechanisms into a
-   "resource" for users to reference and access in the future.
-</t>
-<t>
-   Two origins are distinct if they differ in scheme, host, or port. Even
-   when it can be verified that the same entity controls two distinct origins,
-   the two namespaces under those origins are distinct unless explicitly
-   aliased by a server authoritative for that origin.
-</t>
-<t>
-   Origin is also used within HTML and related Web protocols, beyond the
-   scope of this document, as described in <xref target="RFC6454"/>.
-</t>
-</section>
-
-<section title="Routing Inbound" anchor="routing.inbound">
-<t>
-   Once the target URI and its origin are determined, a client decides whether
-   a network request is necessary to accomplish the desired semantics and,
-   if so, where that request is to be directed.
-</t>
-
-<section title="To a Cache" anchor="routing.cache">
-<t>
-   If the client has a cache <xref target="Caching"/> and the request can be
-   satisfied by it, then the request is
-   usually directed there first.
-</t>
-</section>
-
-<section title="To a Proxy" anchor="routing.proxy">
-<t>
-   If the request is not satisfied by a cache, then a typical client will
-   check its configuration to determine whether a proxy is to be used to
-   satisfy the request.  Proxy configuration is implementation-dependent,
-   but is often based on URI prefix matching, selective authority matching,
-   or both, and the proxy itself is usually identified by an "http" or
-   "https" URI.  If a proxy is applicable, the client connects inbound by
-   establishing (or reusing) a connection to that proxy.
-</t>
-</section>
-
-<section title="To the Origin" anchor="routing.origin">
-<t>
-   If no proxy is applicable, a typical client will invoke a handler routine,
-   usually specific to the target URI's scheme, to connect directly
-   to an origin for the target resource.  How that is accomplished is
-   dependent on the target URI scheme and defined by its associated
-   specification.
-</t>
-
-<section title="http origins" anchor="http.origin">
-<t>
-   Although HTTP is independent of the transport protocol, the "http" scheme
-   (<xref target="http.uri"/>) is specific to associating authority with
-   whomever controls the origin
-   server listening for TCP connections on the indicated port of whatever
-   host is identified within the authority component. This is a very weak
-   sense of authority because it depends on both client-specific name
-   resolution mechanisms and communication that might not be secured from
-   an on-path attacker. Nevertheless, it is a sufficient minimum for
-   binding "http" identifiers to an origin server for consistent resolution
-   within a trusted environment.
-</t>
-<t>
-   If the host identifier is provided as an IP address, the origin server is
-   the listener (if any) on the indicated TCP port at that IP address.
-   If host is a registered name, the registered name is an indirect identifier
-   for use with a name resolution service, such as DNS, to find an address for
-   an appropriate origin server.
-</t>
-<t>
-   When an "http" URI is used within a context that calls for access to the
-   indicated resource, a client &MAY; attempt access by resolving the host
-   identifier to an IP address, establishing a TCP connection to that address
-   on the indicated port, and sending an HTTP request message to the server
-   containing the URI's identifying data.
-</t>
-<t>
-   If the server responds to such a request with a non-interim HTTP response
-   message, as described in <xref target="status.codes"/>, then that response
-   is considered an authoritative answer to the client's request.
-</t>
-<t>
-   Note, however, that the above is not the only means for obtaining an
-   authoritative response, nor does it imply that an authoritative response
-   is always necessary (see <xref target="Caching"/>).
-   For example, the Alt-Svc header field <xref target="RFC7838"/> allows an
-   origin server to identify other services that are also authoritative for
-   that origin. Access to "http" identified resources might also be provided
-   by protocols outside the scope of this document.
-</t>
-<t>
-   See <xref target="establishing.authority"/> for security considerations
-   related to establishing authority.
-</t>
-</section>
-
-<section title="https origins" anchor="https.origin">
-<t>
-   The "https" scheme (<xref target="https.uri"/>) associates authority based
-   on the ability of a server to use the private key corresponding to a
-   certificate that the client considers to be trustworthy for the identified
-   origin server. The client usually relies upon a chain of trust, conveyed
-   from some prearranged or configured trust anchor, to deem a certificate
-   trustworthy (<xref target="https.verify"/>).
-</t>
-<t>
-   In HTTP/1.1 and earlier, a client will only attribute authority to a server
-   when they are communicating over a successfully established and secured
-   connection specifically to that URI origin's host. The connection
-   establishment and certificate verification are used as proof of authority.
-</t>
-<t>
-   In HTTP/2 and HTTP/3, a client will attribute authority to a server when
-   they are communicating over a successfully established and secured
-   connection if the URI origin's host matches any of the hosts present in the
-   server's certificate and the client believes that it could open a connection
-   to that host for that URI. In practice, a client will make a DNS query to
-   check that the origin's host contains the same server IP address as the
-   established connection. This restriction can be removed by the origin server
-   sending an equivalent ORIGIN frame <xref target="RFC8336"/>.
-</t>
-<t>
-   The request target's host and port value are passed within each HTTP
-   request, identifying the origin and distinguishing it from other namespaces
-   that might be controlled by the same server.
-   It is the origin's responsibility to ensure that any services provided with
-   control over its certificate's private key are equally responsible for
-   managing the corresponding "https" namespaces, or at least prepared to
-   reject requests that appear to have been misdirected. A server might be
-   unwilling to serve as the origin for some hosts even when they have the
-   authority to do so.
-</t>
-<t>
-   For example, if a network attacker causes connections for port N to be
-   received at port Q, checking the target URI is necessary to ensure that the
-   attacker can't cause "https://example.com:N/foo" to be replaced by
-   "https://example.com:Q/foo" without consent.
-</t>
-<t>
-   Note that the "https" scheme does not rely on TCP and the connected port
-   number for associating authority, since both are outside the secured
-   communication and thus cannot be trusted as definitive. Hence, the HTTP
-   communication might take place over any channel that has been secured,
-   as defined in <xref target="https.uri"/>, including protocols that don't
-   use TCP.
-</t>
-<t>
-   When an "https" URI is used within a context that calls for access to the
-   indicated resource, a client &MAY; attempt access by resolving the host
-   identifier to an IP address, establishing a TCP connection to that address
-   on the indicated port, securing the connection end-to-end by successfully
-   initiating TLS over TCP with confidentiality and integrity protection, and
-   sending an HTTP request message over that connection containing the URI's
-   identifying data.
-</t>
-<t>
-   If the server responds to such a request with a non-interim HTTP response
-   message, as described in <xref target="status.codes"/>, then that response
-   is considered an authoritative answer to the client's request.
-</t>
-<t>
-   Note, however, that the above is not the only means for obtaining an
-   authoritative response, nor does it imply that an authoritative response
-   is always necessary (see <xref target="Caching"/>).
-</t>
-</section>
-
-<section title="https certificate verification" anchor="https.verify">
-<t>
-   To establish a <x:ref>secured</x:ref> connection to dereference a URI,
-   a client &MUST; verify that the service's identity is an acceptable
-   match for the URI's origin server. Certificate verification is used to
-   prevent server impersonation by an on-path attacker or by an attacker
-   that controls name resolution. This process requires that a client be
-   configured with a set of trust anchors. 
-</t>
-<t>
-   In general, a client &MUST; verify the service identity using the
-   verification process defined in
-   <xref target="RFC6125" x:fmt="of" x:sec="6"/> (for a reference identifier of
-   type URI-ID) unless the client has been specifically configured to accept
-   some other form of verification. For example, a client might be connecting
-   to a server whose address and hostname are dynamic, with an expectation that
-   the service will present a specific certificate (or a certificate matching
-   some externally defined reference identity) rather than one matching the
-   dynamic URI's origin server identifier.
-</t>
-<t>
-   In special cases, it might be appropriate for
-   a client to simply ignore the server's identity, but it must be
-   understood that this leaves a connection open to active attack.
-</t>
-<t>
-   If the certificate is not valid for the URI's origin server,
-   a user agent &MUST; either notify the user (user agents &MAY; give the
-   user an option to continue with the connection in any case) or
-   terminate the connection with a bad certificate error. Automated
-   clients &MUST; log the error to an appropriate audit log (if available)
-   and &SHOULD; terminate the connection (with a bad certificate error).
-   Automated clients &MAY; provide a configuration setting that disables
-   this check, but &MUST; provide a setting which enables it.
-</t>
-</section>
-</section>
-</section>
-
-<section title="Reconstructing the Target URI" anchor="reconstructing.target.uri">
-<t>
-   Once an inbound connection is obtained,
-   the client sends an HTTP request message.
-</t>
-<t>
-   Depending on the nature of the request, the client's target URI might be
-   split into components and transmitted (or implied) within various parts of
-   a request message. These parts are recombined by each recipient, in
-   accordance with their local configuration and incoming connection context,
-   to determine the target URI.
-   <xref target="h1.effective.request.uri"/> defines how a server
-   determines the target URI for an HTTP/1.1 request.
-</t>
-<t>
-   Once the target URI has been reconstructed, an origin server needs
-   to decide whether or not to provide service for that URI via the connection
-   in which the request was received. For example, the request might have been
-   misdirected, deliberately or accidentally, such that the information within
-   a received <x:ref>Host</x:ref> header
-   field differs from the host or port upon which the connection has been
-   made. If the connection is from a trusted gateway, that inconsistency might
-   be expected; otherwise, it might indicate an attempt to bypass security
-   filters, trick the server into delivering non-public content, or poison a
-   cache. See <xref target="security.considerations"/> for security
-   considerations regarding message routing.
-</t>
-<aside anchor="effective.request.uri">
-  <t>
-    <iref primary="true" item="effective request URI"/>
-    &Note; previous specifications defined the recomposed target URI as a
-    distinct concept, the <x:dfn>effective request URI</x:dfn>.
-  </t>
-</aside>
-</section>
-
-<section title="Host" anchor="field.host">
-  <x:anchor-alias value="header.host"/>
-  <iref primary="true" item="Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Host header field" x:for-anchor=""/>
-  <x:anchor-alias value="Host"/>
-<t>
-   The "Host" header field in a request provides the host and port
-   information from the target URI, enabling the origin
-   server to distinguish among resources while servicing requests
-   for multiple host names on a single IP address.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Host"/>
-  <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="uri"/>
-</sourcecode>
-<t>
-   Since the Host field value is critical information for handling a request,
-   a user agent &SHOULD; generate Host as the first field in the header section.
-</t>
-<t>
-   For example, a GET request to the origin server for
-   &lt;http://www.example.org/pub/WWW/&gt; would begin with:
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET /pub/WWW/ HTTP/1.1
-Host: www.example.org
-</artwork>
-<t>
-   Since the Host header field acts as an application-level routing
-   mechanism, it is a frequent target for malware seeking to poison
-   a shared cache or redirect a request to an unintended server.
-   An interception proxy is particularly vulnerable if it relies on
-   the Host field value for redirecting requests to internal
-   servers, or for use as a cache key in a shared cache, without
-   first verifying that the intercepted connection is targeting a
-   valid IP address for that host.
-</t>
-</section>
-
-<section title="Message Forwarding" anchor="message.forwarding">
-<t>
-   As described in <xref target="intermediaries"/>, intermediaries can serve
-   a variety of roles in the processing of HTTP requests and responses.
-   Some intermediaries are used to improve performance or availability.
-   Others are used for access control or to filter content.
-   Since an HTTP stream has characteristics similar to a pipe-and-filter
-   architecture, there are no inherent limits to the extent an intermediary
-   can enhance (or interfere) with either direction of the stream.
-</t>
-<t>
-   An intermediary not acting as a tunnel &MUST; implement the
-   <x:ref>Connection</x:ref> header field, as specified in
-   <xref target="field.connection"/>, and exclude fields from being forwarded
-   that are only intended for the incoming connection.
-</t>
-<t>
-   An intermediary &MUST-NOT; forward a message to itself unless it is
-   protected from an infinite request loop. In general, an intermediary ought
-   to recognize its own server names, including any aliases, local variations,
-   or literal IP addresses, and respond to such requests directly.
-</t>
-<t>
-   An HTTP message can be parsed as a stream for incremental processing or
-   forwarding downstream.  However, recipients cannot rely on incremental
-   delivery of partial messages, since some implementations will buffer or
-   delay message forwarding for the sake of network efficiency, security
-   checks, or payload transformations.
-</t>
-
-<section title="Via" anchor="field.via">
-  <x:anchor-alias value="header.via"/>
-  <iref primary="true" item="Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Via header field" x:for-anchor=""/>
-  <x:anchor-alias value="pseudonym"/>
-  <x:anchor-alias value="received-by"/>
-  <x:anchor-alias value="received-protocol"/>
-  <x:anchor-alias value="Via"/>
-<t>
-   The "Via" header field indicates the presence of intermediate protocols and
-   recipients between the user agent and the server (on requests) or between
-   the origin server and the client (on responses), similar to the
-   "Received" header field in email
-   (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>).
-   Via can be used for tracking message forwards,
-   avoiding request loops, and identifying the protocol capabilities of
-   senders along the request/response chain.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
-  <x:ref>Via</x:ref> = #( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
-
-  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
-                    ; see <xref target="field.upgrade"/>
-  <x:ref>received-by</x:ref>       = <x:ref>pseudonym</x:ref> [ ":" <x:ref>port</x:ref> ]
-  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Each member of the Via field value represents a proxy or gateway that has
-   forwarded the message. Each intermediary appends its own information
-   about how the message was received, such that the end result is ordered
-   according to the sequence of forwarding recipients.
-</t>
-<t>
-   A proxy &MUST; send an appropriate Via header field, as described below, in
-   each message that it forwards.
-   An HTTP-to-HTTP gateway &MUST; send an appropriate Via header field in
-   each inbound request message and &MAY; send a Via header field in
-   forwarded response messages.
-</t>
-<t>
-   For each intermediary, the received-protocol indicates the protocol and
-   protocol version used by the upstream sender of the message. Hence, the
-   Via field value records the advertised protocol capabilities of the
-   request/response chain such that they remain visible to downstream
-   recipients; this can be useful for determining what backwards-incompatible
-   features might be safe to use in response, or within a later request, as
-   described in <xref target="protocol.version"/>. For brevity, the protocol-name
-   is omitted when the received protocol is HTTP.
-</t>
-<t>
-   The received-by portion is normally the host and optional
-   port number of a recipient server or client that subsequently forwarded the
-   message.
-   However, if the real host is considered to be sensitive information, a
-   sender &MAY; replace it with a pseudonym. If a port is not provided,
-   a recipient &MAY; interpret that as meaning it was received on the default
-   TCP port, if any, for the received-protocol.
-</t>
-<t>
-   A sender &MAY; generate comments to identify the
-   software of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
-   <x:ref>Server</x:ref> header fields. However, comments in Via
-   are optional, and a recipient &MAY; remove them prior to forwarding the
-   message.
-</t>
-<t>
-   For example, a request message could be sent from an HTTP/1.0 user
-   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
-   forward the request to a public proxy at p.example.net, which completes
-   the request by forwarding it to the origin server at www.example.com.
-   The request received by www.example.com would then have the following
-   Via header field:
-</t>
-<artwork type="example">
-  Via: 1.0 fred, 1.1 p.example.net
-</artwork>
-<t>
-   An intermediary used as a portal through a network firewall
-   &SHOULD-NOT; forward the names and ports of hosts within the firewall
-   region unless it is explicitly enabled to do so. If not enabled, such an
-   intermediary &SHOULD; replace each received-by host of any host behind the
-   firewall by an appropriate pseudonym for that host.
-</t>
-<t>
-   An intermediary &MAY; combine an ordered subsequence of Via header
-   field list members into a single member if the entries have identical
-   received-protocol values. For example,
-</t>
-<artwork type="example">
-  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
-</artwork>
-<t>
-  could be collapsed to
-</t>
-<artwork type="example">
-  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
-</artwork>
-<t>
-   A sender &SHOULD-NOT; combine multiple list members unless they are all
-   under the same organizational control and the hosts have already been
-   replaced by pseudonyms. A sender &MUST-NOT; combine members that
-   have different received-protocol values.
-</t>
-</section>
-
-<section title="Transformations" anchor="message.transformations">
-   <iref primary="true" item="transforming proxy"/>
-   <iref primary="true" item="non-transforming proxy"/>
-<t>
-   Some intermediaries include features for transforming messages and their
-   payloads. A proxy might, for example, convert between image formats in
-   order to save cache space or to reduce the amount of traffic on a slow
-   link. However, operational problems might occur when these transformations
-   are applied to payloads intended for critical applications, such as medical
-   imaging or scientific data analysis, particularly when integrity checks or
-   digital signatures are used to ensure that the payload received is
-   identical to the original.
-</t>
-<t>
-   An HTTP-to-HTTP proxy is called a "<x:dfn>transforming proxy</x:dfn>"
-   if it is designed or configured to modify messages in a semantically
-   meaningful way (i.e., modifications, beyond those required by normal
-   HTTP processing, that change the message in a way that would be
-   significant to the original sender or potentially significant to
-   downstream recipients).  For example, a transforming proxy might be
-   acting as a shared annotation server (modifying responses to include
-   references to a local annotation database), a malware filter, a
-   format transcoder, or a privacy filter. Such transformations are presumed
-   to be desired by whichever client (or client organization) selected the
-   proxy.
-</t>
-<t>
-   If a proxy receives a target URI with a host name that is not a
-   fully qualified domain name, it &MAY; add its own domain to the host name
-   it received when forwarding the request.  A proxy &MUST-NOT; change the
-   host name if the target URI contains a fully qualified domain name.
-</t>
-<t>
-   A proxy &MUST-NOT; modify the "absolute-path" and "query" parts of the
-   received target URI when forwarding it to the next inbound server,
-   except as noted above to replace an empty path with "/" or "*".
-</t>
-<t>
-   A proxy &MUST-NOT; transform the payload (<xref target="payload"/>) of a message that
-   contains a no-transform cache-control response directive (<xref target="field.cache-control"/>).
-   Note that this does not include changes to the message body that do not affect
-   the payload, such as transfer codings (<xref target="transfer.codings"/>).
-</t>
-<t>
-   A proxy &MAY; transform the payload of a message
-   that does not contain a no-transform cache-control directive.
-   A proxy that transforms the payload of a <x:ref>200 (OK)</x:ref> response
-   can inform downstream recipients that a transformation has been
-   applied by changing the response status code to
-   <x:ref>203 (Non-Authoritative Information)</x:ref> (<xref target="status.203"/>).
-</t>
-<t>
-   A proxy &SHOULD-NOT; modify header fields that provide information about
-   the endpoints of the communication chain, the resource state, or the
-   <x:ref>selected representation</x:ref> (other than the payload) unless the field's
-   definition specifically allows such modification or the modification is
-   deemed necessary for privacy or security.
-</t>
-</section>
-</section>
-
-
-<section title="Upgrading HTTP" anchor="field.upgrade">
-  <x:anchor-alias value="header.upgrade"/>
-  <iref primary="true" item="Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Upgrade header field" x:for-anchor=""/>
-  <x:anchor-alias value="Upgrade"/>
-  <x:anchor-alias value="protocol"/>
-  <x:anchor-alias value="protocol-name"/>
-  <x:anchor-alias value="protocol-version"/>
-<t>
-   The "Upgrade" header field is intended to provide a simple mechanism
-   for transitioning from HTTP/1.1 to some other protocol on the same
-   connection.
-</t>
-<t>
-   A client &MAY; send a list of protocol names in the Upgrade header field
-   of a request to invite the server to switch to one or more of the named
-   protocols, in order of descending preference, before sending
-   the final response. A server &MAY; ignore a received Upgrade header field
-   if it wishes to continue using the current protocol on that connection.
-   Upgrade cannot be used to insist on a protocol change.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Upgrade"/>
-  <x:ref>Upgrade</x:ref>          = #<x:ref>protocol</x:ref>
-
-  <x:ref>protocol</x:ref>         = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
-  <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
-  <x:ref>protocol-version</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Although protocol names are registered with a preferred case,
-   recipients &SHOULD; use case-insensitive comparison when matching each
-   protocol-name to supported protocols.
-</t>
-<t>
-   A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
-   &MUST; send an Upgrade header field to indicate the new protocol(s) to
-   which the connection is being switched; if multiple protocol layers are
-   being switched, the sender &MUST; list the protocols in layer-ascending
-   order. A server &MUST-NOT; switch to a protocol that was not indicated by
-   the client in the corresponding request's Upgrade header field.
-   A server &MAY; choose to ignore the order of preference indicated by the
-   client and select the new protocol(s) based on other factors, such as the
-   nature of the request or the current load on the server.
-</t>
-<t>
-   A server that sends a <x:ref>426 (Upgrade Required)</x:ref> response
-   &MUST; send an Upgrade header field to indicate the acceptable protocols,
-   in order of descending preference.
-</t>
-<t>
-   A server &MAY; send an Upgrade header field in any other response to
-   advertise that it implements support for upgrading to the listed protocols,
-   in order of descending preference, when appropriate for a future request.
-</t>
-<t>
-   The following is a hypothetical example sent by a client:
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET /hello HTTP/1.1
-Host: www.example.com
-Connection: upgrade
-Upgrade: websocket, IRC/6.9, RTA/x11
-
-</artwork>
-<t>
-   The capabilities and nature of the
-   application-level communication after the protocol change is entirely
-   dependent upon the new protocol(s) chosen. However, immediately after
-   sending the <x:ref>101 (Switching Protocols)</x:ref> response, the server is expected to continue responding to
-   the original request as if it had received its equivalent within the new
-   protocol (i.e., the server still has an outstanding request to satisfy
-   after the protocol has been changed, and is expected to do so without
-   requiring the request to be repeated).
-</t>
-<t>
-   For example, if the Upgrade header field is received in a GET request
-   and the server decides to switch protocols, it first responds
-   with a <x:ref>101 (Switching Protocols)</x:ref> message in HTTP/1.1 and
-   then immediately follows that with the new protocol's equivalent of a
-   response to a GET on the target resource.  This allows a connection to be
-   upgraded to protocols with the same semantics as HTTP without the
-   latency cost of an additional round trip.  A server &MUST-NOT; switch
-   protocols unless the received message semantics can be honored by the new
-   protocol; an OPTIONS request can be honored by any protocol.
-</t>
-<t>
-   The following is an example response to the above hypothetical request:
-</t>
-<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
-HTTP/1.1 101 Switching Protocols
-Connection: upgrade
-Upgrade: websocket
-
-[... data stream switches to websocket with an appropriate response
-(as defined by new protocol) to the "GET /hello" request ...]
-</artwork>
-<t>
-   When Upgrade is sent, the sender &MUST; also send a
-   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
-   that contains an "upgrade" connection option, in order to prevent Upgrade
-   from being accidentally forwarded by intermediaries that might not implement
-   the listed protocols.  A server &MUST; ignore an Upgrade header field that
-   is received in an HTTP/1.0 request.
-</t>
-<t>
-   A client cannot begin using an upgraded protocol on the connection until
-   it has completely sent the request message (i.e., the client can't change
-   the protocol it is sending in the middle of a message).
-   If a server receives both an Upgrade and an <x:ref>Expect</x:ref> header field
-   with the "100-continue" expectation (<xref target="field.expect"/>), the
-   server &MUST; send a <x:ref>100 (Continue)</x:ref> response before sending
-   a <x:ref>101 (Switching Protocols)</x:ref> response.
-</t>
-<t>
-   The Upgrade header field only applies to switching protocols on top of the
-   existing connection; it cannot be used to switch the underlying connection
-   (transport) protocol, nor to switch the existing communication to a
-   different connection. For those purposes, it is more appropriate to use a
-   <x:ref>3xx (Redirection)</x:ref> response (<xref target="status.3xx"/>).
-</t>
-
-<section title="Upgrade Protocol Names" anchor="upgrade.protocol.names">
-<t>
-   This specification only defines the protocol name "HTTP" for use by
-   the family of Hypertext Transfer Protocols, as defined by the HTTP
-   version rules of <xref target="protocol.version"/> and future updates to this
-   specification. Additional protocol names ought to be registered using the
-   registration procedure defined in <xref target="upgrade.token.registry"/>.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Description</th>
-      <th>Expected Version Tokens</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>HTTP</td>
-      <td>Hypertext Transfer Protocol</td>
-      <td>any DIGIT.DIGIT (e.g, "2.0")</td>
-      <td><xref target="protocol.version" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-</section>
-
-<section title="Upgrade Token Registry" anchor="upgrade.token.registry">
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" defines
-   the namespace for protocol-name tokens used to identify protocols in the
-   <x:ref>Upgrade</x:ref> header field. The registry is maintained at
-   <eref target="https://www.iana.org/assignments/http-upgrade-tokens"/>.
-</t>
-<t>
-   Each registered protocol name is associated with contact information
-   and an optional set of specifications that details how the connection
-   will be processed after it has been upgraded.
-</t>
-<t>
-   Registrations happen on a "First Come First Served" basis (see
-   <xref target="RFC8126" x:sec="4.4" x:fmt="of"/>) and are subject to the
-   following rules:
-</t>
-<ol>
-   <li>A protocol-name token, once registered, stays registered forever.</li>
-   <li>A protocol-name token is case-insensitive and registered with the
-       preferred case to be generated by senders.</li>
-   <li>The registration &MUST; name a responsible party for the
-       registration.</li>
-   <li>The registration &MUST; name a point of contact.</li>
-   <li>The registration &MAY; name a set of specifications associated with
-       that token. Such specifications need not be publicly available.</li>
-   <li>The registration &SHOULD; name a set of expected "protocol-version"
-       tokens associated with that token at the time of registration.</li>
-   <li>The responsible party &MAY; change the registration at any time.
-       The IANA will keep a record of all such changes, and make them
-       available upon request.</li>
-   <li>The IESG &MAY; reassign responsibility for a protocol token.
-       This will normally only be used in the case when a
-       responsible party cannot be contacted.</li>
-</ol>
-</section>
-</section>
-
-<section title="Connection-Specific Fields" anchor="field.connection">
-  <x:anchor-alias value="header.connection"/>
-  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
-  <iref primary="true" item="close" x:for-anchor=""/>
-  <x:anchor-alias value="Connection"/>
-  <x:anchor-alias value="connection-option"/>
-  <x:anchor-alias value="close"/>
-<t>
-   The "Connection" header field allows the sender to list desired
-   control options for the current connection.
-</t>
-<t>
-   When a field aside from Connection is used to supply control
-   information for or about the current connection, the sender &MUST; list
-   the corresponding field name within the Connection header field.
-   Note that some versions of HTTP prohibit the use of fields for such
-   information, and therefore do not allow the Connection field.
-</t>
-<t>
-   Intermediaries &MUST; parse a received Connection
-   header field before a message is forwarded and, for each
-   connection-option in this field, remove any header or trailer field(s) from
-   the message with the same name as the connection-option, and then
-   remove the Connection header field itself (or replace it with the
-   intermediary's own connection options for the forwarded message).
-</t>
-<t>
-   Hence, the Connection header field provides a declarative way of
-   distinguishing fields that are only intended for the
-   immediate recipient ("hop-by-hop") from those fields that are
-   intended for all recipients on the chain ("end-to-end"), enabling the
-   message to be self-descriptive and allowing future connection-specific
-   extensions to be deployed without fear that they will be blindly
-   forwarded by older intermediaries.
-</t>
-<t>
-   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
-   semantics are known to require removal before forwarding, whether or not they appear as a Connection
-   option, after applying those fields' semantics. This includes but is not limited to:
-</t>
-<ul>
-   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
-   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
-   <li>TE (<xref target="field.te"/>)</li>
-   <li>Trailer (<xref target="field.trailer"/>)</li>
-   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
-   <li>Upgrade (<xref target="field.upgrade"/>)</li>
-</ul>
-<t>
-   The Connection header field's value has the following grammar:
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
-  <x:ref>Connection</x:ref>        = #<x:ref>connection-option</x:ref>
-  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Connection options are case-insensitive.
-</t>
-<t>
-   A sender &MUST-NOT; send a connection option corresponding to a
-   field that is intended for all recipients of the payload.
-   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
-   connection option (<xref target="field.cache-control"/>).
-</t>
-<t>
-   The connection options do not always correspond to a field
-   present in the message, since a connection-specific field
-   might not be needed if there are no parameters associated with a
-   connection option. In contrast, a connection-specific field that
-   is received without a corresponding connection option usually indicates
-   that the field has been improperly forwarded by an intermediary and
-   ought to be ignored by the recipient.
-</t>
-<t>
-   When defining new connection options, specification authors ought to
-   document it as reserved field name and register that definition in the
-   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
-   target="field.name.registry"/>), to avoid collisions.
-</t>
 </section>
 </section>
 
