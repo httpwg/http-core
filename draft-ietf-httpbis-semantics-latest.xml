@@ -5851,223 +5851,6 @@ Content-Range: exampleunit 11.2-14.3/25
 </t>
 </section>
 
-<section title="ETag" anchor="field.etag">
-  <x:anchor-alias value="header.etag"/>
-  <iref primary="true" item="Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Trailer Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="ETag field" x:for-anchor=""/>
-  <x:anchor-alias value="ETag"/>
-  <x:anchor-alias value="entity-tag"/>
-  <x:anchor-alias value="opaque-tag"/>
-  <x:anchor-alias value="weak"/>
-  <x:anchor-alias value="etagc"/>
-<t>
-   The "ETag" field in a response provides the current entity-tag for
-   the <x:ref>selected representation</x:ref>, as determined at the conclusion of handling
-   the request.
-   An entity-tag is an opaque validator for differentiating between
-   multiple representations of the same resource, regardless of whether
-   those multiple representations are due to resource state changes over
-   time, content negotiation resulting in multiple representations being
-   valid at the same time, or both. An entity-tag consists of an opaque
-   quoted string, possibly prefixed by a weakness indicator.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/><iref primary="true" item="Grammar" subitem="etagc"/>
-  <x:ref>ETag</x:ref>       = <x:ref>entity-tag</x:ref>
-
-  <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
-  <x:ref>weak</x:ref>       = %s"W/"
-  <x:ref>opaque-tag</x:ref> = <x:ref>DQUOTE</x:ref> *<x:ref>etagc</x:ref> <x:ref>DQUOTE</x:ref>
-  <x:ref>etagc</x:ref>      = %x21 / %x23-7E / <x:ref>obs-text</x:ref>
-             ; <x:ref>VCHAR</x:ref> except double quotes, plus obs-text
-</sourcecode>
-<aside>
-  <t>
-    &Note; Previously, opaque-tag was defined to be a quoted-string
-    (<xref target="RFC2616" x:fmt="," x:sec="3.11"/>); thus, some recipients
-    might perform backslash unescaping. Servers therefore ought to avoid
-    backslash characters in entity tags.
-  </t>
-</aside>
-<t>
-   An entity-tag can be more reliable for validation than a modification
-   date in situations where it is inconvenient to store modification
-   dates, where the one-second resolution of HTTP date values is not
-   sufficient, or where modification dates are not consistently maintained.
-</t>
-<t>
-  Examples:
-</t>
-<artwork type="example">
-  ETag: "xyzzy"
-  ETag: W/"xyzzy"
-  ETag: ""
-</artwork>
-<t>
-   An entity-tag can be either a weak or strong validator, with
-   strong being the default.  If an origin server provides an entity-tag
-   for a representation and the generation of that entity-tag does not satisfy
-   all of the characteristics of a strong validator
-   (<xref target="weak.and.strong.validators"/>), then the origin server
-   &MUST; mark the entity-tag as weak by prefixing its opaque value
-   with "W/" (case-sensitive).
-</t>
-<t>
-   A sender &MAY; send the Etag field in a trailer section (see
-   <xref target="trailer.fields"/>). However, since trailers are often
-   ignored, it is preferable to send Etag as a header field unless the
-   entity-tag is generated while sending the message body.
-</t>
-
-<section title="Generation" anchor="entity.tag.generation">
-<t>
-   The principle behind entity-tags is that only the service author
-   knows the implementation of a resource well enough to select the
-   most accurate and efficient validation mechanism for that resource,
-   and that any such mechanism can be mapped to a simple sequence of
-   octets for easy comparison.  Since the value is opaque, there is no
-   need for the client to be aware of how each entity-tag is constructed.
-</t>
-<t>
-   For example, a resource that has implementation-specific versioning
-   applied to all changes might use an internal revision number, perhaps
-   combined with a variance identifier for content negotiation, to
-   accurately differentiate between representations.
-   Other implementations might use a collision-resistant hash of
-   representation content, a combination of various file attributes, or
-   a modification timestamp that has sub-second resolution.
-</t>
-<t>
-   An origin server &SHOULD; send an ETag for any selected representation
-   for which detection of changes can be reasonably and consistently
-   determined, since the entity-tag's use in conditional requests and
-   evaluating cache freshness (<xref target="Caching"/>) can result in a substantial
-   reduction of HTTP network traffic and can be a significant factor in
-   improving service scalability and reliability.
-</t>
-</section>
-
-<section title="Comparison" anchor="entity.tag.comparison">
-  <x:anchor-alias value="validator.comparison"/>
-  <x:anchor-alias value="strong comparison"/>
-  <x:anchor-alias value="weak comparison"/>
-<t>
-   There are two entity-tag comparison functions, depending on whether or not
-   the comparison context allows the use of weak validators:
-</t>
-<ul>
-   <li><x:dfn>Strong comparison</x:dfn>: two entity-tags are equivalent if both
-       are not weak and their opaque-tags match character-by-character.</li>
-   <li><x:dfn>Weak comparison</x:dfn>: two entity-tags are equivalent if their opaque-tags
-       match character-by-character, regardless of either or both
-       being tagged as "weak".</li>
-</ul>
-<t>
-   The example below shows the results for a set of entity-tag pairs and both
-   the weak and strong comparison function results:
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>ETag 1</th>
-      <th>ETag 2</th>
-      <th>Strong Comparison</th>
-      <th>Weak Comparison</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>W/"1"</td>
-      <td>W/"1"</td>
-      <td>no match</td>
-      <td>match</td>
-    </tr>
-    <tr>
-      <td>W/"1"</td>
-      <td>W/"2"</td>
-      <td>no match</td>
-      <td>no match</td>
-    </tr>
-    <tr>
-      <td>W/"1"</td>
-      <td>"1"</td>
-      <td>no match</td>
-      <td>match</td>
-    </tr>
-    <tr>
-      <td>"1"</td>
-      <td>"1"</td>
-      <td>match</td>
-      <td>match</td>
-    </tr>
-  </tbody>
-</table>
-</section>
-
-<section title="Example: Entity-Tags Varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
-<t>
-   Consider a resource that is subject to content negotiation
-   (<xref target="content.negotiation"/>), and where the representations sent in response to
-   a GET request vary based on the <x:ref>Accept-Encoding</x:ref> request
-   header field (<xref target="field.accept-encoding"/>):
-</t>
-<t>
-   >> Request:
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
-GET /index HTTP/1.1
-Host: www.example.com
-Accept-Encoding: gzip
-
-</artwork>
-<t>
-   In this case, the response might or might not use the gzip content coding.
-   If it does not, the response might look like:
-</t>
-<t>
-   >> Response:
-</t>
-<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
-HTTP/1.1 200 OK
-Date: Fri, 26 Mar 2010 00:05:00 GMT
-ETag: "123-a"
-Content-Length: <x:length-of target="exbody2"/>
-Vary: Accept-Encoding
-Content-Type: text/plain
-
-<x:span anchor="exbody2">Hello World!
-Hello World!
-Hello World!
-Hello World!
-Hello World!
-</x:span></artwork>
-<t>
-   An alternative representation that does use gzip content coding would be:
-</t>
-<t>
-   >> Response:
-</t>
-<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
-HTTP/1.1 200 OK
-Date: Fri, 26 Mar 2010 00:05:00 GMT
-ETag: "123-b"
-Content-Length: 43
-Vary: Accept-Encoding
-Content-Type: text/plain
-Content-Encoding: gzip
-
-<spanx>...binary data...</spanx></artwork>
-<aside>
-  <t>
-    &Note; Content codings are a property of the representation data,
-    so a strong entity-tag for a content-encoded representation has to be
-    distinct from the entity tag of an unencoded representation to prevent
-    potential conflicts during cache updates and range requests. In contrast,
-    transfer codings (<xref target="transfer.codings"/>) apply only during message transfer
-    and do not result in distinct entity-tags.
-  </t>
-</aside>
-</section>
-</section>
-
 <section title="When to Use Entity-Tags and Last-Modified Dates" anchor="when.to.use.entity.tags.and.last-modified.dates">
 <t>
    In <x:ref>200 (OK)</x:ref> responses to GET or HEAD, an origin server:
@@ -9383,6 +9166,223 @@ Content-Range: bytes 734-1233/1234
    the server is expected to adjust its interpretation of the user's request
    based on differences between the user agent and server clocks.
 </t>
+</section>
+
+<section title="ETag" anchor="field.etag">
+  <x:anchor-alias value="header.etag"/>
+  <iref primary="true" item="Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Trailer Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="ETag field" x:for-anchor=""/>
+  <x:anchor-alias value="ETag"/>
+  <x:anchor-alias value="entity-tag"/>
+  <x:anchor-alias value="opaque-tag"/>
+  <x:anchor-alias value="weak"/>
+  <x:anchor-alias value="etagc"/>
+<t>
+   The "ETag" field in a response provides the current entity-tag for
+   the <x:ref>selected representation</x:ref>, as determined at the conclusion of handling
+   the request.
+   An entity-tag is an opaque validator for differentiating between
+   multiple representations of the same resource, regardless of whether
+   those multiple representations are due to resource state changes over
+   time, content negotiation resulting in multiple representations being
+   valid at the same time, or both. An entity-tag consists of an opaque
+   quoted string, possibly prefixed by a weakness indicator.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/><iref primary="true" item="Grammar" subitem="etagc"/>
+  <x:ref>ETag</x:ref>       = <x:ref>entity-tag</x:ref>
+
+  <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
+  <x:ref>weak</x:ref>       = %s"W/"
+  <x:ref>opaque-tag</x:ref> = <x:ref>DQUOTE</x:ref> *<x:ref>etagc</x:ref> <x:ref>DQUOTE</x:ref>
+  <x:ref>etagc</x:ref>      = %x21 / %x23-7E / <x:ref>obs-text</x:ref>
+             ; <x:ref>VCHAR</x:ref> except double quotes, plus obs-text
+</sourcecode>
+<aside>
+  <t>
+    &Note; Previously, opaque-tag was defined to be a quoted-string
+    (<xref target="RFC2616" x:fmt="," x:sec="3.11"/>); thus, some recipients
+    might perform backslash unescaping. Servers therefore ought to avoid
+    backslash characters in entity tags.
+  </t>
+</aside>
+<t>
+   An entity-tag can be more reliable for validation than a modification
+   date in situations where it is inconvenient to store modification
+   dates, where the one-second resolution of HTTP date values is not
+   sufficient, or where modification dates are not consistently maintained.
+</t>
+<t>
+  Examples:
+</t>
+<artwork type="example">
+  ETag: "xyzzy"
+  ETag: W/"xyzzy"
+  ETag: ""
+</artwork>
+<t>
+   An entity-tag can be either a weak or strong validator, with
+   strong being the default.  If an origin server provides an entity-tag
+   for a representation and the generation of that entity-tag does not satisfy
+   all of the characteristics of a strong validator
+   (<xref target="weak.and.strong.validators"/>), then the origin server
+   &MUST; mark the entity-tag as weak by prefixing its opaque value
+   with "W/" (case-sensitive).
+</t>
+<t>
+   A sender &MAY; send the Etag field in a trailer section (see
+   <xref target="trailer.fields"/>). However, since trailers are often
+   ignored, it is preferable to send Etag as a header field unless the
+   entity-tag is generated while sending the message body.
+</t>
+
+<section title="Generation" anchor="entity.tag.generation">
+<t>
+   The principle behind entity-tags is that only the service author
+   knows the implementation of a resource well enough to select the
+   most accurate and efficient validation mechanism for that resource,
+   and that any such mechanism can be mapped to a simple sequence of
+   octets for easy comparison.  Since the value is opaque, there is no
+   need for the client to be aware of how each entity-tag is constructed.
+</t>
+<t>
+   For example, a resource that has implementation-specific versioning
+   applied to all changes might use an internal revision number, perhaps
+   combined with a variance identifier for content negotiation, to
+   accurately differentiate between representations.
+   Other implementations might use a collision-resistant hash of
+   representation content, a combination of various file attributes, or
+   a modification timestamp that has sub-second resolution.
+</t>
+<t>
+   An origin server &SHOULD; send an ETag for any selected representation
+   for which detection of changes can be reasonably and consistently
+   determined, since the entity-tag's use in conditional requests and
+   evaluating cache freshness (<xref target="Caching"/>) can result in a substantial
+   reduction of HTTP network traffic and can be a significant factor in
+   improving service scalability and reliability.
+</t>
+</section>
+
+<section title="Comparison" anchor="entity.tag.comparison">
+  <x:anchor-alias value="validator.comparison"/>
+  <x:anchor-alias value="strong comparison"/>
+  <x:anchor-alias value="weak comparison"/>
+<t>
+   There are two entity-tag comparison functions, depending on whether or not
+   the comparison context allows the use of weak validators:
+</t>
+<ul>
+   <li><x:dfn>Strong comparison</x:dfn>: two entity-tags are equivalent if both
+       are not weak and their opaque-tags match character-by-character.</li>
+   <li><x:dfn>Weak comparison</x:dfn>: two entity-tags are equivalent if their opaque-tags
+       match character-by-character, regardless of either or both
+       being tagged as "weak".</li>
+</ul>
+<t>
+   The example below shows the results for a set of entity-tag pairs and both
+   the weak and strong comparison function results:
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>ETag 1</th>
+      <th>ETag 2</th>
+      <th>Strong Comparison</th>
+      <th>Weak Comparison</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>W/"1"</td>
+      <td>W/"1"</td>
+      <td>no match</td>
+      <td>match</td>
+    </tr>
+    <tr>
+      <td>W/"1"</td>
+      <td>W/"2"</td>
+      <td>no match</td>
+      <td>no match</td>
+    </tr>
+    <tr>
+      <td>W/"1"</td>
+      <td>"1"</td>
+      <td>no match</td>
+      <td>match</td>
+    </tr>
+    <tr>
+      <td>"1"</td>
+      <td>"1"</td>
+      <td>match</td>
+      <td>match</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Example: Entity-Tags Varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
+<t>
+   Consider a resource that is subject to content negotiation
+   (<xref target="content.negotiation"/>), and where the representations sent in response to
+   a GET request vary based on the <x:ref>Accept-Encoding</x:ref> request
+   header field (<xref target="field.accept-encoding"/>):
+</t>
+<t>
+   >> Request:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
+GET /index HTTP/1.1
+Host: www.example.com
+Accept-Encoding: gzip
+
+</artwork>
+<t>
+   In this case, the response might or might not use the gzip content coding.
+   If it does not, the response might look like:
+</t>
+<t>
+   >> Response:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+HTTP/1.1 200 OK
+Date: Fri, 26 Mar 2010 00:05:00 GMT
+ETag: "123-a"
+Content-Length: <x:length-of target="exbody2"/>
+Vary: Accept-Encoding
+Content-Type: text/plain
+
+<x:span anchor="exbody2">Hello World!
+Hello World!
+Hello World!
+Hello World!
+Hello World!
+</x:span></artwork>
+<t>
+   An alternative representation that does use gzip content coding would be:
+</t>
+<t>
+   >> Response:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+HTTP/1.1 200 OK
+Date: Fri, 26 Mar 2010 00:05:00 GMT
+ETag: "123-b"
+Content-Length: 43
+Vary: Accept-Encoding
+Content-Type: text/plain
+Content-Encoding: gzip
+
+<spanx>...binary data...</spanx></artwork>
+<aside>
+  <t>
+    &Note; Content codings are a property of the representation data,
+    so a strong entity-tag for a content-encoded representation has to be
+    distinct from the entity tag of an unencoded representation to prevent
+    potential conflicts during cache updates and range requests. In contrast,
+    transfer codings (<xref target="transfer.codings"/>) apply only during message transfer
+    and do not result in distinct entity-tags.
+  </t>
+</aside>
+</section>
 </section>
 
 <section title="Expect" anchor="field.expect">
