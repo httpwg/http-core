@@ -1925,6 +1925,556 @@ Content-Type: text/plain
 </section>
 </section>
 
+<section title="Method Definitions" anchor="method.definitions">
+
+<section title="GET" anchor="GET">
+  <rdf:Description>
+    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
+    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
+  </rdf:Description>
+  <iref primary="true" item="GET method" x:for-anchor=""/>
+<t>
+   The GET method requests transfer of a current
+   <x:ref>selected representation</x:ref> for the
+   <x:ref>target resource</x:ref>.
+</t>
+<t>
+   GET is the primary mechanism of information retrieval and the focus of
+   almost all performance optimizations. Hence, when people speak of retrieving
+   some identifiable information via HTTP, they are generally referring to
+   making a GET request. A successful response reflects the quality of
+   "sameness" identified by the target URI.
+   In turn, constructing applications such that they produce a URI
+   for each important resource results in more resources being available for
+   other applications, producing a network effect that promotes further
+   expansion of the Web.
+</t>
+<t>
+   It is tempting to think of resource identifiers as remote file system
+   pathnames and of representations as being a copy of the contents of such
+   files. In fact, that is how many resources are implemented (see
+   <xref target="attack.pathname"/> for related security considerations).
+   However, there are no such limitations in practice.
+</t>
+<t>
+   The HTTP interface for
+   a resource is just as likely to be implemented as a tree of content
+   objects, a programmatic view on various database records, or a gateway to
+   other information systems. Even when the URI mapping mechanism is tied to a
+   file system, an origin server might be configured to execute the files with
+   the request as input and send the output as the representation rather than
+   transfer the files directly. Regardless, only the origin server needs to
+   know how each of its resource identifiers corresponds to an implementation
+   and how each implementation manages to select and send a current
+   representation of the target resource in a response to GET.
+</t>
+<t>
+   A client can alter the semantics of GET to be a "range request", requesting
+   transfer of only some part(s) of the selected representation, by sending a
+   <x:ref>Range</x:ref> header field in the request (<xref target="field.range"/>).
+</t>
+<t>
+   A client &SHOULD-NOT; generate a body in a GET
+   request. A payload received in a GET request has no defined semantics,
+   cannot alter the meaning or target of the request, and might lead some
+   implementations to reject the request and close the connection because of
+   its potential as a request smuggling attack
+   (<xref target="request.smuggling"/>).
+</t>
+<t>
+   The response to a GET request is cacheable; a cache &MAY; use it to satisfy
+   subsequent GET and HEAD requests unless otherwise indicated by the
+   Cache-Control header field (<xref target="field.cache-control"/>).
+   A cache that receives a payload in a GET request is likely to ignore that
+   payload and cache regardless of the payload contents.
+</t>
+<t>
+   When information retrieval is performed with a mechanism that constructs a
+   target URI from user-provided information, such as the query fields of a
+   form using GET, potentially sensitive data might be provided that would not
+   be appropriate for disclosure within a URI
+   (see <xref target="sensitive.information.in.uris"/>). In some cases, the
+   data can be filtered or transformed such that it would not reveal such
+   information. In others, particularly when there is no benefit from caching
+   a response, using the POST method (<xref target="POST"/>) instead of GET
+   will usually transmit such information in the request body rather than
+   construct a new URI.
+</t>
+</section>
+
+<section title="HEAD" anchor="HEAD">
+  <rdf:Description>
+    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
+    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
+  </rdf:Description>
+  <iref primary="true" item="HEAD method" x:for-anchor=""/>
+<t>
+   The HEAD method is identical to GET except that the server &MUST-NOT;
+   send a message body in the response (i.e., the response terminates at the
+   end of the header section). The server &SHOULD; send the same header fields
+   in response to a HEAD request as it would have sent if the request had been
+   a GET, except that the payload header fields (<xref target="payload"/>)
+   &MAY; be omitted. This method can be used for obtaining metadata about the
+   <x:ref>selected representation</x:ref> without transferring the representation data and is
+   often used for testing hypertext links for validity, accessibility, and
+   recent modification.
+</t>
+<t>
+   A payload within a HEAD request message has no defined semantics;
+   sending a payload body on a HEAD request might cause some existing
+   implementations to reject the request.
+</t>
+<t>
+   The response to a HEAD request is cacheable; a cache &MAY; use it to
+   satisfy subsequent HEAD requests unless otherwise indicated by the
+   Cache-Control header field (<xref target="field.cache-control"/>). A HEAD response might
+   also have an effect on previously cached responses to GET; see <xref target="head.effects"/>.
+</t>
+</section>
+
+<section title="POST" anchor="POST">
+  <iref primary="true" item="POST method" x:for-anchor=""/>
+<t>
+   The POST method requests that the <x:ref>target resource</x:ref> process
+   the representation enclosed in the request according to the resource's own
+   specific semantics. For example, POST is used for the following functions
+   (among others):
+</t>
+<ul>
+   <li>Providing a block of data, such as the fields entered into an HTML
+      form, to a data-handling process;</li>
+   <li>Posting a message to a bulletin board, newsgroup, mailing list, blog,
+      or similar group of articles;</li>
+   <li>Creating a new resource that has yet to be identified by the origin
+      server; and</li>
+   <li>Appending data to a resource's existing representation(s).</li>
+</ul>
+<t>
+   An origin server indicates response semantics by choosing an appropriate
+   status code depending on the result of processing the POST request;
+   almost all of the status codes defined by this specification could be
+   received in a response to POST (the exceptions being <x:ref>206 (Partial Content)</x:ref>,
+   <x:ref>304 (Not Modified)</x:ref>, and <x:ref>416 (Range Not Satisfiable)</x:ref>).
+</t>
+<t>
+   If one or more resources has been created on the origin server as a result
+   of successfully processing a POST request, the origin server &SHOULD; send
+   a <x:ref>201 (Created)</x:ref> response containing a <x:ref>Location</x:ref>
+   header field that provides an identifier for the primary resource created
+   (<xref target="field.location"/>) and a representation that describes the
+   status of the request while referring to the new resource(s).
+</t>
+<t>
+   Responses to POST requests are only cacheable when they include explicit
+   freshness information (see <xref
+   target="calculating.freshness.lifetime"/>) and a
+   <x:ref>Content-Location</x:ref> header field that has the same value as
+   the POST's target URI (<xref
+   target="field.content-location"/>). A cached POST response can be reused
+   to satisfy a later GET or HEAD request, but not a POST request, since POST
+   is required to be written through to the origin server, because it is
+   unsafe; see <xref target="constructing.responses.from.caches"/>.
+</t>
+<t>
+   If the result of processing a POST would be equivalent to a representation
+   of an existing resource, an origin server &MAY; redirect the user agent to
+   that resource by sending a <x:ref>303 (See Other)</x:ref> response with the
+   existing resource's identifier in the <x:ref>Location</x:ref> field.
+   This has the benefits of providing the user agent a resource identifier
+   and transferring the representation via a method more amenable to shared
+   caching, though at the cost of an extra request if the user agent does not
+   already have the representation cached.
+</t>
+</section>
+
+<section title="PUT" anchor="PUT">
+  <rdf:Description>
+    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
+  </rdf:Description>
+  <iref primary="true" item="PUT method" x:for-anchor=""/>
+<t>
+   The PUT method requests that the state of the <x:ref>target resource</x:ref>
+   be created or replaced with the state defined by the representation
+   enclosed in the request message payload.  A successful PUT of a given
+   representation would suggest that a subsequent GET on that same target
+   resource will result in an equivalent representation being sent in
+   a <x:ref>200 (OK)</x:ref> response.  However, there is no guarantee that
+   such a state change will be observable, since the target resource might be
+   acted upon by other user agents in parallel, or might be subject to dynamic
+   processing by the origin server, before any subsequent GET is received.
+   A successful response only implies that the user agent's intent was
+   achieved at the time of its processing by the origin server.
+</t>
+<t>   
+   If the target resource does not have a current representation and
+   the PUT successfully creates one, then the origin server &MUST; inform
+   the user agent by sending a <x:ref>201 (Created)</x:ref> response.  If the
+   target resource does have a current representation and that representation is
+   successfully modified in accordance with the state of the enclosed
+   representation, then the origin server &MUST; send either a
+   <x:ref>200 (OK)</x:ref> or a <x:ref>204 (No Content)</x:ref> response to
+   indicate successful completion of the request.
+</t>
+<t>
+   An origin server &SHOULD; ignore unrecognized header and trailer fields
+   received in a PUT request (i.e., do not save them as part of the resource
+   state).
+</t>
+<t>
+   An origin server &SHOULD; verify that the PUT representation is
+   consistent with any constraints the server has for the target
+   resource that cannot or will not be changed by the PUT.  This is
+   particularly important when the origin server uses internal
+   configuration information related to the URI in order to set the
+   values for representation metadata on GET responses.  When a PUT
+   representation is inconsistent with the target resource, the origin
+   server &SHOULD; either make them consistent, by transforming the
+   representation or changing the resource configuration, or respond
+   with an appropriate error message containing sufficient information
+   to explain why the representation is unsuitable.  The
+   <x:ref>409 (Conflict)</x:ref> or <x:ref>415 (Unsupported Media Type)</x:ref>
+   status codes are suggested, with the latter being specific to constraints on
+   <x:ref>Content-Type</x:ref> values.
+</t>
+<t>
+   For example, if the target resource is configured to always have a
+   <x:ref>Content-Type</x:ref> of "text/html" and the representation being PUT
+   has a Content-Type of "image/jpeg", the origin server ought to do one of:
+</t>
+<ol type="a">
+   <li>reconfigure the target resource to reflect the new media type;</li>
+   <li>transform the PUT representation to a format consistent with that
+       of the resource before saving it as the new resource state; or,</li>
+   <li>reject the request with a <x:ref>415 (Unsupported Media Type)</x:ref>
+       response indicating that the target resource is limited to "text/html",
+       perhaps including a link to a different resource that would be a
+       suitable target for the new representation.</li>
+</ol>
+<t>
+   HTTP does not define exactly how a PUT method affects the state
+   of an origin server beyond what can be expressed by the intent of
+   the user agent request and the semantics of the origin server response.
+   It does not define what a resource might be, in any sense of that
+   word, beyond the interface provided via HTTP.  It does not define
+   how resource state is "stored", nor how such storage might change
+   as a result of a change in resource state, nor how the origin server
+   translates resource state into representations.  Generally speaking,
+   all implementation details behind the resource interface are
+   intentionally hidden by the server.
+</t>
+<t>
+   An origin server &MUST-NOT; send a validator header field
+   (<xref target="response.validator"/>), such as an <x:ref>ETag</x:ref> or
+   <x:ref>Last-Modified</x:ref> field, in a successful response to PUT unless
+   the request's representation data was saved without any transformation
+   applied to the body (i.e., the resource's new representation data is
+   identical to the representation data received in the PUT request) and the
+   validator field value reflects the new representation.
+   This requirement allows a user agent to know when the representation body
+   it has in memory remains current as a result of the PUT, thus not in need
+   of being retrieved again from the origin server, and that the new validator(s)
+   received in the response can be used for future conditional requests in
+   order to prevent accidental overwrites (<xref target="preconditions"/>).
+</t>
+<t>
+   The fundamental difference between the POST and PUT methods is
+   highlighted by the different intent for the enclosed representation.
+   The target resource in a POST request is intended to handle the
+   enclosed representation according to the resource's own semantics,
+   whereas the enclosed representation in a PUT request is defined as
+   replacing the state of the target resource. Hence, the intent of PUT is
+   idempotent and visible to intermediaries, even though the exact effect is
+   only known by the origin server.
+</t>
+<t>
+   Proper interpretation of a PUT request presumes that the user agent knows
+   which target resource is desired. A service that selects a proper URI on
+   behalf of the client, after receiving a state-changing request, &SHOULD; be
+   implemented using the POST method rather than PUT. If the origin server
+   will not make the requested PUT state change to the target resource and
+   instead wishes to have it applied to a different resource, such as when the
+   resource has been moved to a different URI, then the origin server &MUST;
+   send an appropriate <x:ref>3xx (Redirection)</x:ref> response; the
+   user agent &MAY; then make its own decision regarding whether or not to
+   redirect the request.
+</t>
+<t>
+   A PUT request applied to the target resource can have side effects
+   on other resources.  For example, an article might have a URI for
+   identifying "the current version" (a resource) that is separate
+   from the URIs identifying each particular version (different
+   resources that at one point shared the same state as the current version
+   resource).  A successful PUT request on "the current version" URI might
+   therefore create a new version resource in addition to changing the
+   state of the target resource, and might also cause links to be added
+   between the related resources.
+</t>
+<t>
+   An origin server that allows PUT on a given target resource &MUST; send a
+   <x:ref>400 (Bad Request)</x:ref> response to a PUT request that contains a
+   <x:ref>Content-Range</x:ref> header field (<xref target="field.content-range"/>), since
+   the payload is likely to be partial content that has been mistakenly PUT as
+   a full representation.
+   Partial content updates are possible by targeting a separately identified
+   resource with state that overlaps a portion of the larger resource, or by
+   using a different method that has been specifically defined for partial
+   updates (for example, the PATCH method defined in
+   <xref target="RFC5789"/>).
+</t>
+<t>
+   Responses to the PUT method are not cacheable. If a successful PUT request
+   passes through a cache that has one or more stored responses for the
+   target URI, those stored responses will be invalidated
+   (see <xref target="invalidation"/>).
+</t>
+</section>
+
+<section title="DELETE" anchor="DELETE">
+  <rdf:Description>
+    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
+  </rdf:Description>
+  <iref primary="true" item="DELETE method" x:for-anchor=""/>
+<t>
+   The DELETE method requests that the origin server remove the association
+   between the <x:ref>target resource</x:ref> and its current functionality.
+   In effect, this method is similar to the rm command in UNIX: it expresses a
+   deletion operation on the URI mapping of the origin server rather than an
+   expectation that the previously associated information be deleted.
+</t>
+<t>
+   If the target resource has one or more current representations, they might
+   or might not be destroyed by the origin server, and the associated storage
+   might or might not be reclaimed, depending entirely on the nature of the
+   resource and its implementation by the origin server (which are beyond the
+   scope of this specification). Likewise, other implementation aspects of a
+   resource might need to be deactivated or archived as a result of a DELETE,
+   such as database or gateway connections. In general, it is assumed that the
+   origin server will only allow DELETE on resources for which it has a
+   prescribed mechanism for accomplishing the deletion.
+</t>
+<t>
+   Relatively few resources allow the DELETE method &mdash; its primary use
+   is for remote authoring environments, where the user has some direction
+   regarding its effect. For example, a resource that was previously created
+   using a PUT request, or identified via the Location header field after a
+   <x:ref>201 (Created)</x:ref> response to a POST request, might allow a
+   corresponding DELETE request to undo those actions.  Similarly, custom
+   user agent implementations that implement an authoring function, such as
+   revision control clients using HTTP for remote operations, might use
+   DELETE based on an assumption that the server's URI space has been crafted
+   to correspond to a version repository.
+</t>
+<t>
+   If a DELETE method is successfully applied, the origin server &SHOULD; send
+</t>
+<ul>
+  <li>a <x:ref>202 (Accepted)</x:ref> status code if the action will likely succeed but
+   has not yet been enacted,</li>
+  <li>a <x:ref>204 (No Content)</x:ref> status code if the action has been
+   enacted and no further information is to be supplied, or</li>
+  <li>a <x:ref>200 (OK)</x:ref> status code if the action has been enacted and
+   the response message includes a representation describing the status.</li>
+</ul>
+<t>
+   A client &SHOULD-NOT; generate a body in a DELETE request. A payload
+   received in a DELETE request has no defined semantics, cannot alter the
+   meaning or target of the request, and might lead some implementations to
+   reject the request.
+</t>
+<t>
+   Responses to the DELETE method are not cacheable. If a successful DELETE
+   request passes through a cache that has one or more stored responses for
+   the target URI, those stored responses will be invalidated (see
+   <xref target="invalidation"/>).
+</t>
+</section>
+
+<section title="CONNECT" anchor="CONNECT">
+  <iref primary="true" item="CONNECT method" x:for-anchor=""/>
+<t>
+   The CONNECT method requests that the recipient establish a tunnel to the
+   destination origin server identified by the request target and, if
+   successful, thereafter restrict its behavior to blind forwarding of
+   data, in both directions, until the tunnel is closed.
+   Tunnels are commonly used to create an end-to-end virtual connection,
+   through one or more proxies, which can then be secured using TLS
+   (Transport Layer Security, <xref target="RFC8446"/>).
+</t>
+<t>
+   Because CONNECT changes the request/response nature of an HTTP connection,
+   specific HTTP versions might have different ways of mapping its semantics
+   into the protocol's wire format.
+</t>
+<t>
+   CONNECT is intended only for use in requests to a proxy.
+   An origin server that receives a CONNECT request for itself &MAY;
+   respond with a <x:ref>2xx (Successful)</x:ref> status code to indicate that a connection
+   is established.  However, most origin servers do not implement CONNECT.
+</t>
+<t>
+   A client sending a CONNECT request &MUST; send the authority component
+   (described in Section 3.2 of <xref target="RFC3986"/>) as the request target;
+   i.e., the request target consists of only the host name and port number of the
+   tunnel destination, separated by a colon. For example,
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+CONNECT server.example.com:80 HTTP/1.1
+Host: server.example.com:80
+
+</artwork>
+<t>
+   The recipient proxy can establish a tunnel either by directly connecting to
+   the request target or, if configured to use another proxy, by forwarding
+   the CONNECT request to the next inbound proxy.
+   Any <x:ref>2xx (Successful)</x:ref> response indicates
+   that the sender (and all inbound proxies) will switch to tunnel mode
+   immediately after the blank line that concludes the successful response's
+   header section; data received after that blank line is from the server
+   identified by the request target.
+   Any response other than a successful response indicates that the tunnel
+   has not yet been formed and that the connection remains governed by HTTP.
+</t>
+<t>
+   A tunnel is closed when a tunnel intermediary detects that either side
+   has closed its connection: the intermediary &MUST; attempt to send any
+   outstanding data that came from the closed side to the other side, close
+   both connections, and then discard any remaining data left undelivered.
+</t>
+<t>
+   Proxy authentication might be used to establish the
+   authority to create a tunnel.  For example,
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+CONNECT server.example.com:80 HTTP/1.1
+Host: server.example.com:80
+Proxy-Authorization: basic aGVsbG86d29ybGQ=
+
+</artwork>
+<t>
+   There are significant risks in establishing a tunnel to arbitrary servers,
+   particularly when the destination is a well-known or reserved TCP port that
+   is not intended for Web traffic. For example, a CONNECT to
+   "example.com:25" would suggest that the proxy connect to the reserved
+   port for SMTP traffic; if allowed, that could trick the proxy into
+   relaying spam email. Proxies that support CONNECT &SHOULD; restrict its
+   use to a limited set of known ports or a configurable whitelist of safe
+   request targets.
+</t>
+<t>
+   A server &MUST-NOT; send any <x:ref>Transfer-Encoding</x:ref> or
+   <x:ref>Content-Length</x:ref> header fields in a
+   <x:ref>2xx (Successful)</x:ref> response to CONNECT.
+   A client &MUST; ignore any Content-Length or Transfer-Encoding header
+   fields received in a successful response to CONNECT.
+</t>
+<t>
+   A payload within a CONNECT request message has no defined semantics;
+   sending a payload body on a CONNECT request might cause some existing
+   implementations to reject the request.
+</t>
+<t>
+   Responses to the CONNECT method are not cacheable.
+</t>
+</section>
+
+<section title="OPTIONS" anchor="OPTIONS">
+  <rdf:Description>
+    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
+    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
+  </rdf:Description>
+  <iref primary="true" item="OPTIONS method" x:for-anchor=""/>
+<t>
+   The OPTIONS method requests information about the communication options
+   available for the target resource, at either the origin server or an
+   intervening intermediary. This method allows a client to determine the
+   options and/or requirements associated with a resource, or the capabilities
+   of a server, without implying a resource action.
+</t>
+<t>
+   An OPTIONS request with an asterisk ("*") as the request target
+   (<xref target="target.resource"/>) applies to the server in general rather than to a
+   specific resource. Since a server's communication options typically depend
+   on the resource, the "*" request is only useful as a "ping" or "no-op"
+   type of method; it does nothing beyond allowing the client to test
+   the capabilities of the server. For example, this can be used to test
+   a proxy for HTTP/1.1 conformance (or lack thereof).
+</t>
+<t>
+   If the request target is not an asterisk, the OPTIONS request applies
+   to the options that are available when communicating with the target
+   resource.
+</t>
+<t>
+   A server generating a successful response to OPTIONS &SHOULD; send any
+   header that might indicate optional features implemented by the
+   server and applicable to the target resource (e.g., <x:ref>Allow</x:ref>),
+   including potential extensions not defined by this specification.
+   The response payload, if any, might also describe the communication options
+   in a machine or human-readable representation. A standard format for such a
+   representation is not defined by this specification, but might be defined by
+   future extensions to HTTP.
+</t>
+<t>
+   A client &MAY; send a <x:ref>Max-Forwards</x:ref> header field in an
+   OPTIONS request to target a specific recipient in the request chain (see
+   <xref target="field.max-forwards"/>). A proxy &MUST-NOT; generate a
+   Max-Forwards header field while forwarding a request unless that request
+   was received with a Max-Forwards field.
+</t>
+<t>
+   A client that generates an OPTIONS request containing a payload body
+   &MUST; send a valid <x:ref>Content-Type</x:ref> header field describing
+   the representation media type. Note that this specification does not define
+   any use for such a payload.
+</t>
+<t>
+   Responses to the OPTIONS method are not cacheable.
+</t>
+</section>
+
+<section title="TRACE" anchor="TRACE">
+  <rdf:Description>
+    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
+    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
+  </rdf:Description>
+  <iref primary="true" item="TRACE method" x:for-anchor=""/>
+<t>
+   The TRACE method requests a remote, application-level loop-back of the
+   request message. The final recipient of the request &SHOULD; reflect the
+   message received, excluding some fields described below, back to the client
+   as the message body of a <x:ref>200 (OK)</x:ref> response with a
+   <x:ref>Content-Type</x:ref> of "message/http" (<xref target="media.type.message.http"/>).
+   The final recipient is either the origin server or the first server to
+   receive a <x:ref>Max-Forwards</x:ref> value of zero (0) in the request
+   (<xref target="field.max-forwards"/>).
+</t>
+<t>
+   A client &MUST-NOT; generate fields in a TRACE request containing
+   sensitive data that might be disclosed by the response. For example, it
+   would be foolish for a user agent to send stored user credentials
+   <xref target="request.auth"/> or cookies <xref target="RFC6265"/> in a TRACE
+   request. The final recipient of the request &SHOULD; exclude any request
+   fields that are likely to contain sensitive data when that recipient
+   generates the response body.
+</t>
+<t>
+   TRACE allows the client to see what is being received at the other
+   end of the request chain and use that data for testing or diagnostic
+   information. The value of the <x:ref>Via</x:ref> header field (<xref target="field.via"/>)
+   is of particular interest, since it acts as a trace of the request chain.
+   Use of the <x:ref>Max-Forwards</x:ref> header field allows the client to
+   limit the length of the request chain, which is useful for testing a chain
+   of proxies forwarding messages in an infinite loop.
+</t>
+<t>
+   A client &MUST-NOT; send a message body in a TRACE request.
+</t>
+<t>
+   Responses to the TRACE method are not cacheable.
+</t>
+</section>
+</section>
+
 <section title="Method Extensibility" anchor="method.extensibility">
 <t>
    Additional methods, outside the scope of this specification, have been
@@ -5971,556 +6521,6 @@ Content-Range: exampleunit 11.2-14.3/25
     </tr>
   </tbody>
 </table>
-</section>
-</section>
-
-<section title="Method Definitions" anchor="method.definitions">
-
-<section title="GET" anchor="GET">
-  <rdf:Description>
-    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
-    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
-  </rdf:Description>
-  <iref primary="true" item="GET method" x:for-anchor=""/>
-<t>
-   The GET method requests transfer of a current
-   <x:ref>selected representation</x:ref> for the
-   <x:ref>target resource</x:ref>.
-</t>
-<t>
-   GET is the primary mechanism of information retrieval and the focus of
-   almost all performance optimizations. Hence, when people speak of retrieving
-   some identifiable information via HTTP, they are generally referring to
-   making a GET request. A successful response reflects the quality of
-   "sameness" identified by the target URI.
-   In turn, constructing applications such that they produce a URI
-   for each important resource results in more resources being available for
-   other applications, producing a network effect that promotes further
-   expansion of the Web.
-</t>
-<t>
-   It is tempting to think of resource identifiers as remote file system
-   pathnames and of representations as being a copy of the contents of such
-   files. In fact, that is how many resources are implemented (see
-   <xref target="attack.pathname"/> for related security considerations).
-   However, there are no such limitations in practice.
-</t>
-<t>
-   The HTTP interface for
-   a resource is just as likely to be implemented as a tree of content
-   objects, a programmatic view on various database records, or a gateway to
-   other information systems. Even when the URI mapping mechanism is tied to a
-   file system, an origin server might be configured to execute the files with
-   the request as input and send the output as the representation rather than
-   transfer the files directly. Regardless, only the origin server needs to
-   know how each of its resource identifiers corresponds to an implementation
-   and how each implementation manages to select and send a current
-   representation of the target resource in a response to GET.
-</t>
-<t>
-   A client can alter the semantics of GET to be a "range request", requesting
-   transfer of only some part(s) of the selected representation, by sending a
-   <x:ref>Range</x:ref> header field in the request (<xref target="field.range"/>).
-</t>
-<t>
-   A client &SHOULD-NOT; generate a body in a GET
-   request. A payload received in a GET request has no defined semantics,
-   cannot alter the meaning or target of the request, and might lead some
-   implementations to reject the request and close the connection because of
-   its potential as a request smuggling attack
-   (<xref target="request.smuggling"/>).
-</t>
-<t>
-   The response to a GET request is cacheable; a cache &MAY; use it to satisfy
-   subsequent GET and HEAD requests unless otherwise indicated by the
-   Cache-Control header field (<xref target="field.cache-control"/>).
-   A cache that receives a payload in a GET request is likely to ignore that
-   payload and cache regardless of the payload contents.
-</t>
-<t>
-   When information retrieval is performed with a mechanism that constructs a
-   target URI from user-provided information, such as the query fields of a
-   form using GET, potentially sensitive data might be provided that would not
-   be appropriate for disclosure within a URI
-   (see <xref target="sensitive.information.in.uris"/>). In some cases, the
-   data can be filtered or transformed such that it would not reveal such
-   information. In others, particularly when there is no benefit from caching
-   a response, using the POST method (<xref target="POST"/>) instead of GET
-   will usually transmit such information in the request body rather than
-   construct a new URI.
-</t>
-</section>
-
-<section title="HEAD" anchor="HEAD">
-  <rdf:Description>
-    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
-    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
-  </rdf:Description>
-  <iref primary="true" item="HEAD method" x:for-anchor=""/>
-<t>
-   The HEAD method is identical to GET except that the server &MUST-NOT;
-   send a message body in the response (i.e., the response terminates at the
-   end of the header section). The server &SHOULD; send the same header fields
-   in response to a HEAD request as it would have sent if the request had been
-   a GET, except that the payload header fields (<xref target="payload"/>)
-   &MAY; be omitted. This method can be used for obtaining metadata about the
-   <x:ref>selected representation</x:ref> without transferring the representation data and is
-   often used for testing hypertext links for validity, accessibility, and
-   recent modification.
-</t>
-<t>
-   A payload within a HEAD request message has no defined semantics;
-   sending a payload body on a HEAD request might cause some existing
-   implementations to reject the request.
-</t>
-<t>
-   The response to a HEAD request is cacheable; a cache &MAY; use it to
-   satisfy subsequent HEAD requests unless otherwise indicated by the
-   Cache-Control header field (<xref target="field.cache-control"/>). A HEAD response might
-   also have an effect on previously cached responses to GET; see <xref target="head.effects"/>.
-</t>
-</section>
-
-<section title="POST" anchor="POST">
-  <iref primary="true" item="POST method" x:for-anchor=""/>
-<t>
-   The POST method requests that the <x:ref>target resource</x:ref> process
-   the representation enclosed in the request according to the resource's own
-   specific semantics. For example, POST is used for the following functions
-   (among others):
-</t>
-<ul>
-   <li>Providing a block of data, such as the fields entered into an HTML
-      form, to a data-handling process;</li>
-   <li>Posting a message to a bulletin board, newsgroup, mailing list, blog,
-      or similar group of articles;</li>
-   <li>Creating a new resource that has yet to be identified by the origin
-      server; and</li>
-   <li>Appending data to a resource's existing representation(s).</li>
-</ul>
-<t>
-   An origin server indicates response semantics by choosing an appropriate
-   status code depending on the result of processing the POST request;
-   almost all of the status codes defined by this specification could be
-   received in a response to POST (the exceptions being <x:ref>206 (Partial Content)</x:ref>,
-   <x:ref>304 (Not Modified)</x:ref>, and <x:ref>416 (Range Not Satisfiable)</x:ref>).
-</t>
-<t>
-   If one or more resources has been created on the origin server as a result
-   of successfully processing a POST request, the origin server &SHOULD; send
-   a <x:ref>201 (Created)</x:ref> response containing a <x:ref>Location</x:ref>
-   header field that provides an identifier for the primary resource created
-   (<xref target="field.location"/>) and a representation that describes the
-   status of the request while referring to the new resource(s).
-</t>
-<t>
-   Responses to POST requests are only cacheable when they include explicit
-   freshness information (see <xref
-   target="calculating.freshness.lifetime"/>) and a
-   <x:ref>Content-Location</x:ref> header field that has the same value as
-   the POST's target URI (<xref
-   target="field.content-location"/>). A cached POST response can be reused
-   to satisfy a later GET or HEAD request, but not a POST request, since POST
-   is required to be written through to the origin server, because it is
-   unsafe; see <xref target="constructing.responses.from.caches"/>.
-</t>
-<t>
-   If the result of processing a POST would be equivalent to a representation
-   of an existing resource, an origin server &MAY; redirect the user agent to
-   that resource by sending a <x:ref>303 (See Other)</x:ref> response with the
-   existing resource's identifier in the <x:ref>Location</x:ref> field.
-   This has the benefits of providing the user agent a resource identifier
-   and transferring the representation via a method more amenable to shared
-   caching, though at the cost of an extra request if the user agent does not
-   already have the representation cached.
-</t>
-</section>
-
-<section title="PUT" anchor="PUT">
-  <rdf:Description>
-    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
-  </rdf:Description>
-  <iref primary="true" item="PUT method" x:for-anchor=""/>
-<t>
-   The PUT method requests that the state of the <x:ref>target resource</x:ref>
-   be created or replaced with the state defined by the representation
-   enclosed in the request message payload.  A successful PUT of a given
-   representation would suggest that a subsequent GET on that same target
-   resource will result in an equivalent representation being sent in
-   a <x:ref>200 (OK)</x:ref> response.  However, there is no guarantee that
-   such a state change will be observable, since the target resource might be
-   acted upon by other user agents in parallel, or might be subject to dynamic
-   processing by the origin server, before any subsequent GET is received.
-   A successful response only implies that the user agent's intent was
-   achieved at the time of its processing by the origin server.
-</t>
-<t>   
-   If the target resource does not have a current representation and
-   the PUT successfully creates one, then the origin server &MUST; inform
-   the user agent by sending a <x:ref>201 (Created)</x:ref> response.  If the
-   target resource does have a current representation and that representation is
-   successfully modified in accordance with the state of the enclosed
-   representation, then the origin server &MUST; send either a
-   <x:ref>200 (OK)</x:ref> or a <x:ref>204 (No Content)</x:ref> response to
-   indicate successful completion of the request.
-</t>
-<t>
-   An origin server &SHOULD; ignore unrecognized header and trailer fields
-   received in a PUT request (i.e., do not save them as part of the resource
-   state).
-</t>
-<t>
-   An origin server &SHOULD; verify that the PUT representation is
-   consistent with any constraints the server has for the target
-   resource that cannot or will not be changed by the PUT.  This is
-   particularly important when the origin server uses internal
-   configuration information related to the URI in order to set the
-   values for representation metadata on GET responses.  When a PUT
-   representation is inconsistent with the target resource, the origin
-   server &SHOULD; either make them consistent, by transforming the
-   representation or changing the resource configuration, or respond
-   with an appropriate error message containing sufficient information
-   to explain why the representation is unsuitable.  The
-   <x:ref>409 (Conflict)</x:ref> or <x:ref>415 (Unsupported Media Type)</x:ref>
-   status codes are suggested, with the latter being specific to constraints on
-   <x:ref>Content-Type</x:ref> values.
-</t>
-<t>
-   For example, if the target resource is configured to always have a
-   <x:ref>Content-Type</x:ref> of "text/html" and the representation being PUT
-   has a Content-Type of "image/jpeg", the origin server ought to do one of:
-</t>
-<ol type="a">
-   <li>reconfigure the target resource to reflect the new media type;</li>
-   <li>transform the PUT representation to a format consistent with that
-       of the resource before saving it as the new resource state; or,</li>
-   <li>reject the request with a <x:ref>415 (Unsupported Media Type)</x:ref>
-       response indicating that the target resource is limited to "text/html",
-       perhaps including a link to a different resource that would be a
-       suitable target for the new representation.</li>
-</ol>
-<t>
-   HTTP does not define exactly how a PUT method affects the state
-   of an origin server beyond what can be expressed by the intent of
-   the user agent request and the semantics of the origin server response.
-   It does not define what a resource might be, in any sense of that
-   word, beyond the interface provided via HTTP.  It does not define
-   how resource state is "stored", nor how such storage might change
-   as a result of a change in resource state, nor how the origin server
-   translates resource state into representations.  Generally speaking,
-   all implementation details behind the resource interface are
-   intentionally hidden by the server.
-</t>
-<t>
-   An origin server &MUST-NOT; send a validator header field
-   (<xref target="response.validator"/>), such as an <x:ref>ETag</x:ref> or
-   <x:ref>Last-Modified</x:ref> field, in a successful response to PUT unless
-   the request's representation data was saved without any transformation
-   applied to the body (i.e., the resource's new representation data is
-   identical to the representation data received in the PUT request) and the
-   validator field value reflects the new representation.
-   This requirement allows a user agent to know when the representation body
-   it has in memory remains current as a result of the PUT, thus not in need
-   of being retrieved again from the origin server, and that the new validator(s)
-   received in the response can be used for future conditional requests in
-   order to prevent accidental overwrites (<xref target="preconditions"/>).
-</t>
-<t>
-   The fundamental difference between the POST and PUT methods is
-   highlighted by the different intent for the enclosed representation.
-   The target resource in a POST request is intended to handle the
-   enclosed representation according to the resource's own semantics,
-   whereas the enclosed representation in a PUT request is defined as
-   replacing the state of the target resource. Hence, the intent of PUT is
-   idempotent and visible to intermediaries, even though the exact effect is
-   only known by the origin server.
-</t>
-<t>
-   Proper interpretation of a PUT request presumes that the user agent knows
-   which target resource is desired. A service that selects a proper URI on
-   behalf of the client, after receiving a state-changing request, &SHOULD; be
-   implemented using the POST method rather than PUT. If the origin server
-   will not make the requested PUT state change to the target resource and
-   instead wishes to have it applied to a different resource, such as when the
-   resource has been moved to a different URI, then the origin server &MUST;
-   send an appropriate <x:ref>3xx (Redirection)</x:ref> response; the
-   user agent &MAY; then make its own decision regarding whether or not to
-   redirect the request.
-</t>
-<t>
-   A PUT request applied to the target resource can have side effects
-   on other resources.  For example, an article might have a URI for
-   identifying "the current version" (a resource) that is separate
-   from the URIs identifying each particular version (different
-   resources that at one point shared the same state as the current version
-   resource).  A successful PUT request on "the current version" URI might
-   therefore create a new version resource in addition to changing the
-   state of the target resource, and might also cause links to be added
-   between the related resources.
-</t>
-<t>
-   An origin server that allows PUT on a given target resource &MUST; send a
-   <x:ref>400 (Bad Request)</x:ref> response to a PUT request that contains a
-   <x:ref>Content-Range</x:ref> header field (<xref target="field.content-range"/>), since
-   the payload is likely to be partial content that has been mistakenly PUT as
-   a full representation.
-   Partial content updates are possible by targeting a separately identified
-   resource with state that overlaps a portion of the larger resource, or by
-   using a different method that has been specifically defined for partial
-   updates (for example, the PATCH method defined in
-   <xref target="RFC5789"/>).
-</t>
-<t>
-   Responses to the PUT method are not cacheable. If a successful PUT request
-   passes through a cache that has one or more stored responses for the
-   target URI, those stored responses will be invalidated
-   (see <xref target="invalidation"/>).
-</t>
-</section>
-
-<section title="DELETE" anchor="DELETE">
-  <rdf:Description>
-    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
-  </rdf:Description>
-  <iref primary="true" item="DELETE method" x:for-anchor=""/>
-<t>
-   The DELETE method requests that the origin server remove the association
-   between the <x:ref>target resource</x:ref> and its current functionality.
-   In effect, this method is similar to the rm command in UNIX: it expresses a
-   deletion operation on the URI mapping of the origin server rather than an
-   expectation that the previously associated information be deleted.
-</t>
-<t>
-   If the target resource has one or more current representations, they might
-   or might not be destroyed by the origin server, and the associated storage
-   might or might not be reclaimed, depending entirely on the nature of the
-   resource and its implementation by the origin server (which are beyond the
-   scope of this specification). Likewise, other implementation aspects of a
-   resource might need to be deactivated or archived as a result of a DELETE,
-   such as database or gateway connections. In general, it is assumed that the
-   origin server will only allow DELETE on resources for which it has a
-   prescribed mechanism for accomplishing the deletion.
-</t>
-<t>
-   Relatively few resources allow the DELETE method &mdash; its primary use
-   is for remote authoring environments, where the user has some direction
-   regarding its effect. For example, a resource that was previously created
-   using a PUT request, or identified via the Location header field after a
-   <x:ref>201 (Created)</x:ref> response to a POST request, might allow a
-   corresponding DELETE request to undo those actions.  Similarly, custom
-   user agent implementations that implement an authoring function, such as
-   revision control clients using HTTP for remote operations, might use
-   DELETE based on an assumption that the server's URI space has been crafted
-   to correspond to a version repository.
-</t>
-<t>
-   If a DELETE method is successfully applied, the origin server &SHOULD; send
-</t>
-<ul>
-  <li>a <x:ref>202 (Accepted)</x:ref> status code if the action will likely succeed but
-   has not yet been enacted,</li>
-  <li>a <x:ref>204 (No Content)</x:ref> status code if the action has been
-   enacted and no further information is to be supplied, or</li>
-  <li>a <x:ref>200 (OK)</x:ref> status code if the action has been enacted and
-   the response message includes a representation describing the status.</li>
-</ul>
-<t>
-   A client &SHOULD-NOT; generate a body in a DELETE request. A payload
-   received in a DELETE request has no defined semantics, cannot alter the
-   meaning or target of the request, and might lead some implementations to
-   reject the request.
-</t>
-<t>
-   Responses to the DELETE method are not cacheable. If a successful DELETE
-   request passes through a cache that has one or more stored responses for
-   the target URI, those stored responses will be invalidated (see
-   <xref target="invalidation"/>).
-</t>
-</section>
-
-<section title="CONNECT" anchor="CONNECT">
-  <iref primary="true" item="CONNECT method" x:for-anchor=""/>
-<t>
-   The CONNECT method requests that the recipient establish a tunnel to the
-   destination origin server identified by the request target and, if
-   successful, thereafter restrict its behavior to blind forwarding of
-   data, in both directions, until the tunnel is closed.
-   Tunnels are commonly used to create an end-to-end virtual connection,
-   through one or more proxies, which can then be secured using TLS
-   (Transport Layer Security, <xref target="RFC8446"/>).
-</t>
-<t>
-   Because CONNECT changes the request/response nature of an HTTP connection,
-   specific HTTP versions might have different ways of mapping its semantics
-   into the protocol's wire format.
-</t>
-<t>
-   CONNECT is intended only for use in requests to a proxy.
-   An origin server that receives a CONNECT request for itself &MAY;
-   respond with a <x:ref>2xx (Successful)</x:ref> status code to indicate that a connection
-   is established.  However, most origin servers do not implement CONNECT.
-</t>
-<t>
-   A client sending a CONNECT request &MUST; send the authority component
-   (described in Section 3.2 of <xref target="RFC3986"/>) as the request target;
-   i.e., the request target consists of only the host name and port number of the
-   tunnel destination, separated by a colon. For example,
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-CONNECT server.example.com:80 HTTP/1.1
-Host: server.example.com:80
-
-</artwork>
-<t>
-   The recipient proxy can establish a tunnel either by directly connecting to
-   the request target or, if configured to use another proxy, by forwarding
-   the CONNECT request to the next inbound proxy.
-   Any <x:ref>2xx (Successful)</x:ref> response indicates
-   that the sender (and all inbound proxies) will switch to tunnel mode
-   immediately after the blank line that concludes the successful response's
-   header section; data received after that blank line is from the server
-   identified by the request target.
-   Any response other than a successful response indicates that the tunnel
-   has not yet been formed and that the connection remains governed by HTTP.
-</t>
-<t>
-   A tunnel is closed when a tunnel intermediary detects that either side
-   has closed its connection: the intermediary &MUST; attempt to send any
-   outstanding data that came from the closed side to the other side, close
-   both connections, and then discard any remaining data left undelivered.
-</t>
-<t>
-   Proxy authentication might be used to establish the
-   authority to create a tunnel.  For example,
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-CONNECT server.example.com:80 HTTP/1.1
-Host: server.example.com:80
-Proxy-Authorization: basic aGVsbG86d29ybGQ=
-
-</artwork>
-<t>
-   There are significant risks in establishing a tunnel to arbitrary servers,
-   particularly when the destination is a well-known or reserved TCP port that
-   is not intended for Web traffic. For example, a CONNECT to
-   "example.com:25" would suggest that the proxy connect to the reserved
-   port for SMTP traffic; if allowed, that could trick the proxy into
-   relaying spam email. Proxies that support CONNECT &SHOULD; restrict its
-   use to a limited set of known ports or a configurable whitelist of safe
-   request targets.
-</t>
-<t>
-   A server &MUST-NOT; send any <x:ref>Transfer-Encoding</x:ref> or
-   <x:ref>Content-Length</x:ref> header fields in a
-   <x:ref>2xx (Successful)</x:ref> response to CONNECT.
-   A client &MUST; ignore any Content-Length or Transfer-Encoding header
-   fields received in a successful response to CONNECT.
-</t>
-<t>
-   A payload within a CONNECT request message has no defined semantics;
-   sending a payload body on a CONNECT request might cause some existing
-   implementations to reject the request.
-</t>
-<t>
-   Responses to the CONNECT method are not cacheable.
-</t>
-</section>
-
-<section title="OPTIONS" anchor="OPTIONS">
-  <rdf:Description>
-    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
-    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
-  </rdf:Description>
-  <iref primary="true" item="OPTIONS method" x:for-anchor=""/>
-<t>
-   The OPTIONS method requests information about the communication options
-   available for the target resource, at either the origin server or an
-   intervening intermediary. This method allows a client to determine the
-   options and/or requirements associated with a resource, or the capabilities
-   of a server, without implying a resource action.
-</t>
-<t>
-   An OPTIONS request with an asterisk ("*") as the request target
-   (<xref target="target.resource"/>) applies to the server in general rather than to a
-   specific resource. Since a server's communication options typically depend
-   on the resource, the "*" request is only useful as a "ping" or "no-op"
-   type of method; it does nothing beyond allowing the client to test
-   the capabilities of the server. For example, this can be used to test
-   a proxy for HTTP/1.1 conformance (or lack thereof).
-</t>
-<t>
-   If the request target is not an asterisk, the OPTIONS request applies
-   to the options that are available when communicating with the target
-   resource.
-</t>
-<t>
-   A server generating a successful response to OPTIONS &SHOULD; send any
-   header that might indicate optional features implemented by the
-   server and applicable to the target resource (e.g., <x:ref>Allow</x:ref>),
-   including potential extensions not defined by this specification.
-   The response payload, if any, might also describe the communication options
-   in a machine or human-readable representation. A standard format for such a
-   representation is not defined by this specification, but might be defined by
-   future extensions to HTTP.
-</t>
-<t>
-   A client &MAY; send a <x:ref>Max-Forwards</x:ref> header field in an
-   OPTIONS request to target a specific recipient in the request chain (see
-   <xref target="field.max-forwards"/>). A proxy &MUST-NOT; generate a
-   Max-Forwards header field while forwarding a request unless that request
-   was received with a Max-Forwards field.
-</t>
-<t>
-   A client that generates an OPTIONS request containing a payload body
-   &MUST; send a valid <x:ref>Content-Type</x:ref> header field describing
-   the representation media type. Note that this specification does not define
-   any use for such a payload.
-</t>
-<t>
-   Responses to the OPTIONS method are not cacheable.
-</t>
-</section>
-
-<section title="TRACE" anchor="TRACE">
-  <rdf:Description>
-    <safe xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</safe>
-    <idempotent xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">yes</idempotent>
-  </rdf:Description>
-  <iref primary="true" item="TRACE method" x:for-anchor=""/>
-<t>
-   The TRACE method requests a remote, application-level loop-back of the
-   request message. The final recipient of the request &SHOULD; reflect the
-   message received, excluding some fields described below, back to the client
-   as the message body of a <x:ref>200 (OK)</x:ref> response with a
-   <x:ref>Content-Type</x:ref> of "message/http" (<xref target="media.type.message.http"/>).
-   The final recipient is either the origin server or the first server to
-   receive a <x:ref>Max-Forwards</x:ref> value of zero (0) in the request
-   (<xref target="field.max-forwards"/>).
-</t>
-<t>
-   A client &MUST-NOT; generate fields in a TRACE request containing
-   sensitive data that might be disclosed by the response. For example, it
-   would be foolish for a user agent to send stored user credentials
-   <xref target="request.auth"/> or cookies <xref target="RFC6265"/> in a TRACE
-   request. The final recipient of the request &SHOULD; exclude any request
-   fields that are likely to contain sensitive data when that recipient
-   generates the response body.
-</t>
-<t>
-   TRACE allows the client to see what is being received at the other
-   end of the request chain and use that data for testing or diagnostic
-   information. The value of the <x:ref>Via</x:ref> header field (<xref target="field.via"/>)
-   is of particular interest, since it acts as a trace of the request chain.
-   Use of the <x:ref>Max-Forwards</x:ref> header field allows the client to
-   limit the length of the request chain, which is useful for testing a chain
-   of proxies forwarding messages in an infinite loop.
-</t>
-<t>
-   A client &MUST-NOT; send a message body in a TRACE request.
-</t>
-<t>
-   Responses to the TRACE method are not cacheable.
-</t>
 </section>
 </section>
 
