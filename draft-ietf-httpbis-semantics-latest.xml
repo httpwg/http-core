@@ -3393,6 +3393,369 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </section>
 </section>
 
+<section title="Authentication" anchor="authentication">
+<section title="Authentication Credentials" anchor="request.auth">
+<t>
+   HTTP provides a general framework for access control and authentication,
+   via an extensible set of challenge-response authentication schemes, which
+   can be used by a server to challenge a client request and by a client to
+   provide authentication information.
+</t>
+<t>
+   Two header fields are used for carrying authentication credentials.
+   Note that various custom mechanisms for
+   user authentication use the Cookie header field for this purpose, as
+   defined in <xref target="RFC6265"/>.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Authorization</td>
+      <td><xref target="field.authorization" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Proxy-Authorization</td>
+      <td><xref target="field.proxy-authorization" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Authentication Challenges" anchor="response.auth">
+<t>
+   Authentication challenges indicate what mechanisms are available for the
+   client to provide authentication credentials in future requests.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>WWW-Authenticate</td>
+      <td><xref target="field.www-authenticate" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Proxy-Authenticate</td>
+      <td><xref target="field.proxy-authenticate" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+<t>
+   Furthermore, the "Authentication-Info" and
+   "Proxy-Authentication-Info" response header fields are defined
+   for use in authentication schemes that need to return
+   information once the client's authentication credentials have been accepted.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Authentication-Info</td>
+      <td><xref target="field.authentication-info" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Proxy-Authentication-Info</td>
+      <td><xref target="field.proxy-authentication-info" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Challenge and Response" anchor="challenge.and.response">
+  <x:anchor-alias value="auth-scheme"/>
+  <x:anchor-alias value="auth-param"/>
+  <x:anchor-alias value="token68"/>
+  <x:anchor-alias value="challenge"/>
+  <x:anchor-alias value="credentials"/>
+<t>
+   HTTP provides a simple challenge-response authentication framework
+   that can be used by a server to challenge a client request and by a
+   client to provide authentication information. It uses a case-insensitive
+   token as a means to identify the authentication scheme, followed
+   by additional information necessary for achieving authentication via that
+   scheme. The latter can be either a comma-separated list of parameters or a
+   single sequence of characters capable of holding base64-encoded
+   information.
+</t>
+<t>
+   Authentication parameters are name=value pairs, where the name token is
+   matched case-insensitively,
+   and each parameter name &MUST; only occur once per challenge.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="auth-scheme"/><iref primary="true" item="Grammar" subitem="auth-param"/><iref primary="true" item="Grammar" subitem="token68"/>
+  auth-scheme    = <x:ref>token</x:ref>
+
+  auth-param     = <x:ref>token</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
+
+  token68        = 1*( <x:ref>ALPHA</x:ref> / <x:ref>DIGIT</x:ref> /
+                       "-" / "." / "_" / "~" / "+" / "/" ) *"="
+</sourcecode>
+<t>
+   The token68 syntax allows the 66 unreserved URI characters
+   (<xref target="RFC3986"/>), plus a few others, so that it can hold a
+   base64, base64url (URL and filename safe alphabet), base32, or base16 (hex)
+   encoding, with or without padding, but excluding whitespace
+   (<xref target="RFC4648"/>).
+</t>
+<t>
+   A <x:ref>401 (Unauthorized)</x:ref> response message is used by an origin
+   server to challenge the authorization of a user agent, including a
+   <x:ref>WWW-Authenticate</x:ref> header field containing at least one
+   challenge applicable to the requested resource.
+</t>
+<t>
+   A <x:ref>407 (Proxy Authentication Required)</x:ref> response message is
+   used by a proxy to challenge the authorization of a client, including a
+   <x:ref>Proxy-Authenticate</x:ref> header field containing at least one
+   challenge applicable to the proxy for the requested resource.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="challenge"/>
+  <x:ref>challenge</x:ref>   = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>token68</x:ref> / #<x:ref>auth-param</x:ref> ) ]
+</sourcecode>
+<aside>
+  <t>
+     &Note; Many clients fail to parse a challenge that contains an unknown
+     scheme. A workaround for this problem is to list well-supported schemes
+     (such as "basic") first.<!-- see https://greenbytes.de/tech/tc/httpauth/#multibasicunknown2 -->
+  </t>
+</aside>
+<t>
+   A user agent that wishes to authenticate itself with an origin server
+   &mdash; usually, but not necessarily, after receiving a
+   <x:ref>401 (Unauthorized)</x:ref> &mdash; can do so by including an
+   <x:ref>Authorization</x:ref> header field with the request.
+</t>
+<t>
+   A client that wishes to authenticate itself with a proxy &mdash; usually,
+   but not necessarily, after receiving a
+   <x:ref>407 (Proxy Authentication Required)</x:ref> &mdash; can do so by
+   including a <x:ref>Proxy-Authorization</x:ref> header field with the
+   request.
+</t>
+<t>
+   Both the <x:ref>Authorization</x:ref> field value and the
+   <x:ref>Proxy-Authorization</x:ref> field value contain the client's
+   credentials for the realm of the resource being requested, based upon a
+   challenge received in a response (possibly at some point in the past).
+   When creating their values, the user agent ought to do so by selecting the
+   challenge with what it considers to be the most secure auth-scheme that it
+   understands, obtaining credentials from the user as appropriate.
+   Transmission of credentials within header field values implies significant
+   security considerations regarding the confidentiality of the underlying
+   connection, as described in
+   <xref target="confidentiality.of.credentials"/>.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="credentials"/>
+  <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>token68</x:ref> / #<x:ref>auth-param</x:ref> ) ]
+</sourcecode>
+<t>
+   Upon receipt of a request for a protected resource that omits credentials,
+   contains invalid credentials (e.g., a bad password) or partial credentials
+   (e.g., when the authentication scheme requires more than one round trip),
+   an origin server &SHOULD; send a <x:ref>401 (Unauthorized)</x:ref> response
+   that contains a <x:ref>WWW-Authenticate</x:ref> header field with at least
+   one (possibly new) challenge applicable to the requested resource.
+</t>
+<t>
+   Likewise, upon receipt of a request that omits proxy credentials or
+   contains invalid or partial proxy credentials, a proxy that requires
+   authentication &SHOULD; generate a
+   <x:ref>407 (Proxy Authentication Required)</x:ref> response that contains
+   a <x:ref>Proxy-Authenticate</x:ref> header field with at least one
+   (possibly new) challenge applicable to the proxy.
+</t>
+<t>
+   A server that receives valid credentials that are not adequate to gain
+   access ought to respond with the <x:ref>403 (Forbidden)</x:ref> status
+   code (<xref target="status.403"/>).
+</t>
+<t>
+   HTTP does not restrict applications to this simple challenge-response
+   framework for access authentication. Additional mechanisms can be used,
+   such as authentication at the transport level or via message encapsulation,
+   and with additional header fields specifying authentication information.
+   However, such additional mechanisms are not defined by this specification.
+</t>
+</section>
+
+<section title="Protection Space (Realm)" anchor="protection.space">
+  <iref item="Protection Space"/>
+  <iref item="Realm"/>
+  <iref item="Canonical Root URI"/>
+<t>
+   The "<x:dfn>realm</x:dfn>" authentication parameter is reserved for use by
+   authentication schemes that wish to indicate a scope of protection.
+</t>
+<t>
+   A <x:dfn>protection space</x:dfn> is defined by the canonical root URI (the
+   scheme and authority components of the target URI; see
+   <xref target="target.resource"/>) of the
+   server being accessed, in combination with the realm value if present.
+   These realms allow the protected resources on a server to be
+   partitioned into a set of protection spaces, each with its own
+   authentication scheme and/or authorization database. The realm value
+   is a string, generally assigned by the origin server, that can have
+   additional semantics specific to the authentication scheme. Note that a
+   response can have multiple challenges with the same auth-scheme but
+   with different realms.
+</t>
+<t>
+   The protection space determines the domain over which credentials can
+   be automatically applied. If a prior request has been authorized, the
+   user agent &MAY; reuse the same credentials for all other requests within
+   that protection space for a period of time determined by the authentication
+   scheme, parameters, and/or user preferences (such as a configurable
+   inactivity timeout). Unless specifically allowed by the authentication
+   scheme, a single protection space cannot extend outside the scope of its
+   server.
+</t>
+<t>
+   For historical reasons, a sender &MUST; only generate the quoted-string syntax.
+   Recipients might have to support both token and quoted-string syntax for
+   maximum interoperability with existing clients that have been accepting both
+   notations for a long time.
+</t>
+</section>
+
+<section title="Authentication Scheme Extensibility" anchor="auth.scheme.extensibility">
+<t>
+   Aside from the general framework, this document does not specify any
+   authentication schemes. New and existing authentication schemes are
+   specified independently and ought to be registered within the
+   "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry".
+   For example, the "basic" and "digest" authentication schemes are defined by
+   <xref target="RFC7617" x:fmt="none">RFC 7617</xref> and
+   <xref target="RFC7616" x:fmt="none">RFC 7616</xref>, respectively.
+</t>
+
+<section title="Authentication Scheme Registry" anchor="auth.scheme.registry">
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry"
+   defines the namespace for the authentication schemes in challenges and
+   credentials. It is maintained
+   at <eref target="https://www.iana.org/assignments/http-authschemes"/>.
+</t>
+<t>
+  Registrations &MUST; include the following fields:
+</t>
+<ul>
+  <li>Authentication Scheme Name</li>
+  <li>Pointer to specification text</li>
+  <li>Notes (optional)</li>
+</ul>
+<t>
+  Values to be added to this namespace require IETF Review
+  (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
+</t>
+</section>
+
+<section title="Considerations for New Authentication Schemes" anchor="considerations.for.new.auth.schemes">
+<t>
+  There are certain aspects of the HTTP Authentication framework that put
+  constraints on how new authentication schemes can work:
+</t>
+<ul>
+  <li><t>
+    HTTP authentication is presumed to be stateless: all of the information
+    necessary to authenticate a request &MUST; be provided in the request,
+    rather than be dependent on the server remembering prior requests.
+    Authentication based on, or bound to, the underlying connection is
+    outside the scope of this specification and inherently flawed unless
+    steps are taken to ensure that the connection cannot be used by any
+    party other than the authenticated user
+    (see <xref target="intermediaries"/>).
+  </t>
+  </li>
+  <li>
+    <t>
+      The authentication parameter "realm" is reserved for defining protection
+      spaces as described in <xref target="protection.space"/>. New schemes
+      &MUST-NOT; use it in a way incompatible with that definition.
+    </t>
+  </li>
+  <li>
+    <t>
+      The "token68" notation was introduced for compatibility with existing
+      authentication schemes and can only be used once per challenge or credential.
+      Thus, new schemes ought to use the auth-param syntax instead, because
+      otherwise future extensions will be impossible.
+    </t>
+  </li>
+  <li>
+    <t>
+      The parsing of challenges and credentials is defined by this specification
+      and cannot be modified by new authentication schemes. When the auth-param
+      syntax is used, all parameters ought to support both token and
+      quoted-string syntax, and syntactical constraints ought to be defined on
+      the field value after parsing (i.e., quoted-string processing). This is
+      necessary so that recipients can use a generic parser that applies to
+      all authentication schemes.
+    </t>
+    <t>
+      &Note; The fact that the value syntax for the "realm" parameter
+      is restricted to quoted-string was a bad design choice not to be repeated
+      for new parameters.
+    </t>
+  </li>
+  <li>
+    <t>
+      Definitions of new schemes ought to define the treatment of unknown
+      extension parameters. In general, a "must-ignore" rule is preferable
+      to a "must-understand" rule, because otherwise it will be hard to introduce
+      new parameters in the presence of legacy recipients. Furthermore,
+      it's good to describe the policy for defining new parameters (such
+      as "update the specification" or "use this registry").
+    </t>
+  </li>
+  <li>
+    <t>
+      Authentication schemes need to document whether they are usable in
+      origin-server authentication (i.e., using <x:ref>WWW-Authenticate</x:ref>),
+      and/or proxy authentication (i.e., using <x:ref>Proxy-Authenticate</x:ref>).
+    </t>
+  </li>
+  <li>
+    <t>
+      The credentials carried in an <x:ref>Authorization</x:ref> header field are specific to
+      the user agent and, therefore, have the same effect on HTTP caches as the
+      "private" Cache-Control response directive (<xref target="cache-response-directive.private"/>),
+      within the scope of the request in which they appear.
+    </t>
+    <t>
+      Therefore, new authentication schemes that choose not to carry
+      credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
+      header field) will need to explicitly disallow caching, by mandating the use of
+      Cache-Control response directives (e.g., "private").
+    </t>
+  </li>
+  <li>
+    <t>
+      Schemes using <x:ref>Authentication-Info</x:ref>, <x:ref>Proxy-Authentication-Info</x:ref>,
+      or any other authentication related response header field need to
+      consider and document the related security considerations (see 
+      <xref target="security.auth.add.resp"/>). 
+    </t>
+  </li>
+</ul>
+</section>
+</section>
+</section>
+
 <section title="Range Requests" anchor="range.requests">
 
 <section title="Range Units" anchor="range.units">
@@ -4238,318 +4601,6 @@ Content-Range: exampleunit 11.2-14.3/25
 </t>
 </section>
 
-<section title="Authentication Credentials" anchor="request.auth">
-<t>
-   HTTP provides a general framework for access control and authentication,
-   via an extensible set of challenge-response authentication schemes, which
-   can be used by a server to challenge a client request and by a client to
-   provide authentication information.
-</t>
-<t>
-   Two header fields are used for carrying authentication credentials.
-   Note that various custom mechanisms for
-   user authentication use the Cookie header field for this purpose, as
-   defined in <xref target="RFC6265"/>.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Authorization</td>
-      <td><xref target="field.authorization" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Proxy-Authorization</td>
-      <td><xref target="field.proxy-authorization" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-
-<section title="Challenge and Response" anchor="challenge.and.response">
-  <x:anchor-alias value="auth-scheme"/>
-  <x:anchor-alias value="auth-param"/>
-  <x:anchor-alias value="token68"/>
-  <x:anchor-alias value="challenge"/>
-  <x:anchor-alias value="credentials"/>
-<t>
-   HTTP provides a simple challenge-response authentication framework
-   that can be used by a server to challenge a client request and by a
-   client to provide authentication information. It uses a case-insensitive
-   token as a means to identify the authentication scheme, followed
-   by additional information necessary for achieving authentication via that
-   scheme. The latter can be either a comma-separated list of parameters or a
-   single sequence of characters capable of holding base64-encoded
-   information.
-</t>
-<t>
-   Authentication parameters are name=value pairs, where the name token is
-   matched case-insensitively,
-   and each parameter name &MUST; only occur once per challenge.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="auth-scheme"/><iref primary="true" item="Grammar" subitem="auth-param"/><iref primary="true" item="Grammar" subitem="token68"/>
-  auth-scheme    = <x:ref>token</x:ref>
-
-  auth-param     = <x:ref>token</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
-
-  token68        = 1*( <x:ref>ALPHA</x:ref> / <x:ref>DIGIT</x:ref> /
-                       "-" / "." / "_" / "~" / "+" / "/" ) *"="
-</sourcecode>
-<t>
-   The token68 syntax allows the 66 unreserved URI characters
-   (<xref target="RFC3986"/>), plus a few others, so that it can hold a
-   base64, base64url (URL and filename safe alphabet), base32, or base16 (hex)
-   encoding, with or without padding, but excluding whitespace
-   (<xref target="RFC4648"/>).
-</t>
-<t>
-   A <x:ref>401 (Unauthorized)</x:ref> response message is used by an origin
-   server to challenge the authorization of a user agent, including a
-   <x:ref>WWW-Authenticate</x:ref> header field containing at least one
-   challenge applicable to the requested resource.
-</t>
-<t>
-   A <x:ref>407 (Proxy Authentication Required)</x:ref> response message is
-   used by a proxy to challenge the authorization of a client, including a
-   <x:ref>Proxy-Authenticate</x:ref> header field containing at least one
-   challenge applicable to the proxy for the requested resource.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="challenge"/>
-  <x:ref>challenge</x:ref>   = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>token68</x:ref> / #<x:ref>auth-param</x:ref> ) ]
-</sourcecode>
-<aside>
-  <t>
-     &Note; Many clients fail to parse a challenge that contains an unknown
-     scheme. A workaround for this problem is to list well-supported schemes
-     (such as "basic") first.<!-- see https://greenbytes.de/tech/tc/httpauth/#multibasicunknown2 -->
-  </t>
-</aside>
-<t>
-   A user agent that wishes to authenticate itself with an origin server
-   &mdash; usually, but not necessarily, after receiving a
-   <x:ref>401 (Unauthorized)</x:ref> &mdash; can do so by including an
-   <x:ref>Authorization</x:ref> header field with the request.
-</t>
-<t>
-   A client that wishes to authenticate itself with a proxy &mdash; usually,
-   but not necessarily, after receiving a
-   <x:ref>407 (Proxy Authentication Required)</x:ref> &mdash; can do so by
-   including a <x:ref>Proxy-Authorization</x:ref> header field with the
-   request.
-</t>
-<t>
-   Both the <x:ref>Authorization</x:ref> field value and the
-   <x:ref>Proxy-Authorization</x:ref> field value contain the client's
-   credentials for the realm of the resource being requested, based upon a
-   challenge received in a response (possibly at some point in the past).
-   When creating their values, the user agent ought to do so by selecting the
-   challenge with what it considers to be the most secure auth-scheme that it
-   understands, obtaining credentials from the user as appropriate.
-   Transmission of credentials within header field values implies significant
-   security considerations regarding the confidentiality of the underlying
-   connection, as described in
-   <xref target="confidentiality.of.credentials"/>.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="credentials"/>
-  <x:ref>credentials</x:ref> = <x:ref>auth-scheme</x:ref> [ 1*<x:ref>SP</x:ref> ( <x:ref>token68</x:ref> / #<x:ref>auth-param</x:ref> ) ]
-</sourcecode>
-<t>
-   Upon receipt of a request for a protected resource that omits credentials,
-   contains invalid credentials (e.g., a bad password) or partial credentials
-   (e.g., when the authentication scheme requires more than one round trip),
-   an origin server &SHOULD; send a <x:ref>401 (Unauthorized)</x:ref> response
-   that contains a <x:ref>WWW-Authenticate</x:ref> header field with at least
-   one (possibly new) challenge applicable to the requested resource.
-</t>
-<t>
-   Likewise, upon receipt of a request that omits proxy credentials or
-   contains invalid or partial proxy credentials, a proxy that requires
-   authentication &SHOULD; generate a
-   <x:ref>407 (Proxy Authentication Required)</x:ref> response that contains
-   a <x:ref>Proxy-Authenticate</x:ref> header field with at least one
-   (possibly new) challenge applicable to the proxy.
-</t>
-<t>
-   A server that receives valid credentials that are not adequate to gain
-   access ought to respond with the <x:ref>403 (Forbidden)</x:ref> status
-   code (<xref target="status.403"/>).
-</t>
-<t>
-   HTTP does not restrict applications to this simple challenge-response
-   framework for access authentication. Additional mechanisms can be used,
-   such as authentication at the transport level or via message encapsulation,
-   and with additional header fields specifying authentication information.
-   However, such additional mechanisms are not defined by this specification.
-</t>
-</section>
-
-<section title="Protection Space (Realm)" anchor="protection.space">
-  <iref item="Protection Space"/>
-  <iref item="Realm"/>
-  <iref item="Canonical Root URI"/>
-<t>
-   The "<x:dfn>realm</x:dfn>" authentication parameter is reserved for use by
-   authentication schemes that wish to indicate a scope of protection.
-</t>
-<t>
-   A <x:dfn>protection space</x:dfn> is defined by the canonical root URI (the
-   scheme and authority components of the target URI; see
-   <xref target="target.resource"/>) of the
-   server being accessed, in combination with the realm value if present.
-   These realms allow the protected resources on a server to be
-   partitioned into a set of protection spaces, each with its own
-   authentication scheme and/or authorization database. The realm value
-   is a string, generally assigned by the origin server, that can have
-   additional semantics specific to the authentication scheme. Note that a
-   response can have multiple challenges with the same auth-scheme but
-   with different realms.
-</t>
-<t>
-   The protection space determines the domain over which credentials can
-   be automatically applied. If a prior request has been authorized, the
-   user agent &MAY; reuse the same credentials for all other requests within
-   that protection space for a period of time determined by the authentication
-   scheme, parameters, and/or user preferences (such as a configurable
-   inactivity timeout). Unless specifically allowed by the authentication
-   scheme, a single protection space cannot extend outside the scope of its
-   server.
-</t>
-<t>
-   For historical reasons, a sender &MUST; only generate the quoted-string syntax.
-   Recipients might have to support both token and quoted-string syntax for
-   maximum interoperability with existing clients that have been accepting both
-   notations for a long time.
-</t>
-</section>
-
-<section title="Authentication Scheme Extensibility" anchor="auth.scheme.extensibility">
-<t>
-   Aside from the general framework, this document does not specify any
-   authentication schemes. New and existing authentication schemes are
-   specified independently and ought to be registered within the
-   "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry".
-   For example, the "basic" and "digest" authentication schemes are defined by
-   <xref target="RFC7617" x:fmt="none">RFC 7617</xref> and
-   <xref target="RFC7616" x:fmt="none">RFC 7616</xref>, respectively.
-</t>
-
-<section title="Authentication Scheme Registry" anchor="auth.scheme.registry">
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry"
-   defines the namespace for the authentication schemes in challenges and
-   credentials. It is maintained
-   at <eref target="https://www.iana.org/assignments/http-authschemes"/>.
-</t>
-<t>
-  Registrations &MUST; include the following fields:
-</t>
-<ul>
-  <li>Authentication Scheme Name</li>
-  <li>Pointer to specification text</li>
-  <li>Notes (optional)</li>
-</ul>
-<t>
-  Values to be added to this namespace require IETF Review
-  (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
-</t>
-</section>
-
-<section title="Considerations for New Authentication Schemes" anchor="considerations.for.new.auth.schemes">
-<t>
-  There are certain aspects of the HTTP Authentication framework that put
-  constraints on how new authentication schemes can work:
-</t>
-<ul>
-  <li><t>
-    HTTP authentication is presumed to be stateless: all of the information
-    necessary to authenticate a request &MUST; be provided in the request,
-    rather than be dependent on the server remembering prior requests.
-    Authentication based on, or bound to, the underlying connection is
-    outside the scope of this specification and inherently flawed unless
-    steps are taken to ensure that the connection cannot be used by any
-    party other than the authenticated user
-    (see <xref target="intermediaries"/>).
-  </t>
-  </li>
-  <li>
-    <t>
-      The authentication parameter "realm" is reserved for defining protection
-      spaces as described in <xref target="protection.space"/>. New schemes
-      &MUST-NOT; use it in a way incompatible with that definition.
-    </t>
-  </li>
-  <li>
-    <t>
-      The "token68" notation was introduced for compatibility with existing
-      authentication schemes and can only be used once per challenge or credential.
-      Thus, new schemes ought to use the auth-param syntax instead, because
-      otherwise future extensions will be impossible.
-    </t>
-  </li>
-  <li>
-    <t>
-      The parsing of challenges and credentials is defined by this specification
-      and cannot be modified by new authentication schemes. When the auth-param
-      syntax is used, all parameters ought to support both token and
-      quoted-string syntax, and syntactical constraints ought to be defined on
-      the field value after parsing (i.e., quoted-string processing). This is
-      necessary so that recipients can use a generic parser that applies to
-      all authentication schemes.
-    </t>
-    <t>
-      &Note; The fact that the value syntax for the "realm" parameter
-      is restricted to quoted-string was a bad design choice not to be repeated
-      for new parameters.
-    </t>
-  </li>
-  <li>
-    <t>
-      Definitions of new schemes ought to define the treatment of unknown
-      extension parameters. In general, a "must-ignore" rule is preferable
-      to a "must-understand" rule, because otherwise it will be hard to introduce
-      new parameters in the presence of legacy recipients. Furthermore,
-      it's good to describe the policy for defining new parameters (such
-      as "update the specification" or "use this registry").
-    </t>
-  </li>
-  <li>
-    <t>
-      Authentication schemes need to document whether they are usable in
-      origin-server authentication (i.e., using <x:ref>WWW-Authenticate</x:ref>),
-      and/or proxy authentication (i.e., using <x:ref>Proxy-Authenticate</x:ref>).
-    </t>
-  </li>
-  <li>
-    <t>
-      The credentials carried in an <x:ref>Authorization</x:ref> header field are specific to
-      the user agent and, therefore, have the same effect on HTTP caches as the
-      "private" Cache-Control response directive (<xref target="cache-response-directive.private"/>),
-      within the scope of the request in which they appear.
-    </t>
-    <t>
-      Therefore, new authentication schemes that choose not to carry
-      credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
-      header field) will need to explicitly disallow caching, by mandating the use of
-      Cache-Control response directives (e.g., "private").
-    </t>
-  </li>
-  <li>
-    <t>
-      Schemes using <x:ref>Authentication-Info</x:ref>, <x:ref>Proxy-Authentication-Info</x:ref>,
-      or any other authentication related response header field need to
-      consider and document the related security considerations (see 
-      <xref target="security.auth.add.resp"/>). 
-    </t>
-  </li>
-</ul>
-</section>
-</section>
-</section>
-
 <section title="Response Status Codes" anchor="status.codes">
   <iref item="Status Code"/>
 <t>
@@ -5230,55 +5281,6 @@ Content-Range: exampleunit 11.2-14.3/25
        respond appropriately.</li>
 </ul>
 </section>
-</section>
-
-<section title="Authentication Challenges" anchor="response.auth">
-<t>
-   Authentication challenges indicate what mechanisms are available for the
-   client to provide authentication credentials in future requests.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>WWW-Authenticate</td>
-      <td><xref target="field.www-authenticate" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Proxy-Authenticate</td>
-      <td><xref target="field.proxy-authenticate" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-<t>
-   Furthermore, the "Authentication-Info" and
-   "Proxy-Authentication-Info" response header fields are defined
-   for use in authentication schemes that need to return
-   information once the client's authentication credentials have been accepted.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Authentication-Info</td>
-      <td><xref target="field.authentication-info" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Proxy-Authentication-Info</td>
-      <td><xref target="field.proxy-authentication-info" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
 </section>
 
 <section title="Status Code Definitions" anchor="core.status.codes">
