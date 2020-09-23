@@ -3756,6 +3756,279 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </section>
 </section>
 
+<section title="Content Negotiation" anchor="content.negotiation">
+  <x:anchor-alias value="content negotiation"/>
+<t>
+   When responses convey payload information, whether indicating a success or
+   an error, the origin server often has different ways of representing that
+   information; for example, in different formats, languages, or encodings.
+   Likewise, different users or user agents might have differing capabilities,
+   characteristics, or preferences that could influence which representation,
+   among those available, would be best to deliver. For this reason, HTTP
+   provides mechanisms for <x:ref>content negotiation</x:ref>.
+</t>
+<t>
+   This specification defines three patterns of content negotiation that can
+   be made visible within the protocol:
+   "proactive" negotiation, where the server selects the representation based
+   upon the user agent's stated preferences, "reactive" negotiation,
+   where the server provides a list of representations for the user agent to
+   choose from, and "request payload" negotiation, where the user agent
+   selects the representation for a future request based upon the server's
+   stated preferences in past responses. Other patterns of content negotiation include
+   "conditional content", where the representation consists of multiple
+   parts that are selectively rendered based on user agent parameters, 
+   "active content", where the representation contains a script that
+   makes additional (more specific) requests based on the user agent
+   characteristics, and "Transparent Content Negotiation"
+   (<xref target="RFC2295"/>), where content selection is performed by
+   an intermediary. These patterns are not mutually exclusive, and each has
+   trade-offs in applicability and practicality.
+</t>
+<t>
+   Note that, in all cases, HTTP is not aware of the resource semantics.
+   The consistency with which an origin server responds to requests, over time
+   and over the varying dimensions of content negotiation, and thus the
+   "sameness" of a resource's observed representations over time, is
+   determined entirely by whatever entity or algorithm selects or generates
+   those responses.
+</t>
+
+<section title="Proactive Negotiation" anchor="proactive.negotiation">
+  <x:anchor-alias value="proactive negotiation"/>
+  <x:anchor-alias value="server-driven negotiation"/>
+<t>
+   When content negotiation preferences are sent by the user agent in a
+   request to encourage an algorithm located at the server to
+   select the preferred representation, it is called
+   <x:dfn>proactive negotiation</x:dfn>
+   (a.k.a., <x:dfn>server-driven negotiation</x:dfn>). Selection is based on
+   the available representations for a response (the dimensions over which it
+   might vary, such as language, content-coding, etc.) compared to various
+   information supplied in the request, including both the explicit
+   negotiation fields below and implicit
+   characteristics, such as the client's network address or parts of the
+   <x:ref>User-Agent</x:ref> field.
+</t>
+<t>
+   Proactive negotiation is advantageous when the algorithm for
+   selecting from among the available representations is difficult to
+   describe to a user agent, or when the server desires to send its
+   "best guess" to the user agent along with the first response (hoping to
+   avoid the round trip delay of a subsequent request if the "best
+   guess" is good enough for the user). In order to improve the server's
+   guess, a user agent &MAY; send request header fields that describe
+   its preferences.
+</t>
+<t>
+   Proactive negotiation has serious disadvantages:
+</t>
+<ul>
+   <li>
+    It is impossible for the server to accurately determine what
+    might be "best" for any given user, since that would require
+    complete knowledge of both the capabilities of the user agent
+    and the intended use for the response (e.g., does the user want
+    to view it on screen or print it on paper?);
+   </li>
+   <li>
+    Having the user agent describe its capabilities in every
+    request can be both very inefficient (given that only a small
+    percentage of responses have multiple representations) and a
+    potential risk to the user's privacy;
+   </li>
+   <li>
+    It complicates the implementation of an origin server and the
+    algorithms for generating responses to a request; and,
+   </li>
+   <li>
+    It limits the reusability of responses for shared caching.
+   </li>
+</ul>
+<t>
+   A user agent cannot rely on proactive negotiation preferences being
+   consistently honored, since the origin server might not implement proactive
+   negotiation for the requested resource or might decide that sending a
+   response that doesn't conform to the user agent's preferences is better
+   than sending a <x:ref>406 (Not Acceptable)</x:ref> response.
+</t>
+<t>
+   A <x:ref>Vary</x:ref> header field (<xref target="field.vary"/>) is
+   often sent in a response subject to proactive negotiation to indicate what
+   parts of the request information were used in the selection algorithm.
+</t>
+<t>
+   The following request header fields can be sent by a user agent to engage in
+   <x:ref>proactive negotiation</x:ref> of the response content, as defined in
+   <xref target="proactive.negotiation"/>. The preferences sent in these
+   fields apply to any content in the response, including representations of
+   the target resource, representations of error or processing status, and
+   potentially even the miscellaneous text strings that might appear within
+   the protocol.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Accept</td>
+      <td><xref target="field.accept" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Accept-Charset</td>
+      <td><xref target="field.accept-charset" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Accept-Encoding</td>
+      <td><xref target="field.accept-encoding" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Accept-Language</td>
+      <td><xref target="field.accept-language" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+<t>
+   For each of these header fields, a request that does not contain it
+   implies that the user agent has no preference on that axis of negotiation.
+   If the header field is present in a request and none of the available
+   representations for the response can be considered acceptable according to
+   it, the origin server can either honor the header field by sending a
+   <x:ref>406 (Not Acceptable)</x:ref> response or disregard the header field
+   by treating the response as if it is not subject to content negotiation
+   for that request header field. This does not imply, however, that the
+   client will be able to use the representation.
+</t>
+<t>
+   &Note; Sending these header fields makes it easier for a server to
+   identify an individual by virtue of the user agent's request
+   characteristics (<xref target="fingerprinting"/>).
+</t>
+<t>
+   Each of these header fields defines a wildcard value (often, "*") to
+   select unspecified values. If no wildcard is present, all values not
+   explicitly mentioned in the field are considered "not acceptable" to the
+   client.
+</t>
+<t>
+   &Note; In practice, using wildcards in content negotiation has limited
+   practical value, because it is seldom useful to say, for example, "I
+   prefer image/* more or less than (some other specific value)". Clients can
+   explicitly request a <x:ref>406 (Not Acceptable)</x:ref> response if a
+   more preferred format is not available by sending Accept: */*;q=0, but
+   they still need to be able to handle a different response, since the
+   server is allowed to ignore their preference.
+</t>
+</section>
+
+<section title="Reactive Negotiation" anchor="reactive.negotiation">
+  <x:anchor-alias value="reactive negotiation"/>
+  <x:anchor-alias value="agent-driven negotiation"/>
+<t>
+   With <x:dfn>reactive negotiation</x:dfn>
+   (a.k.a., <x:dfn>agent-driven negotiation</x:dfn>), selection of the best
+   response representation (regardless of the status code) is performed by the
+   user agent after receiving an initial response from the origin server that
+   contains a list of resources for alternative representations.
+   If the user agent is not satisfied by the initial response representation,
+   it can perform a GET request on one or more of the alternative resources,
+   selected based on metadata included in the list, to obtain a different form
+   of representation for that response. Selection of alternatives might be
+   performed automatically by the user agent or manually by the user selecting
+   from a generated (possibly hypertext) menu.
+</t>
+<t>
+   Note that the above refers to representations of the response, in general,
+   not representations of the resource. The alternative representations are
+   only considered representations of the target resource if the response in
+   which those alternatives are provided has the semantics of being a
+   representation of the target resource (e.g., a <x:ref>200 (OK)</x:ref>
+   response to a GET request) or has the semantics of providing links to
+   alternative representations for the target resource
+   (e.g., a <x:ref>300 (Multiple Choices)</x:ref> response to a GET request).
+</t>
+<t>
+   A server might choose not to send an initial representation, other than
+   the list of alternatives, and thereby indicate that reactive
+   negotiation by the user agent is preferred. For example, the alternatives
+   listed in responses with the <x:ref>300 (Multiple Choices)</x:ref> and
+   <x:ref>406 (Not Acceptable)</x:ref> status codes include information about
+   the available representations so that the user or user agent can react by
+   making a selection.
+</t>
+<t>
+   Reactive negotiation is advantageous when the response would vary
+   over commonly used dimensions (such as type, language, or encoding),
+   when the origin server is unable to determine a user agent's
+   capabilities from examining the request, and generally when public
+   caches are used to distribute server load and reduce network usage.
+</t>
+<t>
+   Reactive negotiation suffers from the disadvantages of transmitting
+   a list of alternatives to the user agent, which degrades user-perceived
+   latency if transmitted in the header section, and needing a second request
+   to obtain an alternate representation. Furthermore, this specification
+   does not define a mechanism for supporting automatic selection, though it
+   does not prevent such a mechanism from being developed as an extension.
+</t>
+</section>
+
+<section title="Request Payload Negotiation" anchor="request.payload.negotiation">
+  <x:anchor-alias value="request payload negotiation"/>
+<t>
+   When content negotiation preferences are sent in a server's response, the
+   listed preferences are called <x:dfn>request payload negotiation</x:dfn>
+   because they intend to influence selection of an appropriate payload for
+   subsequent requests to that resource. For example,
+   the <x:ref>Accept-Encoding</x:ref> field
+   (<xref target="field.accept-encoding"/>) can be sent in a response to
+   indicate preferred content codings for subsequent requests to that
+   resource <xref target="RFC7694"/>.
+</t>
+<aside>
+  <t>
+    Similarly, <xref target="RFC5789" x:sec="3.1" x:fmt="of"/> defines
+    the "Accept-Patch" response header field which allows discovery of
+    which content types are accepted in PATCH requests.
+  </t>
+</aside>
+</section>
+
+<section title="Quality Values" anchor="quality.values">
+  <x:anchor-alias value="weight"/>
+  <x:anchor-alias value="qvalue"/>
+<t>
+   The content negotiation fields defined by this specification
+   use a common parameter, named "q" (case-insensitive), to assign a relative
+   "weight" to the preference for that associated kind of content.
+   This weight is referred to as a "quality value" (or "qvalue") because
+   the same parameter name is often used within server configurations to
+   assign a weight to the relative quality of the various representations
+   that can be selected for a resource.
+</t>
+<t>
+   The weight is normalized to a real number in the range 0 through 1,
+   where 0.001 is the least preferred and 1 is the most preferred;
+   a value of 0 means "not acceptable". If no "q" parameter is present,
+   the default weight is 1.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
+  <x:ref>weight</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref>
+  <x:ref>qvalue</x:ref> = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
+         / ( "1" [ "." 0*3("0") ] )
+</sourcecode>
+<t>
+   A sender of qvalue &MUST-NOT; generate more than three digits after the
+   decimal point. User configuration of these values ought to be limited in
+   the same fashion.
+</t>
+</section>
+</section>
+
 <section title="Conditional Requests" anchor="conditional.requests">
   <iref item="conditional request" primary="true"/>
 <t>
@@ -4326,282 +4599,6 @@ Content-Range: exampleunit 11.2-14.3/25
   <dd>IESG</dd>
 </dl>
 </section>
-</section>
-
-<section title="Content Negotiation" anchor="content.negotiation">
-  <x:anchor-alias value="content negotiation"/>
-<t>
-   When responses convey payload information, whether indicating a success or
-   an error, the origin server often has different ways of representing that
-   information; for example, in different formats, languages, or encodings.
-   Likewise, different users or user agents might have differing capabilities,
-   characteristics, or preferences that could influence which representation,
-   among those available, would be best to deliver. For this reason, HTTP
-   provides mechanisms for <x:ref>content negotiation</x:ref>.
-</t>
-<t>
-   This specification defines three patterns of content negotiation that can
-   be made visible within the protocol:
-   "proactive" negotiation, where the server selects the representation based
-   upon the user agent's stated preferences, "reactive" negotiation,
-   where the server provides a list of representations for the user agent to
-   choose from, and "request payload" negotiation, where the user agent
-   selects the representation for a future request based upon the server's
-   stated preferences in past responses. Other patterns of content negotiation include
-   "conditional content", where the representation consists of multiple
-   parts that are selectively rendered based on user agent parameters, 
-   "active content", where the representation contains a script that
-   makes additional (more specific) requests based on the user agent
-   characteristics, and "Transparent Content Negotiation"
-   (<xref target="RFC2295"/>), where content selection is performed by
-   an intermediary. These patterns are not mutually exclusive, and each has
-   trade-offs in applicability and practicality.
-</t>
-<t>
-   Note that, in all cases, HTTP is not aware of the resource semantics.
-   The consistency with which an origin server responds to requests, over time
-   and over the varying dimensions of content negotiation, and thus the
-   "sameness" of a resource's observed representations over time, is
-   determined entirely by whatever entity or algorithm selects or generates
-   those responses.
-</t>
-
-<section title="Proactive Negotiation" anchor="proactive.negotiation">
-  <x:anchor-alias value="proactive negotiation"/>
-  <x:anchor-alias value="server-driven negotiation"/>
-<t>
-   When content negotiation preferences are sent by the user agent in a
-   request to encourage an algorithm located at the server to
-   select the preferred representation, it is called
-   <x:dfn>proactive negotiation</x:dfn>
-   (a.k.a., <x:dfn>server-driven negotiation</x:dfn>). Selection is based on
-   the available representations for a response (the dimensions over which it
-   might vary, such as language, content-coding, etc.) compared to various
-   information supplied in the request, including both the explicit
-   negotiation fields of <xref target="request.conneg"/> and implicit
-   characteristics, such as the client's network address or parts of the
-   <x:ref>User-Agent</x:ref> field.
-</t>
-<t>
-   Proactive negotiation is advantageous when the algorithm for
-   selecting from among the available representations is difficult to
-   describe to a user agent, or when the server desires to send its
-   "best guess" to the user agent along with the first response (hoping to
-   avoid the round trip delay of a subsequent request if the "best
-   guess" is good enough for the user). In order to improve the server's
-   guess, a user agent &MAY; send request header fields that describe
-   its preferences.
-</t>
-<t>
-   Proactive negotiation has serious disadvantages:
-</t>
-<ul>
-   <li>
-    It is impossible for the server to accurately determine what
-    might be "best" for any given user, since that would require
-    complete knowledge of both the capabilities of the user agent
-    and the intended use for the response (e.g., does the user want
-    to view it on screen or print it on paper?);
-   </li>
-   <li>
-    Having the user agent describe its capabilities in every
-    request can be both very inefficient (given that only a small
-    percentage of responses have multiple representations) and a
-    potential risk to the user's privacy;
-   </li>
-   <li>
-    It complicates the implementation of an origin server and the
-    algorithms for generating responses to a request; and,
-   </li>
-   <li>
-    It limits the reusability of responses for shared caching.
-   </li>
-</ul>
-<t>
-   A user agent cannot rely on proactive negotiation preferences being
-   consistently honored, since the origin server might not implement proactive
-   negotiation for the requested resource or might decide that sending a
-   response that doesn't conform to the user agent's preferences is better
-   than sending a <x:ref>406 (Not Acceptable)</x:ref> response.
-</t>
-<t>
-   A <x:ref>Vary</x:ref> header field (<xref target="field.vary"/>) is
-   often sent in a response subject to proactive negotiation to indicate what
-   parts of the request information were used in the selection algorithm.
-</t>
-</section>
-
-<section title="Reactive Negotiation" anchor="reactive.negotiation">
-  <x:anchor-alias value="reactive negotiation"/>
-  <x:anchor-alias value="agent-driven negotiation"/>
-<t>
-   With <x:dfn>reactive negotiation</x:dfn>
-   (a.k.a., <x:dfn>agent-driven negotiation</x:dfn>), selection of the best
-   response representation (regardless of the status code) is performed by the
-   user agent after receiving an initial response from the origin server that
-   contains a list of resources for alternative representations.
-   If the user agent is not satisfied by the initial response representation,
-   it can perform a GET request on one or more of the alternative resources,
-   selected based on metadata included in the list, to obtain a different form
-   of representation for that response. Selection of alternatives might be
-   performed automatically by the user agent or manually by the user selecting
-   from a generated (possibly hypertext) menu.
-</t>
-<t>
-   Note that the above refers to representations of the response, in general,
-   not representations of the resource. The alternative representations are
-   only considered representations of the target resource if the response in
-   which those alternatives are provided has the semantics of being a
-   representation of the target resource (e.g., a <x:ref>200 (OK)</x:ref>
-   response to a GET request) or has the semantics of providing links to
-   alternative representations for the target resource
-   (e.g., a <x:ref>300 (Multiple Choices)</x:ref> response to a GET request).
-</t>
-<t>
-   A server might choose not to send an initial representation, other than
-   the list of alternatives, and thereby indicate that reactive
-   negotiation by the user agent is preferred. For example, the alternatives
-   listed in responses with the <x:ref>300 (Multiple Choices)</x:ref> and
-   <x:ref>406 (Not Acceptable)</x:ref> status codes include information about
-   the available representations so that the user or user agent can react by
-   making a selection.
-</t>
-<t>
-   Reactive negotiation is advantageous when the response would vary
-   over commonly used dimensions (such as type, language, or encoding),
-   when the origin server is unable to determine a user agent's
-   capabilities from examining the request, and generally when public
-   caches are used to distribute server load and reduce network usage.
-</t>
-<t>
-   Reactive negotiation suffers from the disadvantages of transmitting
-   a list of alternatives to the user agent, which degrades user-perceived
-   latency if transmitted in the header section, and needing a second request
-   to obtain an alternate representation. Furthermore, this specification
-   does not define a mechanism for supporting automatic selection, though it
-   does not prevent such a mechanism from being developed as an extension.
-</t>
-</section>
-
-<section title="Request Payload Negotiation" anchor="request.payload.negotiation">
-  <x:anchor-alias value="request payload negotiation"/>
-<t>
-   When content negotiation preferences are sent in a server's response, the
-   listed preferences are called <x:dfn>request payload negotiation</x:dfn>
-   because they intend to influence selection of an appropriate payload for
-   subsequent requests to that resource. For example,
-   the <x:ref>Accept-Encoding</x:ref> field
-   (<xref target="field.accept-encoding"/>) can be sent in a response to
-   indicate preferred content codings for subsequent requests to that
-   resource <xref target="RFC7694"/>.
-</t>
-<aside>
-  <t>
-    Similarly, <xref target="RFC5789" x:sec="3.1" x:fmt="of"/> defines
-    the "Accept-Patch" response header field which allows discovery of
-    which content types are accepted in PATCH requests.
-  </t>
-</aside>
-</section>
-
-<section title="Quality Values" anchor="quality.values">
-  <x:anchor-alias value="weight"/>
-  <x:anchor-alias value="qvalue"/>
-<t>
-   The content negotiation fields defined by this specification
-   use a common parameter, named "q" (case-insensitive), to assign a relative
-   "weight" to the preference for that associated kind of content.
-   This weight is referred to as a "quality value" (or "qvalue") because
-   the same parameter name is often used within server configurations to
-   assign a weight to the relative quality of the various representations
-   that can be selected for a resource.
-</t>
-<t>
-   The weight is normalized to a real number in the range 0 through 1,
-   where 0.001 is the least preferred and 1 is the most preferred;
-   a value of 0 means "not acceptable". If no "q" parameter is present,
-   the default weight is 1.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="weight"/><iref primary="true" item="Grammar" subitem="qvalue"/>
-  <x:ref>weight</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>qvalue</x:ref>
-  <x:ref>qvalue</x:ref> = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
-         / ( "1" [ "." 0*3("0") ] )
-</sourcecode>
-<t>
-   A sender of qvalue &MUST-NOT; generate more than three digits after the
-   decimal point. User configuration of these values ought to be limited in
-   the same fashion.
-</t>
-</section>
-</section>
-
-<section title="Negotiation" anchor="request.conneg">
-<t>
-   The following request header fields can be sent by a user agent to engage in
-   <x:ref>proactive negotiation</x:ref> of the response content, as defined in
-   <xref target="proactive.negotiation"/>. The preferences sent in these
-   fields apply to any content in the response, including representations of
-   the target resource, representations of error or processing status, and
-   potentially even the miscellaneous text strings that might appear within
-   the protocol.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Accept</td>
-      <td><xref target="field.accept" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Accept-Charset</td>
-      <td><xref target="field.accept-charset" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Accept-Encoding</td>
-      <td><xref target="field.accept-encoding" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Accept-Language</td>
-      <td><xref target="field.accept-language" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-<t>
-   For each of these header fields, a request that does not contain it
-   implies that the user agent has no preference on that axis of negotiation.
-   If the header field is present in a request and none of the available
-   representations for the response can be considered acceptable according to
-   it, the origin server can either honor the header field by sending a
-   <x:ref>406 (Not Acceptable)</x:ref> response or disregard the header field
-   by treating the response as if it is not subject to content negotiation
-   for that request header field. This does not imply, however, that the
-   client will be able to use the representation.
-</t>
-<t>
-   &Note; Sending these header fields makes it easier for a server to
-   identify an individual by virtue of the user agent's request
-   characteristics (<xref target="fingerprinting"/>).
-</t>
-<t>
-   Each of these header fields defines a wildcard value (often, "*") to
-   select unspecified values. If no wildcard is present, all values not
-   explicitly mentioned in the field are considered "not acceptable" to the
-   client.
-</t>
-<t>
-   &Note; In practice, using wildcards in content negotiation has limited
-   practical value, because it is seldom useful to say, for example, "I
-   prefer image/* more or less than (some other specific value)". Clients can
-   explicitly request a <x:ref>406 (Not Acceptable)</x:ref> response if a
-   more preferred format is not available by sending Accept: */*;q=0, but
-   they still need to be able to handle a different response, since the
-   server is allowed to ignore their preference.
-</t>
 </section>
 
 <section title="Response Status Codes" anchor="status.codes">
@@ -6259,7 +6256,7 @@ Content-Range: bytes 7000-7999/8000
    <x:ref>target resource</x:ref> does not have a current representation that
    would be acceptable to the user agent, according to the
    <x:ref>proactive negotiation</x:ref> header fields received in the request
-   (<xref target="request.conneg"/>), and the server is unwilling to supply a
+   (<xref target="proactive.negotiation"/>), and the server is unwilling to supply a
    default representation.
 </t>
 <t>
@@ -10723,7 +10720,7 @@ Upgrade: websocket
   <li>
     <t>
        To inform user agent recipients that this response is subject to
-       content negotiation (<xref target="request.conneg"/>) and that a
+       content negotiation (<xref target="content.negotiation"/>) and that a
        different representation might be sent in a subsequent request if
        additional parameters are provided in the listed header fields
        (<x:ref>proactive negotiation</x:ref>).
@@ -11377,7 +11374,7 @@ Upgrade: websocket
    characteristics, particularly if the user agent sends excessive details
    about the user's system or extensions. However, the source of unique
    information that is least expected by users is
-   <x:ref>proactive negotiation</x:ref> (<xref target="request.conneg"/>),
+   <x:ref>proactive negotiation</x:ref> (<xref target="proactive.negotiation"/>),
    including the <x:ref>Accept</x:ref>, <x:ref>Accept-Charset</x:ref>,
    <x:ref>Accept-Encoding</x:ref>, and <x:ref>Accept-Language</x:ref>
    header fields.
@@ -13199,7 +13196,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
 <t>
    Allow <x:ref>Accept</x:ref> and <x:ref>Accept-Encoding</x:ref> in response
    messages; the latter was introduced by <xref target="RFC7694"/>.
-   (<xref target="request.conneg"/>)
+   (<xref target="request.payload.negotiation"/>)
 </t>
 <t>
    The process of creating a redirected request has been clarified.
@@ -13356,7 +13353,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="status.308"/>, include status code 308 from RFC 7538 (<eref target="https://github.com/httpwg/http-core/issues/3"/>)</li>
   <li>In <xref target="media.type"/>, clarify that the charset parameter value is case-insensitive due to the definition in RFC 2046 (<eref target="https://github.com/httpwg/http-core/issues/13"/>)</li>
   <li>Define a separate registry for HTTP header field names (<eref target="https://github.com/httpwg/http-core/issues/42"/>)</li>
-  <li>In <xref target="request.conneg"/>, refactor and clarify description of wildcard ("*") handling (<eref target="https://github.com/httpwg/http-core/issues/46"/>)</li>
+  <li>In <xref target="proactive.negotiation"/>, refactor and clarify description of wildcard ("*") handling (<eref target="https://github.com/httpwg/http-core/issues/46"/>)</li>
   <li>Deprecate Accept-Charset (<eref target="https://github.com/httpwg/http-core/issues/61"/>)</li>
   <li>In <xref target="evaluation"/>, mention Cache-Control: immutable (<eref target="https://github.com/httpwg/http-core/issues/69"/>)</li>
   <li>In <xref target="field.order"/>, clarify when header field combination is allowed (<eref target="https://github.com/httpwg/http-core/issues/74"/>)</li>
