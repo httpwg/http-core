@@ -1687,6 +1687,196 @@ Content-Type: text/plain
    See <xref target="RFC5646"/> for further information. 
 </t>
 </section>
+
+<section title="Validators" anchor="response.validator">
+   <iref primary="true" item="metadata"/>
+   <iref primary="true" item="validator"/>
+   <iref item="selected representation"/>
+<t>
+   Validator header fields convey metadata about the
+   <x:ref>selected representation</x:ref> (<xref target="representations"/>).
+   In responses to safe requests, validator fields describe the selected
+   representation chosen by the origin server while handling the response.
+   Note that, depending on the status code semantics, the
+   <x:ref>selected representation</x:ref> for a given response is not
+   necessarily the same as the representation enclosed as response payload.
+</t>
+<t>
+   In a successful response to a state-changing request, validator fields
+   describe the new representation that has replaced the prior
+   <x:ref>selected representation</x:ref> as a result of processing the
+   request.
+</t>
+<t>
+   For example, an ETag field in a <x:ref>201 (Created)</x:ref> response communicates the
+   entity-tag of the newly created resource's representation, so that it can
+   be used in later conditional requests to prevent the "lost update"
+   problem <xref target="preconditions"/>.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ETag</td>
+      <td><xref target="field.etag" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Last-Modified</td>
+      <td><xref target="field.last-modified" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+<t>
+   This specification defines two forms of metadata that are commonly used
+   to observe resource state and test for preconditions: modification dates
+   (<xref target="field.last-modified"/>) and opaque entity tags
+   (<xref target="field.etag"/>).  Additional metadata that reflects resource state
+   has been defined by various extensions of HTTP, such as Web Distributed
+   Authoring and Versioning (WebDAV, <xref target="RFC4918"/>), that are beyond the scope of this specification.
+   A resource metadata value is referred to as a "<x:dfn>validator</x:dfn>"
+   when it is used within a precondition.
+</t>
+
+<section title="Weak versus Strong" anchor="weak.and.strong.validators">
+   <iref primary="true" item="validator" subitem="weak"/>
+   <iref primary="true" item="validator" subitem="strong"/>
+<t>
+   Validators come in two flavors: strong or weak.  Weak validators are easy
+   to generate but are far less useful for comparisons.  Strong validators
+   are ideal for comparisons but can be very difficult (and occasionally
+   impossible) to generate efficiently.  Rather than impose that all forms
+   of resource adhere to the same strength of validator, HTTP exposes the
+   type of validator in use and imposes restrictions on when weak validators
+   can be used as preconditions.
+</t>
+<t>
+   A "strong validator" is representation metadata that changes value whenever
+   a change occurs to the representation data that would be observable in the
+   payload body of a <x:ref>200 (OK)</x:ref> response to GET.
+</t>
+<t>   
+   A strong validator might change for reasons other than a change to the
+   representation data, such as when a
+   semantically significant part of the representation metadata is changed
+   (e.g., <x:ref>Content-Type</x:ref>), but it is in the best interests of the
+   origin server to only change the value when it is necessary to invalidate
+   the stored responses held by remote caches and authoring tools.
+</t>
+<t>
+   Cache entries might persist for arbitrarily long periods, regardless
+   of expiration times.  Thus, a cache might attempt to validate an
+   entry using a validator that it obtained in the distant past.
+   A strong validator is unique across all versions of all
+   representations associated with a particular resource over time.
+   However, there is no implication of uniqueness across representations
+   of different resources (i.e., the same strong validator might be
+   in use for representations of multiple resources at the same time
+   and does not imply that those representations are equivalent).
+</t>
+<t>
+   There are a variety of strong validators used in practice.  The best are
+   based on strict revision control, wherein each change to a representation
+   always results in a unique node name and revision identifier being assigned
+   before the representation is made accessible to GET.  A collision-resistant hash
+   function applied to the representation data is also sufficient if the data
+   is available prior to the response header fields being sent and the digest
+   does not need to be recalculated every time a validation request is
+   received.  However, if a resource has distinct representations that differ
+   only in their metadata, such as might occur with content negotiation over
+   media types that happen to share the same data format, then the origin
+   server needs to incorporate additional information in the validator to
+   distinguish those representations.
+</t>
+<t>
+   In contrast, a "weak validator" is representation metadata that
+   might not change for every change to the representation data.  This
+   weakness might be due to limitations in how the value is calculated, such
+   as clock resolution, an inability to ensure uniqueness for all possible
+   representations of the resource, or a desire of the resource owner
+   to group representations by some self-determined set of equivalency
+   rather than unique sequences of data.  An origin server &SHOULD; change a
+   weak entity-tag whenever it considers prior representations to be
+   unacceptable as a substitute for the current representation. In other words,
+   a weak entity-tag ought to change whenever the origin server wants caches to
+   invalidate old responses.
+</t>
+<t>
+   For example, the representation of a weather report that changes in
+   content every second, based on dynamic measurements, might be grouped
+   into sets of equivalent representations (from the origin server's
+   perspective) with the same weak validator in order to allow cached
+   representations to be valid for a reasonable period of time (perhaps
+   adjusted dynamically based on server load or weather quality).
+   Likewise, a representation's modification time, if defined with only
+   one-second resolution, might be a weak validator if it is possible
+   for the representation to be modified twice during a single second and
+   retrieved between those modifications.
+</t>
+<t>
+   Likewise, a validator is weak if it is shared by two or more
+   representations of a given resource at the same time, unless those
+   representations have identical representation data. For example, if the
+   origin server sends the same validator for a representation with a gzip
+   content coding applied as it does for a representation with no content
+   coding, then that validator is weak. However, two simultaneous
+   representations might share the same strong validator if they differ only
+   in the representation metadata, such as when two different media types are
+   available for the same representation data.
+</t>
+<t>
+   Strong validators are usable for all conditional requests, including cache
+   validation, partial content ranges, and "lost update" avoidance.
+   Weak validators are only usable when the client does not require exact
+   equality with previously obtained representation data, such as when
+   validating a cache entry or limiting a web traversal to recent changes.
+</t>
+</section>
+
+<section title="When to Use Entity-Tags and Last-Modified Dates" anchor="when.to.use.entity.tags.and.last-modified.dates">
+<t>
+   In <x:ref>200 (OK)</x:ref> responses to GET or HEAD, an origin server:
+</t>
+<ul>
+   <li>&SHOULD; send an entity-tag validator unless it is not feasible to
+       generate one.</li>
+   <li>&MAY; send a weak entity-tag instead of a strong entity-tag, if
+       performance considerations support the use of weak entity-tags,
+       or if it is unfeasible to send a strong entity-tag.</li>
+   <li>&SHOULD; send a <x:ref>Last-Modified</x:ref> value if it is feasible to
+       send one.</li>
+</ul>
+<t>
+   In other words, the preferred behavior for an origin server
+   is to send both a strong entity-tag and a <x:ref>Last-Modified</x:ref>
+   value in successful responses to a retrieval request.
+</t>
+<t>
+   A client:
+</t>
+<ul>
+   <li>&MUST; send that entity-tag in any cache validation request (using
+       <x:ref>If-Match</x:ref> or <x:ref>If-None-Match</x:ref>) if an
+       entity-tag has been provided by the origin server.</li>
+   <li>&SHOULD; send the <x:ref>Last-Modified</x:ref> value in non-subrange
+       cache validation requests (using <x:ref>If-Modified-Since</x:ref>)
+       if only a Last-Modified value has been provided by the origin server.</li>
+   <li>&MAY; send the <x:ref>Last-Modified</x:ref> value in subrange
+       cache validation requests (using <x:ref>If-Unmodified-Since</x:ref>)
+       if only a Last-Modified value has been provided by an HTTP/1.0 origin
+       server. The user agent &SHOULD; provide a way to disable this, in case
+       of difficulty.</li>
+   <li>&SHOULD; send both validators in cache validation requests if both an
+       entity-tag and a <x:ref>Last-Modified</x:ref> value have been provided
+       by the origin server. This allows both HTTP/1.0 and HTTP/1.1 caches to
+       respond appropriately.</li>
+</ul>
+</section>
+</section>
 </section>
 
 <section title="Message Composition" anchor="message.composition">
@@ -5090,196 +5280,6 @@ Content-Range: exampleunit 11.2-14.3/25
    target="identifying.payload"/>).
 </t>
 </section>
-</section>
-</section>
-
-<section title="Validators" anchor="response.validator">
-   <iref primary="true" item="metadata"/>
-   <iref primary="true" item="validator"/>
-   <iref item="selected representation"/>
-<t>
-   Validator header fields convey metadata about the
-   <x:ref>selected representation</x:ref> (<xref target="representations"/>).
-   In responses to safe requests, validator fields describe the selected
-   representation chosen by the origin server while handling the response.
-   Note that, depending on the status code semantics, the
-   <x:ref>selected representation</x:ref> for a given response is not
-   necessarily the same as the representation enclosed as response payload.
-</t>
-<t>
-   In a successful response to a state-changing request, validator fields
-   describe the new representation that has replaced the prior
-   <x:ref>selected representation</x:ref> as a result of processing the
-   request.
-</t>
-<t>
-   For example, an ETag field in a <x:ref>201 (Created)</x:ref> response communicates the
-   entity-tag of the newly created resource's representation, so that it can
-   be used in later conditional requests to prevent the "lost update"
-   problem <xref target="preconditions"/>.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ETag</td>
-      <td><xref target="field.etag" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Last-Modified</td>
-      <td><xref target="field.last-modified" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-<t>
-   This specification defines two forms of metadata that are commonly used
-   to observe resource state and test for preconditions: modification dates
-   (<xref target="field.last-modified"/>) and opaque entity tags
-   (<xref target="field.etag"/>).  Additional metadata that reflects resource state
-   has been defined by various extensions of HTTP, such as Web Distributed
-   Authoring and Versioning (WebDAV, <xref target="RFC4918"/>), that are beyond the scope of this specification.
-   A resource metadata value is referred to as a "<x:dfn>validator</x:dfn>"
-   when it is used within a precondition.
-</t>
-
-<section title="Weak versus Strong" anchor="weak.and.strong.validators">
-   <iref primary="true" item="validator" subitem="weak"/>
-   <iref primary="true" item="validator" subitem="strong"/>
-<t>
-   Validators come in two flavors: strong or weak.  Weak validators are easy
-   to generate but are far less useful for comparisons.  Strong validators
-   are ideal for comparisons but can be very difficult (and occasionally
-   impossible) to generate efficiently.  Rather than impose that all forms
-   of resource adhere to the same strength of validator, HTTP exposes the
-   type of validator in use and imposes restrictions on when weak validators
-   can be used as preconditions.
-</t>
-<t>
-   A "strong validator" is representation metadata that changes value whenever
-   a change occurs to the representation data that would be observable in the
-   payload body of a <x:ref>200 (OK)</x:ref> response to GET.
-</t>
-<t>   
-   A strong validator might change for reasons other than a change to the
-   representation data, such as when a
-   semantically significant part of the representation metadata is changed
-   (e.g., <x:ref>Content-Type</x:ref>), but it is in the best interests of the
-   origin server to only change the value when it is necessary to invalidate
-   the stored responses held by remote caches and authoring tools.
-</t>
-<t>
-   Cache entries might persist for arbitrarily long periods, regardless
-   of expiration times.  Thus, a cache might attempt to validate an
-   entry using a validator that it obtained in the distant past.
-   A strong validator is unique across all versions of all
-   representations associated with a particular resource over time.
-   However, there is no implication of uniqueness across representations
-   of different resources (i.e., the same strong validator might be
-   in use for representations of multiple resources at the same time
-   and does not imply that those representations are equivalent).
-</t>
-<t>
-   There are a variety of strong validators used in practice.  The best are
-   based on strict revision control, wherein each change to a representation
-   always results in a unique node name and revision identifier being assigned
-   before the representation is made accessible to GET.  A collision-resistant hash
-   function applied to the representation data is also sufficient if the data
-   is available prior to the response header fields being sent and the digest
-   does not need to be recalculated every time a validation request is
-   received.  However, if a resource has distinct representations that differ
-   only in their metadata, such as might occur with content negotiation over
-   media types that happen to share the same data format, then the origin
-   server needs to incorporate additional information in the validator to
-   distinguish those representations.
-</t>
-<t>
-   In contrast, a "weak validator" is representation metadata that
-   might not change for every change to the representation data.  This
-   weakness might be due to limitations in how the value is calculated, such
-   as clock resolution, an inability to ensure uniqueness for all possible
-   representations of the resource, or a desire of the resource owner
-   to group representations by some self-determined set of equivalency
-   rather than unique sequences of data.  An origin server &SHOULD; change a
-   weak entity-tag whenever it considers prior representations to be
-   unacceptable as a substitute for the current representation. In other words,
-   a weak entity-tag ought to change whenever the origin server wants caches to
-   invalidate old responses.
-</t>
-<t>
-   For example, the representation of a weather report that changes in
-   content every second, based on dynamic measurements, might be grouped
-   into sets of equivalent representations (from the origin server's
-   perspective) with the same weak validator in order to allow cached
-   representations to be valid for a reasonable period of time (perhaps
-   adjusted dynamically based on server load or weather quality).
-   Likewise, a representation's modification time, if defined with only
-   one-second resolution, might be a weak validator if it is possible
-   for the representation to be modified twice during a single second and
-   retrieved between those modifications.
-</t>
-<t>
-   Likewise, a validator is weak if it is shared by two or more
-   representations of a given resource at the same time, unless those
-   representations have identical representation data. For example, if the
-   origin server sends the same validator for a representation with a gzip
-   content coding applied as it does for a representation with no content
-   coding, then that validator is weak. However, two simultaneous
-   representations might share the same strong validator if they differ only
-   in the representation metadata, such as when two different media types are
-   available for the same representation data.
-</t>
-<t>
-   Strong validators are usable for all conditional requests, including cache
-   validation, partial content ranges, and "lost update" avoidance.
-   Weak validators are only usable when the client does not require exact
-   equality with previously obtained representation data, such as when
-   validating a cache entry or limiting a web traversal to recent changes.
-</t>
-</section>
-
-<section title="When to Use Entity-Tags and Last-Modified Dates" anchor="when.to.use.entity.tags.and.last-modified.dates">
-<t>
-   In <x:ref>200 (OK)</x:ref> responses to GET or HEAD, an origin server:
-</t>
-<ul>
-   <li>&SHOULD; send an entity-tag validator unless it is not feasible to
-       generate one.</li>
-   <li>&MAY; send a weak entity-tag instead of a strong entity-tag, if
-       performance considerations support the use of weak entity-tags,
-       or if it is unfeasible to send a strong entity-tag.</li>
-   <li>&SHOULD; send a <x:ref>Last-Modified</x:ref> value if it is feasible to
-       send one.</li>
-</ul>
-<t>
-   In other words, the preferred behavior for an origin server
-   is to send both a strong entity-tag and a <x:ref>Last-Modified</x:ref>
-   value in successful responses to a retrieval request.
-</t>
-<t>
-   A client:
-</t>
-<ul>
-   <li>&MUST; send that entity-tag in any cache validation request (using
-       <x:ref>If-Match</x:ref> or <x:ref>If-None-Match</x:ref>) if an
-       entity-tag has been provided by the origin server.</li>
-   <li>&SHOULD; send the <x:ref>Last-Modified</x:ref> value in non-subrange
-       cache validation requests (using <x:ref>If-Modified-Since</x:ref>)
-       if only a Last-Modified value has been provided by the origin server.</li>
-   <li>&MAY; send the <x:ref>Last-Modified</x:ref> value in subrange
-       cache validation requests (using <x:ref>If-Unmodified-Since</x:ref>)
-       if only a Last-Modified value has been provided by an HTTP/1.0 origin
-       server. The user agent &SHOULD; provide a way to disable this, in case
-       of difficulty.</li>
-   <li>&SHOULD; send both validators in cache validation requests if both an
-       entity-tag and a <x:ref>Last-Modified</x:ref> value have been provided
-       by the origin server. This allows both HTTP/1.0 and HTTP/1.1 caches to
-       respond appropriately.</li>
-</ul>
 </section>
 </section>
 
