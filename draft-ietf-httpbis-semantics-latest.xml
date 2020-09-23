@@ -3756,6 +3756,210 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </section>
 </section>
 
+<section title="Conditional Requests" anchor="conditional.requests">
+  <iref item="conditional request" primary="true"/>
+<t>
+   A conditional request is an HTTP request with one or more request header
+   fields that indicate a precondition to be tested before
+   applying the request method to the target resource.
+   <xref target="evaluation"/> defines when preconditions are applied.
+   <xref target="precedence"/> defines the order of evaluation when more than
+   one precondition is present.
+</t>
+<t>
+   Conditional GET requests are the most efficient mechanism for HTTP
+   cache updates <xref target="Caching"/>.  Conditionals can also be
+   applied to state-changing methods, such as PUT and DELETE, to prevent
+   the "lost update" problem: one client accidentally overwriting
+   the work of another client that has been acting in parallel.
+</t>
+<t><iref primary="false" item="selected representation"/>
+   Conditional request preconditions are based on the state of the target
+   resource as a whole (its current value set) or the state as observed
+   in a previously obtained representation (one value in that set).
+   A resource might have multiple current representations, each with its
+   own observable state.  The conditional request mechanisms assume that
+   the mapping of requests to a <x:ref>selected representation</x:ref> (<xref target="representations"/>)
+   will be consistent over time if the server intends to take advantage of
+   conditionals. Regardless, if the mapping is inconsistent and the server is
+   unable to select the appropriate representation, then no harm will result
+   when the precondition evaluates to false.
+</t>
+
+<section title="Preconditions" anchor="preconditions">
+<t>
+   The following request header fields allow a
+   client to place a precondition on the state of the target resource, so that
+   the action corresponding to the method semantics will not be applied if the
+   precondition evaluates to false. Each precondition defined by this
+   specification consists of a comparison between a set of validators obtained
+   from prior representations of the target resource to the current state of
+   validators for the selected representation
+   (<xref target="response.validator"/>). Hence, these preconditions evaluate
+   whether the state of the target resource has changed since a given state
+   known by the client. The effect of such an evaluation depends on the method
+   semantics and choice of conditional, as defined in <xref target="evaluation"/>.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>If-Match</td>
+      <td><xref target="field.if-match" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>If-None-Match</td>
+      <td><xref target="field.if-none-match" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>If-Modified-Since</td>
+      <td><xref target="field.if-modified-since" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>If-Unmodified-Since</td>
+      <td><xref target="field.if-unmodified-since" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>If-Range</td>
+      <td><xref target="field.if-range" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Evaluation" anchor="evaluation">
+<t>
+   Except when excluded below, a recipient cache or origin server &MUST;
+   evaluate received request preconditions after it has successfully performed
+   its normal request checks and just before it would process the request body
+   (if any) or perform the action associated with the request method.
+   A server &MUST; ignore all received preconditions if its response to the
+   same request without those conditions, prior to processing the request body,
+   would have been a status code other than a <x:ref>2xx (Successful)</x:ref>
+   or <x:ref>412 (Precondition Failed)</x:ref>.
+   In other words, redirects and failures that can be detected before
+   significant processing occurs take precedence over the evaluation
+   of preconditions.
+</t>
+<t>
+   A server that is not the origin server for the target resource and cannot
+   act as a cache for requests on the target resource &MUST-NOT; evaluate the
+   conditional request header fields defined by this specification, and it
+   &MUST; forward them if the request is forwarded, since the generating
+   client intends that they be evaluated by a server that can provide a
+   current representation.
+   Likewise, a server &MUST; ignore the conditional request header fields
+   defined by this specification when received with a request method that does
+   not involve the selection or modification of a
+   <x:ref>selected representation</x:ref>, such as CONNECT, OPTIONS, or TRACE.
+</t>
+<t>
+   Note that protocol extensions can modify the conditions under which
+   revalidation is triggered. For example, the "immutable" cache directive
+   (defined by <xref target="RFC8246"/>) instructs caches to forgo
+   revalidation of fresh responses even when requested by the client.
+</t>
+<t>
+   Conditional request header fields that are defined by extensions to HTTP
+   might place conditions on all recipients, on the state of the target
+   resource in general, or on a group of resources. For instance, the "If"
+   header field in WebDAV can make a request conditional on various aspects
+   of multiple resources, such as locks, if the recipient understands and
+   implements that field (<xref target="RFC4918" x:fmt="," x:sec="10.4"/>).
+</t>
+<t>
+   Although conditional request header fields are defined as being usable with
+   the HEAD method (to keep HEAD's semantics consistent with those of GET),
+   there is no point in sending a conditional HEAD because a successful
+   response is around the same size as a <x:ref>304 (Not Modified)</x:ref>
+   response and more useful than a <x:ref>412 (Precondition Failed)</x:ref>
+   response.
+</t>
+</section>
+
+<section title="Precedence" anchor="precedence">
+<t>
+   When more than one conditional request header field is present in a request,
+   the order in which the fields are evaluated becomes important. In practice,
+   the fields defined in this document are consistently implemented in a
+   single, logical order, since "lost update" preconditions have more strict
+   requirements than cache validation, a validated cache is more efficient
+   than a partial response, and entity tags are presumed to be more accurate
+   than date validators.
+</t>
+<t>
+   A recipient cache or origin server &MUST; evaluate the request
+   preconditions defined by this specification in the following order:
+</t>
+<ol>
+   <li anchor="precedence1"><t>When recipient is the origin server and
+     <x:ref>If-Match</x:ref> is present,
+     evaluate the <x:ref>If-Match</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence3" format="counter"/></li>
+       <li>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
+           it can be determined that the state-changing request has already
+           succeeded (see <xref target="field.if-match"/>)</li>
+     </ul>
+   </li>
+   <li anchor="precedence2"><t>When recipient is the origin server,
+     <x:ref>If-Match</x:ref> is not present, and
+     <x:ref>If-Unmodified-Since</x:ref> is present,
+     evaluate the <x:ref>If-Unmodified-Since</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence3" format="counter"/></li>
+       <li>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
+           it can be determined that the state-changing request has already
+           succeeded (see <xref target="field.if-unmodified-since"/>)</li>
+     </ul>
+   </li>
+   <li anchor="precedence3"><t>When <x:ref>If-None-Match</x:ref> is present,
+     evaluate the <x:ref>If-None-Match</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence5" format="counter"/></li>
+       <li>if false for GET/HEAD, respond <x:ref>304 (Not Modified)</x:ref></li>
+       <li>if false for other methods, respond <x:ref>412 (Precondition Failed)</x:ref></li>
+     </ul>
+   </li>
+   <li anchor="precedence4"><t>When the method is GET or HEAD,
+     <x:ref>If-None-Match</x:ref> is not present, and
+     <x:ref>If-Modified-Since</x:ref> is present,
+     evaluate the <x:ref>If-Modified-Since</x:ref> precondition:</t>
+     <ul>
+       <li>if true, continue to step <xref target="precedence5" format="counter"/></li>
+       <li>if false, respond <x:ref>304 (Not Modified)</x:ref></li>
+     </ul>
+   </li>
+   <li anchor="precedence5"><t>When the method is GET and both
+     <x:ref>Range</x:ref> and <x:ref>If-Range</x:ref> are present,
+     evaluate the <x:ref>If-Range</x:ref> precondition:</t>
+     <ul>
+       <li>if the validator matches and the Range specification is
+           applicable to the <x:ref>selected representation</x:ref>, respond
+           <x:ref>206 (Partial Content)</x:ref></li>
+     </ul>
+   </li>
+   <li anchor="precedencelast"><t>Otherwise,</t>
+     <ul>
+       <li>all conditions are met, so perform the requested action and
+           respond according to its success or failure.</li>
+     </ul>
+   </li>
+</ol>
+<t>
+   Any extension to HTTP that defines additional conditional request
+   header fields ought to define its own expectations regarding the order
+   for evaluating such fields in relation to those defined in this document
+   and other conditionals that might be found in practice.
+</t>
+</section>
+</section>
+
 <section title="Range Requests" anchor="range.requests">
 
 <section title="Range Units" anchor="range.units">
@@ -4327,207 +4531,6 @@ Content-Range: exampleunit 11.2-14.3/25
    A sender of qvalue &MUST-NOT; generate more than three digits after the
    decimal point. User configuration of these values ought to be limited in
    the same fashion.
-</t>
-</section>
-</section>
-
-<section title="Preconditions" anchor="preconditions">
-  <iref item="conditional request" primary="true"/>
-<t>
-   A conditional request is an HTTP request with one or more request header
-   fields that indicate a precondition to be tested before
-   applying the request method to the target resource.
-   <xref target="evaluation"/> defines when preconditions are applied.
-   <xref target="precedence"/> defines the order of evaluation when more than
-   one precondition is present.
-</t>
-<t>
-   Conditional GET requests are the most efficient mechanism for HTTP
-   cache updates <xref target="Caching"/>.  Conditionals can also be
-   applied to state-changing methods, such as PUT and DELETE, to prevent
-   the "lost update" problem: one client accidentally overwriting
-   the work of another client that has been acting in parallel.
-</t>
-<t><iref primary="false" item="selected representation"/>
-   Conditional request preconditions are based on the state of the target
-   resource as a whole (its current value set) or the state as observed
-   in a previously obtained representation (one value in that set).
-   A resource might have multiple current representations, each with its
-   own observable state.  The conditional request mechanisms assume that
-   the mapping of requests to a <x:ref>selected representation</x:ref> (<xref target="representations"/>)
-   will be consistent over time if the server intends to take advantage of
-   conditionals. Regardless, if the mapping is inconsistent and the server is
-   unable to select the appropriate representation, then no harm will result
-   when the precondition evaluates to false.
-</t>
-<t>
-   The following request header fields allow a
-   client to place a precondition on the state of the target resource, so that
-   the action corresponding to the method semantics will not be applied if the
-   precondition evaluates to false. Each precondition defined by this
-   specification consists of a comparison between a set of validators obtained
-   from prior representations of the target resource to the current state of
-   validators for the selected representation
-   (<xref target="response.validator"/>). Hence, these preconditions evaluate
-   whether the state of the target resource has changed since a given state
-   known by the client. The effect of such an evaluation depends on the method
-   semantics and choice of conditional, as defined in <xref target="evaluation"/>.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>If-Match</td>
-      <td><xref target="field.if-match" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>If-None-Match</td>
-      <td><xref target="field.if-none-match" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>If-Modified-Since</td>
-      <td><xref target="field.if-modified-since" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>If-Unmodified-Since</td>
-      <td><xref target="field.if-unmodified-since" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>If-Range</td>
-      <td><xref target="field.if-range" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-
-<section title="Evaluation" anchor="evaluation">
-<t>
-   Except when excluded below, a recipient cache or origin server &MUST;
-   evaluate received request preconditions after it has successfully performed
-   its normal request checks and just before it would process the request body
-   (if any) or perform the action associated with the request method.
-   A server &MUST; ignore all received preconditions if its response to the
-   same request without those conditions, prior to processing the request body,
-   would have been a status code other than a <x:ref>2xx (Successful)</x:ref>
-   or <x:ref>412 (Precondition Failed)</x:ref>.
-   In other words, redirects and failures that can be detected before
-   significant processing occurs take precedence over the evaluation
-   of preconditions.
-</t>
-<t>
-   A server that is not the origin server for the target resource and cannot
-   act as a cache for requests on the target resource &MUST-NOT; evaluate the
-   conditional request header fields defined by this specification, and it
-   &MUST; forward them if the request is forwarded, since the generating
-   client intends that they be evaluated by a server that can provide a
-   current representation.
-   Likewise, a server &MUST; ignore the conditional request header fields
-   defined by this specification when received with a request method that does
-   not involve the selection or modification of a
-   <x:ref>selected representation</x:ref>, such as CONNECT, OPTIONS, or TRACE.
-</t>
-<t>
-   Note that protocol extensions can modify the conditions under which
-   revalidation is triggered. For example, the "immutable" cache directive
-   (defined by <xref target="RFC8246"/>) instructs caches to forgo
-   revalidation of fresh responses even when requested by the client.
-</t>
-<t>
-   Conditional request header fields that are defined by extensions to HTTP
-   might place conditions on all recipients, on the state of the target
-   resource in general, or on a group of resources. For instance, the "If"
-   header field in WebDAV can make a request conditional on various aspects
-   of multiple resources, such as locks, if the recipient understands and
-   implements that field (<xref target="RFC4918" x:fmt="," x:sec="10.4"/>).
-</t>
-<t>
-   Although conditional request header fields are defined as being usable with
-   the HEAD method (to keep HEAD's semantics consistent with those of GET),
-   there is no point in sending a conditional HEAD because a successful
-   response is around the same size as a <x:ref>304 (Not Modified)</x:ref>
-   response and more useful than a <x:ref>412 (Precondition Failed)</x:ref>
-   response.
-</t>
-</section>
-
-<section title="Precedence" anchor="precedence">
-<t>
-   When more than one conditional request header field is present in a request,
-   the order in which the fields are evaluated becomes important. In practice,
-   the fields defined in this document are consistently implemented in a
-   single, logical order, since "lost update" preconditions have more strict
-   requirements than cache validation, a validated cache is more efficient
-   than a partial response, and entity tags are presumed to be more accurate
-   than date validators.
-</t>
-<t>
-   A recipient cache or origin server &MUST; evaluate the request
-   preconditions defined by this specification in the following order:
-</t>
-<ol>
-   <li anchor="precedence1"><t>When recipient is the origin server and
-     <x:ref>If-Match</x:ref> is present,
-     evaluate the <x:ref>If-Match</x:ref> precondition:</t>
-     <ul>
-       <li>if true, continue to step <xref target="precedence3" format="counter"/></li>
-       <li>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
-           it can be determined that the state-changing request has already
-           succeeded (see <xref target="field.if-match"/>)</li>
-     </ul>
-   </li>
-   <li anchor="precedence2"><t>When recipient is the origin server,
-     <x:ref>If-Match</x:ref> is not present, and
-     <x:ref>If-Unmodified-Since</x:ref> is present,
-     evaluate the <x:ref>If-Unmodified-Since</x:ref> precondition:</t>
-     <ul>
-       <li>if true, continue to step <xref target="precedence3" format="counter"/></li>
-       <li>if false, respond <x:ref>412 (Precondition Failed)</x:ref> unless
-           it can be determined that the state-changing request has already
-           succeeded (see <xref target="field.if-unmodified-since"/>)</li>
-     </ul>
-   </li>
-   <li anchor="precedence3"><t>When <x:ref>If-None-Match</x:ref> is present,
-     evaluate the <x:ref>If-None-Match</x:ref> precondition:</t>
-     <ul>
-       <li>if true, continue to step <xref target="precedence5" format="counter"/></li>
-       <li>if false for GET/HEAD, respond <x:ref>304 (Not Modified)</x:ref></li>
-       <li>if false for other methods, respond <x:ref>412 (Precondition Failed)</x:ref></li>
-     </ul>
-   </li>
-   <li anchor="precedence4"><t>When the method is GET or HEAD,
-     <x:ref>If-None-Match</x:ref> is not present, and
-     <x:ref>If-Modified-Since</x:ref> is present,
-     evaluate the <x:ref>If-Modified-Since</x:ref> precondition:</t>
-     <ul>
-       <li>if true, continue to step <xref target="precedence5" format="counter"/></li>
-       <li>if false, respond <x:ref>304 (Not Modified)</x:ref></li>
-     </ul>
-   </li>
-   <li anchor="precedence5"><t>When the method is GET and both
-     <x:ref>Range</x:ref> and <x:ref>If-Range</x:ref> are present,
-     evaluate the <x:ref>If-Range</x:ref> precondition:</t>
-     <ul>
-       <li>if the validator matches and the Range specification is
-           applicable to the <x:ref>selected representation</x:ref>, respond
-           <x:ref>206 (Partial Content)</x:ref></li>
-     </ul>
-   </li>
-   <li anchor="precedencelast"><t>Otherwise,</t>
-     <ul>
-       <li>all conditions are met, so perform the requested action and
-           respond according to its success or failure.</li>
-     </ul>
-   </li>
-</ol>
-<t>
-   Any extension to HTTP that defines additional conditional request
-   header fields ought to define its own expectations regarding the order
-   for evaluating such fields in relation to those defined in this document
-   and other conditionals that might be found in practice.
 </t>
 </section>
 </section>
