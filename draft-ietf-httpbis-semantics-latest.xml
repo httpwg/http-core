@@ -1358,6 +1358,337 @@ Content-Type: text/plain
 </section>
 </section>
 
+<section title="Representation Data" anchor="representation.data">
+  <x:anchor-alias value="representation-data"/>
+<t>
+   The representation data associated with an HTTP message is
+   either provided as the payload body of the message or
+   referred to by the message semantics and the target
+   URI.  The representation data is in a format and encoding defined by
+   the representation metadata header fields.
+</t>
+<t>
+   The data type of the representation data is determined via the header fields
+   <x:ref>Content-Type</x:ref> and <x:ref>Content-Encoding</x:ref>.
+   These define a two-layer, ordered encoding model:
+</t>
+<artwork type="example">
+  representation-data := Content-Encoding( Content-Type( bits ) )
+</artwork>
+
+<section title="Media Type" anchor="media.type">
+  <x:anchor-alias value="media-type"/>
+  <x:anchor-alias value="type"/>
+  <x:anchor-alias value="subtype"/>
+<t>
+   HTTP uses media types <xref target="RFC2046"/> in the
+   <x:ref>Content-Type</x:ref> (<xref target="field.content-type"/>)
+   and <x:ref>Accept</x:ref> (<xref target="field.accept"/>) header fields in
+   order to provide open and extensible data typing and type negotiation.
+   Media types define both a data format and various processing models:
+   how to process that data in accordance with each context in which it
+   is received.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
+  <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> <x:ref>parameters</x:ref>
+  <x:ref>type</x:ref>       = <x:ref>token</x:ref>
+  <x:ref>subtype</x:ref>    = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   The type and subtype tokens are case-insensitive.
+</t>
+<t>
+   The type/subtype &MAY; be followed by semicolon-delimited parameters
+   (<xref target="parameter"/>) in the form of name=value pairs.
+   The presence or absence of a parameter might be significant to the
+   processing of a media type, depending on its definition within the media
+   type registry.
+   Parameter values might or might not be case-sensitive, depending on the
+   semantics of the parameter name.
+</t>
+<t>
+   For example, the following media types are equivalent in describing HTML
+   text data encoded in the UTF-8 character encoding scheme, but the first is
+   preferred for consistency (the "charset" parameter value is defined as
+   being case-insensitive in <xref target="RFC2046" x:fmt="," x:sec="4.1.2"/>):
+</t>
+<artwork type="example">
+  text/html;charset=utf-8
+  Text/HTML;Charset="utf-8"
+  text/html; charset="utf-8"
+  text/html;charset=UTF-8
+</artwork>
+<t>
+   Media types ought to be registered with IANA according to the
+   procedures defined in <xref target="BCP13"/>.
+</t>
+
+<section title="Charset" anchor="charset">
+  <x:anchor-alias value="rule.charset"/>
+<t>
+   HTTP uses <x:dfn>charset</x:dfn> names to indicate or negotiate the
+   character encoding scheme of a textual representation
+   <xref target="RFC6365"/>.
+   A charset is identified by a case-insensitive token.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="charset"/>
+  <x:ref>charset</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Charset names ought to be registered in the IANA "Character Sets" registry
+   (<eref target="https://www.iana.org/assignments/character-sets"/>)
+   according to the procedures defined in <xref target="RFC2978" x:fmt="of" x:sec="2"/>.
+</t>
+<aside>
+  <t>
+    &Note; In theory, charset names are defined by the "mime-charset" ABNF
+    rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/> (as
+    corrected in <xref target="Err1912"/>). That rule allows two characters
+    that are not included in "token" ("{" and "}"), but no charset name
+    registered at the time of this writing includes braces
+    (see <xref target="Err5433"/>).
+  </t>
+</aside>
+</section>
+
+<section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
+<t>
+   Media types are registered with a canonical form in order to be
+   interoperable among systems with varying native encoding formats.
+   Representations selected or transferred via HTTP ought to be in canonical
+   form, for many of the same reasons described by the Multipurpose Internet
+   Mail Extensions (MIME) <xref target="RFC2045"/>.
+   However, the performance characteristics of email deployments (i.e., store
+   and forward messages to peers) are significantly different from those
+   common to HTTP and the Web (server-based information services).
+   Furthermore, MIME's constraints for the sake of compatibility with older
+   mail transfer protocols do not apply to HTTP
+   (see <xref target="differences.between.http.and.mime"/>).
+</t>
+<t>
+   MIME's canonical form requires that media subtypes of the "text"
+   type use CRLF as the text line break. HTTP allows the
+   transfer of text media with plain CR or LF alone representing a line
+   break, when such line breaks are consistent for an entire representation.
+   An HTTP sender &MAY; generate, and a recipient &MUST; be able to parse,
+   line breaks in text media that consist of CRLF, bare CR, or bare LF.
+   In addition, text media in HTTP is not limited to charsets that
+   use octets 13 and 10 for CR and LF, respectively.
+   This flexibility regarding line breaks applies only to text within a
+   representation that has been assigned a "text" media type; it does not
+   apply to "multipart" types or HTTP elements outside the payload body
+   (e.g., header fields).
+</t>
+<t>
+   If a representation is encoded with a content-coding, the underlying
+   data ought to be in a form defined above prior to being encoded.
+</t>
+</section>
+
+<section title="Multipart Types" anchor="multipart.types">
+<t>
+   MIME provides for a number of "multipart" types &mdash; encapsulations of
+   one or more representations within a single message body. All multipart
+   types share a common syntax, as defined in <xref target="RFC2046" x:sec="5.1.1" x:fmt="of"/>,
+   and include a boundary parameter as part of the media type
+   value. The message body is itself a protocol element; a sender &MUST;
+   generate only CRLF to represent line breaks between body parts.
+</t>
+<t>
+   HTTP message framing does not use the multipart boundary as an indicator
+   of message body length, though it might be used by implementations that
+   generate or process the payload. For example, the "multipart/form-data"
+   type is often used for carrying form data in a request, as described in
+   <xref target="RFC7578"/>, and the "multipart/byteranges" type is defined
+   by this specification for use in some <x:ref>206 (Partial Content)</x:ref>
+   responses (see <xref target="status.206"/>).
+</t>
+</section>
+</section>
+
+<section title="Content Codings" anchor="content.codings">
+  <iref primary="true" item="content coding"/>
+  <iref primary="true" item="compress (content coding)"/>
+  <iref primary="true" item="x-compress (content coding)"/>
+  <iref primary="true" item="deflate (content coding)"/>
+  <iref primary="true" item="gzip (content coding)"/>
+  <iref primary="true" item="x-gzip (content coding)"/>
+  <x:anchor-alias value="content-coding"/>
+<t>
+   Content coding values indicate an encoding transformation that has
+   been or can be applied to a representation. Content codings are primarily
+   used to allow a representation to be compressed or otherwise usefully
+   transformed without losing the identity of its underlying media type
+   and without loss of information. Frequently, the representation is stored
+   in coded form, transmitted directly, and only decoded by the final recipient.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="content-coding"/>
+  <x:ref>content-coding</x:ref>   = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   All content codings are case-insensitive and ought to be registered
+   within the "HTTP Content Coding Registry", as defined in <xref target="content.coding.registry"/>
+</t>
+<t>
+   Content-coding values are used in the
+   <x:ref>Accept-Encoding</x:ref> (<xref target="field.accept-encoding"/>)
+   and <x:ref>Content-Encoding</x:ref> (<xref target="field.content-encoding"/>)
+   header fields.
+</t>
+<t>
+  The following content-coding values are defined by this specification:
+</t>
+<table align="left" anchor="iana.content.coding.registration.table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>compress</td>
+      <td>UNIX "compress" data format <xref target="Welch"/></td>
+      <td><xref target="compress.coding" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>deflate</td>
+      <td>"deflate" compressed data (<xref target="RFC1951"/>) inside
+      the "zlib" data format (<xref target="RFC1950"/>)</td>
+      <td><xref target="deflate.coding" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>gzip</td>
+      <td>GZIP file format <xref target="RFC1952"/></td>
+      <td><xref target="gzip.coding" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>identity</td>
+      <td>Reserved</td>
+      <td><xref target="field.accept-encoding" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>x-compress</td>
+      <td>Deprecated (alias for compress)</td>
+      <td><xref target="compress.coding" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>x-gzip</td>
+      <td>Deprecated (alias for gzip)</td>
+      <td><xref target="gzip.coding" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+
+<section title="Compress Coding" anchor="compress.coding">
+<iref item="compress (Coding Format)"/>
+<t>
+   The "compress" coding is an adaptive Lempel-Ziv-Welch (LZW) coding
+   <xref target="Welch"/> that is commonly produced by the UNIX file
+   compression program "compress".
+   A recipient &SHOULD; consider "x-compress" to be equivalent to "compress".
+</t>
+</section>
+
+<section title="Deflate Coding" anchor="deflate.coding">
+<iref item="deflate (Coding Format)"/>
+<t>
+   The "deflate" coding is a "zlib" data format <xref target="RFC1950"/>
+   containing a "deflate" compressed data stream <xref target="RFC1951"/>
+   that uses a combination of the Lempel-Ziv (LZ77) compression algorithm and
+   Huffman coding.
+</t>
+<aside>
+  <t>
+    &Note; Some non-conformant implementations send the "deflate"
+    compressed data without the zlib wrapper.
+   </t>
+</aside>
+</section>
+
+<section title="Gzip Coding" anchor="gzip.coding">
+<iref item="gzip (Coding Format)"/>
+<t>
+   The "gzip" coding is an LZ77 coding with a 32-bit Cyclic Redundancy Check
+   (CRC) that is commonly
+   produced by the gzip file compression program <xref target="RFC1952"/>.
+   A recipient &SHOULD; consider "x-gzip" to be equivalent to "gzip".
+</t>
+</section>
+
+<section title="Content Coding Registry" anchor="content.coding.registry">
+<t>
+   The "HTTP Content Coding Registry", maintained by
+   IANA at <eref target="https://www.iana.org/assignments/http-parameters/"/>,
+   registers <x:ref>content-coding</x:ref> names.
+</t>
+<t>
+   Content coding registrations &MUST; include the following fields:
+</t>
+<ul>
+  <li>Name</li>
+  <li>Description</li>
+  <li>Pointer to specification text</li>
+</ul>
+<t>
+   Names of content codings &MUST-NOT; overlap with names of transfer codings
+   (<xref target="transfer.codings"/>), unless the encoding transformation is identical (as
+   is the case for the compression codings defined in
+   <xref target="content.codings"/>).
+</t>
+<t>
+   Values to be added to this namespace require IETF Review
+   (see <xref target="RFC8126" x:fmt="of" x:sec="4.8"/>) and &MUST;
+   conform to the purpose of content coding defined in
+   <xref target="content.codings"/>.
+</t>
+<t>
+   New content codings ought to be self-descriptive whenever possible, with
+   optional parameters discoverable within the coding format itself, rather
+   than rely on external metadata that might be lost during transit.
+</t>
+</section>
+</section>
+
+<section title="Language Tags" anchor="language.tags">
+  <x:anchor-alias value="language-tag"/>
+<t>
+   A language tag, as defined in <xref target="RFC5646"/>, identifies a
+   natural language spoken, written, or otherwise conveyed by human beings for
+   communication of information to other human beings. Computer languages are
+   explicitly excluded.
+</t>
+<t>
+   HTTP uses language tags within the <x:ref>Accept-Language</x:ref> and
+   <x:ref>Content-Language</x:ref> header fields.
+   <x:ref>Accept-Language</x:ref> uses the broader language-range production
+   defined in <xref target="field.accept-language"/>, whereas
+   <x:ref>Content-Language</x:ref> uses the language-tag production defined
+   below.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="language-tag"/>
+  <x:ref>language-tag</x:ref> = &lt;Language-Tag, see <xref target="RFC5646" x:sec="2.1"/>&gt;
+</sourcecode>
+<t>
+   A language tag is a sequence of one or more case-insensitive subtags, each
+   separated by a hyphen character ("-", %x2D).  In most cases, a language tag
+   consists of a primary language subtag that identifies a broad family of
+   related languages (e.g., "en" = English), which is optionally followed by a
+   series of subtags that refine or narrow that language's range (e.g.,
+   "en-CA" = the variety of English as communicated in Canada).
+   Whitespace is not allowed within a language tag.
+   Example tags include:
+</t>
+<artwork type="example">
+  fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
+</artwork>
+<t>
+   See <xref target="RFC5646"/> for further information. 
+</t>
+</section>
+</section>
+
 <section title="Message Composition" anchor="message.composition">
 <iref primary="true" item="message composition"/>
 <iref item="message"/>
@@ -3062,335 +3393,7 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </section>
 </section>
 
-<section title="Representation Data" anchor="representation.data">
-  <x:anchor-alias value="representation-data"/>
-<t>
-   The representation data associated with an HTTP message is
-   either provided as the payload body of the message or
-   referred to by the message semantics and the target
-   URI.  The representation data is in a format and encoding defined by
-   the representation metadata header fields.
-</t>
-<t>
-   The data type of the representation data is determined via the header fields
-   <x:ref>Content-Type</x:ref> and <x:ref>Content-Encoding</x:ref>.
-   These define a two-layer, ordered encoding model:
-</t>
-<artwork type="example">
-  representation-data := Content-Encoding( Content-Type( bits ) )
-</artwork>
-
-<section title="Media Type" anchor="media.type">
-  <x:anchor-alias value="media-type"/>
-  <x:anchor-alias value="type"/>
-  <x:anchor-alias value="subtype"/>
-<t>
-   HTTP uses media types <xref target="RFC2046"/> in the
-   <x:ref>Content-Type</x:ref> (<xref target="field.content-type"/>)
-   and <x:ref>Accept</x:ref> (<xref target="field.accept"/>) header fields in
-   order to provide open and extensible data typing and type negotiation.
-   Media types define both a data format and various processing models:
-   how to process that data in accordance with each context in which it
-   is received.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
-  <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> <x:ref>parameters</x:ref>
-  <x:ref>type</x:ref>       = <x:ref>token</x:ref>
-  <x:ref>subtype</x:ref>    = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   The type and subtype tokens are case-insensitive.
-</t>
-<t>
-   The type/subtype &MAY; be followed by semicolon-delimited parameters
-   (<xref target="parameter"/>) in the form of name=value pairs.
-   The presence or absence of a parameter might be significant to the
-   processing of a media type, depending on its definition within the media
-   type registry.
-   Parameter values might or might not be case-sensitive, depending on the
-   semantics of the parameter name.
-</t>
-<t>
-   For example, the following media types are equivalent in describing HTML
-   text data encoded in the UTF-8 character encoding scheme, but the first is
-   preferred for consistency (the "charset" parameter value is defined as
-   being case-insensitive in <xref target="RFC2046" x:fmt="," x:sec="4.1.2"/>):
-</t>
-<artwork type="example">
-  text/html;charset=utf-8
-  Text/HTML;Charset="utf-8"
-  text/html; charset="utf-8"
-  text/html;charset=UTF-8
-</artwork>
-<t>
-   Media types ought to be registered with IANA according to the
-   procedures defined in <xref target="BCP13"/>.
-</t>
-
-<section title="Charset" anchor="charset">
-  <x:anchor-alias value="rule.charset"/>
-<t>
-   HTTP uses <x:dfn>charset</x:dfn> names to indicate or negotiate the
-   character encoding scheme of a textual representation
-   <xref target="RFC6365"/>.
-   A charset is identified by a case-insensitive token.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="charset"/>
-  <x:ref>charset</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Charset names ought to be registered in the IANA "Character Sets" registry
-   (<eref target="https://www.iana.org/assignments/character-sets"/>)
-   according to the procedures defined in <xref target="RFC2978" x:fmt="of" x:sec="2"/>.
-</t>
-<aside>
-  <t>
-    &Note; In theory, charset names are defined by the "mime-charset" ABNF
-    rule defined in <xref target="RFC2978" x:fmt="of" x:sec="2.3"/> (as
-    corrected in <xref target="Err1912"/>). That rule allows two characters
-    that are not included in "token" ("{" and "}"), but no charset name
-    registered at the time of this writing includes braces
-    (see <xref target="Err5433"/>).
-  </t>
-</aside>
-</section>
-
-<section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
-<t>
-   Media types are registered with a canonical form in order to be
-   interoperable among systems with varying native encoding formats.
-   Representations selected or transferred via HTTP ought to be in canonical
-   form, for many of the same reasons described by the Multipurpose Internet
-   Mail Extensions (MIME) <xref target="RFC2045"/>.
-   However, the performance characteristics of email deployments (i.e., store
-   and forward messages to peers) are significantly different from those
-   common to HTTP and the Web (server-based information services).
-   Furthermore, MIME's constraints for the sake of compatibility with older
-   mail transfer protocols do not apply to HTTP
-   (see <xref target="differences.between.http.and.mime"/>).
-</t>
-<t>
-   MIME's canonical form requires that media subtypes of the "text"
-   type use CRLF as the text line break. HTTP allows the
-   transfer of text media with plain CR or LF alone representing a line
-   break, when such line breaks are consistent for an entire representation.
-   An HTTP sender &MAY; generate, and a recipient &MUST; be able to parse,
-   line breaks in text media that consist of CRLF, bare CR, or bare LF.
-   In addition, text media in HTTP is not limited to charsets that
-   use octets 13 and 10 for CR and LF, respectively.
-   This flexibility regarding line breaks applies only to text within a
-   representation that has been assigned a "text" media type; it does not
-   apply to "multipart" types or HTTP elements outside the payload body
-   (e.g., header fields).
-</t>
-<t>
-   If a representation is encoded with a content-coding, the underlying
-   data ought to be in a form defined above prior to being encoded.
-</t>
-</section>
-
-<section title="Multipart Types" anchor="multipart.types">
-<t>
-   MIME provides for a number of "multipart" types &mdash; encapsulations of
-   one or more representations within a single message body. All multipart
-   types share a common syntax, as defined in <xref target="RFC2046" x:sec="5.1.1" x:fmt="of"/>,
-   and include a boundary parameter as part of the media type
-   value. The message body is itself a protocol element; a sender &MUST;
-   generate only CRLF to represent line breaks between body parts.
-</t>
-<t>
-   HTTP message framing does not use the multipart boundary as an indicator
-   of message body length, though it might be used by implementations that
-   generate or process the payload. For example, the "multipart/form-data"
-   type is often used for carrying form data in a request, as described in
-   <xref target="RFC7578"/>, and the "multipart/byteranges" type is defined
-   by this specification for use in some <x:ref>206 (Partial Content)</x:ref>
-   responses (see <xref target="status.206"/>).
-</t>
-</section>
-</section>
-
-<section title="Content Codings" anchor="content.codings">
-  <iref primary="true" item="content coding"/>
-  <iref primary="true" item="compress (content coding)"/>
-  <iref primary="true" item="x-compress (content coding)"/>
-  <iref primary="true" item="deflate (content coding)"/>
-  <iref primary="true" item="gzip (content coding)"/>
-  <iref primary="true" item="x-gzip (content coding)"/>
-  <x:anchor-alias value="content-coding"/>
-<t>
-   Content coding values indicate an encoding transformation that has
-   been or can be applied to a representation. Content codings are primarily
-   used to allow a representation to be compressed or otherwise usefully
-   transformed without losing the identity of its underlying media type
-   and without loss of information. Frequently, the representation is stored
-   in coded form, transmitted directly, and only decoded by the final recipient.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="content-coding"/>
-  <x:ref>content-coding</x:ref>   = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   All content codings are case-insensitive and ought to be registered
-   within the "HTTP Content Coding Registry", as defined in <xref target="content.coding.registry"/>
-</t>
-<t>
-   Content-coding values are used in the
-   <x:ref>Accept-Encoding</x:ref> (<xref target="field.accept-encoding"/>)
-   and <x:ref>Content-Encoding</x:ref> (<xref target="field.content-encoding"/>)
-   header fields.
-</t>
-<t>
-  The following content-coding values are defined by this specification:
-</t>
-<table align="left" anchor="iana.content.coding.registration.table">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Description</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>compress</td>
-      <td>UNIX "compress" data format <xref target="Welch"/></td>
-      <td><xref target="compress.coding" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>deflate</td>
-      <td>"deflate" compressed data (<xref target="RFC1951"/>) inside
-      the "zlib" data format (<xref target="RFC1950"/>)</td>
-      <td><xref target="deflate.coding" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>gzip</td>
-      <td>GZIP file format <xref target="RFC1952"/></td>
-      <td><xref target="gzip.coding" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>identity</td>
-      <td>Reserved</td>
-      <td><xref target="field.accept-encoding" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>x-compress</td>
-      <td>Deprecated (alias for compress)</td>
-      <td><xref target="compress.coding" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>x-gzip</td>
-      <td>Deprecated (alias for gzip)</td>
-      <td><xref target="gzip.coding" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-
-<section title="Compress Coding" anchor="compress.coding">
-<iref item="compress (Coding Format)"/>
-<t>
-   The "compress" coding is an adaptive Lempel-Ziv-Welch (LZW) coding
-   <xref target="Welch"/> that is commonly produced by the UNIX file
-   compression program "compress".
-   A recipient &SHOULD; consider "x-compress" to be equivalent to "compress".
-</t>
-</section>
-
-<section title="Deflate Coding" anchor="deflate.coding">
-<iref item="deflate (Coding Format)"/>
-<t>
-   The "deflate" coding is a "zlib" data format <xref target="RFC1950"/>
-   containing a "deflate" compressed data stream <xref target="RFC1951"/>
-   that uses a combination of the Lempel-Ziv (LZ77) compression algorithm and
-   Huffman coding.
-</t>
-<aside>
-  <t>
-    &Note; Some non-conformant implementations send the "deflate"
-    compressed data without the zlib wrapper.
-   </t>
-</aside>
-</section>
-
-<section title="Gzip Coding" anchor="gzip.coding">
-<iref item="gzip (Coding Format)"/>
-<t>
-   The "gzip" coding is an LZ77 coding with a 32-bit Cyclic Redundancy Check
-   (CRC) that is commonly
-   produced by the gzip file compression program <xref target="RFC1952"/>.
-   A recipient &SHOULD; consider "x-gzip" to be equivalent to "gzip".
-</t>
-</section>
-
-<section title="Content Coding Registry" anchor="content.coding.registry">
-<t>
-   The "HTTP Content Coding Registry", maintained by
-   IANA at <eref target="https://www.iana.org/assignments/http-parameters/"/>,
-   registers <x:ref>content-coding</x:ref> names.
-</t>
-<t>
-   Content coding registrations &MUST; include the following fields:
-</t>
-<ul>
-  <li>Name</li>
-  <li>Description</li>
-  <li>Pointer to specification text</li>
-</ul>
-<t>
-   Names of content codings &MUST-NOT; overlap with names of transfer codings
-   (<xref target="transfer.codings"/>), unless the encoding transformation is identical (as
-   is the case for the compression codings defined in
-   <xref target="content.codings"/>).
-</t>
-<t>
-   Values to be added to this namespace require IETF Review
-   (see <xref target="RFC8126" x:fmt="of" x:sec="4.8"/>) and &MUST;
-   conform to the purpose of content coding defined in
-   <xref target="content.codings"/>.
-</t>
-<t>
-   New content codings ought to be self-descriptive whenever possible, with
-   optional parameters discoverable within the coding format itself, rather
-   than rely on external metadata that might be lost during transit.
-</t>
-</section>
-</section>
-
-<section title="Language Tags" anchor="language.tags">
-  <x:anchor-alias value="language-tag"/>
-<t>
-   A language tag, as defined in <xref target="RFC5646"/>, identifies a
-   natural language spoken, written, or otherwise conveyed by human beings for
-   communication of information to other human beings. Computer languages are
-   explicitly excluded.
-</t>
-<t>
-   HTTP uses language tags within the <x:ref>Accept-Language</x:ref> and
-   <x:ref>Content-Language</x:ref> header fields.
-   <x:ref>Accept-Language</x:ref> uses the broader language-range production
-   defined in <xref target="field.accept-language"/>, whereas
-   <x:ref>Content-Language</x:ref> uses the language-tag production defined
-   below.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="language-tag"/>
-  <x:ref>language-tag</x:ref> = &lt;Language-Tag, see <xref target="RFC5646" x:sec="2.1"/>&gt;
-</sourcecode>
-<t>
-   A language tag is a sequence of one or more case-insensitive subtags, each
-   separated by a hyphen character ("-", %x2D).  In most cases, a language tag
-   consists of a primary language subtag that identifies a broad family of
-   related languages (e.g., "en" = English), which is optionally followed by a
-   series of subtags that refine or narrow that language's range (e.g.,
-   "en-CA" = the variety of English as communicated in Canada).
-   Whitespace is not allowed within a language tag.
-   Example tags include:
-</t>
-<artwork type="example">
-  fr, en-US, es-419, az-Arab, x-pig-latin, man-Nkoo-GN
-</artwork>
-<t>
-   See <xref target="RFC5646"/> for further information. 
-</t>
-</section>
+<section title="Range Requests" anchor="range.requests">
 
 <section title="Range Units" anchor="range.units">
   <x:anchor-alias value="range-unit"/>
@@ -3654,7 +3657,6 @@ bytes=500-700,601-999
 </t>
 </section>
 </section>
-</section>
 
 <section title="Media Type multipart/byteranges" anchor="multipart.byteranges">
 <iref item="Media Type" subitem="multipart/byteranges" primary="true"/>
@@ -3756,6 +3758,7 @@ Content-Range: exampleunit 11.2-14.3/25
   <dt>Change controller:</dt>
   <dd>IESG</dd>
 </dl>
+</section>
 </section>
 
 <section title="Content Negotiation" anchor="content.negotiation">
