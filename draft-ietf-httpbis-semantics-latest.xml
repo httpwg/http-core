@@ -1480,10 +1480,161 @@ Content-Type: text/plain
 <section title="Representation Metadata" anchor="message.metadata">
 </section>
 <section title="Payload Metadata" anchor="message.payload.metadata">
+<t>
+   Header fields that specifically describe the payload, rather than the
+   associated representation, are referred to as "payload header fields".
+   Payload header fields are defined in other parts of this specification,
+   due to their impact on message parsing.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Content-Range</td>
+      <td><xref target="field.content-range" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Trailer</td>
+      <td><xref target="field.trailer" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Transfer-Encoding</td>
+      <td><xref target="field.transfer-encoding" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
 </section>
 </section>
 
-<section title="Payload Data" anchor="message.payload.data">
+<section title="Payload" anchor="payload">
+<iref item="payload"/>
+<t>
+   Some HTTP messages transfer a complete or partial representation as the
+   message "<x:dfn>payload</x:dfn>".  In some cases, a payload might contain
+   only the associated representation's header fields (e.g., responses to
+   HEAD) or only some part(s) of the representation data
+   (e.g., the <x:ref>206 (Partial Content)</x:ref> status code).
+</t>
+
+<section title="Purpose" anchor="payload.purpose">
+<t>
+   The purpose of a payload in a request is defined by the method semantics.
+   For example, a representation in the payload of a PUT request
+   (<xref target="PUT"/>) represents the desired state of the
+   <x:ref>target resource</x:ref> if the request is successfully applied,
+   whereas a representation in the payload of a POST request
+   (<xref target="POST"/>) represents information to be processed by the
+   target resource.
+</t>
+<t>
+   In a response, the payload's purpose is defined by both the request method
+   and the response status code.
+   For example, the payload of a <x:ref>200 (OK)</x:ref> response to GET
+   (<xref target="GET"/>) represents the current state of the
+   <x:ref>target resource</x:ref>, as observed at the time of the message
+   origination date (<xref target="field.date"/>), whereas the payload of
+   the same status code in a response to POST might represent either the
+   processing result or the new state of the target resource after applying
+   the processing. Response messages with an error status code usually contain
+   a payload that represents the error condition, such that it describes the
+   error state and what next steps are suggested for resolving it.
+</t>
+</section>
+
+<section title="Identification" anchor="identifying.payload">
+<t>
+   When a complete or partial representation is transferred in a message
+   payload, it is often desirable for the sender to supply, or the recipient
+   to determine, an identifier for a resource corresponding to that
+   representation.
+</t>
+<t>
+   For a request message:
+</t>
+<ul>
+   <li>If the request has a <x:ref>Content-Location</x:ref> header field,
+       then the sender asserts that the payload is a representation of the
+       resource identified by the Content-Location field value. However,
+       such an assertion cannot be trusted unless it can be verified by
+       other means (not defined by this specification). The information
+       might still be useful for revision history links.</li>
+   <li>Otherwise, the payload is unidentified.</li>
+</ul>
+<t>
+   For a response message, the following rules are applied in order until a
+   match is found:
+</t>
+<ol>
+   <li>If the request method is GET or HEAD and the response status code is
+       <x:ref>200 (OK)</x:ref>, 
+       <x:ref>204 (No Content)</x:ref>,
+       <x:ref>206 (Partial Content)</x:ref>, or
+       <x:ref>304 (Not Modified)</x:ref>,
+       the payload is a representation of the resource identified by the
+       target URI (<xref target="target.resource"/>).</li>
+   <li>If the request method is GET or HEAD and the response status code is
+       <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
+       a potentially modified or enhanced representation of the
+       <x:ref>target resource</x:ref> as provided by an intermediary.</li>
+   <li>If the response has a <x:ref>Content-Location</x:ref> header field
+       and its field value is a reference to the same URI as the target URI, 
+       the payload is a representation of the target resource.</li>
+   <li>If the response has a <x:ref>Content-Location</x:ref> header field
+       and its field value is a reference to a URI different from the
+       target URI, then the sender asserts that the payload is a
+       representation of the resource identified by the Content-Location
+       field value. However, such an assertion cannot be trusted unless
+       it can be verified by other means (not defined by this specification).</li>
+   <li>Otherwise, the payload is unidentified.</li>
+</ol>
+</section>
+
+<section title="Payload Body" anchor="payload.body">
+<t>
+   The payload body contains the data of a request or response. This is
+   distinct from the message body (e.g., <xref target="message.body"/>),
+   which is how the payload body is transferred "on the wire", and might be
+   encoded, depending on the HTTP version in use.
+</t>
+<t>
+   It is also distinct from a request or response's representation data
+   (<xref target="representation.data"/>), which can be inferred from
+   protocol operation, rather than necessarily appearing "on the wire."
+</t>
+<t>
+   The presence of a payload body in a request depends on whether the request
+   method used defines semantics for it.
+</t>
+<t>
+   The presence of a payload body in a response depends on both the request
+   method to which it is responding and the response status code (<xref
+   target="status.codes"/>).
+</t>
+<t>
+   Responses to the HEAD request method (<xref target="HEAD"/>) never include
+   a payload body because the associated response header fields indicate only
+   what their values would have been if the request method had been GET
+   (<xref target="GET"/>).
+</t>
+<t>
+   <x:ref>2xx (Successful)</x:ref> responses to a CONNECT request method
+   (<xref target="CONNECT"/>) switch the connection to tunnel mode instead of
+   having a payload body.
+</t>
+<t>
+   All <x:ref>1xx (Informational)</x:ref>, <x:ref>204 (No Content)</x:ref>, and
+   <x:ref>304 (Not Modified)</x:ref> responses do not include a payload body.
+</t>
+<t>
+   All other responses do include a payload body, although that body
+   might be of zero length.
+</t>
+</section>
 </section>
 
 <section title="Trailer Fields" anchor="message.trailer.fields">
@@ -3232,159 +3383,6 @@ bytes=500-700,601-999
 </table>
 </section>
 
-<section title="Payload" anchor="payload">
-<iref item="payload"/>
-<t>
-   Some HTTP messages transfer a complete or partial representation as the
-   message "<x:dfn>payload</x:dfn>".  In some cases, a payload might contain
-   only the associated representation's header fields (e.g., responses to
-   HEAD) or only some part(s) of the representation data
-   (e.g., the <x:ref>206 (Partial Content)</x:ref> status code).
-</t>
-<t>
-   Header fields that specifically describe the payload, rather than the
-   associated representation, are referred to as "payload header fields".
-   Payload header fields are defined in other parts of this specification,
-   due to their impact on message parsing.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Content-Range</td>
-      <td><xref target="field.content-range" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Trailer</td>
-      <td><xref target="field.trailer" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Transfer-Encoding</td>
-      <td><xref target="field.transfer-encoding" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-
-<section title="Purpose" anchor="payload.purpose">
-<t>
-   The purpose of a payload in a request is defined by the method semantics.
-   For example, a representation in the payload of a PUT request
-   (<xref target="PUT"/>) represents the desired state of the
-   <x:ref>target resource</x:ref> if the request is successfully applied,
-   whereas a representation in the payload of a POST request
-   (<xref target="POST"/>) represents information to be processed by the
-   target resource.
-</t>
-<t>
-   In a response, the payload's purpose is defined by both the request method
-   and the response status code.
-   For example, the payload of a <x:ref>200 (OK)</x:ref> response to GET
-   (<xref target="GET"/>) represents the current state of the
-   <x:ref>target resource</x:ref>, as observed at the time of the message
-   origination date (<xref target="field.date"/>), whereas the payload of
-   the same status code in a response to POST might represent either the
-   processing result or the new state of the target resource after applying
-   the processing. Response messages with an error status code usually contain
-   a payload that represents the error condition, such that it describes the
-   error state and what next steps are suggested for resolving it.
-</t>
-</section>
-
-<section title="Identification" anchor="identifying.payload">
-<t>
-   When a complete or partial representation is transferred in a message
-   payload, it is often desirable for the sender to supply, or the recipient
-   to determine, an identifier for a resource corresponding to that
-   representation.
-</t>
-<t>
-   For a request message:
-</t>
-<ul>
-   <li>If the request has a <x:ref>Content-Location</x:ref> header field,
-       then the sender asserts that the payload is a representation of the
-       resource identified by the Content-Location field value. However,
-       such an assertion cannot be trusted unless it can be verified by
-       other means (not defined by this specification). The information
-       might still be useful for revision history links.</li>
-   <li>Otherwise, the payload is unidentified.</li>
-</ul>
-<t>
-   For a response message, the following rules are applied in order until a
-   match is found:
-</t>
-<ol>
-   <li>If the request method is GET or HEAD and the response status code is
-       <x:ref>200 (OK)</x:ref>, 
-       <x:ref>204 (No Content)</x:ref>,
-       <x:ref>206 (Partial Content)</x:ref>, or
-       <x:ref>304 (Not Modified)</x:ref>,
-       the payload is a representation of the resource identified by the
-       target URI (<xref target="target.resource"/>).</li>
-   <li>If the request method is GET or HEAD and the response status code is
-       <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
-       a potentially modified or enhanced representation of the
-       <x:ref>target resource</x:ref> as provided by an intermediary.</li>
-   <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field value is a reference to the same URI as the target URI, 
-       the payload is a representation of the target resource.</li>
-   <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field value is a reference to a URI different from the
-       target URI, then the sender asserts that the payload is a
-       representation of the resource identified by the Content-Location
-       field value. However, such an assertion cannot be trusted unless
-       it can be verified by other means (not defined by this specification).</li>
-   <li>Otherwise, the payload is unidentified.</li>
-</ol>
-</section>
-
-<section title="Payload Body" anchor="payload.body">
-<t>
-   The payload body contains the data of a request or response. This is
-   distinct from the message body (e.g., <xref target="message.body"/>),
-   which is how the payload body is transferred "on the wire", and might be
-   encoded, depending on the HTTP version in use.
-</t>
-<t>
-   It is also distinct from a request or response's representation data
-   (<xref target="representation.data"/>), which can be inferred from
-   protocol operation, rather than necessarily appearing "on the wire."
-</t>
-<t>
-   The presence of a payload body in a request depends on whether the request
-   method used defines semantics for it.
-</t>
-<t>
-   The presence of a payload body in a response depends on both the request
-   method to which it is responding and the response status code (<xref
-   target="status.codes"/>).
-</t>
-<t>
-   Responses to the HEAD request method (<xref target="HEAD"/>) never include
-   a payload body because the associated response header fields indicate only
-   what their values would have been if the request method had been GET
-   (<xref target="GET"/>).
-</t>
-<t>
-   <x:ref>2xx (Successful)</x:ref> responses to a CONNECT request method
-   (<xref target="CONNECT"/>) switch the connection to tunnel mode instead of
-   having a payload body.
-</t>
-<t>
-   All <x:ref>1xx (Informational)</x:ref>, <x:ref>204 (No Content)</x:ref>, and
-   <x:ref>304 (Not Modified)</x:ref> responses do not include a payload body.
-</t>
-<t>
-   All other responses do include a payload body, although that body
-   might be of zero length.
-</t>
-</section>
-
 <section title="Media Type multipart/byteranges" anchor="multipart.byteranges">
 <iref item="Media Type" subitem="multipart/byteranges" primary="true"/>
 <iref item="multipart/byteranges Media Type" primary="true"/>
@@ -3485,7 +3483,6 @@ Content-Range: exampleunit 11.2-14.3/25
   <dt>Change controller:</dt>
   <dd>IESG</dd>
 </dl>
-</section>
 </section>
 
 <section title="Content Negotiation" anchor="content.negotiation">
