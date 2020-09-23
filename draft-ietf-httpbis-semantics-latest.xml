@@ -1637,7 +1637,106 @@ Content-Type: text/plain
 </section>
 </section>
 
-<section title="Trailer Fields" anchor="message.trailer.fields">
+<section title="Trailer Fields" anchor="trailer.fields">
+   <iref item="trailer fields"/>
+   <iref item="trailers"/>
+
+<section title="Purpose" anchor="trailers.purpose">
+<t>
+   In some HTTP versions, additional
+   metadata can be sent after the initial header section has been completed
+   (during or after transmission of the payload body), such as a message
+   integrity check, digital signature, or post-processing status.
+   For example, the chunked coding in HTTP/1.1 allows a trailer section after
+   the payload body (<xref target="chunked.trailer.section"/>) which can contain
+   trailer fields: field names and values that share the same syntax and
+   namespace as header fields but that are received after the header section.
+</t>
+<t>
+   Trailer fields ought to be processed and stored separately from the fields
+   in the header section to avoid contradicting message semantics known at
+   the time the header section was complete. The presence or absence of
+   certain header fields might impact choices made for the routing or
+   processing of the message as a whole before the trailers are received;
+   those choices cannot be unmade by the later discovery of trailer fields.
+</t>
+</section>
+
+<section title="Limitations" anchor="trailers.limitations">
+<t>
+   Many fields cannot be processed outside the header section because
+   their evaluation is necessary prior to receiving the message body, such as
+   those that describe message framing, routing, authentication,
+   request modifiers, response controls, or payload format.
+   A sender &MUST-NOT; generate a trailer field unless the sender knows the
+   corresponding header field name's definition permits the field to be sent
+   in trailers.
+</t>
+<t>
+   Trailer fields can be difficult to process by intermediaries that forward
+   messages from one protocol version to another. If the entire message can be
+   buffered in transit, some intermediaries could merge trailer fields into
+   the header section (as appropriate) before it is forwarded. However, in
+   most cases, the trailers are simply discarded.
+   A recipient &MUST-NOT; merge a trailer field into a header section unless
+   the recipient understands the corresponding header field definition and
+   that definition explicitly permits and defines how trailer field values
+   can be safely merged.
+</t>
+<t>
+   The presence of the keyword "trailers" in the TE header field (<xref
+   target="field.te"/>) indicates that the client is willing to accept
+   trailer fields, on behalf of itself and any downstream clients. For
+   requests from an intermediary, this implies that all
+   downstream clients are willing to accept trailer fields in the forwarded
+   response. Note that the presence of "trailers" does not mean that the
+   client(s) will process any particular trailer field in the response; only
+   that the trailer section(s) will not be dropped by any of the clients.
+</t>
+<t>
+   Because of the potential for trailer fields to be discarded in transit, a
+   server &SHOULD-NOT; generate trailer fields that it believes are necessary
+   for the user agent to receive.
+</t>
+</section>
+
+<section title="Processing" anchor="trailers.processing">
+<t>
+   Like header fields, trailer fields with the same name are processed in the
+   order received; multiple trailer field lines with the same name have the
+   equivalent semantics as appending the multiple values as a list of members,
+   even when the field lines are received in separate trailer sections.
+   Trailer fields that might be generated more than once during a message
+   &MUST; be defined as a list value even if each member value is only
+   processed once per field line received.
+</t>
+<t>
+   Trailer fields are expected (but not required) to be processed one trailer
+   section at a time. That is, for each trailer section received, a recipient
+   that is looking for trailer fields will parse the received section into
+   fields, invoke any associated processing for those fields at that point
+   in the message processing, and then append those fields to the set of
+   trailer fields received for the overall message.
+</t>
+<t>
+   This behavior allows for iterative processing of trailer fields that contain
+   incremental signatures or mid-stream status information, and fields that
+   might refer to each other's values within the same section. However,
+   there is no guarantee that trailer sections won't shift in relation to the
+   message body stream, or won't be recombined (or dropped) in transit, so
+   trailer fields that refer to data outside the present trailer section need
+   to use self-descriptive references (i.e., refer to the data by name,
+   ordinal position, or an octet range) rather than assume it is the data
+   most recently received.
+</t>
+<t>
+   Likewise, at the end of a message, a recipient &MAY; treat the entire set
+   of received trailer fields as one data structure to be considered as the
+   message concludes. Additional processing expectations, if any, can be
+   defined within the field specification for a field intended for use in
+   trailers.
+</t>
+</section>
 </section>
 </section>
 
@@ -7321,108 +7420,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   ","
   ",   ,"
 </artwork>
-</section>
-</section>
-
-<section title="Trailer Fields" anchor="trailer.fields">
-   <iref item="trailer fields"/>
-   <iref item="trailers"/>
-
-<section title="Purpose" anchor="trailers.purpose">
-<t>
-   In some HTTP versions, additional
-   metadata can be sent after the initial header section has been completed
-   (during or after transmission of the payload body), such as a message
-   integrity check, digital signature, or post-processing status.
-   For example, the chunked coding in HTTP/1.1 allows a trailer section after
-   the payload body (<xref target="chunked.trailer.section"/>) which can contain
-   trailer fields: field names and values that share the same syntax and
-   namespace as header fields but that are received after the header section.
-</t>
-<t>
-   Trailer fields ought to be processed and stored separately from the fields
-   in the header section to avoid contradicting message semantics known at
-   the time the header section was complete. The presence or absence of
-   certain header fields might impact choices made for the routing or
-   processing of the message as a whole before the trailers are received;
-   those choices cannot be unmade by the later discovery of trailer fields.
-</t>
-</section>
-
-<section title="Limitations" anchor="trailers.limitations">
-<t>
-   Many fields cannot be processed outside the header section because
-   their evaluation is necessary prior to receiving the message body, such as
-   those that describe message framing, routing, authentication,
-   request modifiers, response controls, or payload format.
-   A sender &MUST-NOT; generate a trailer field unless the sender knows the
-   corresponding header field name's definition permits the field to be sent
-   in trailers.
-</t>
-<t>
-   Trailer fields can be difficult to process by intermediaries that forward
-   messages from one protocol version to another. If the entire message can be
-   buffered in transit, some intermediaries could merge trailer fields into
-   the header section (as appropriate) before it is forwarded. However, in
-   most cases, the trailers are simply discarded.
-   A recipient &MUST-NOT; merge a trailer field into a header section unless
-   the recipient understands the corresponding header field definition and
-   that definition explicitly permits and defines how trailer field values
-   can be safely merged.
-</t>
-<t>
-   The presence of the keyword "trailers" in the TE header field (<xref
-   target="field.te"/>) indicates that the client is willing to accept
-   trailer fields, on behalf of itself and any downstream clients. For
-   requests from an intermediary, this implies that all
-   downstream clients are willing to accept trailer fields in the forwarded
-   response. Note that the presence of "trailers" does not mean that the
-   client(s) will process any particular trailer field in the response; only
-   that the trailer section(s) will not be dropped by any of the clients.
-</t>
-<t>
-   Because of the potential for trailer fields to be discarded in transit, a
-   server &SHOULD-NOT; generate trailer fields that it believes are necessary
-   for the user agent to receive.
-</t>
-</section>
-
-<section title="Processing" anchor="trailers.processing">
-<t>
-   Like header fields, trailer fields with the same name are processed in the
-   order received; multiple trailer field lines with the same name have the
-   equivalent semantics as appending the multiple values as a list of members,
-   even when the field lines are received in separate trailer sections.
-   Trailer fields that might be generated more than once during a message
-   &MUST; be defined as a list value even if each member value is only
-   processed once per field line received.
-</t>
-<t>
-   Trailer fields are expected (but not required) to be processed one trailer
-   section at a time. That is, for each trailer section received, a recipient
-   that is looking for trailer fields will parse the received section into
-   fields, invoke any associated processing for those fields at that point
-   in the message processing, and then append those fields to the set of
-   trailer fields received for the overall message.
-</t>
-<t>
-   This behavior allows for iterative processing of trailer fields that contain
-   incremental signatures or mid-stream status information, and fields that
-   might refer to each other's values within the same section. However,
-   there is no guarantee that trailer sections won't shift in relation to the
-   message body stream, or won't be recombined (or dropped) in transit, so
-   trailer fields that refer to data outside the present trailer section need
-   to use self-descriptive references (i.e., refer to the data by name,
-   ordinal position, or an octet range) rather than assume it is the data
-   most recently received.
-</t>
-<t>
-   Likewise, at the end of a message, a recipient &MAY; treat the entire set
-   of received trailer fields as one data structure to be considered as the
-   message concludes. Additional processing expectations, if any, can be
-   defined within the field specification for a field intended for use in
-   trailers.
-</t>
 </section>
 </section>
 
