@@ -1887,6 +1887,75 @@ Content-Type: text/plain
    messages. However, they all share a common data abstraction.
 </t>
 
+<section title="Protocol Version" anchor="protocol.version">
+<t>
+   While HTTP's core semantics don't change between protocol versions, the
+   expression of them "on the wire" can change, and so the
+   HTTP version number changes when incompatible changes are made to the wire
+   format. Additionally, HTTP allows incremental, backwards-compatible
+   changes to be made to the protocol without changing its version through
+   the use of defined extension points (<xref target="extending"/>).
+</t>
+<t>
+   The protocol version as a whole indicates the sender's conformance with
+   the set of requirements laid out in that version's corresponding
+   specification of HTTP.
+   For example, the version "HTTP/1.1" is defined by the combined
+   specifications of this document, "HTTP Caching" <xref target="Caching"/>,
+   and "HTTP/1.1 Messaging" <xref target="Messaging"/>.
+</t>
+<t>
+   HTTP's major version number is incremented when an incompatible message
+   syntax is introduced. The minor number is incremented when changes made to
+   the protocol have the effect of adding to the message semantics or
+   implying additional capabilities of the sender.
+</t>
+<t>
+   The minor version advertises the sender's communication capabilities even
+   when the sender is only using a backwards-compatible subset of the
+   protocol, thereby letting the recipient know that more advanced features
+   can be used in response (by servers) or in future requests (by clients).
+</t>
+<t>
+   A client &SHOULD; send a request version equal to the highest
+   version to which the client is conformant and
+   whose major version is no higher than the highest version supported
+   by the server, if this is known.  A client &MUST-NOT; send a
+   version to which it is not conformant.
+</t>
+<t>
+   A client &MAY; send a lower request version if it is known that
+   the server incorrectly implements the HTTP specification, but only
+   after the client has attempted at least one normal request and determined
+   from the response status code or header fields (e.g., <x:ref>Server</x:ref>) that
+   the server improperly handles higher request versions.
+</t>
+<t>
+   A server &SHOULD; send a response version equal to the highest version to
+   which the server is conformant that has a major version less than or equal
+   to the one received in the request.
+   A server &MUST-NOT; send a version to which it is not conformant.
+   A server can send a <x:ref>505 (HTTP Version Not Supported)</x:ref>
+   response if it wishes, for any reason, to refuse service of the client's
+   major protocol version.
+</t>
+<t>
+   When an HTTP message is received with a major version number that the
+   recipient implements, but a higher minor version number than what the
+   recipient implements, the recipient &SHOULD; process the message as if it
+   were in the highest minor version within that major version to which the
+   recipient is conformant. A recipient can assume that a message with a
+   higher minor version, when sent to a recipient that has not yet indicated
+   support for that higher version, is sufficiently backwards-compatible to be
+   safely processed by any implementation of the same major version.
+</t>
+<t>
+   When a major version of HTTP does not define any minor versions, the minor
+   version "0" is implied and is used when referring to that protocol within a
+   protocol element that requires sending a minor version.
+</t>
+</section>
+
 <section title="Framing" anchor="message.framing">
 <iref primary="true" item="complete"/>
 <iref primary="true" item="incomplete"/>
@@ -2752,6 +2821,12 @@ Content-Type: text/plain
    not allowed for the target resource, the origin server &SHOULD; respond
    with the <x:ref>405 (Method Not Allowed)</x:ref> status code.
 </t>
+<t>
+   Additional methods, outside the scope of this specification, have been
+   specified for use in HTTP. All such methods ought to be registered
+   within the "Hypertext Transfer Protocol (HTTP) Method Registry",
+   as described in <xref target="method.extensibility"/>.
+</t>
 </section>
 
 <section title="Common Method Properties" anchor="method.properties">
@@ -3511,76 +3586,6 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </t>
 </section>
 </section>
-
-<section title="Method Extensibility" anchor="method.extensibility">
-<t>
-   Additional methods, outside the scope of this specification, have been
-   specified for use in HTTP. All such methods ought to be registered
-   within the "Hypertext Transfer Protocol (HTTP) Method Registry".
-</t>
-
-<section title="Method Registry" anchor="method.registry">
-<t>
-  The "Hypertext Transfer Protocol (HTTP) Method Registry", maintained by
-  IANA at <eref target="https://www.iana.org/assignments/http-methods"/>,
-  registers <x:ref>method</x:ref> names.
-</t>
-<t>
-  HTTP method registrations &MUST; include the following fields:
-</t>
-<ul>
-  <li>Method Name (see <xref target="methods"/>)</li>
-  <li>Safe ("yes" or "no", see <xref target="safe.methods"/>)</li>
-  <li>Idempotent ("yes" or "no", see <xref target="idempotent.methods"/>)</li>
-  <li>Pointer to specification text</li>
-</ul>
-<t>
-  Values to be added to this namespace require IETF Review
-  (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
-</t>
-</section>
-
-<section title="Considerations for New Methods" anchor="considerations.for.new.methods">
-<t>
-   Standardized methods are generic; that is, they are potentially
-   applicable to any resource, not just one particular media type, kind of
-   resource, or application. As such, it is preferred that new methods
-   be registered in a document that isn't specific to a single application or
-   data format, since orthogonal technologies deserve orthogonal specification.
-</t>
-<t>
-   Since message parsing (<xref target="message.body"/>) needs to be independent of method
-   semantics (aside from responses to HEAD), definitions of new methods
-   cannot change the parsing algorithm or prohibit the presence of a message
-   body on either the request or the response message.
-   Definitions of new methods can specify that only a zero-length message body
-   is allowed by requiring a Content-Length header field with a value of "0".
-</t>
-<t>
-   A new method definition needs to indicate whether it is safe (<xref
-   target="safe.methods"/>), idempotent (<xref target="idempotent.methods"/>),
-   cacheable (<xref target="cacheable.methods"/>), what
-   semantics are to be associated with the payload body if any is present
-   in the request and what refinements the method makes to header field
-   or status code semantics.
-   If the new method is cacheable, its definition ought to describe how, and
-   under what conditions, a cache can store a response and use it to satisfy a
-   subsequent request.
-   The new method ought to describe whether it can be made conditional
-   (<xref target="preconditions"/>) and, if so, how a server responds
-   when the condition is false.
-   Likewise, if the new method might have some use for partial response
-   semantics (<xref target="field.range"/>), it ought to document this, too.
-</t>
-<aside>
-  <t>
-    &Note; Avoid defining a method name that starts with "M-", since that
-    prefix might be misinterpreted as having the semantics assigned to it
-    by <xref target="RFC2774"/>.
-  </t>
-</aside>
-</section>
-</section>
 </section>
 
 <section title="Authentication" anchor="authentication">
@@ -3590,6 +3595,15 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    via an extensible set of challenge-response authentication schemes, which
    can be used by a server to challenge a client request and by a client to
    provide authentication information.
+</t>
+<t>
+   Aside from the general framework, this document does not specify any
+   authentication schemes. New and existing authentication schemes are
+   specified independently and ought to be registered within the
+   "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry".
+   For example, the "basic" and "digest" authentication schemes are defined by
+   <xref target="RFC7617" x:fmt="none">RFC 7617</xref> and
+   <xref target="RFC7616" x:fmt="none">RFC 7616</xref>, respectively.
 </t>
 <t>
    Two header fields are used for carrying authentication credentials.
@@ -3820,129 +3834,6 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    maximum interoperability with existing clients that have been accepting both
    notations for a long time.
 </t>
-</section>
-
-<section title="Authentication Scheme Extensibility" anchor="auth.scheme.extensibility">
-<t>
-   Aside from the general framework, this document does not specify any
-   authentication schemes. New and existing authentication schemes are
-   specified independently and ought to be registered within the
-   "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry".
-   For example, the "basic" and "digest" authentication schemes are defined by
-   <xref target="RFC7617" x:fmt="none">RFC 7617</xref> and
-   <xref target="RFC7616" x:fmt="none">RFC 7616</xref>, respectively.
-</t>
-
-<section title="Authentication Scheme Registry" anchor="auth.scheme.registry">
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry"
-   defines the namespace for the authentication schemes in challenges and
-   credentials. It is maintained
-   at <eref target="https://www.iana.org/assignments/http-authschemes"/>.
-</t>
-<t>
-  Registrations &MUST; include the following fields:
-</t>
-<ul>
-  <li>Authentication Scheme Name</li>
-  <li>Pointer to specification text</li>
-  <li>Notes (optional)</li>
-</ul>
-<t>
-  Values to be added to this namespace require IETF Review
-  (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
-</t>
-</section>
-
-<section title="Considerations for New Authentication Schemes" anchor="considerations.for.new.auth.schemes">
-<t>
-  There are certain aspects of the HTTP Authentication framework that put
-  constraints on how new authentication schemes can work:
-</t>
-<ul>
-  <li><t>
-    HTTP authentication is presumed to be stateless: all of the information
-    necessary to authenticate a request &MUST; be provided in the request,
-    rather than be dependent on the server remembering prior requests.
-    Authentication based on, or bound to, the underlying connection is
-    outside the scope of this specification and inherently flawed unless
-    steps are taken to ensure that the connection cannot be used by any
-    party other than the authenticated user
-    (see <xref target="intermediaries"/>).
-  </t>
-  </li>
-  <li>
-    <t>
-      The authentication parameter "realm" is reserved for defining protection
-      spaces as described in <xref target="protection.space"/>. New schemes
-      &MUST-NOT; use it in a way incompatible with that definition.
-    </t>
-  </li>
-  <li>
-    <t>
-      The "token68" notation was introduced for compatibility with existing
-      authentication schemes and can only be used once per challenge or credential.
-      Thus, new schemes ought to use the auth-param syntax instead, because
-      otherwise future extensions will be impossible.
-    </t>
-  </li>
-  <li>
-    <t>
-      The parsing of challenges and credentials is defined by this specification
-      and cannot be modified by new authentication schemes. When the auth-param
-      syntax is used, all parameters ought to support both token and
-      quoted-string syntax, and syntactical constraints ought to be defined on
-      the field value after parsing (i.e., quoted-string processing). This is
-      necessary so that recipients can use a generic parser that applies to
-      all authentication schemes.
-    </t>
-    <t>
-      &Note; The fact that the value syntax for the "realm" parameter
-      is restricted to quoted-string was a bad design choice not to be repeated
-      for new parameters.
-    </t>
-  </li>
-  <li>
-    <t>
-      Definitions of new schemes ought to define the treatment of unknown
-      extension parameters. In general, a "must-ignore" rule is preferable
-      to a "must-understand" rule, because otherwise it will be hard to introduce
-      new parameters in the presence of legacy recipients. Furthermore,
-      it's good to describe the policy for defining new parameters (such
-      as "update the specification" or "use this registry").
-    </t>
-  </li>
-  <li>
-    <t>
-      Authentication schemes need to document whether they are usable in
-      origin-server authentication (i.e., using <x:ref>WWW-Authenticate</x:ref>),
-      and/or proxy authentication (i.e., using <x:ref>Proxy-Authenticate</x:ref>).
-    </t>
-  </li>
-  <li>
-    <t>
-      The credentials carried in an <x:ref>Authorization</x:ref> header field are specific to
-      the user agent and, therefore, have the same effect on HTTP caches as the
-      "private" Cache-Control response directive (<xref target="cache-response-directive.private"/>),
-      within the scope of the request in which they appear.
-    </t>
-    <t>
-      Therefore, new authentication schemes that choose not to carry
-      credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
-      header field) will need to explicitly disallow caching, by mandating the use of
-      Cache-Control response directives (e.g., "private").
-    </t>
-  </li>
-  <li>
-    <t>
-      Schemes using <x:ref>Authentication-Info</x:ref>, <x:ref>Proxy-Authentication-Info</x:ref>,
-      or any other authentication related response header field need to
-      consider and document the related security considerations (see 
-      <xref target="security.auth.add.resp"/>). 
-    </t>
-  </li>
-</ul>
-</section>
 </section>
 </section>
 
@@ -5194,96 +5085,12 @@ Content-Range: exampleunit 11.2-14.3/25
 <!--(END)-->
 <?ENDINC build/draft-ietf-httpbis-semantics-latest.iana-status-codes ?>
 <t>
-   Note that this list is not exhaustive &mdash; it does not include
-   extension status codes defined in other specifications
-   (<xref target="status.code.extensibility"/>).
-</t>
-</section>
-
-<section title="Status Code Extensibility" anchor="status.code.extensibility">
-<t>
    Additional status codes, outside the scope of this specification, have been
    specified for use in HTTP. All such status codes ought to be registered
-   within the "Hypertext Transfer Protocol (HTTP) Status Code Registry".
-</t>
-
-<section title="Status Code Registry" anchor="status.code.registry">
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Status Code Registry", maintained
-   by IANA at <eref target="https://www.iana.org/assignments/http-status-codes"/>,
-   registers <x:ref>status code</x:ref> numbers.
-</t>
-<t>
-   A registration &MUST; include the following fields:
-</t>
-<ul>
-  <li>Status Code (3 digits)</li>
-  <li>Short Description</li>
-  <li>Pointer to specification text</li>
-</ul>
-<t>
-   Values to be added to the HTTP status code namespace require IETF Review
-   (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
+   within the "Hypertext Transfer Protocol (HTTP) Status Code Registry",
+   as described in <xref target="status.code.extensibility"/>.
 </t>
 </section>
-
-<section title="Considerations for New Status Codes" anchor="considerations.for.new.status.codes">
-<t>
-   When it is necessary to express semantics for a response that are not
-   defined by current status codes, a new status code can be registered.
-   Status codes are generic; they are potentially applicable to any resource,
-   not just one particular media type, kind of resource, or application of
-   HTTP. As such, it is preferred that new status codes be registered in a
-   document that isn't specific to a single application.
-</t>
-<t>
-   New status codes are required to fall under one of the categories
-   defined in <xref target="status.codes"/>. To allow existing parsers to
-   process the response message, new status codes cannot disallow a payload,
-   although they can mandate a zero-length payload body.
-</t>
-<t>
-   Proposals for new status codes that are not yet widely deployed ought to
-   avoid allocating a specific number for the code until there is clear
-   consensus that it will be registered; instead, early drafts can use a
-   notation such as "4NN", or "3N0" .. "3N9", to indicate the class
-   of the proposed status code(s) without consuming a number prematurely.
-</t>
-<t>
-   The definition of a new status code ought to explain the request
-   conditions that would cause a response containing that status code (e.g.,
-   combinations of request header fields and/or method(s)) along with any 
-   dependencies on response header fields (e.g., what fields are required,
-   what fields can modify the semantics, and what field semantics are
-   further refined when used with the new status code).
-</t>
-<t>
-   By default, a status code applies only to the request corresponding to the
-   response it occurs within. If a status code applies to a larger scope of
-   applicability &mdash; for example, all requests to the resource in question, or
-   all requests to a server &mdash; this must be explicitly specified. When doing
-   so, it should be noted that not all clients can be expected to
-   consistently apply a larger scope, because they might not understand the
-   new status code.
-</t>
-<t>
-   The definition of a new status code ought to specify whether or not it is
-   cacheable. Note that all status codes can be cached if the response they
-   occur in has explicit freshness information; however, status codes that are
-   defined as being cacheable are allowed to be cached without explicit
-   freshness information. Likewise, the definition of a status code can place
-   constraints upon cache behavior. See <xref target="Caching"/> for more information.
-</t>
-<t>   
-   Finally, the definition of a new status code ought to indicate whether the
-   payload has any implied association with an identified resource (<xref
-   target="identifying.payload"/>).
-</t>
-</section>
-</section>
-</section>
-
-<section title="Status Code Definitions" anchor="core.status.codes">
 
 <section title="Informational 1xx" anchor="status.1xx">
   <x:anchor-alias value="1xx"/>
@@ -6720,6 +6527,15 @@ Content-Type: text/plain
    their defined semantics allow them to be safely ignored by recipients
    that do not recognize them; see <xref target="field.extensibility"/>.
 </t>
+<t>
+   A proxy &MUST; forward unrecognized header fields unless the
+   field name is listed in the <x:ref>Connection</x:ref> header field
+   (<xref target="field.connection"/>) or the proxy is specifically
+   configured to block, or otherwise transform, such fields.
+   Other recipients &SHOULD; ignore unrecognized header and trailer fields.
+   These requirements allow HTTP's functionality to be enhanced without
+   requiring prior update of deployed intermediaries.
+</t>
 
 <section title="Field Ordering and Combination" anchor="field.order">
   <x:anchor-alias value="header.order"/>
@@ -6810,137 +6626,6 @@ Content-Type: text/plain
    Field names are case-insensitive and ought to be registered within the
    "Hypertext Transfer Protocol (HTTP) Field Name Registry"; see <xref target="field.name.registry"/>.
 </t>
-
-<t>
-   Authors of specifications defining new fields are advised to choose a short
-   but descriptive field name. Short names avoid needless data transmission;
-   descriptive names avoid confusion and "squatting" on names that might have
-   broader uses.
-</t>
-<t>
-   To that end, limited-use fields (such as a header confined to a single
-   application or use case) are encouraged to use a name that includes its name
-   (or an abbreviation) as a prefix; for example, if the Foo Application needs
-   a Description field, it might use "Foo-Desc"; "Description" is too generic,
-   and "Foo-Description" is needlessly long.
-</t>
-<t>
-   While the field-name syntax is defined to allow any token character, in
-   practice some implementations place limits on the characters they accept
-   in field-names. To be interoperable, new field names &SHOULD; constrain
-   themselves to alphanumeric characters, "-", and ".", and &SHOULD;
-   begin with an alphanumeric character.
-</t>
-<t>
-   Field names ought not be prefixed with "X-"; see
-   <xref target="BCP178"/> for further information.
-</t>
-<t>
-   Other prefixes are sometimes used in HTTP field names; for example,
-   "Accept-" is used in many content negotiation headers. These prefixes are
-   only an aid to recognizing the purpose of a field, and do not
-   trigger automatic processing.
-</t>
-
-<section title="Field Extensibility" anchor="field.extensibility">
-  <x:anchor-alias value="header.extensibility"/>
-<t>
-   There is no limit on the introduction of new field names, each presumably
-   defining new semantics.
-</t>
-<t>
-   New fields can be defined such that, when they are understood by a
-   recipient, they might override or enhance the interpretation of previously
-   defined fields, define preconditions on request evaluation, or
-   refine the meaning of responses.
-</t>
-<t>
-   A proxy &MUST; forward unrecognized header fields unless the
-   field name is listed in the <x:ref>Connection</x:ref> header field
-   (<xref target="field.connection"/>) or the proxy is specifically
-   configured to block, or otherwise transform, such fields.
-   Other recipients &SHOULD; ignore unrecognized header and trailer fields.
-   These requirements allow HTTP's functionality to be enhanced without
-   requiring prior update of deployed intermediaries.
-</t>
-</section>
-
-<section title="Field Name Registry" anchor="field.name.registry">
-  <x:anchor-alias value="header.name.registry"/>
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Field Name Registry" defines the
-   namespace for HTTP field names.
-</t>
-<t>
-   Any party can request registration of a HTTP field. See <xref
-   target="considerations.for.new.header.fields"/> for considerations to take
-   into account when creating a new HTTP field.
-</t>
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Field Name Registry" is located at
-   <eref target="https://www.iana.org/assignments/http-fields/"/>.
-   Registration requests can be made by following the instructions located
-   there or by sending an email to the "ietf-http-wg@ietf.org" mailing list.
-</t>
-<t>
-   Field names are registered on the advice of a Designated Expert
-   (appointed by the IESG or their delegate). Fields with the status
-   'permanent' are Specification Required
-   (<xref target="RFC8126" x:sec="4.6" x:fmt=","/>).
-</t>
-<t>
-   Registration requests consist of at least the following information:
-</t>
-<dl newline="true">
-  <dt>Field name:</dt>
-  <dd>
-    The requested field name. It &MUST; conform to the
-    field-name syntax defined in <xref target="field.names"/>, and &SHOULD; be
-    restricted to just letters, digits, hyphen ('-') and underscore ('_')
-    characters, with the first character being a letter.
-  </dd>
-  <dt>Status:</dt>
-  <dd>
-    "permanent" or "provisional".
-  </dd>
-  <dt>Specification document(s):</dt>
-  <dd>
-    Reference to the document that specifies
-    the field, preferably including a URI that can be used to retrieve
-    a copy of the document. An indication of the relevant section(s) can also
-    be included, but is not required.
-  </dd>
-</dl>
-<t>
-   And, optionally:
-</t>
-<dl>
-  <dt>Comments:</dt>
-  <dd>
-    Additional information, such as about reserved entries.
-  </dd>
-</dl>
-<t>
-   The Expert(s) can define additional fields to be collected in the
-   registry, in consultation with the community.
-</t>
-<t>
-   Standards-defined names have a status of "permanent". Other names can also
-   be registered as permanent, if the Expert(s) find that they are in use, in
-   consultation with the community. Other names should be registered as
-   "provisional".
-</t>
-<t>
-   Provisional entries can be removed by the Expert(s) if &mdash; in consultation
-   with the community &mdash; the Expert(s) find that they are not in use. The
-   Experts can change a provisional entry's status to permanent at any time.
-</t>
-<t>
-   Note that names can be registered by third parties (including the
-   Expert(s)), if the Expert(s) determines that an unregistered name is widely
-   deployed and not likely to be registered in a timely manner otherwise.
-</t>
-</section>
 </section>
 
 <section title="Field Values" anchor="field.values">
@@ -7426,62 +7111,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </section>
 </section>
 
-<section title="Considerations for New HTTP Fields" anchor="considerations.for.new.header.fields">
-
-<t>
-   See <xref target="field.names"/> for a general requirements for field names,
-   and <xref target="field.values"/> for a discussion of field values.
-</t>
-<t>
-   Authors of specifications defining new fields are advised to consider
-   documenting:
-</t>
-<ul>
-  <li>
-    <t>Whether the field has a singleton or list-based value
-    (see <xref target="field.values"/>).</t>
-    <t>If it is a singleton field, document how to treat messages
-    where the multiple members are present (a sensible default would
-    be to ignore the field, but this might not always be the right
-    choice).</t>
-    <t>Note that intermediaries and software libraries might combine
-    multiple field instances into a single one, despite the
-    field being defined as a singleton. A robust format enables
-    recipients to discover these situations (good example: "Content-Type",
-    as the comma can only appear inside quoted strings;
-    bad example: "Location", as a comma can occur inside a URI).</t>
-  </li>
-  <li><t>Under what conditions the field can be used; e.g., only in
-    responses or requests, in all messages, only on responses to a
-    particular request method, etc.</t></li>
-   <li><t>What the scope of applicability for the information conveyed in
-    the field is. By default, fields apply only to the message they are
-    associated with, but some response fields are designed to apply to all
-    representations of a resource, the resource itself, or an even broader
-    scope. Specifications that expand the scope of a response field will
-    need to carefully consider issues such as content negotiation, the time
-    period of applicability, and (in some cases) multi-tenant server
-    deployments.</t></li>
-  <li><t>Whether the field should be stored by origin servers that
-    understand it upon a PUT request.</t></li>
-  <li><t>Whether the field semantics are further refined by the context,
-    such as by existing request methods or status codes.</t></li>
-  <li><t>Whether it is appropriate to list the field name in the
-    <x:ref>Connection</x:ref> header field (i.e., if the field is to
-    be hop-by-hop; see <xref target="field.connection"/>).</t></li>
-  <li><t>Under what conditions intermediaries are allowed to insert,
-    delete, or modify the field's value.</t></li>
-  <li><t>Whether it is appropriate to list the field name in a
-    <x:ref>Vary</x:ref> response header field (e.g., when the request header
-    field is used by an origin server's content selection algorithm; see
-    <xref target="field.vary"/>).</t></li>
-  <li><t>Whether the field is allowable in trailers (see
-    <xref target="trailer.fields"/>).</t></li>
-  <li><t>Whether the field ought to be preserved across redirects.</t></li>
-  <li><t>Whether it introduces any additional security considerations, such
-    as disclosure of privacy-related data.</t></li>
-</ul>
-</section>
 <section title="Fields Defined In This Document" anchor="field.definitions">
    <t>
       The following fields are defined by this document:
@@ -10905,24 +10534,13 @@ Upgrade: websocket
 </section>
 </section>
 
-<section title="Extending and Versioning HTTP" anchor="extending.versioning">
-<t>
-   While HTTP's core semantics don't change between protocol versions, the
-   expression of them "on the wire" can change, and so the
-   HTTP version number changes when incompatible changes are made to the wire
-   format. Additionally, HTTP allows incremental, backwards-compatible
-   changes to be made to the protocol without changing its version through
-   the use of defined extension points.
-</t>
-
 <section title="Extending HTTP" anchor="extending">
 <t>
    HTTP defines a number of generic extension points that can be used to
    introduce capabilities to the protocol without introducing a new version,
-   including methods (<xref target="method.extensibility"/>), status codes
-   (<xref target="status.code.extensibility"/>), header and trailer fields
-   (<xref target="considerations.for.new.header.fields"/>), and further
-   extensibility points within defined fields (such as Cache-Control in <xref
+   including methods, status codes, field names, and further extensibility
+   points within defined fields, such as authentication schemes and
+   cache-directives (see Cache-Control in <xref
    target="cache.control.extensions"/>). Because the semantics of HTTP are
    not versioned, these extension points are persistent; the version of the
    protocol in use does not affect their semantics.
@@ -10951,67 +10569,437 @@ Upgrade: websocket
    predictably, even when parts of the path implement different versions of
    HTTP.
 </t>
+
+<section title="Method Extensibility" anchor="method.extensibility">
+
+<section title="Method Registry" anchor="method.registry">
+<t>
+  The "Hypertext Transfer Protocol (HTTP) Method Registry", maintained by
+  IANA at <eref target="https://www.iana.org/assignments/http-methods"/>,
+  registers <x:ref>method</x:ref> names.
+</t>
+<t>
+  HTTP method registrations &MUST; include the following fields:
+</t>
+<ul>
+  <li>Method Name (see <xref target="methods"/>)</li>
+  <li>Safe ("yes" or "no", see <xref target="safe.methods"/>)</li>
+  <li>Idempotent ("yes" or "no", see <xref target="idempotent.methods"/>)</li>
+  <li>Pointer to specification text</li>
+</ul>
+<t>
+  Values to be added to this namespace require IETF Review
+  (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
+</t>
 </section>
 
-<section title="Protocol Versioning" anchor="protocol.version">
+<section title="Considerations for New Methods" anchor="considerations.for.new.methods">
 <t>
-   The protocol version as a whole indicates the sender's conformance with
-   the set of requirements laid out in that version's corresponding
-   specification of HTTP.
-   For example, the version "HTTP/1.1" is defined by the combined
-   specifications of this document, "HTTP Caching" <xref target="Caching"/>,
-   and "HTTP/1.1 Messaging" <xref target="Messaging"/>.
+   Standardized methods are generic; that is, they are potentially
+   applicable to any resource, not just one particular media type, kind of
+   resource, or application. As such, it is preferred that new methods
+   be registered in a document that isn't specific to a single application or
+   data format, since orthogonal technologies deserve orthogonal specification.
 </t>
 <t>
-   HTTP's major version number is incremented when an incompatible message
-   syntax is introduced. The minor number is incremented when changes made to
-   the protocol have the effect of adding to the message semantics or
-   implying additional capabilities of the sender.
+   Since message parsing (<xref target="message.body"/>) needs to be independent of method
+   semantics (aside from responses to HEAD), definitions of new methods
+   cannot change the parsing algorithm or prohibit the presence of a message
+   body on either the request or the response message.
+   Definitions of new methods can specify that only a zero-length message body
+   is allowed by requiring a Content-Length header field with a value of "0".
 </t>
 <t>
-   The minor version advertises the sender's communication capabilities even
-   when the sender is only using a backwards-compatible subset of the
-   protocol, thereby letting the recipient know that more advanced features
-   can be used in response (by servers) or in future requests (by clients).
+   A new method definition needs to indicate whether it is safe (<xref
+   target="safe.methods"/>), idempotent (<xref target="idempotent.methods"/>),
+   cacheable (<xref target="cacheable.methods"/>), what
+   semantics are to be associated with the payload body if any is present
+   in the request and what refinements the method makes to header field
+   or status code semantics.
+   If the new method is cacheable, its definition ought to describe how, and
+   under what conditions, a cache can store a response and use it to satisfy a
+   subsequent request.
+   The new method ought to describe whether it can be made conditional
+   (<xref target="preconditions"/>) and, if so, how a server responds
+   when the condition is false.
+   Likewise, if the new method might have some use for partial response
+   semantics (<xref target="field.range"/>), it ought to document this, too.
+</t>
+<aside>
+  <t>
+    &Note; Avoid defining a method name that starts with "M-", since that
+    prefix might be misinterpreted as having the semantics assigned to it
+    by <xref target="RFC2774"/>.
+  </t>
+</aside>
+</section>
+</section>
+
+<section title="Status Code Extensibility" anchor="status.code.extensibility">
+
+<section title="Status Code Registry" anchor="status.code.registry">
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Status Code Registry", maintained
+   by IANA at <eref target="https://www.iana.org/assignments/http-status-codes"/>,
+   registers <x:ref>status code</x:ref> numbers.
 </t>
 <t>
-   A client &SHOULD; send a request version equal to the highest
-   version to which the client is conformant and
-   whose major version is no higher than the highest version supported
-   by the server, if this is known.  A client &MUST-NOT; send a
-   version to which it is not conformant.
+   A registration &MUST; include the following fields:
+</t>
+<ul>
+  <li>Status Code (3 digits)</li>
+  <li>Short Description</li>
+  <li>Pointer to specification text</li>
+</ul>
+<t>
+   Values to be added to the HTTP status code namespace require IETF Review
+   (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
+</t>
+</section>
+
+<section title="Considerations for New Status Codes" anchor="considerations.for.new.status.codes">
+<t>
+   When it is necessary to express semantics for a response that are not
+   defined by current status codes, a new status code can be registered.
+   Status codes are generic; they are potentially applicable to any resource,
+   not just one particular media type, kind of resource, or application of
+   HTTP. As such, it is preferred that new status codes be registered in a
+   document that isn't specific to a single application.
 </t>
 <t>
-   A client &MAY; send a lower request version if it is known that
-   the server incorrectly implements the HTTP specification, but only
-   after the client has attempted at least one normal request and determined
-   from the response status code or header fields (e.g., <x:ref>Server</x:ref>) that
-   the server improperly handles higher request versions.
+   New status codes are required to fall under one of the categories
+   defined in <xref target="status.codes"/>. To allow existing parsers to
+   process the response message, new status codes cannot disallow a payload,
+   although they can mandate a zero-length payload body.
 </t>
 <t>
-   A server &SHOULD; send a response version equal to the highest version to
-   which the server is conformant that has a major version less than or equal
-   to the one received in the request.
-   A server &MUST-NOT; send a version to which it is not conformant.
-   A server can send a <x:ref>505 (HTTP Version Not Supported)</x:ref>
-   response if it wishes, for any reason, to refuse service of the client's
-   major protocol version.
+   Proposals for new status codes that are not yet widely deployed ought to
+   avoid allocating a specific number for the code until there is clear
+   consensus that it will be registered; instead, early drafts can use a
+   notation such as "4NN", or "3N0" .. "3N9", to indicate the class
+   of the proposed status code(s) without consuming a number prematurely.
 </t>
 <t>
-   When an HTTP message is received with a major version number that the
-   recipient implements, but a higher minor version number than what the
-   recipient implements, the recipient &SHOULD; process the message as if it
-   were in the highest minor version within that major version to which the
-   recipient is conformant. A recipient can assume that a message with a
-   higher minor version, when sent to a recipient that has not yet indicated
-   support for that higher version, is sufficiently backwards-compatible to be
-   safely processed by any implementation of the same major version.
+   The definition of a new status code ought to explain the request
+   conditions that would cause a response containing that status code (e.g.,
+   combinations of request header fields and/or method(s)) along with any 
+   dependencies on response header fields (e.g., what fields are required,
+   what fields can modify the semantics, and what field semantics are
+   further refined when used with the new status code).
 </t>
 <t>
-   When a major version of HTTP does not define any minor versions, the minor
-   version "0" is implied and is used when referring to that protocol within a
-   protocol element that requires sending a minor version.
+   By default, a status code applies only to the request corresponding to the
+   response it occurs within. If a status code applies to a larger scope of
+   applicability &mdash; for example, all requests to the resource in question, or
+   all requests to a server &mdash; this must be explicitly specified. When doing
+   so, it should be noted that not all clients can be expected to
+   consistently apply a larger scope, because they might not understand the
+   new status code.
 </t>
+<t>
+   The definition of a new status code ought to specify whether or not it is
+   cacheable. Note that all status codes can be cached if the response they
+   occur in has explicit freshness information; however, status codes that are
+   defined as being cacheable are allowed to be cached without explicit
+   freshness information. Likewise, the definition of a status code can place
+   constraints upon cache behavior. See <xref target="Caching"/> for more information.
+</t>
+<t>
+   Finally, the definition of a new status code ought to indicate whether the
+   payload has any implied association with an identified resource (<xref
+   target="identifying.payload"/>).
+</t>
+</section>
+</section>
+
+<section title="Field Name Extensibility" anchor="field.extensibility">
+  <x:anchor-alias value="header.extensibility"/>
+
+<section title="Field Name Registry" anchor="field.name.registry">
+  <x:anchor-alias value="header.name.registry"/>
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Field Name Registry" defines the
+   namespace for HTTP field names.
+</t>
+<t>
+   Any party can request registration of a HTTP field. See <xref
+   target="considerations.for.new.field.values"/> for considerations to take
+   into account when creating a new HTTP field.
+</t>
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Field Name Registry" is located at
+   <eref target="https://www.iana.org/assignments/http-fields/"/>.
+   Registration requests can be made by following the instructions located
+   there or by sending an email to the "ietf-http-wg@ietf.org" mailing list.
+</t>
+<t>
+   Field names are registered on the advice of a Designated Expert
+   (appointed by the IESG or their delegate). Fields with the status
+   'permanent' are Specification Required
+   (<xref target="RFC8126" x:sec="4.6" x:fmt=","/>).
+</t>
+<t>
+   Registration requests consist of at least the following information:
+</t>
+<dl newline="true">
+  <dt>Field name:</dt>
+  <dd>
+    The requested field name. It &MUST; conform to the
+    field-name syntax defined in <xref target="field.names"/>, and &SHOULD; be
+    restricted to just letters, digits, hyphen ('-') and underscore ('_')
+    characters, with the first character being a letter.
+  </dd>
+  <dt>Status:</dt>
+  <dd>
+    "permanent" or "provisional".
+  </dd>
+  <dt>Specification document(s):</dt>
+  <dd>
+    Reference to the document that specifies
+    the field, preferably including a URI that can be used to retrieve
+    a copy of the document. An indication of the relevant section(s) can also
+    be included, but is not required.
+  </dd>
+</dl>
+<t>
+   And, optionally:
+</t>
+<dl>
+  <dt>Comments:</dt>
+  <dd>
+    Additional information, such as about reserved entries.
+  </dd>
+</dl>
+<t>
+   The Expert(s) can define additional fields to be collected in the
+   registry, in consultation with the community.
+</t>
+<t>
+   Standards-defined names have a status of "permanent". Other names can also
+   be registered as permanent, if the Expert(s) find that they are in use, in
+   consultation with the community. Other names should be registered as
+   "provisional".
+</t>
+<t>
+   Provisional entries can be removed by the Expert(s) if &mdash; in consultation
+   with the community &mdash; the Expert(s) find that they are not in use. The
+   Experts can change a provisional entry's status to permanent at any time.
+</t>
+<t>
+   Note that names can be registered by third parties (including the
+   Expert(s)), if the Expert(s) determines that an unregistered name is widely
+   deployed and not likely to be registered in a timely manner otherwise.
+</t>
+</section>
+
+<section title="Considerations for New Field Names" anchor="considerations.for.new.field.names">
+<t>
+   There is no limit on the introduction of new field names, each presumably
+   defining new semantics.
+</t>
+<t>
+   New fields can be defined such that, when they are understood by a
+   recipient, they might override or enhance the interpretation of previously
+   defined fields, define preconditions on request evaluation, or
+   refine the meaning of responses.
+</t>
+<t>
+   Authors of specifications defining new fields are advised to choose a short
+   but descriptive field name. Short names avoid needless data transmission;
+   descriptive names avoid confusion and "squatting" on names that might have
+   broader uses.
+</t>
+<t>
+   To that end, limited-use fields (such as a header confined to a single
+   application or use case) are encouraged to use a name that includes its name
+   (or an abbreviation) as a prefix; for example, if the Foo Application needs
+   a Description field, it might use "Foo-Desc"; "Description" is too generic,
+   and "Foo-Description" is needlessly long.
+</t>
+<t>
+   While the field-name syntax is defined to allow any token character, in
+   practice some implementations place limits on the characters they accept
+   in field-names. To be interoperable, new field names &SHOULD; constrain
+   themselves to alphanumeric characters, "-", and ".", and &SHOULD;
+   begin with an alphanumeric character.
+</t>
+<t>
+   Field names ought not be prefixed with "X-"; see
+   <xref target="BCP178"/> for further information.
+</t>
+<t>
+   Other prefixes are sometimes used in HTTP field names; for example,
+   "Accept-" is used in many content negotiation headers. These prefixes are
+   only an aid to recognizing the purpose of a field, and do not
+   trigger automatic processing.
+</t>
+</section>
+
+<section title="Considerations for New Field Values" anchor="considerations.for.new.field.values">
+<t>
+   Authors of specifications defining new fields are advised to consider
+   documenting:
+</t>
+<ul>
+  <li>
+    <t>Whether the field has a singleton or list-based value
+    (see <xref target="field.values"/>).</t>
+    <t>If it is a singleton field, document how to treat messages
+    where the multiple members are present (a sensible default would
+    be to ignore the field, but this might not always be the right
+    choice).</t>
+    <t>Note that intermediaries and software libraries might combine
+    multiple field instances into a single one, despite the
+    field being defined as a singleton. A robust format enables
+    recipients to discover these situations (good example: "Content-Type",
+    as the comma can only appear inside quoted strings;
+    bad example: "Location", as a comma can occur inside a URI).</t>
+  </li>
+  <li><t>Under what conditions the field can be used; e.g., only in
+    responses or requests, in all messages, only on responses to a
+    particular request method, etc.</t></li>
+   <li><t>What the scope of applicability for the information conveyed in
+    the field is. By default, fields apply only to the message they are
+    associated with, but some response fields are designed to apply to all
+    representations of a resource, the resource itself, or an even broader
+    scope. Specifications that expand the scope of a response field will
+    need to carefully consider issues such as content negotiation, the time
+    period of applicability, and (in some cases) multi-tenant server
+    deployments.</t></li>
+  <li><t>Whether the field should be stored by origin servers that
+    understand it upon a PUT request.</t></li>
+  <li><t>Whether the field semantics are further refined by the context,
+    such as by existing request methods or status codes.</t></li>
+  <li><t>Whether it is appropriate to list the field name in the
+    <x:ref>Connection</x:ref> header field (i.e., if the field is to
+    be hop-by-hop; see <xref target="field.connection"/>).</t></li>
+  <li><t>Under what conditions intermediaries are allowed to insert,
+    delete, or modify the field's value.</t></li>
+  <li><t>Whether it is appropriate to list the field name in a
+    <x:ref>Vary</x:ref> response header field (e.g., when the request header
+    field is used by an origin server's content selection algorithm; see
+    <xref target="field.vary"/>).</t></li>
+  <li><t>Whether the field is allowable in trailers (see
+    <xref target="trailer.fields"/>).</t></li>
+  <li><t>Whether the field ought to be preserved across redirects.</t></li>
+  <li><t>Whether it introduces any additional security considerations, such
+    as disclosure of privacy-related data.</t></li>
+</ul>
+</section>
+</section>
+
+<section title="Authentication Scheme Extensibility" anchor="auth.scheme.extensibility">
+
+<section title="Authentication Scheme Registry" anchor="auth.scheme.registry">
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Authentication Scheme Registry"
+   defines the namespace for the authentication schemes in challenges and
+   credentials. It is maintained
+   at <eref target="https://www.iana.org/assignments/http-authschemes"/>.
+</t>
+<t>
+  Registrations &MUST; include the following fields:
+</t>
+<ul>
+  <li>Authentication Scheme Name</li>
+  <li>Pointer to specification text</li>
+  <li>Notes (optional)</li>
+</ul>
+<t>
+  Values to be added to this namespace require IETF Review
+  (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
+</t>
+</section>
+
+<section title="Considerations for New Authentication Schemes" anchor="considerations.for.new.auth.schemes">
+<t>
+  There are certain aspects of the HTTP Authentication framework that put
+  constraints on how new authentication schemes can work:
+</t>
+<ul>
+  <li><t>
+    HTTP authentication is presumed to be stateless: all of the information
+    necessary to authenticate a request &MUST; be provided in the request,
+    rather than be dependent on the server remembering prior requests.
+    Authentication based on, or bound to, the underlying connection is
+    outside the scope of this specification and inherently flawed unless
+    steps are taken to ensure that the connection cannot be used by any
+    party other than the authenticated user
+    (see <xref target="intermediaries"/>).
+  </t>
+  </li>
+  <li>
+    <t>
+      The authentication parameter "realm" is reserved for defining protection
+      spaces as described in <xref target="protection.space"/>. New schemes
+      &MUST-NOT; use it in a way incompatible with that definition.
+    </t>
+  </li>
+  <li>
+    <t>
+      The "token68" notation was introduced for compatibility with existing
+      authentication schemes and can only be used once per challenge or credential.
+      Thus, new schemes ought to use the auth-param syntax instead, because
+      otherwise future extensions will be impossible.
+    </t>
+  </li>
+  <li>
+    <t>
+      The parsing of challenges and credentials is defined by this specification
+      and cannot be modified by new authentication schemes. When the auth-param
+      syntax is used, all parameters ought to support both token and
+      quoted-string syntax, and syntactical constraints ought to be defined on
+      the field value after parsing (i.e., quoted-string processing). This is
+      necessary so that recipients can use a generic parser that applies to
+      all authentication schemes.
+    </t>
+    <t>
+      &Note; The fact that the value syntax for the "realm" parameter
+      is restricted to quoted-string was a bad design choice not to be repeated
+      for new parameters.
+    </t>
+  </li>
+  <li>
+    <t>
+      Definitions of new schemes ought to define the treatment of unknown
+      extension parameters. In general, a "must-ignore" rule is preferable
+      to a "must-understand" rule, because otherwise it will be hard to introduce
+      new parameters in the presence of legacy recipients. Furthermore,
+      it's good to describe the policy for defining new parameters (such
+      as "update the specification" or "use this registry").
+    </t>
+  </li>
+  <li>
+    <t>
+      Authentication schemes need to document whether they are usable in
+      origin-server authentication (i.e., using <x:ref>WWW-Authenticate</x:ref>),
+      and/or proxy authentication (i.e., using <x:ref>Proxy-Authenticate</x:ref>).
+    </t>
+  </li>
+  <li>
+    <t>
+      The credentials carried in an <x:ref>Authorization</x:ref> header field are specific to
+      the user agent and, therefore, have the same effect on HTTP caches as the
+      "private" Cache-Control response directive (<xref target="cache-response-directive.private"/>),
+      within the scope of the request in which they appear.
+    </t>
+    <t>
+      Therefore, new authentication schemes that choose not to carry
+      credentials in the <x:ref>Authorization</x:ref> header field (e.g., using a newly defined
+      header field) will need to explicitly disallow caching, by mandating the use of
+      Cache-Control response directives (e.g., "private").
+    </t>
+  </li>
+  <li>
+    <t>
+      Schemes using <x:ref>Authentication-Info</x:ref>, <x:ref>Proxy-Authentication-Info</x:ref>,
+      or any other authentication related response header field need to
+      consider and document the related security considerations (see 
+      <xref target="security.auth.add.resp"/>). 
+    </t>
+  </li>
+</ul>
+</section>
 </section>
 </section>
 
@@ -13382,7 +13370,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>Moved transport-independent part of the description of trailers into <xref target="trailer.fields"/> (<eref target="https://github.com/httpwg/http-core/issues/16"/>)</li>
   <li>Loosen requirements on retries based upon implementation behavior (<eref target="https://github.com/httpwg/http-core/issues/27"/>)</li>
   <li>In <xref target="port.reg"/>, update IANA port registry for TCP/UDP on ports 80 and 443 (<eref target="https://github.com/httpwg/http-core/issues/36"/>)</li>
-  <li>In <xref target="considerations.for.new.header.fields"/>, revise guidelines for new header field names (<eref target="https://github.com/httpwg/http-core/issues/47"/>)</li>
+  <li>In <xref target="considerations.for.new.field.values"/>, revise guidelines for new header field names (<eref target="https://github.com/httpwg/http-core/issues/47"/>)</li>
   <li>In <xref target="cacheable.methods"/>, remove concept of "cacheable methods" in favor of prose (<eref target="https://github.com/httpwg/http-core/issues/54"/>, <eref target="https://www.rfc-editor.org/errata/eid5300"/>)</li>
   <li>In <xref target="establishing.authority"/>, mention that the concept of authority can be modified by protocol extensions (<eref target="https://github.com/httpwg/http-core/issues/143"/>)</li>
   <li>Create new subsection on payload body in <xref target="payload.body"/>, taken from portions of message body (<eref target="https://github.com/httpwg/http-core/issues/159"/>)</li>
@@ -13390,7 +13378,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="resources"/>, recommend minimum URI size support for implementations (<eref target="https://github.com/httpwg/http-core/issues/169"/>)</li>
   <li>In <xref target="range.units"/>, refactored the range-unit and ranges-specifier grammars (<eref target="https://github.com/httpwg/http-core/issues/196"/>, <eref target="https://www.rfc-editor.org/errata/eid5620"/>)</li>
   <li>In <xref target="GET"/>, caution against a request body more strongly (<eref target="https://github.com/httpwg/http-core/issues/202"/>)</li>
-  <li>Reorganized text in <xref target="considerations.for.new.header.fields"/> (<eref target="https://github.com/httpwg/http-core/issues/214"/>)</li>
+  <li>Reorganized text in <xref target="considerations.for.new.field.values"/> (<eref target="https://github.com/httpwg/http-core/issues/214"/>)</li>
   <li>In <xref target="status.403"/>, replace "authorize" with "fulfill" (<eref target="https://github.com/httpwg/http-core/issues/218"/>)</li>
   <li>In <xref target="OPTIONS"/>, removed a misleading statement about Content-Length (<eref target="https://github.com/httpwg/http-core/issues/235"/>, <eref target="https://www.rfc-editor.org/errata/eid5806"/>)</li>
   <li>In <xref target="establishing.authority"/>, add text from RFC 2818 (<eref target="https://github.com/httpwg/http-core/issues/236"/>)</li>
@@ -13432,7 +13420,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="status.205"/>, <xref target="status.408"/>, and <xref target="status.413"/>, remove HTTP/1-specific, connection-related requirements (<eref target="https://github.com/httpwg/http-core/issues/144"/>)</li>
   <li>In <xref target="CONNECT"/>, correct language about what is forwarded (<eref target="https://github.com/httpwg/http-core/issues/170"/>)</li>
   <li>Throughout, replace "effective request URI", "request-target" and similar with "target URI" (<eref target="https://github.com/httpwg/http-core/issues/259"/>)</li>
-  <li>In <xref target="considerations.for.new.header.fields"/> and <xref target="considerations.for.new.status.codes"/>, describe how extensions should consider scope of applicability (<eref target="https://github.com/httpwg/http-core/issues/265"/>)</li>
+  <li>In <xref target="considerations.for.new.field.values"/> and <xref target="considerations.for.new.status.codes"/>, describe how extensions should consider scope of applicability (<eref target="https://github.com/httpwg/http-core/issues/265"/>)</li>
   <li>In <xref target="messages"/>, don't rely on the HTTP/1.1 Messaging specification to define "message" (<eref target="https://github.com/httpwg/http-core/issues/311"/>)</li>
   <li>In <xref target="field.content-location"/> and <xref target="field.referer"/>, note that URL resolution is necessary (<eref target="https://github.com/httpwg/http-core/issues/321"/>)</li>
   <li>In <xref target="representations"/>, explicitly reference 206 as one of the status codes that provide representation data (<eref target="https://github.com/httpwg/http-core/issues/325"/>)</li>
@@ -13459,7 +13447,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>Rephrase prose in <xref target="messages"/> to become version-agnostic (<eref target="https://github.com/httpwg/http-core/issues/372"/>)</li>
   <li>In <xref target="field.values"/>, instruct recipients how to deal with control characters in field values (<eref target="https://github.com/httpwg/http-core/issues/377"/>)</li>
   <li>In <xref target="field.values"/>, update note about field ABNF (<eref target="https://github.com/httpwg/http-core/issues/380"/>)</li>
-  <li>Add <xref target="extending.versioning"/> about Extending and Versioning HTTP (<eref target="https://github.com/httpwg/http-core/issues/384"/>)</li>
+  <li>Add <xref target="extending"/> about Extending and Versioning HTTP (<eref target="https://github.com/httpwg/http-core/issues/384"/>)</li>
   <li>In <xref target="overview.of.status.codes"/>, include status 308 in list of heuristically cacheable status codes (<eref target="https://github.com/httpwg/http-core/issues/385"/>)</li>
   <li>In <xref target="field.content-encoding"/>, make it clearer that "identity" is not to be included (<eref target="https://github.com/httpwg/http-core/issues/388"/>)</li>
 </ul>
