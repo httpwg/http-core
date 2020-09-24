@@ -5092,6 +5092,29 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </section>
 
 <section title="Range Requests" anchor="range.requests">
+<t>
+   Clients often encounter interrupted data
+   transfers as a result of canceled requests or dropped connections. When a
+   client has stored a partial representation, it is desirable to request the
+   remainder of that representation in a subsequent request rather than
+   transfer the entire representation. Likewise, devices with limited local
+   storage might benefit from being able to request only a subset of a larger
+   representation, such as a single page of a very large document, or the
+   dimensions of an embedded image.
+</t>
+<t>
+   Range requests are an &OPTIONAL; feature
+   of HTTP, designed so that recipients not implementing this feature (or not
+   supporting it for the target resource) can respond as if it is a normal
+   GET request without impacting interoperability. Partial responses are
+   indicated by a distinct status code to not be mistaken for full responses
+   by caches that might not implement the feature.
+</t>
+<t>
+   Although the range request mechanism is designed to allow for
+   extensible range types, this specification only defines requests for
+   byte ranges.
+</t>
 
 <section title="Range Units" anchor="range.units">
   <x:anchor-alias value="range-unit"/>
@@ -5354,6 +5377,82 @@ bytes=500-700,601-999
   (see <xref target="RFC8126" x:fmt="," x:sec="4.8"/>).
 </t>
 </section>
+</section>
+
+<section title="Range" anchor="field.range">
+  <x:anchor-alias value="header.range"/>
+  <iref primary="true" item="Fields" subitem="Range" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Range" x:for-anchor=""/><iref primary="true" item="Range header field" x:for-anchor=""/>
+  <x:anchor-alias value="Range"/>
+<t>
+   The "Range" header field on a GET request modifies the method semantics to
+   request transfer of only one or more subranges of the
+   selected representation data (<xref target="representation.data"/>),
+   rather than the entire <x:ref>selected representation</x:ref>.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Range"/>
+  <x:ref>Range</x:ref> = <x:ref>ranges-specifier</x:ref>
+</sourcecode>
+<t>
+   A server &MAY; ignore the Range header field. However, origin servers and
+   intermediate caches ought to support byte ranges when possible, since they
+   support efficient recovery from partially failed transfers and partial
+   retrieval of large representations. A server &MUST; ignore a Range header
+   field received with a request method other than GET.
+</t>
+<t>
+   An origin server &MUST; ignore a Range header field that contains a range
+   unit it does not understand. A proxy &MAY; discard a Range header
+   field that contains a range unit it does not understand.
+</t>
+<t>
+   A server that supports range requests &MAY; ignore or reject a
+   <x:ref>Range</x:ref> header field that consists of more than two
+   overlapping ranges, or a set of many small ranges that are not listed
+   in ascending order, since both are indications of either a broken client or
+   a deliberate denial-of-service attack (<xref target="overlapping.ranges"/>).
+   A client &SHOULD-NOT; request multiple ranges that are inherently less
+   efficient to process and transfer than a single range that encompasses the
+   same data.
+</t>
+<t>
+   A server that supports range requests &MAY; ignore a <x:ref>Range</x:ref>
+   header field when the selected representation has no body
+   (i.e., the selected representation data is of zero length).
+</t>
+<t>
+   A client that is requesting multiple ranges &SHOULD; list those ranges in
+   ascending order (the order in which they would typically be received in a
+   complete representation) unless there is a specific need to request a later
+   part earlier. For example, a user agent processing a large representation
+   with an internal catalog of parts might need to request later parts first,
+   particularly if the representation consists of pages stored in reverse
+   order and the user agent wishes to transfer one page at a time.
+</t>
+<t>
+   The Range header field is evaluated after evaluating the precondition header
+   fields defined in <xref target="preconditions"/>, and only if the result in absence
+   of the Range header field would be a <x:ref>200 (OK)</x:ref> response. In
+   other words, Range is ignored when a conditional GET would result in a
+   <x:ref>304 (Not Modified)</x:ref> response.
+</t>
+<t>
+   The If-Range header field (<xref target="field.if-range"/>) can be used as
+   a precondition to applying the Range header field.
+</t>
+<t>
+   If all of the preconditions are true, the server supports the Range header
+   field for the target resource, and the specified range(s) are valid and
+   satisfiable (as defined in <xref target="byte.ranges"/>), the
+   server &SHOULD; send a <x:ref>206 (Partial Content)</x:ref> response with a
+   payload containing one or more partial representations that correspond to
+   the satisfiable ranges requested.
+</t>
+<t>
+   If all of the preconditions are true, the server supports the Range header
+   field for the target resource, and the specified range(s) are invalid or
+   unsatisfiable, the server &SHOULD; send a
+   <x:ref>416 (Range Not Satisfiable)</x:ref> response.
+</t>
 </section>
 
 <section title="Accept-Ranges" anchor="field.accept-ranges">
@@ -9075,105 +9174,6 @@ Host: www.example.org
    relay the credentials from the client request to the next proxy if that is
    the mechanism by which the proxies cooperatively authenticate a given
    request.
-</t>
-</section>
-
-<section title="Range" anchor="field.range">
-  <x:anchor-alias value="header.range"/>
-  <iref primary="true" item="Fields" subitem="Range" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Range" x:for-anchor=""/><iref primary="true" item="Range header field" x:for-anchor=""/>
-  <x:anchor-alias value="Range"/>
-<t>
-   The "Range" header field on a GET request modifies the method semantics to
-   request transfer of only one or more subranges of the
-   selected representation data (<xref target="representation.data"/>),
-   rather than the entire <x:ref>selected representation</x:ref>.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Range"/>
-  <x:ref>Range</x:ref> = <x:ref>ranges-specifier</x:ref>
-</sourcecode>
-<t>
-   Clients often encounter interrupted data
-   transfers as a result of canceled requests or dropped connections. When a
-   client has stored a partial representation, it is desirable to request the
-   remainder of that representation in a subsequent request rather than
-   transfer the entire representation. Likewise, devices with limited local
-   storage might benefit from being able to request only a subset of a larger
-   representation, such as a single page of a very large document, or the
-   dimensions of an embedded image.
-</t>
-<t>
-   Range requests are an &OPTIONAL; feature
-   of HTTP, designed so that recipients not implementing this feature (or not
-   supporting it for the target resource) can respond as if it is a normal
-   GET request without impacting interoperability. Partial responses are
-   indicated by a distinct status code to not be mistaken for full responses
-   by caches that might not implement the feature.
-</t>
-<t>
-   A server &MAY; ignore the Range header field. However, origin servers and
-   intermediate caches ought to support byte ranges when possible, since they
-   support efficient recovery from partially failed transfers and partial
-   retrieval of large representations. A server &MUST; ignore a Range header
-   field received with a request method other than GET.
-</t>
-<t>
-   Although the range request mechanism is designed to allow for
-   extensible range types, this specification only defines requests for
-   byte ranges.
-</t>
-<t>
-   An origin server &MUST; ignore a Range header field that contains a range
-   unit it does not understand. A proxy &MAY; discard a Range header
-   field that contains a range unit it does not understand.
-</t>
-<t>
-   A server that supports range requests &MAY; ignore or reject a
-   <x:ref>Range</x:ref> header field that consists of more than two
-   overlapping ranges, or a set of many small ranges that are not listed
-   in ascending order, since both are indications of either a broken client or
-   a deliberate denial-of-service attack (<xref target="overlapping.ranges"/>).
-   A client &SHOULD-NOT; request multiple ranges that are inherently less
-   efficient to process and transfer than a single range that encompasses the
-   same data.
-</t>
-<t>
-   A server that supports range requests &MAY; ignore a <x:ref>Range</x:ref>
-   header field when the selected representation has no body
-   (i.e., the selected representation data is of zero length).
-</t>
-<t>
-   A client that is requesting multiple ranges &SHOULD; list those ranges in
-   ascending order (the order in which they would typically be received in a
-   complete representation) unless there is a specific need to request a later
-   part earlier. For example, a user agent processing a large representation
-   with an internal catalog of parts might need to request later parts first,
-   particularly if the representation consists of pages stored in reverse
-   order and the user agent wishes to transfer one page at a time.
-</t>
-<t>
-   The Range header field is evaluated after evaluating the precondition header
-   fields defined in <xref target="preconditions"/>, and only if the result in absence
-   of the Range header field would be a <x:ref>200 (OK)</x:ref> response. In
-   other words, Range is ignored when a conditional GET would result in a
-   <x:ref>304 (Not Modified)</x:ref> response.
-</t>
-<t>
-   The If-Range header field (<xref target="field.if-range"/>) can be used as
-   a precondition to applying the Range header field.
-</t>
-<t>
-   If all of the preconditions are true, the server supports the Range header
-   field for the target resource, and the specified range(s) are valid and
-   satisfiable (as defined in <xref target="byte.ranges"/>), the
-   server &SHOULD; send a <x:ref>206 (Partial Content)</x:ref> response with a
-   payload containing one or more partial representations that correspond to
-   the satisfiable ranges requested.
-</t>
-<t>
-   If all of the preconditions are true, the server supports the Range header
-   field for the target resource, and the specified range(s) are invalid or
-   unsatisfiable, the server &SHOULD; send a
-   <x:ref>416 (Range Not Satisfiable)</x:ref> response.
 </t>
 </section>
 
