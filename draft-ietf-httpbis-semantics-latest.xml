@@ -3643,6 +3643,11 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    and with additional header fields specifying authentication information.
    However, such additional mechanisms are not defined by this specification.
 </t>
+<t>
+   Note that various custom mechanisms for user authentication use the
+   Set-Cookie and Cookie header fields, defined in <xref target="RFC6265"/>,
+   for passing tokens related to authentication.
+</t>
 </section>
 
 <section title="Protection Space (Realm)" anchor="protection.space">
@@ -3684,77 +3689,243 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
 </t>
 </section>
 
-<section title="Related Fields" anchor="auth.related">
+<section title="Authenticating User to Origin Server" anchor="auth.user.origin.server">
+
+
+<section title="WWW-Authenticate" anchor="field.www-authenticate">
+  <x:anchor-alias value="header.www-authenticate"/>
+  <iref primary="true" item="Fields" subitem="WWW-Authenticate" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="WWW-Authenticate" x:for-anchor=""/><iref primary="true" item="WWW-Authenticate header field" x:for-anchor=""/>
+  <x:anchor-alias value="WWW-Authenticate"/>
 <t>
-   Two header fields are used for carrying authentication credentials.
-   Note that various custom mechanisms for
-   user authentication use the Cookie header field for this purpose, as
-   defined in <xref target="RFC6265"/>.
+   The "WWW-Authenticate" header field indicates the authentication scheme(s)
+   and parameters applicable to the target resource.
 </t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Authorization</td>
-      <td><xref target="field.authorization" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Proxy-Authorization</td>
-      <td><xref target="field.proxy-authorization" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="WWW-Authenticate"/>
+  <x:ref>WWW-Authenticate</x:ref> = #<x:ref>challenge</x:ref>
+</sourcecode>
 <t>
-   Authentication challenges indicate what mechanisms are available for the
-   client to provide authentication credentials in future requests.
+   A server generating a <x:ref>401 (Unauthorized)</x:ref> response
+   &MUST; send a WWW-Authenticate header field containing at least one
+   challenge.  A server &MAY; generate a WWW-Authenticate header field
+   in other response messages to indicate that supplying credentials
+   (or different credentials) might affect the response.
 </t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>WWW-Authenticate</td>
-      <td><xref target="field.www-authenticate" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Proxy-Authenticate</td>
-      <td><xref target="field.proxy-authenticate" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
 <t>
-   Furthermore, the "Authentication-Info" and
-   "Proxy-Authentication-Info" response header fields are defined
-   for use in authentication schemes that need to return
-   information once the client's authentication credentials have been accepted.
+   A proxy forwarding a response &MUST-NOT; modify any
+   <x:ref>WWW-Authenticate</x:ref> fields in that response.
 </t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Authentication-Info</td>
-      <td><xref target="field.authentication-info" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Proxy-Authentication-Info</td>
-      <td><xref target="field.proxy-authentication-info" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
+<t>
+   User agents are advised to take special care in parsing the field value, as
+   it might contain more than one challenge, and each challenge can contain a
+   comma-separated list of authentication parameters. Furthermore, the header
+   field itself can occur multiple times.
+</t>
+<t>
+  For instance:
+</t>
+<artwork type="example">
+  WWW-Authenticate: Newauth realm="apps", type=1,
+                    title="Login to \"apps\"", Basic realm="simple"
+</artwork>
+<t>
+  This header field contains two challenges; one for the "Newauth" scheme
+  with a realm value of "apps", and two additional parameters "type" and
+  "title", and another one for the "Basic" scheme with a realm value of
+  "simple".
+</t>
+<t>
+  Some user agents do not recognise this form, however. As a result, sending
+  a WWW-Authenticate field value with more than one member on the same field
+  line might not be interoperable.
+</t>
+<aside>
+  <t>
+    &Note; The challenge grammar production uses the list syntax as
+    well. Therefore, a sequence of comma, whitespace, and comma can be
+    considered either as applying to the preceding challenge, or to be an
+    empty entry in the list of challenges. In practice, this ambiguity
+    does not affect the semantics of the header field value and thus is
+    harmless.
+  </t>
+</aside>
+</section>
+
+<section title="Authorization" anchor="field.authorization">
+  <x:anchor-alias value="header.authorization"/>
+  <iref primary="true" item="Fields" subitem="Authorization" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Authorization" x:for-anchor=""/><iref primary="true" item="Authorization header field" x:for-anchor=""/>
+  <x:anchor-alias value="Authorization"/>
+<t>
+   The "Authorization" header field allows a user agent to authenticate itself
+   with an origin server &mdash; usually, but not necessarily, after receiving
+   a <x:ref>401 (Unauthorized)</x:ref> response. Its value consists of
+   credentials containing the authentication information of the user agent for
+   the realm of the resource being requested.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Authorization"/>
+  <x:ref>Authorization</x:ref> = <x:ref>credentials</x:ref>
+</sourcecode>
+<t>
+   If a request is authenticated and a realm specified, the same credentials
+   are presumed to be valid for all other requests within this realm (assuming
+   that the authentication scheme itself does not require otherwise, such as
+   credentials that vary according to a challenge value or using synchronized
+   clocks).
+</t>
+<t>
+   A proxy forwarding a request &MUST-NOT; modify any
+   <x:ref>Authorization</x:ref> fields in that request.
+   See <xref target="caching.authenticated.responses"/> for details of and requirements
+   pertaining to handling of the Authorization field by HTTP caches.
+</t>
+</section>
+
+<section title="Authentication-Info" anchor="field.authentication-info">
+  <x:anchor-alias value="header.authentication-info"/>
+  <iref primary="true" item="Fields" subitem="Authentication-Info" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Authentication-Info" x:for-anchor=""/><iref primary="true" item="Authentication-Info header field" x:for-anchor=""/>
+  <x:anchor-alias value="Authentication-Info"/>
+<t>
+   HTTP authentication schemes can use the Authentication-Info response header
+   field to communicate information after the client's authentication credentials have been accepted.
+   This information can include a finalization message from the server (e.g., it can contain the
+   server authentication).
+</t>
+<t>
+   The field value is a list of parameters (name/value pairs), using the "auth-param"
+   syntax defined in <xref target="challenge.and.response"/>.
+   This specification only describes the generic format; authentication schemes
+   using Authentication-Info will define the individual parameters. The "Digest"
+   Authentication Scheme, for instance, defines multiple parameters in
+   <xref target="RFC7616" x:sec="3.5"/>.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Authentication-Info"/>
+  <x:ref>Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
+</sourcecode>
+<t>
+   The Authentication-Info header field can be used in any HTTP response,
+   independently of request method and status code. Its semantics are defined
+   by the authentication scheme indicated by the <x:ref>Authorization</x:ref> header field
+   (<xref target="field.authorization"/>) of the corresponding request.
+</t>
+<t>
+   A proxy forwarding a response is not allowed to modify the field value in any
+   way.
+</t>
+<t>
+   Authentication-Info can be sent as a trailer field
+   (<xref target="trailer.fields"/>)
+   when the authentication scheme explicitly allows this.
+</t>
+
+<section title="Parameter Value Format">
+<t>
+   Parameter values can be expressed either as "token" or as "quoted-string"
+   (<xref target="field-components"/>).
+</t>
+<t>
+   Authentication scheme definitions need to allow both notations, both for
+   senders and recipients. This allows recipients to use generic parsing
+   components, independent of the authentication scheme in use.
+</t>
+<t>
+   For backwards compatibility, authentication scheme definitions can restrict
+   the format for senders to one of the two variants. This can be important
+   when it is known that deployed implementations will fail when encountering
+   one of the two formats.
+</t>
+</section>
+</section>
+</section>
+
+<section title="Authenticating Client to Proxy" anchor="auth.client.proxy">
+
+<section title="Proxy-Authenticate" anchor="field.proxy-authenticate">
+  <x:anchor-alias value="header.proxy-authenticate"/>
+  <iref primary="true" item="Fields" subitem="Proxy-Authenticate" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Proxy-Authenticate" x:for-anchor=""/><iref primary="true" item="Proxy-Authenticate header field" x:for-anchor=""/>
+  <x:anchor-alias value="Proxy-Authenticate"/>
+<t>
+   The "Proxy-Authenticate" header field consists of at least one
+   challenge that indicates the authentication scheme(s) and parameters
+   applicable to the proxy for this request.
+   A proxy &MUST; send at least one Proxy-Authenticate header field in
+   each <x:ref>407 (Proxy Authentication Required)</x:ref> response that it
+   generates.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authenticate"/>
+  <x:ref>Proxy-Authenticate</x:ref> = #<x:ref>challenge</x:ref>
+</sourcecode>
+<t>
+   Unlike <x:ref>WWW-Authenticate</x:ref>, the Proxy-Authenticate header field
+   applies only to the next outbound client on the response chain.
+   This is because only the client that chose a given proxy is likely to have
+   the credentials necessary for authentication.  However, when multiple
+   proxies are used within the same administrative domain, such as office and
+   regional caching proxies within a large corporate network, it is common
+   for credentials to be generated by the user agent and passed through the
+   hierarchy until consumed.  Hence, in such a configuration, it will appear
+   as if Proxy-Authenticate is being forwarded because each proxy will send
+   the same challenge set.
+</t>
+<t>
+   Note that the parsing considerations for <x:ref>WWW-Authenticate</x:ref>
+   apply to this header field as well; see <xref target="field.www-authenticate"/>
+   for details.
+</t>
+</section>
+
+<section title="Proxy-Authorization" anchor="field.proxy-authorization">
+  <x:anchor-alias value="header.proxy-authorization"/>
+  <iref primary="true" item="Fields" subitem="Proxy-Authorization" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Proxy-Authorization" x:for-anchor=""/><iref primary="true" item="Proxy-Authorization header field" x:for-anchor=""/>
+  <x:anchor-alias value="Proxy-Authorization"/>
+<t>
+   The "Proxy-Authorization" header field allows the client to
+   identify itself (or its user) to a proxy that requires
+   authentication. Its value consists of credentials containing the
+   authentication information of the client for the proxy and/or realm of the
+   resource being requested.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authorization"/>
+  <x:ref>Proxy-Authorization</x:ref> = <x:ref>credentials</x:ref>
+</sourcecode>
+<t>
+   Unlike <x:ref>Authorization</x:ref>, the Proxy-Authorization header field
+   applies only to the next inbound proxy that demanded authentication using
+   the <x:ref>Proxy-Authenticate</x:ref> field. When multiple proxies are used
+   in a chain, the Proxy-Authorization header field is consumed by the first
+   inbound proxy that was expecting to receive credentials. A proxy &MAY;
+   relay the credentials from the client request to the next proxy if that is
+   the mechanism by which the proxies cooperatively authenticate a given
+   request.
+</t>
+</section>
+
+<section title="Proxy-Authentication-Info" anchor="field.proxy-authentication-info">
+  <x:anchor-alias value="header.proxy-authentication-info"/>
+  <iref primary="true" item="Fields" subitem="Proxy-Authentication-Info" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Proxy-Authentication-Info" x:for-anchor=""/><iref primary="true" item="Proxy-Authentication-Info header field" x:for-anchor=""/>
+  <x:anchor-alias value="Proxy-Authentication-Info"/>
+<t>
+   The Proxy-Authentication-Info response header field is equivalent to
+   <x:ref>Authentication-Info</x:ref>, except that it applies to proxy authentication (<xref target="challenge.and.response"/>)
+   and its semantics are defined by the
+   authentication scheme indicated by the Proxy-Authorization header field
+   (<xref target="field.proxy-authorization"/>)
+   of the corresponding request:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authentication-Info"/>
+  <x:ref>Proxy-Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
+</sourcecode>
+<t>
+   However, unlike <x:ref>Authentication-Info</x:ref>, the Proxy-Authentication-Info header
+   field applies only to the next outbound client on the response chain. This is
+   because only the client that chose a given proxy is likely to have the
+   credentials necessary for authentication. However, when multiple proxies are
+   used within the same administrative domain, such as office and regional
+   caching proxies within a large corporate network, it is common for
+   credentials to be generated by the user agent and passed through the
+   hierarchy until consumed. Hence, in such a configuration, it will appear as
+   if Proxy-Authentication-Info is being forwarded because each proxy will send
+   the same field value.
+</t>
+</section>
 </section>
 </section>
 
@@ -7692,91 +7863,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 </section>
 
-<section title="Authentication-Info" anchor="field.authentication-info">
-  <x:anchor-alias value="header.authentication-info"/>
-  <iref primary="true" item="Fields" subitem="Authentication-Info" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Authentication-Info" x:for-anchor=""/><iref primary="true" item="Authentication-Info header field" x:for-anchor=""/>
-  <x:anchor-alias value="Authentication-Info"/>
-<t>
-   HTTP authentication schemes can use the Authentication-Info response header
-   field to communicate information after the client's authentication credentials have been accepted.
-   This information can include a finalization message from the server (e.g., it can contain the
-   server authentication).
-</t>
-<t>
-   The field value is a list of parameters (name/value pairs), using the "auth-param"
-   syntax defined in <xref target="challenge.and.response"/>.
-   This specification only describes the generic format; authentication schemes
-   using Authentication-Info will define the individual parameters. The "Digest"
-   Authentication Scheme, for instance, defines multiple parameters in
-   <xref target="RFC7616" x:sec="3.5"/>.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Authentication-Info"/>
-  <x:ref>Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
-</sourcecode>
-<t>
-   The Authentication-Info header field can be used in any HTTP response,
-   independently of request method and status code. Its semantics are defined
-   by the authentication scheme indicated by the <x:ref>Authorization</x:ref> header field
-   (<xref target="field.authorization"/>) of the corresponding request.
-</t>
-<t>
-   A proxy forwarding a response is not allowed to modify the field value in any
-   way.
-</t>
-<t>
-   Authentication-Info can be sent as a trailer field
-   (<xref target="trailer.fields"/>)
-   when the authentication scheme explicitly allows this.
-</t>
-
-<section title="Parameter Value Format">
-<t>
-   Parameter values can be expressed either as "token" or as "quoted-string"
-   (<xref target="field-components"/>).
-</t>
-<t>
-   Authentication scheme definitions need to allow both notations, both for
-   senders and recipients. This allows recipients to use generic parsing
-   components, independent of the authentication scheme in use.
-</t>
-<t>
-   For backwards compatibility, authentication scheme definitions can restrict
-   the format for senders to one of the two variants. This can be important
-   when it is known that deployed implementations will fail when encountering
-   one of the two formats.
-</t>
-</section>
-</section>
-
-<section title="Authorization" anchor="field.authorization">
-  <x:anchor-alias value="header.authorization"/>
-  <iref primary="true" item="Fields" subitem="Authorization" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Authorization" x:for-anchor=""/><iref primary="true" item="Authorization header field" x:for-anchor=""/>
-  <x:anchor-alias value="Authorization"/>
-<t>
-   The "Authorization" header field allows a user agent to authenticate itself
-   with an origin server &mdash; usually, but not necessarily, after receiving
-   a <x:ref>401 (Unauthorized)</x:ref> response. Its value consists of
-   credentials containing the authentication information of the user agent for
-   the realm of the resource being requested.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Authorization"/>
-  <x:ref>Authorization</x:ref> = <x:ref>credentials</x:ref>
-</sourcecode>
-<t>
-   If a request is authenticated and a realm specified, the same credentials
-   are presumed to be valid for all other requests within this realm (assuming
-   that the authentication scheme itself does not require otherwise, such as
-   credentials that vary according to a challenge value or using synchronized
-   clocks).
-</t>
-<t>
-   A proxy forwarding a request &MUST-NOT; modify any
-   <x:ref>Authorization</x:ref> fields in that request.
-   See <xref target="caching.authenticated.responses"/> for details of and requirements
-   pertaining to handling of the Authorization field by HTTP caches.
-</t>
-</section>
-
 <section title="Connection-Specific Fields" anchor="field.connection">
   <x:anchor-alias value="header.connection"/>
   <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
@@ -9050,95 +9136,6 @@ Host: www.example.org
 </t>
 </section>
 
-<section title="Proxy-Authenticate" anchor="field.proxy-authenticate">
-  <x:anchor-alias value="header.proxy-authenticate"/>
-  <iref primary="true" item="Fields" subitem="Proxy-Authenticate" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Proxy-Authenticate" x:for-anchor=""/><iref primary="true" item="Proxy-Authenticate header field" x:for-anchor=""/>
-  <x:anchor-alias value="Proxy-Authenticate"/>
-<t>
-   The "Proxy-Authenticate" header field consists of at least one
-   challenge that indicates the authentication scheme(s) and parameters
-   applicable to the proxy for this request.
-   A proxy &MUST; send at least one Proxy-Authenticate header field in
-   each <x:ref>407 (Proxy Authentication Required)</x:ref> response that it
-   generates.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authenticate"/>
-  <x:ref>Proxy-Authenticate</x:ref> = #<x:ref>challenge</x:ref>
-</sourcecode>
-<t>
-   Unlike <x:ref>WWW-Authenticate</x:ref>, the Proxy-Authenticate header field
-   applies only to the next outbound client on the response chain.
-   This is because only the client that chose a given proxy is likely to have
-   the credentials necessary for authentication.  However, when multiple
-   proxies are used within the same administrative domain, such as office and
-   regional caching proxies within a large corporate network, it is common
-   for credentials to be generated by the user agent and passed through the
-   hierarchy until consumed.  Hence, in such a configuration, it will appear
-   as if Proxy-Authenticate is being forwarded because each proxy will send
-   the same challenge set.
-</t>
-<t>
-   Note that the parsing considerations for <x:ref>WWW-Authenticate</x:ref>
-   apply to this header field as well; see <xref target="field.www-authenticate"/>
-   for details.
-</t>
-</section>
-
-<section title="Proxy-Authentication-Info" anchor="field.proxy-authentication-info">
-  <x:anchor-alias value="header.proxy-authentication-info"/>
-  <iref primary="true" item="Fields" subitem="Proxy-Authentication-Info" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Proxy-Authentication-Info" x:for-anchor=""/><iref primary="true" item="Proxy-Authentication-Info header field" x:for-anchor=""/>
-  <x:anchor-alias value="Proxy-Authentication-Info"/>
-<t>
-   The Proxy-Authentication-Info response header field is equivalent to
-   <x:ref>Authentication-Info</x:ref>, except that it applies to proxy authentication (<xref target="challenge.and.response"/>)
-   and its semantics are defined by the
-   authentication scheme indicated by the Proxy-Authorization header field
-   (<xref target="field.proxy-authorization"/>)
-   of the corresponding request:
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authentication-Info"/>
-  <x:ref>Proxy-Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
-</sourcecode>
-<t>
-   However, unlike <x:ref>Authentication-Info</x:ref>, the Proxy-Authentication-Info header
-   field applies only to the next outbound client on the response chain. This is
-   because only the client that chose a given proxy is likely to have the
-   credentials necessary for authentication. However, when multiple proxies are
-   used within the same administrative domain, such as office and regional
-   caching proxies within a large corporate network, it is common for
-   credentials to be generated by the user agent and passed through the
-   hierarchy until consumed. Hence, in such a configuration, it will appear as
-   if Proxy-Authentication-Info is being forwarded because each proxy will send
-   the same field value.
-</t>
-</section>
-
-<section title="Proxy-Authorization" anchor="field.proxy-authorization">
-  <x:anchor-alias value="header.proxy-authorization"/>
-  <iref primary="true" item="Fields" subitem="Proxy-Authorization" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Proxy-Authorization" x:for-anchor=""/><iref primary="true" item="Proxy-Authorization header field" x:for-anchor=""/>
-  <x:anchor-alias value="Proxy-Authorization"/>
-<t>
-   The "Proxy-Authorization" header field allows the client to
-   identify itself (or its user) to a proxy that requires
-   authentication. Its value consists of credentials containing the
-   authentication information of the client for the proxy and/or realm of the
-   resource being requested.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Proxy-Authorization"/>
-  <x:ref>Proxy-Authorization</x:ref> = <x:ref>credentials</x:ref>
-</sourcecode>
-<t>
-   Unlike <x:ref>Authorization</x:ref>, the Proxy-Authorization header field
-   applies only to the next inbound proxy that demanded authentication using
-   the <x:ref>Proxy-Authenticate</x:ref> field. When multiple proxies are used
-   in a chain, the Proxy-Authorization header field is consumed by the first
-   inbound proxy that was expecting to receive credentials. A proxy &MAY;
-   relay the credentials from the client request to the next proxy if that is
-   the mechanism by which the proxies cooperatively authenticate a given
-   request.
-</t>
-</section>
-
 <section title="Referer" anchor="field.referer">
   <x:anchor-alias value="header.referer"/>
   <iref primary="true" item="Fields" subitem="Referer" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Referer" x:for-anchor=""/><iref primary="true" item="Referer header field" x:for-anchor=""/>
@@ -9692,64 +9689,6 @@ Upgrade: websocket
    replaced by pseudonyms. A sender &MUST-NOT; combine members that
    have different received-protocol values.
 </t>
-</section>
-
-<section title="WWW-Authenticate" anchor="field.www-authenticate">
-  <x:anchor-alias value="header.www-authenticate"/>
-  <iref primary="true" item="Fields" subitem="WWW-Authenticate" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="WWW-Authenticate" x:for-anchor=""/><iref primary="true" item="WWW-Authenticate header field" x:for-anchor=""/>
-  <x:anchor-alias value="WWW-Authenticate"/>
-<t>
-   The "WWW-Authenticate" header field indicates the authentication scheme(s)
-   and parameters applicable to the target resource.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="WWW-Authenticate"/>
-  <x:ref>WWW-Authenticate</x:ref> = #<x:ref>challenge</x:ref>
-</sourcecode>
-<t>
-   A server generating a <x:ref>401 (Unauthorized)</x:ref> response
-   &MUST; send a WWW-Authenticate header field containing at least one
-   challenge.  A server &MAY; generate a WWW-Authenticate header field
-   in other response messages to indicate that supplying credentials
-   (or different credentials) might affect the response.
-</t>
-<t>
-   A proxy forwarding a response &MUST-NOT; modify any
-   <x:ref>WWW-Authenticate</x:ref> fields in that response.
-</t>
-<t>
-   User agents are advised to take special care in parsing the field value, as
-   it might contain more than one challenge, and each challenge can contain a
-   comma-separated list of authentication parameters. Furthermore, the header
-   field itself can occur multiple times.
-</t>
-<t>
-  For instance:
-</t>
-<artwork type="example">
-  WWW-Authenticate: Newauth realm="apps", type=1,
-                    title="Login to \"apps\"", Basic realm="simple"
-</artwork>
-<t>
-  This header field contains two challenges; one for the "Newauth" scheme
-  with a realm value of "apps", and two additional parameters "type" and
-  "title", and another one for the "Basic" scheme with a realm value of
-  "simple".
-</t>
-<t>
-  Some user agents do not recognise this form, however. As a result, sending
-  a WWW-Authenticate field value with more than one member on the same field
-  line might not be interoperable.
-</t>
-<aside>
-  <t>
-    &Note; The challenge grammar production uses the list syntax as
-    well. Therefore, a sequence of comma, whitespace, and comma can be
-    considered either as applying to the preceding challenge, or to be an
-    empty entry in the list of challenges. In practice, this ambiguity
-    does not affect the semantics of the header field value and thus is
-    harmless.
-  </t>
-</aside>
 </section>
 </section>
 </section>
