@@ -2180,6 +2180,155 @@ Host: www.example.org
    deemed necessary for privacy or security.
 </t>
 </section>
+
+<section title="Upgrading HTTP" anchor="field.upgrade">
+  <x:anchor-alias value="header.upgrade"/>
+  <iref primary="true" item="Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Upgrade header field" x:for-anchor=""/>
+  <x:anchor-alias value="Upgrade"/>
+  <x:anchor-alias value="protocol"/>
+  <x:anchor-alias value="protocol-name"/>
+  <x:anchor-alias value="protocol-version"/>
+<t>
+   The "Upgrade" header field is intended to provide a simple mechanism
+   for transitioning from HTTP/1.1 to some other protocol on the same
+   connection.
+</t>
+<t>
+   A client &MAY; send a list of protocol names in the Upgrade header field
+   of a request to invite the server to switch to one or more of the named
+   protocols, in order of descending preference, before sending
+   the final response. A server &MAY; ignore a received Upgrade header field
+   if it wishes to continue using the current protocol on that connection.
+   Upgrade cannot be used to insist on a protocol change.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Upgrade"/>
+  <x:ref>Upgrade</x:ref>          = #<x:ref>protocol</x:ref>
+
+  <x:ref>protocol</x:ref>         = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
+  <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
+  <x:ref>protocol-version</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Although protocol names are registered with a preferred case,
+   recipients &SHOULD; use case-insensitive comparison when matching each
+   protocol-name to supported protocols.
+</t>
+<t>
+   A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the new protocol(s) to
+   which the connection is being switched; if multiple protocol layers are
+   being switched, the sender &MUST; list the protocols in layer-ascending
+   order. A server &MUST-NOT; switch to a protocol that was not indicated by
+   the client in the corresponding request's Upgrade header field.
+   A server &MAY; choose to ignore the order of preference indicated by the
+   client and select the new protocol(s) based on other factors, such as the
+   nature of the request or the current load on the server.
+</t>
+<t>
+   A server that sends a <x:ref>426 (Upgrade Required)</x:ref> response
+   &MUST; send an Upgrade header field to indicate the acceptable protocols,
+   in order of descending preference.
+</t>
+<t>
+   A server &MAY; send an Upgrade header field in any other response to
+   advertise that it implements support for upgrading to the listed protocols,
+   in order of descending preference, when appropriate for a future request.
+</t>
+<t>
+   The following is a hypothetical example sent by a client:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /hello HTTP/1.1
+Host: www.example.com
+Connection: upgrade
+Upgrade: websocket, IRC/6.9, RTA/x11
+
+</artwork>
+<t>
+   The capabilities and nature of the
+   application-level communication after the protocol change is entirely
+   dependent upon the new protocol(s) chosen. However, immediately after
+   sending the <x:ref>101 (Switching Protocols)</x:ref> response, the server is expected to continue responding to
+   the original request as if it had received its equivalent within the new
+   protocol (i.e., the server still has an outstanding request to satisfy
+   after the protocol has been changed, and is expected to do so without
+   requiring the request to be repeated).
+</t>
+<t>
+   For example, if the Upgrade header field is received in a GET request
+   and the server decides to switch protocols, it first responds
+   with a <x:ref>101 (Switching Protocols)</x:ref> message in HTTP/1.1 and
+   then immediately follows that with the new protocol's equivalent of a
+   response to a GET on the target resource.  This allows a connection to be
+   upgraded to protocols with the same semantics as HTTP without the
+   latency cost of an additional round trip.  A server &MUST-NOT; switch
+   protocols unless the received message semantics can be honored by the new
+   protocol; an OPTIONS request can be honored by any protocol.
+</t>
+<t>
+   The following is an example response to the above hypothetical request:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
+HTTP/1.1 101 Switching Protocols
+Connection: upgrade
+Upgrade: websocket
+
+[... data stream switches to websocket with an appropriate response
+(as defined by new protocol) to the "GET /hello" request ...]
+</artwork>
+<t>
+   When Upgrade is sent, the sender &MUST; also send a
+   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
+   that contains an "upgrade" connection option, in order to prevent Upgrade
+   from being accidentally forwarded by intermediaries that might not implement
+   the listed protocols.  A server &MUST; ignore an Upgrade header field that
+   is received in an HTTP/1.0 request.
+</t>
+<t>
+   A client cannot begin using an upgraded protocol on the connection until
+   it has completely sent the request message (i.e., the client can't change
+   the protocol it is sending in the middle of a message).
+   If a server receives both an Upgrade and an <x:ref>Expect</x:ref> header field
+   with the "100-continue" expectation (<xref target="field.expect"/>), the
+   server &MUST; send a <x:ref>100 (Continue)</x:ref> response before sending
+   a <x:ref>101 (Switching Protocols)</x:ref> response.
+</t>
+<t>
+   The Upgrade header field only applies to switching protocols on top of the
+   existing connection; it cannot be used to switch the underlying connection
+   (transport) protocol, nor to switch the existing communication to a
+   different connection. For those purposes, it is more appropriate to use a
+   <x:ref>3xx (Redirection)</x:ref> response (<xref target="status.3xx"/>).
+</t>
+
+<section title="Upgrade Protocol Names" anchor="upgrade.protocol.names">
+<t>
+   This specification only defines the protocol name "HTTP" for use by
+   the family of Hypertext Transfer Protocols, as defined by the HTTP
+   version rules of <xref target="protocol.version"/> and future updates to this
+   specification. Additional protocol names ought to be registered using the
+   registration procedure defined in <xref target="upgrade.token.registry"/>.
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Expected Version Tokens</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>HTTP</td>
+      <td>Hypertext Transfer Protocol</td>
+      <td>any DIGIT.DIGIT (e.g, "2.0")</td>
+      <td><xref target="protocol.version" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+</section>
 </section>
 
 <section title="Representations" anchor="representations">
@@ -4562,6 +4711,123 @@ Expect: 100-continue
 </t>
 </section>
 
+<section title="TE" anchor="field.te">
+  <x:anchor-alias value="header.te"/>
+  <iref primary="true" item="Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="TE header field" x:for-anchor=""/>
+  <x:anchor-alias value="TE"/>
+  <x:anchor-alias value="t-codings"/>
+  <x:anchor-alias value="t-ranking"/>
+  <x:anchor-alias value="rank"/>
+<t>
+   The "TE" header field in a request can be used to indicate that the sender
+   will not discard trailer fields when it contains a "trailers" member, as
+   described in <xref target="trailer.fields"/>.
+</t>
+<t>
+   Additionally, specific HTTP versions can use it to indicate the transfer
+   codings the client is willing to accept in the response.
+</t>
+<t>
+   The TE field-value consists of a list of tokens, each allowing for
+   optional parameters (as described in <xref target="parameter"/>).
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="t-ranking"/><iref primary="true" item="Grammar" subitem="rank"/>
+  <x:ref>TE</x:ref>        = #<x:ref>t-codings</x:ref>
+  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-coding</x:ref> [ <x:ref>t-ranking</x:ref> ] )
+  <x:ref>t-ranking</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>rank</x:ref>
+  <x:ref>rank</x:ref>      = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
+            / ( "1" [ "." 0*3("0") ] )
+</sourcecode>
+</section>
+
+<section title="Trailer" anchor="field.trailer">
+  <x:anchor-alias value="header.trailer"/>
+  <iref primary="true" item="Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Trailer header field" x:for-anchor=""/>
+  <x:anchor-alias value="Trailer"/>
+<t>
+   The "Trailer" header field provides a list of field names that the sender
+   anticipates sending as trailer fields within that message. This allows a
+   recipient to prepare for receipt of the indicated metadata before it starts
+   processing the body.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
+  <x:ref>Trailer</x:ref> = #<x:ref>field-name</x:ref>
+</sourcecode>
+<t>
+   For example, a sender might indicate that a message integrity check will
+   be computed as the payload is being streamed and provide the final
+   signature as a trailer field. This allows a recipient to perform the same
+   check on the fly as the payload data is received.
+</t>
+<t>
+   A sender that intends to generate one or more trailer fields in a message
+   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
+   section of that message to indicate which fields might be present in the
+   trailers.
+</t>
+</section>
+
+<section title="User-Agent" anchor="field.user-agent">
+  <x:anchor-alias value="header.user-agent"/>
+  <iref primary="true" item="Fields" subitem="User-Agent" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="User-Agent" x:for-anchor=""/><iref primary="true" item="User-Agent header field" x:for-anchor=""/>
+  <x:anchor-alias value="User-Agent"/>
+  <x:anchor-alias value="product"/>
+  <x:anchor-alias value="product-version"/>
+<t>
+   The "User-Agent" header field contains information about the user agent
+   originating the request, which is often used by servers to help identify
+   the scope of reported interoperability problems, to work around or tailor
+   responses to avoid particular user agent limitations, and for analytics
+   regarding browser or operating system use. A user agent &SHOULD; send
+   a User-Agent field in each request unless specifically configured not
+   to do so.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="User-Agent"/>
+  <x:ref>User-Agent</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
+</sourcecode>
+<t>
+   The User-Agent field value consists of one or more product identifiers,
+   each followed by zero or more comments (<xref target="comments"/>), which together
+   identify the user agent software and its significant subproducts.
+   By convention, the product identifiers are listed in decreasing order of
+   their significance for identifying the user agent software. Each product
+   identifier consists of a name and optional version.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
+  <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
+  <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   A sender &SHOULD; limit generated product identifiers to what is necessary
+   to identify the product; a sender &MUST-NOT; generate advertising or other
+   nonessential information within the product identifier.
+   A sender &SHOULD-NOT; generate information in <x:ref>product-version</x:ref>
+   that is not a version identifier (i.e., successive versions of the same
+   product name ought to differ only in the product-version portion of the
+   product identifier).
+</t>
+<t>
+   Example:
+</t>
+<artwork type="example">
+  User-Agent: CERN-LineMode/2.15 libwww/2.17b3
+</artwork>
+<t>
+   A user agent &SHOULD-NOT; generate a User-Agent field containing needlessly
+   fine-grained detail and &SHOULD; limit the addition of subproducts by third
+   parties. Overly long and detailed User-Agent field values increase request
+   latency and the risk of a user being identified against their wishes
+   ("fingerprinting").
+</t>
+<t>
+   Likewise, implementations are encouraged not to use the product tokens of
+   other implementations in order to declare compatibility with them, as this
+   circumvents the purpose of the field. If a user agent masquerades as a
+   different user agent, recipients can assume that the user intentionally
+   desires to see responses tailored for that identified user agent, even
+   if they might not work as well for the actual user agent being used.
+</t>
+</section>
 </section>
 
 <section title="Response Context" anchor="response.context">
@@ -9296,309 +9562,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 </section>
 
-<section title="TE" anchor="field.te">
-  <x:anchor-alias value="header.te"/>
-  <iref primary="true" item="Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="TE header field" x:for-anchor=""/>
-  <x:anchor-alias value="TE"/>
-  <x:anchor-alias value="t-codings"/>
-  <x:anchor-alias value="t-ranking"/>
-  <x:anchor-alias value="rank"/>
-<t>
-   The "TE" header field in a request can be used to indicate that the sender
-   will not discard trailer fields when it contains a "trailers" member, as
-   described in <xref target="trailer.fields"/>.
-</t>
-<t>
-   Additionally, specific HTTP versions can use it to indicate the transfer
-   codings the client is willing to accept in the response.
-</t>
-<t>
-   The TE field-value consists of a list of tokens, each allowing for
-   optional parameters (as described in <xref target="parameter"/>).
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="t-ranking"/><iref primary="true" item="Grammar" subitem="rank"/>
-  <x:ref>TE</x:ref>        = #<x:ref>t-codings</x:ref>
-  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-coding</x:ref> [ <x:ref>t-ranking</x:ref> ] )
-  <x:ref>t-ranking</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>rank</x:ref>
-  <x:ref>rank</x:ref>      = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
-            / ( "1" [ "." 0*3("0") ] )
-</sourcecode>
-</section>
-
-<section title="Trailer" anchor="field.trailer">
-  <x:anchor-alias value="header.trailer"/>
-  <iref primary="true" item="Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Trailer header field" x:for-anchor=""/>
-  <x:anchor-alias value="Trailer"/>
-<t>
-   The "Trailer" header field provides a list of field names that the sender
-   anticipates sending as trailer fields within that message. This allows a
-   recipient to prepare for receipt of the indicated metadata before it starts
-   processing the body.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
-  <x:ref>Trailer</x:ref> = #<x:ref>field-name</x:ref>
-</sourcecode>
-<t>
-   For example, a sender might indicate that a message integrity check will
-   be computed as the payload is being streamed and provide the final
-   signature as a trailer field. This allows a recipient to perform the same
-   check on the fly as the payload data is received.
-</t>
-<t>
-   A sender that intends to generate one or more trailer fields in a message
-   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
-   section of that message to indicate which fields might be present in the
-   trailers.
-</t>
-</section>
-
-<section title="Upgrading HTTP" anchor="field.upgrade">
-  <x:anchor-alias value="header.upgrade"/>
-  <iref primary="true" item="Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Upgrade" x:for-anchor=""/><iref primary="true" item="Upgrade header field" x:for-anchor=""/>
-  <x:anchor-alias value="Upgrade"/>
-  <x:anchor-alias value="protocol"/>
-  <x:anchor-alias value="protocol-name"/>
-  <x:anchor-alias value="protocol-version"/>
-<t>
-   The "Upgrade" header field is intended to provide a simple mechanism
-   for transitioning from HTTP/1.1 to some other protocol on the same
-   connection.
-</t>
-<t>
-   A client &MAY; send a list of protocol names in the Upgrade header field
-   of a request to invite the server to switch to one or more of the named
-   protocols, in order of descending preference, before sending
-   the final response. A server &MAY; ignore a received Upgrade header field
-   if it wishes to continue using the current protocol on that connection.
-   Upgrade cannot be used to insist on a protocol change.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Upgrade"/>
-  <x:ref>Upgrade</x:ref>          = #<x:ref>protocol</x:ref>
-
-  <x:ref>protocol</x:ref>         = <x:ref>protocol-name</x:ref> ["/" <x:ref>protocol-version</x:ref>]
-  <x:ref>protocol-name</x:ref>    = <x:ref>token</x:ref>
-  <x:ref>protocol-version</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Although protocol names are registered with a preferred case,
-   recipients &SHOULD; use case-insensitive comparison when matching each
-   protocol-name to supported protocols.
-</t>
-<t>
-   A server that sends a <x:ref>101 (Switching Protocols)</x:ref> response
-   &MUST; send an Upgrade header field to indicate the new protocol(s) to
-   which the connection is being switched; if multiple protocol layers are
-   being switched, the sender &MUST; list the protocols in layer-ascending
-   order. A server &MUST-NOT; switch to a protocol that was not indicated by
-   the client in the corresponding request's Upgrade header field.
-   A server &MAY; choose to ignore the order of preference indicated by the
-   client and select the new protocol(s) based on other factors, such as the
-   nature of the request or the current load on the server.
-</t>
-<t>
-   A server that sends a <x:ref>426 (Upgrade Required)</x:ref> response
-   &MUST; send an Upgrade header field to indicate the acceptable protocols,
-   in order of descending preference.
-</t>
-<t>
-   A server &MAY; send an Upgrade header field in any other response to
-   advertise that it implements support for upgrading to the listed protocols,
-   in order of descending preference, when appropriate for a future request.
-</t>
-<t>
-   The following is a hypothetical example sent by a client:
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET /hello HTTP/1.1
-Host: www.example.com
-Connection: upgrade
-Upgrade: websocket, IRC/6.9, RTA/x11
-
-</artwork>
-<t>
-   The capabilities and nature of the
-   application-level communication after the protocol change is entirely
-   dependent upon the new protocol(s) chosen. However, immediately after
-   sending the <x:ref>101 (Switching Protocols)</x:ref> response, the server is expected to continue responding to
-   the original request as if it had received its equivalent within the new
-   protocol (i.e., the server still has an outstanding request to satisfy
-   after the protocol has been changed, and is expected to do so without
-   requiring the request to be repeated).
-</t>
-<t>
-   For example, if the Upgrade header field is received in a GET request
-   and the server decides to switch protocols, it first responds
-   with a <x:ref>101 (Switching Protocols)</x:ref> message in HTTP/1.1 and
-   then immediately follows that with the new protocol's equivalent of a
-   response to a GET on the target resource.  This allows a connection to be
-   upgraded to protocols with the same semantics as HTTP without the
-   latency cost of an additional round trip.  A server &MUST-NOT; switch
-   protocols unless the received message semantics can be honored by the new
-   protocol; an OPTIONS request can be honored by any protocol.
-</t>
-<t>
-   The following is an example response to the above hypothetical request:
-</t>
-<artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
-HTTP/1.1 101 Switching Protocols
-Connection: upgrade
-Upgrade: websocket
-
-[... data stream switches to websocket with an appropriate response
-(as defined by new protocol) to the "GET /hello" request ...]
-</artwork>
-<t>
-   When Upgrade is sent, the sender &MUST; also send a
-   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
-   that contains an "upgrade" connection option, in order to prevent Upgrade
-   from being accidentally forwarded by intermediaries that might not implement
-   the listed protocols.  A server &MUST; ignore an Upgrade header field that
-   is received in an HTTP/1.0 request.
-</t>
-<t>
-   A client cannot begin using an upgraded protocol on the connection until
-   it has completely sent the request message (i.e., the client can't change
-   the protocol it is sending in the middle of a message).
-   If a server receives both an Upgrade and an <x:ref>Expect</x:ref> header field
-   with the "100-continue" expectation (<xref target="field.expect"/>), the
-   server &MUST; send a <x:ref>100 (Continue)</x:ref> response before sending
-   a <x:ref>101 (Switching Protocols)</x:ref> response.
-</t>
-<t>
-   The Upgrade header field only applies to switching protocols on top of the
-   existing connection; it cannot be used to switch the underlying connection
-   (transport) protocol, nor to switch the existing communication to a
-   different connection. For those purposes, it is more appropriate to use a
-   <x:ref>3xx (Redirection)</x:ref> response (<xref target="status.3xx"/>).
-</t>
-
-<section title="Upgrade Protocol Names" anchor="upgrade.protocol.names">
-<t>
-   This specification only defines the protocol name "HTTP" for use by
-   the family of Hypertext Transfer Protocols, as defined by the HTTP
-   version rules of <xref target="protocol.version"/> and future updates to this
-   specification. Additional protocol names ought to be registered using the
-   registration procedure defined in <xref target="upgrade.token.registry"/>.
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Description</th>
-      <th>Expected Version Tokens</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>HTTP</td>
-      <td>Hypertext Transfer Protocol</td>
-      <td>any DIGIT.DIGIT (e.g, "2.0")</td>
-      <td><xref target="protocol.version" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
-</section>
-
-<section title="Upgrade Token Registry" anchor="upgrade.token.registry">
-<t>
-   The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" defines
-   the namespace for protocol-name tokens used to identify protocols in the
-   <x:ref>Upgrade</x:ref> header field. The registry is maintained at
-   <eref target="https://www.iana.org/assignments/http-upgrade-tokens"/>.
-</t>
-<t>
-   Each registered protocol name is associated with contact information
-   and an optional set of specifications that details how the connection
-   will be processed after it has been upgraded.
-</t>
-<t>
-   Registrations happen on a "First Come First Served" basis (see
-   <xref target="RFC8126" x:sec="4.4" x:fmt="of"/>) and are subject to the
-   following rules:
-</t>
-<ol>
-   <li>A protocol-name token, once registered, stays registered forever.</li>
-   <li>A protocol-name token is case-insensitive and registered with the
-       preferred case to be generated by senders.</li>
-   <li>The registration &MUST; name a responsible party for the
-       registration.</li>
-   <li>The registration &MUST; name a point of contact.</li>
-   <li>The registration &MAY; name a set of specifications associated with
-       that token. Such specifications need not be publicly available.</li>
-   <li>The registration &SHOULD; name a set of expected "protocol-version"
-       tokens associated with that token at the time of registration.</li>
-   <li>The responsible party &MAY; change the registration at any time.
-       The IANA will keep a record of all such changes, and make them
-       available upon request.</li>
-   <li>The IESG &MAY; reassign responsibility for a protocol token.
-       This will normally only be used in the case when a
-       responsible party cannot be contacted.</li>
-</ol>
-</section>
-</section>
-
-<section title="User-Agent" anchor="field.user-agent">
-  <x:anchor-alias value="header.user-agent"/>
-  <iref primary="true" item="Fields" subitem="User-Agent" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="User-Agent" x:for-anchor=""/><iref primary="true" item="User-Agent header field" x:for-anchor=""/>
-  <x:anchor-alias value="User-Agent"/>
-  <x:anchor-alias value="product"/>
-  <x:anchor-alias value="product-version"/>
-<t>
-   The "User-Agent" header field contains information about the user agent
-   originating the request, which is often used by servers to help identify
-   the scope of reported interoperability problems, to work around or tailor
-   responses to avoid particular user agent limitations, and for analytics
-   regarding browser or operating system use. A user agent &SHOULD; send
-   a User-Agent field in each request unless specifically configured not
-   to do so.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="User-Agent"/>
-  <x:ref>User-Agent</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
-</sourcecode>
-<t>
-   The User-Agent field value consists of one or more product identifiers,
-   each followed by zero or more comments (<xref target="comments"/>), which together
-   identify the user agent software and its significant subproducts.
-   By convention, the product identifiers are listed in decreasing order of
-   their significance for identifying the user agent software. Each product
-   identifier consists of a name and optional version.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="product"/><iref primary="true" item="Grammar" subitem="product-version"/>
-  <x:ref>product</x:ref>         = <x:ref>token</x:ref> ["/" <x:ref>product-version</x:ref>]
-  <x:ref>product-version</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   A sender &SHOULD; limit generated product identifiers to what is necessary
-   to identify the product; a sender &MUST-NOT; generate advertising or other
-   nonessential information within the product identifier.
-   A sender &SHOULD-NOT; generate information in <x:ref>product-version</x:ref>
-   that is not a version identifier (i.e., successive versions of the same
-   product name ought to differ only in the product-version portion of the
-   product identifier).
-</t>
-<t>
-   Example:
-</t>
-<artwork type="example">
-  User-Agent: CERN-LineMode/2.15 libwww/2.17b3
-</artwork>
-<t>
-   A user agent &SHOULD-NOT; generate a User-Agent field containing needlessly
-   fine-grained detail and &SHOULD; limit the addition of subproducts by third
-   parties. Overly long and detailed User-Agent field values increase request
-   latency and the risk of a user being identified against their wishes
-   ("fingerprinting").
-</t>
-<t>
-   Likewise, implementations are encouraged not to use the product tokens of
-   other implementations in order to declare compatibility with them, as this
-   circumvents the purpose of the field. If a user agent masquerades as a
-   different user agent, recipients can assume that the user intentionally
-   desires to see responses tailored for that identified user agent, even
-   if they might not work as well for the actual user agent being used.
-</t>
-</section>
 </section>
 </section>
 
@@ -10142,6 +10105,43 @@ Upgrade: websocket
    than rely on external metadata that might be lost during transit.
 </t>
 </section>
+</section>
+
+<section title="Upgrade Token Registry" anchor="upgrade.token.registry">
+<t>
+   The "Hypertext Transfer Protocol (HTTP) Upgrade Token Registry" defines
+   the namespace for protocol-name tokens used to identify protocols in the
+   <x:ref>Upgrade</x:ref> header field. The registry is maintained at
+   <eref target="https://www.iana.org/assignments/http-upgrade-tokens"/>.
+</t>
+<t>
+   Each registered protocol name is associated with contact information
+   and an optional set of specifications that details how the connection
+   will be processed after it has been upgraded.
+</t>
+<t>
+   Registrations happen on a "First Come First Served" basis (see
+   <xref target="RFC8126" x:sec="4.4" x:fmt="of"/>) and are subject to the
+   following rules:
+</t>
+<ol>
+   <li>A protocol-name token, once registered, stays registered forever.</li>
+   <li>A protocol-name token is case-insensitive and registered with the
+       preferred case to be generated by senders.</li>
+   <li>The registration &MUST; name a responsible party for the
+       registration.</li>
+   <li>The registration &MUST; name a point of contact.</li>
+   <li>The registration &MAY; name a set of specifications associated with
+       that token. Such specifications need not be publicly available.</li>
+   <li>The registration &SHOULD; name a set of expected "protocol-version"
+       tokens associated with that token at the time of registration.</li>
+   <li>The responsible party &MAY; change the registration at any time.
+       The IANA will keep a record of all such changes, and make them
+       available upon request.</li>
+   <li>The IESG &MAY; reassign responsibility for a protocol token.
+       This will normally only be used in the case when a
+       responsible party cannot be contacted.</li>
+</ol>
 </section>
 </section>
 
