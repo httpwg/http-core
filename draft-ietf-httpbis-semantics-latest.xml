@@ -1360,7 +1360,7 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Representation Data" anchor="representation.data">
+<section title="Data" anchor="representation.data">
   <x:anchor-alias value="representation-data"/>
 <t>
    The representation data associated with an HTTP message is
@@ -1378,6 +1378,104 @@ Content-Type: text/plain
   representation-data := Content-Encoding( Content-Type( bits ) )
 </artwork>
 </section>
+
+<section title="Metadata" anchor="representation.metadata">
+  <x:anchor-alias value="representation-header"/>
+<t>
+   Representation header fields provide metadata about the representation.
+   When a message includes a payload body, the representation header fields
+   describe how to interpret the representation data enclosed in the payload
+   body.  In a response to a HEAD request, the representation header fields
+   describe the representation data that would have been enclosed in the
+   payload body if the same request had been a GET.
+</t>
+<t>
+   The following header fields convey representation metadata:
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Content-Type</td>
+      <td><xref target="field.content-type" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Content-Encoding</td>
+      <td><xref target="field.content-encoding" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Content-Language</td>
+      <td><xref target="field.content-language" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Content-Length</td>
+      <td><xref target="field.content-length" format="counter"/></td>
+    </tr>
+    <tr>
+      <td>Content-Location</td>
+      <td><xref target="field.content-location" format="counter"/></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Content-Type" anchor="field.content-type">
+  <x:anchor-alias value="header.content-type"/>
+  <iref primary="true" item="Fields" subitem="Content-Type" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Type" x:for-anchor=""/><iref primary="true" item="Content-Type header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Type"/>
+<t>
+   The "Content-Type" header field indicates the media type of the
+   associated representation: either the representation enclosed in
+   the message payload or the <x:ref>selected representation</x:ref>, as determined by the
+   message semantics.  The indicated media type defines both the data format
+   and how that data is intended to be processed by a recipient, within the
+   scope of the received message semantics, after any content codings
+   indicated by <x:ref>Content-Encoding</x:ref> are decoded.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Type"/>
+  <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
+</sourcecode>
+<t>
+   Media types are defined in <xref target="media.type"/>. An example of the
+   field is
+</t>
+<artwork type="example">
+  Content-Type: text/html; charset=ISO-8859-4
+</artwork>
+<t>
+   A sender that generates a message containing a payload body &SHOULD;
+   generate a Content-Type header field in that message unless the intended
+   media type of the enclosed representation is unknown to the sender.
+   If a Content-Type header field is not present, the recipient &MAY; either
+   assume a media type of
+   "application/octet-stream" (<xref target="RFC2046" x:fmt="," x:sec="4.5.1"/>)
+   or examine the data to determine its type.
+</t>
+<t>
+   In practice, resource owners do not always properly configure their origin
+   server to provide the correct Content-Type for a given representation.
+   Some user agents examine a payload's content and, in certain cases,
+   override the received type (for example, see <xref target="Sniffing"/>).
+   This "MIME sniffing" risks drawing incorrect conclusions about the data,
+   which might expose the user to additional security risks (e.g., "privilege
+   escalation"). Furthermore, it is impossible to determine the sender's
+   intended processing model by examining the data format: many data formats
+   match multiple media types that differ only in processing semantics.
+   Implementers are encouraged to provide a means to disable such sniffing.
+</t>
+<t>
+   Furthermore, although Content-Type is defined as a singleton field, it is
+   sometimes incorrectly generated multiple times, resulting in a combined
+   field value that appears to be a list.
+   Recipients often attempt to handle this error by using the last syntactically
+   valid member of the list, but note that some implementations might have different
+   error handling behaviors, leading to interoperability and/or security issues.
+</t>
 
 <section title="Media Type" anchor="media.type">
   <x:anchor-alias value="media-type"/>
@@ -1425,6 +1523,7 @@ Content-Type: text/plain
    Media types ought to be registered with IANA according to the
    procedures defined in <xref target="BCP13"/>.
 </t>
+</section>
 
 <section title="Charset" anchor="charset">
   <x:anchor-alias value="rule.charset"/>
@@ -1509,6 +1608,66 @@ Content-Type: text/plain
 </section>
 </section>
 
+<section title="Content-Encoding" anchor="field.content-encoding">
+  <x:anchor-alias value="header.content-encoding"/>
+  <iref primary="true" item="Fields" subitem="Content-Encoding" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Encoding" x:for-anchor=""/><iref primary="true" item="Content-Encoding header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Encoding"/>
+<t>
+   The "Content-Encoding" header field indicates what content codings
+   have been applied to the representation, beyond those inherent in the media
+   type, and thus what decoding mechanisms have to be applied in order to
+   obtain data in the media type referenced by the <x:ref>Content-Type</x:ref>
+   header field.
+   Content-Encoding is primarily used to allow a representation's data to be
+   compressed without losing the identity of its underlying media type.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
+  <x:ref>Content-Encoding</x:ref> = #<x:ref>content-coding</x:ref>
+</sourcecode>
+<t>
+   An example of its use is
+</t>
+<artwork type="example">
+  Content-Encoding: gzip
+</artwork>
+<t>
+   If one or more encodings have been applied to a representation, the sender
+   that applied the encodings &MUST; generate a Content-Encoding header field
+   that lists the content codings in the order in which they were applied.
+   Note that the coding named "identity" is reserved for its special role
+   in <x:ref>Accept-Encoding</x:ref>, and thus &SHOULD-NOT; be included.
+</t>
+<t>
+   Additional information about the encoding parameters can be provided
+   by other header fields not defined by this specification.
+</t>
+<t>
+   Unlike Transfer-Encoding (<xref target="field.transfer-encoding"/>), the codings listed
+   in Content-Encoding are a characteristic of the representation; the
+   representation is defined in terms of the coded form, and all other
+   metadata about the representation is about the coded form unless otherwise
+   noted in the metadata definition. Typically, the representation is only
+   decoded just prior to rendering or analogous usage.
+</t>
+<t>
+   If the media type includes an inherent encoding, such as a data format
+   that is always compressed, then that encoding would not be restated in 
+   Content-Encoding even if it happens to be the same algorithm as one
+   of the content codings.  Such a content coding would only be listed if,
+   for some bizarre reason, it is applied a second time to form the
+   representation.  Likewise, an origin server might choose to publish the
+   same data as multiple representations that differ only in whether
+   the coding is defined as part of <x:ref>Content-Type</x:ref> or
+   Content-Encoding, since some user agents will behave differently in their
+   handling of each response (e.g., open a "Save as ..." dialog instead of
+   automatic decompression and rendering of content).
+</t>
+<t>
+   An origin server &MAY; respond with a status code of
+   <x:ref>415 (Unsupported Media Type)</x:ref> if a representation in the
+   request message has a content coding that is not acceptable.
+</t>
+
 <section title="Content Codings" anchor="content.codings">
   <iref primary="true" item="content coding"/>
   <iref primary="true" item="compress (content coding)"/>
@@ -1530,7 +1689,8 @@ Content-Type: text/plain
 </sourcecode>
 <t>
    All content codings are case-insensitive and ought to be registered
-   within the "HTTP Content Coding Registry", as defined in <xref target="content.coding.registry"/>
+   within the "HTTP Content Coding Registry", as described in
+   <xref target="content.coding.extensibility"/>
 </t>
 <t>
    Content-coding values are used in the
@@ -1619,40 +1779,58 @@ Content-Type: text/plain
    A recipient &SHOULD; consider "x-gzip" to be equivalent to "gzip".
 </t>
 </section>
+</section>
+</section>
 
-<section title="Content Coding Registry" anchor="content.coding.registry">
+<section title="Content-Language" anchor="field.content-language">
+  <x:anchor-alias value="header.content-language"/>
+  <iref primary="true" item="Fields" subitem="Content-Language" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Language" x:for-anchor=""/><iref primary="true" item="Content-Language header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Language"/>
 <t>
-   The "HTTP Content Coding Registry", maintained by
-   IANA at <eref target="https://www.iana.org/assignments/http-parameters/"/>,
-   registers <x:ref>content-coding</x:ref> names.
+   The "Content-Language" header field describes the natural
+   language(s) of the intended audience for the representation. Note that this might
+   not be equivalent to all the languages used within the representation.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Language"/>
+  <x:ref>Content-Language</x:ref> = #<x:ref>language-tag</x:ref>
+</sourcecode>
+<t>
+   Language tags are defined in <xref target="language.tags"/>. The primary purpose of
+   Content-Language is to allow a user to identify and differentiate
+   representations according to the users' own preferred language. Thus, if the
+   content is intended only for a Danish-literate audience, the
+   appropriate field is
+</t>
+<artwork type="example">
+  Content-Language: da
+</artwork>
+<t>
+   If no Content-Language is specified, the default is that the content
+   is intended for all language audiences. This might mean that the
+   sender does not consider it to be specific to any natural language,
+   or that the sender does not know for which language it is intended.
 </t>
 <t>
-   Content coding registrations &MUST; include the following fields:
+   Multiple languages &MAY; be listed for content that is intended for
+   multiple audiences. For example, a rendition of the "Treaty of
+   Waitangi", presented simultaneously in the original Maori and English
+   versions, would call for
 </t>
-<ul>
-  <li>Name</li>
-  <li>Description</li>
-  <li>Pointer to specification text</li>
-</ul>
+<artwork type="example">
+  Content-Language: mi, en
+</artwork>
 <t>
-   Names of content codings &MUST-NOT; overlap with names of transfer codings
-   (<xref target="transfer.codings"/>), unless the encoding transformation is identical (as
-   is the case for the compression codings defined in
-   <xref target="content.codings"/>).
-</t>
-<t>
-   Values to be added to this namespace require IETF Review
-   (see <xref target="RFC8126" x:fmt="of" x:sec="4.8"/>) and &MUST;
-   conform to the purpose of content coding defined in
-   <xref target="content.codings"/>.
+   However, just because multiple languages are present within a representation
+   does not mean that it is intended for multiple linguistic audiences.
+   An example would be a beginner's language primer, such as "A First
+   Lesson in Latin", which is clearly intended to be used by an
+   English-literate audience. In this case, the Content-Language would
+   properly only include "en".
 </t>
 <t>
-   New content codings ought to be self-descriptive whenever possible, with
-   optional parameters discoverable within the coding format itself, rather
-   than rely on external metadata that might be lost during transit.
+   Content-Language &MAY; be applied to any media type &mdash; it is not
+   limited to textual documents.
 </t>
-</section>
-</section>
 
 <section title="Language Tags" anchor="language.tags">
   <x:anchor-alias value="language-tag"/>
@@ -1688,6 +1866,194 @@ Content-Type: text/plain
 </artwork>
 <t>
    See <xref target="RFC5646"/> for further information. 
+</t>
+</section>
+</section>
+
+<section title="Content-Length" anchor="field.content-length">
+  <x:anchor-alias value="header.content-length"/>
+  <iref primary="true" item="Fields" subitem="Content-Length" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Length" x:for-anchor=""/><iref primary="true" item="Content-Length header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Length"/>
+<t>
+   The "Content-Length" header field indicates the associated representation's
+   data length as a decimal non-negative integer number of octets.
+   When transferring a representation in a message, Content-Length refers
+   specifically to the amount of data enclosed so that it can be used to
+   delimit framing of the message body
+   (e.g., <xref target="body.content-length"/>).
+   In other cases, Content-Length indicates the selected representation's
+   current length, which can be used by recipients to estimate transfer time
+   or compare to previously stored representations.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Length"/>
+  <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
+</sourcecode>
+<t>
+   An example is
+</t>
+<artwork type="example">
+  Content-Length: 3495
+</artwork>
+<t>
+   A sender &MUST-NOT; send a Content-Length header field in any message that
+   contains a <x:ref>Transfer-Encoding</x:ref> header field.
+</t>
+<t>
+   A user agent &SHOULD; send a Content-Length in a request message when no
+   <x:ref>Transfer-Encoding</x:ref> is sent and the request method defines
+   a meaning for an enclosed payload body. For example, a Content-Length
+   header field is normally sent in a POST request even when the value is
+   0 (indicating an empty payload body).  A user agent &SHOULD-NOT; send a
+   Content-Length header field when the request message does not contain a
+   payload body and the method semantics do not anticipate such a body.
+</t>
+<t>
+   A server &MAY; send a Content-Length header field in a response to a HEAD
+   request (<xref target="HEAD"/>); a server &MUST-NOT; send Content-Length in such a
+   response unless its field value equals the decimal number of octets that
+   would have been sent in the payload body of a response if the same
+   request had used the GET method.
+</t>
+<t>
+   A server &MAY; send a Content-Length header field in a
+   <x:ref>304 (Not Modified)</x:ref> response to a conditional GET request
+   (<xref target="status.304"/>); a server &MUST-NOT; send Content-Length in such a
+   response unless its field value equals the decimal number of octets that
+   would have been sent in the payload body of a <x:ref>200 (OK)</x:ref>
+   response to the same request.
+</t>
+<t>
+   A server &MUST-NOT; send a Content-Length header field in any response
+   with a status code of
+   <x:ref>1xx (Informational)</x:ref> or <x:ref>204 (No Content)</x:ref>.
+   A server &MUST-NOT; send a Content-Length header field in any
+   <x:ref>2xx (Successful)</x:ref> response to a CONNECT request (<xref target="CONNECT"/>).
+</t>
+<t>
+   Aside from the cases defined above, in the absence of Transfer-Encoding,
+   an origin server &SHOULD; send a Content-Length header field when the
+   payload body size is known prior to sending the complete header section.
+   This will allow downstream recipients to measure transfer progress,
+   know when a received message is complete, and potentially reuse the
+   connection for additional requests.
+</t>
+<t>
+   Any Content-Length field value greater than or equal to zero is valid.
+   Since there is no predefined limit to the length of a payload, a
+   recipient &MUST; anticipate potentially large decimal numerals and
+   prevent parsing errors due to integer conversion overflows
+   (<xref target="attack.protocol.element.length"/>).
+</t>
+<t>
+   If a message is received that has a Content-Length header field value
+   consisting of the same decimal value as a comma-separated list (<xref
+   target="abnf.extension"/>) &mdash; for example, "Content-Length: 42, 42" &mdash;
+   indicating that duplicate Content-Length header fields have been generated
+   or combined by an upstream message processor, then the recipient &MUST;
+   either reject the message as invalid or replace the duplicated field
+   values with a single valid Content-Length field containing that decimal
+   value prior to determining the message body length or forwarding the
+   message.
+</t>
+</section>
+
+<section title="Content-Location" anchor="field.content-location">
+  <x:anchor-alias value="header.content-location"/>
+  <iref primary="true" item="Fields" subitem="Content-Location" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Location" x:for-anchor=""/><iref primary="true" item="Content-Location header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Location"/>
+<t>
+   The "Content-Location" header field references a URI that can be used
+   as an identifier for a specific resource corresponding to the
+   representation in this message's payload.
+   In other words, if one were to perform a GET request on this URI at the time
+   of this message's generation, then a <x:ref>200 (OK)</x:ref> response would
+   contain the same representation that is enclosed as payload in this message.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Location"/>
+  <x:ref>Content-Location</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
+</sourcecode>
+<t>
+   The field value is either an <x:ref>absolute-URI</x:ref> or a
+   <x:ref>partial-URI</x:ref>. In the latter case (<xref target="uri"/>),
+   the referenced URI is relative to the target URI
+   (<xref target="RFC3986" x:fmt="," x:sec="5"/>).
+</t>
+<t>
+   The Content-Location value is not a replacement for the target URI 
+   (<xref target="target.resource"/>).  It is representation metadata.
+   It has the same syntax and semantics as the header field of the same name
+   defined for MIME body parts in <xref target="RFC2557" x:fmt="of" x:sec="4"/>.
+   However, its appearance in an HTTP message has some special implications
+   for HTTP recipients.
+</t>
+<t>
+   If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
+   response message and its value refers (after conversion to absolute form)
+   to a URI that is the same as the target URI, then
+   the recipient &MAY; consider the payload to be a current representation of
+   that resource at the time indicated by the message origination date.
+   For a GET (<xref target="GET"/>) or HEAD (<xref target="HEAD"/>) request,
+   this is the same as the default semantics when no Content-Location is
+   provided by the server.
+   For a state-changing request like PUT (<xref target="PUT"/>) or
+   POST (<xref target="POST"/>), it implies that the server's response
+   contains the new representation of that resource, thereby distinguishing it
+   from representations that might only report about the action
+   (e.g., "It worked!").
+   This allows authoring applications to update their local copies without
+   the need for a subsequent GET request.
+</t>
+<t>
+   If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
+   response message and its field value refers to a URI that differs from the
+   target URI, then the origin server claims that the URI
+   is an identifier for a different resource corresponding to the enclosed
+   representation. Such a claim can only be trusted if both identifiers share
+   the same resource owner, which cannot be programmatically determined via
+   HTTP.
+</t>
+<ul>
+  <li>For a response to a GET or HEAD request, this is an indication that the
+     target URI refers to a resource that is subject to content
+     negotiation and the Content-Location field value is a more specific
+     identifier for the <x:ref>selected representation</x:ref>.</li>
+  <li>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
+     a Content-Location field value that is identical to the
+     <x:ref>Location</x:ref> field value indicates that this payload is a
+     current representation of the newly created resource.</li>
+  <li>Otherwise, such a Content-Location indicates that this payload is a
+     representation reporting on the requested action's status and that the
+     same report is available (for future access with GET) at the given URI.
+     For example, a purchase transaction made via a POST request might
+     include a receipt document as the payload of the <x:ref>200 (OK)</x:ref>
+     response; the Content-Location field value provides an identifier for
+     retrieving a copy of that same receipt in the future.</li>
+</ul>
+<t>
+   A user agent that sends Content-Location in a request message is stating
+   that its value refers to where the user agent originally obtained the
+   content of the enclosed representation (prior to any modifications made by
+   that user agent).  In other words, the user agent is providing a back link
+   to the source of the original representation.
+</t>
+<t>
+   An origin server that receives a Content-Location field in a request
+   message &MUST; treat the information as transitory request context rather
+   than as metadata to be saved verbatim as part of the representation.
+   An origin server &MAY; use that context to guide in processing the
+   request or to save it for other uses, such as within source links or
+   versioning metadata. However, an origin server &MUST-NOT; use such context
+   information to alter the request semantics.
+</t>
+<t>
+   For example, if a client makes a PUT request on a negotiated resource and
+   the origin server accepts that PUT (without redirection), then the new
+   state of that resource is expected to be consistent with the one
+   representation supplied in that PUT; the Content-Location cannot be used as
+   a form of reverse content selection identifier to update only one of the
+   negotiated representations. If the user agent had wanted the latter
+   semantics, it would have applied the PUT directly to the Content-Location
+   URI.
 </t>
 </section>
 
@@ -1838,6 +2204,337 @@ Content-Type: text/plain
    equality with previously obtained representation data, such as when
    validating a cache entry or limiting a web traversal to recent changes.
 </t>
+</section>
+
+<section title="Last-Modified" anchor="field.last-modified">
+  <x:anchor-alias value="header.last-modified"/>
+  <iref primary="true" item="Fields" subitem="Last-Modified" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Last-Modified" x:for-anchor=""/><iref primary="true" item="Last-Modified header field" x:for-anchor=""/>
+  <x:anchor-alias value="Last-Modified"/>
+<t>
+   The "Last-Modified" header field in a response provides a timestamp
+   indicating the date and time at which the origin server believes the
+   <x:ref>selected representation</x:ref> was last modified, as determined at the conclusion
+   of handling the request.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
+  <x:ref>Last-Modified</x:ref> = <x:ref>HTTP-date</x:ref>
+</sourcecode>
+<t>
+   An example of its use is
+</t>
+<artwork type="example">
+  Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
+</artwork>
+
+<section title="Generation" anchor="lastmod.generation">
+<t>
+   An origin server &SHOULD; send Last-Modified for any selected
+   representation for which a last modification date can be reasonably
+   and consistently determined, since its use in conditional requests
+   and evaluating cache freshness (<xref target="Caching"/>) results in a substantial
+   reduction of HTTP traffic on the Internet and can be a significant
+   factor in improving service scalability and reliability.
+</t>
+<t>
+   A representation is typically the sum of many parts behind the
+   resource interface.  The last-modified time would usually be
+   the most recent time that any of those parts were changed.
+   How that value is determined for any given resource is an
+   implementation detail beyond the scope of this specification.
+   What matters to HTTP is how recipients of the Last-Modified
+   header field can use its value to make conditional requests
+   and test the validity of locally cached responses.
+</t>
+<t>
+   An origin server &SHOULD; obtain the Last-Modified value of the
+   representation as close as possible to the time that it generates the
+   <x:ref>Date</x:ref> field value for its response. This allows a recipient to
+   make an accurate assessment of the representation's modification time,
+   especially if the representation changes near the time that the
+   response is generated.
+</t>
+<t>
+   An origin server with a clock &MUST-NOT; send a Last-Modified date
+   that is later than the server's time of message origination (<x:ref>Date</x:ref>).
+   If the last modification time is derived from implementation-specific
+   metadata that evaluates to some time in the future, according to the
+   origin server's clock, then the origin server &MUST; replace that
+   value with the message origination date. This prevents a future
+   modification date from having an adverse impact on cache validation.
+</t>
+<t>
+   An origin server without a clock &MUST-NOT; assign Last-Modified
+   values to a response unless these values were associated
+   with the resource by some other system or user with a reliable clock.
+</t>
+</section>
+
+<section title="Comparison" anchor="lastmod.comparison">
+<t>
+   A Last-Modified time, when used as a validator in a request, is
+   implicitly weak unless it is possible to deduce that it is strong,
+   using the following rules:
+</t>
+<ul>
+   <li>The validator is being compared by an origin server to the
+       actual current validator for the representation and,</li>
+   <li>That origin server reliably knows that the associated representation did
+       not change twice during the second covered by the presented
+       validator.</li>
+</ul>
+<t>
+   or
+</t>
+<ul>
+   <li>The validator is about to be used by a client in an <x:ref>If-Modified-Since</x:ref>,
+       <x:ref>If-Unmodified-Since</x:ref>, or <x:ref>If-Range</x:ref> header
+       field, because the client has a cache entry for the associated
+       representation, and</li>
+   <li>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
+       time when the origin server sent the original response, and</li>
+   <li>The presented Last-Modified time is at least 60 seconds before
+       the Date value.</li>
+</ul>
+<t>
+   or
+</t>
+<ul>
+   <li>The validator is being compared by an intermediate cache to the
+       validator stored in its cache entry for the representation, and</li>
+   <li>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
+       time when the origin server sent the original response, and</li>
+   <li>The presented Last-Modified time is at least 60 seconds before
+       the Date value.</li>
+</ul>
+<t>
+   This method relies on the fact that if two different responses were
+   sent by the origin server during the same second, but both had the
+   same Last-Modified time, then at least one of those responses would
+   have a <x:ref>Date</x:ref> value equal to its Last-Modified time. The
+   arbitrary 60-second limit guards against the possibility that the Date and
+   Last-Modified values are generated from different clocks or at somewhat
+   different times during the preparation of the response. An
+   implementation &MAY; use a value larger than 60 seconds, if it is
+   believed that 60 seconds is too short.
+</t>
+</section>
+</section>
+
+<section title="ETag" anchor="field.etag">
+  <x:anchor-alias value="header.etag"/>
+  <iref primary="true" item="Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Trailer Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="ETag field" x:for-anchor=""/>
+  <x:anchor-alias value="ETag"/>
+  <x:anchor-alias value="entity-tag"/>
+  <x:anchor-alias value="opaque-tag"/>
+  <x:anchor-alias value="weak"/>
+  <x:anchor-alias value="etagc"/>
+<t>
+   The "ETag" field in a response provides the current entity-tag for
+   the <x:ref>selected representation</x:ref>, as determined at the conclusion of handling
+   the request.
+   An entity-tag is an opaque validator for differentiating between
+   multiple representations of the same resource, regardless of whether
+   those multiple representations are due to resource state changes over
+   time, content negotiation resulting in multiple representations being
+   valid at the same time, or both. An entity-tag consists of an opaque
+   quoted string, possibly prefixed by a weakness indicator.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/><iref primary="true" item="Grammar" subitem="etagc"/>
+  <x:ref>ETag</x:ref>       = <x:ref>entity-tag</x:ref>
+
+  <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
+  <x:ref>weak</x:ref>       = %s"W/"
+  <x:ref>opaque-tag</x:ref> = <x:ref>DQUOTE</x:ref> *<x:ref>etagc</x:ref> <x:ref>DQUOTE</x:ref>
+  <x:ref>etagc</x:ref>      = %x21 / %x23-7E / <x:ref>obs-text</x:ref>
+             ; <x:ref>VCHAR</x:ref> except double quotes, plus obs-text
+</sourcecode>
+<aside>
+  <t>
+    &Note; Previously, opaque-tag was defined to be a quoted-string
+    (<xref target="RFC2616" x:fmt="," x:sec="3.11"/>); thus, some recipients
+    might perform backslash unescaping. Servers therefore ought to avoid
+    backslash characters in entity tags.
+  </t>
+</aside>
+<t>
+   An entity-tag can be more reliable for validation than a modification
+   date in situations where it is inconvenient to store modification
+   dates, where the one-second resolution of HTTP date values is not
+   sufficient, or where modification dates are not consistently maintained.
+</t>
+<t>
+  Examples:
+</t>
+<artwork type="example">
+  ETag: "xyzzy"
+  ETag: W/"xyzzy"
+  ETag: ""
+</artwork>
+<t>
+   An entity-tag can be either a weak or strong validator, with
+   strong being the default.  If an origin server provides an entity-tag
+   for a representation and the generation of that entity-tag does not satisfy
+   all of the characteristics of a strong validator
+   (<xref target="weak.and.strong.validators"/>), then the origin server
+   &MUST; mark the entity-tag as weak by prefixing its opaque value
+   with "W/" (case-sensitive).
+</t>
+<t>
+   A sender &MAY; send the Etag field in a trailer section (see
+   <xref target="trailer.fields"/>). However, since trailers are often
+   ignored, it is preferable to send Etag as a header field unless the
+   entity-tag is generated while sending the message body.
+</t>
+
+<section title="Generation" anchor="entity.tag.generation">
+<t>
+   The principle behind entity-tags is that only the service author
+   knows the implementation of a resource well enough to select the
+   most accurate and efficient validation mechanism for that resource,
+   and that any such mechanism can be mapped to a simple sequence of
+   octets for easy comparison.  Since the value is opaque, there is no
+   need for the client to be aware of how each entity-tag is constructed.
+</t>
+<t>
+   For example, a resource that has implementation-specific versioning
+   applied to all changes might use an internal revision number, perhaps
+   combined with a variance identifier for content negotiation, to
+   accurately differentiate between representations.
+   Other implementations might use a collision-resistant hash of
+   representation content, a combination of various file attributes, or
+   a modification timestamp that has sub-second resolution.
+</t>
+<t>
+   An origin server &SHOULD; send an ETag for any selected representation
+   for which detection of changes can be reasonably and consistently
+   determined, since the entity-tag's use in conditional requests and
+   evaluating cache freshness (<xref target="Caching"/>) can result in a substantial
+   reduction of HTTP network traffic and can be a significant factor in
+   improving service scalability and reliability.
+</t>
+</section>
+
+<section title="Comparison" anchor="entity.tag.comparison">
+  <x:anchor-alias value="validator.comparison"/>
+  <x:anchor-alias value="strong comparison"/>
+  <x:anchor-alias value="weak comparison"/>
+<t>
+   There are two entity-tag comparison functions, depending on whether or not
+   the comparison context allows the use of weak validators:
+</t>
+<ul>
+   <li><x:dfn>Strong comparison</x:dfn>: two entity-tags are equivalent if both
+       are not weak and their opaque-tags match character-by-character.</li>
+   <li><x:dfn>Weak comparison</x:dfn>: two entity-tags are equivalent if their opaque-tags
+       match character-by-character, regardless of either or both
+       being tagged as "weak".</li>
+</ul>
+<t>
+   The example below shows the results for a set of entity-tag pairs and both
+   the weak and strong comparison function results:
+</t>
+<table align="left">
+  <thead>
+    <tr>
+      <th>ETag 1</th>
+      <th>ETag 2</th>
+      <th>Strong Comparison</th>
+      <th>Weak Comparison</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>W/"1"</td>
+      <td>W/"1"</td>
+      <td>no match</td>
+      <td>match</td>
+    </tr>
+    <tr>
+      <td>W/"1"</td>
+      <td>W/"2"</td>
+      <td>no match</td>
+      <td>no match</td>
+    </tr>
+    <tr>
+      <td>W/"1"</td>
+      <td>"1"</td>
+      <td>no match</td>
+      <td>match</td>
+    </tr>
+    <tr>
+      <td>"1"</td>
+      <td>"1"</td>
+      <td>match</td>
+      <td>match</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section title="Example: Entity-Tags Varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
+<t>
+   Consider a resource that is subject to content negotiation
+   (<xref target="content.negotiation"/>), and where the representations sent in response to
+   a GET request vary based on the <x:ref>Accept-Encoding</x:ref> request
+   header field (<xref target="field.accept-encoding"/>):
+</t>
+<t>
+   >> Request:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
+GET /index HTTP/1.1
+Host: www.example.com
+Accept-Encoding: gzip
+
+</artwork>
+<t>
+   In this case, the response might or might not use the gzip content coding.
+   If it does not, the response might look like:
+</t>
+<t>
+   >> Response:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+HTTP/1.1 200 OK
+Date: Fri, 26 Mar 2010 00:05:00 GMT
+ETag: "123-a"
+Content-Length: <x:length-of target="exbody2"/>
+Vary: Accept-Encoding
+Content-Type: text/plain
+
+<x:span anchor="exbody2">Hello World!
+Hello World!
+Hello World!
+Hello World!
+Hello World!
+</x:span></artwork>
+<t>
+   An alternative representation that does use gzip content coding would be:
+</t>
+<t>
+   >> Response:
+</t>
+<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
+HTTP/1.1 200 OK
+Date: Fri, 26 Mar 2010 00:05:00 GMT
+ETag: "123-b"
+Content-Length: 43
+Vary: Accept-Encoding
+Content-Type: text/plain
+Content-Encoding: gzip
+
+<spanx>...binary data...</spanx></artwork>
+<aside>
+  <t>
+    &Note; Content codings are a property of the representation data,
+    so a strong entity-tag for a content-encoded representation has to be
+    distinct from the entity tag of an unencoded representation to prevent
+    potential conflicts during cache updates and range requests. In contrast,
+    transfer codings (<xref target="transfer.codings"/>) apply only during message transfer
+    and do not result in distinct entity-tags.
+  </t>
+</aside>
+</section>
 </section>
 
 <section title="When to Use Entity-Tags and Last-Modified Dates" anchor="when.to.use.entity.tags.and.last-modified.dates">
@@ -2116,6 +2813,43 @@ Content-Type: text/plain
     </tr>
   </tbody>
 </table>
+<section title="Host" anchor="field.host">
+  <x:anchor-alias value="header.host"/>
+  <iref primary="true" item="Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Host header field" x:for-anchor=""/>
+  <x:anchor-alias value="Host"/>
+<t>
+   The "Host" header field in a request provides the host and port
+   information from the target URI, enabling the origin
+   server to distinguish among resources while servicing requests
+   for multiple host names on a single IP address.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Host"/>
+  <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="uri"/>
+</sourcecode>
+<t>
+   Since the Host field value is critical information for handling a request,
+   a user agent &SHOULD; generate Host as the first field in the header section.
+</t>
+<t>
+   For example, a GET request to the origin server for
+   &lt;http://www.example.org/pub/WWW/&gt; would begin with:
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+GET /pub/WWW/ HTTP/1.1
+Host: www.example.org
+</artwork>
+<t>
+   Since the Host header field acts as an application-level routing
+   mechanism, it is a frequent target for malware seeking to poison
+   a shared cache or redirect a request to an unintended server.
+   An interception proxy is particularly vulnerable if it relies on
+   the Host field value for redirecting requests to internal
+   servers, or for use as a cache key in a shared cache, without
+   first verifying that the intercepted connection is targeting a
+   valid IP address for that host.
+</t>
+</section>
+
 </section>
 
 <section title="Request Context" anchor="request.context">
@@ -2244,51 +2978,6 @@ Content-Type: text/plain
   </tbody>
 </table>
 </section>
-</section>
-
-<section title="Representation Metadata" anchor="representation.metadata">
-  <x:anchor-alias value="representation-header"/>
-<t>
-   Representation header fields provide metadata about the representation.
-   When a message includes a payload body, the representation header fields
-   describe how to interpret the representation data enclosed in the payload
-   body.  In a response to a HEAD request, the representation header fields
-   describe the representation data that would have been enclosed in the
-   payload body if the same request had been a GET.
-</t>
-<t>
-   The following header fields convey representation metadata:
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>Field Name</th>
-      <th>Ref.</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Content-Type</td>
-      <td><xref target="field.content-type" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Content-Encoding</td>
-      <td><xref target="field.content-encoding" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Content-Language</td>
-      <td><xref target="field.content-language" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Content-Length</td>
-      <td><xref target="field.content-length" format="counter"/></td>
-    </tr>
-    <tr>
-      <td>Content-Location</td>
-      <td><xref target="field.content-location" format="counter"/></td>
-    </tr>
-  </tbody>
-</table>
 </section>
 
 <section title="Payload Metadata" anchor="message.payload.metadata">
@@ -5845,6 +6534,115 @@ bytes=500-700,601-999
 </t>
 </section>
 
+<section title="Content-Range" anchor="field.content-range">
+  <x:anchor-alias value="header.content-range"/>
+  <iref primary="true" item="Fields" subitem="Content-Range" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Range" x:for-anchor=""/><iref primary="true" item="Content-Range header field" x:for-anchor=""/>
+  <x:anchor-alias value="Content-Range"/>
+  <x:anchor-alias value="range-resp"/>
+  <x:anchor-alias value="incl-range"/>
+  <x:anchor-alias value="unsatisfied-range"/>
+  <x:anchor-alias value="complete-length"/>
+<t>
+   The "Content-Range" header field is sent in a single part
+   <x:ref>206 (Partial Content)</x:ref> response to indicate the partial range
+   of the <x:ref>selected representation</x:ref> enclosed as the message payload, sent in
+   each part of a multipart 206 response to indicate the range enclosed within
+   each body part, and sent in <x:ref>416 (Range Not Satisfiable)</x:ref>
+   responses to provide information about the selected representation.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="range-resp"/><iref primary="true" item="Grammar" subitem="incl-range"/><iref primary="true" item="Grammar" subitem="unsatisfied-range"/><iref primary="true" item="Grammar" subitem="complete-length"/><iref primary="false" item="Grammar" subitem="first-pos"/><iref primary="false" item="Grammar" subitem="last-pos"/>
+  <x:ref>Content-Range</x:ref>       = <x:ref>range-unit</x:ref> <x:ref>SP</x:ref>
+                        ( <x:ref>range-resp</x:ref> / <x:ref>unsatisfied-range</x:ref> )
+
+  <x:ref>range-resp</x:ref>          = <x:ref>incl-range</x:ref> "/" ( <x:ref>complete-length</x:ref> / "*" )
+  <x:ref>incl-range</x:ref>          = <x:ref>first-pos</x:ref> "-" <x:ref>last-pos</x:ref>
+  <x:ref>unsatisfied-range</x:ref>   = "*/" <x:ref>complete-length</x:ref>
+
+  <x:ref>complete-length</x:ref>     = 1*<x:ref>DIGIT</x:ref>
+</sourcecode>
+<t>
+   If a <x:ref>206 (Partial Content)</x:ref> response contains a
+   <x:ref>Content-Range</x:ref> header field with a <x:ref>range unit</x:ref>
+   (<xref target="range.units"/>) that the recipient does not understand, the
+   recipient &MUST-NOT; attempt to recombine it with a stored representation.
+   A proxy that receives such a message &SHOULD; forward it downstream.
+</t>
+<t>
+   For byte ranges, a sender &SHOULD; indicate the complete length of the
+   representation from which the range has been extracted, unless the complete
+   length is unknown or difficult to determine. An asterisk character ("*") in
+   place of the complete-length indicates that the representation length was
+   unknown when the header field was generated.
+</t>
+<t>
+   The following example illustrates when the complete length of the selected
+   representation is known by the sender to be 1234 bytes:
+</t>
+<artwork type="example">
+  Content-Range: bytes 42-1233/1234
+</artwork>
+<t>
+   and this second example illustrates when the complete length is unknown:
+</t>
+<artwork type="example">
+  Content-Range: bytes 42-1233/*
+</artwork>
+<t>
+   A Content-Range field value is invalid if it contains a
+   <x:ref>range-resp</x:ref> that has a <x:ref>last-pos</x:ref>
+   value less than its <x:ref>first-pos</x:ref> value, or a
+   <x:ref>complete-length</x:ref> value less than or equal to its
+   <x:ref>last-pos</x:ref> value. The recipient of an invalid
+   <x:ref>Content-Range</x:ref> &MUST-NOT; attempt to recombine the received
+   content with a stored representation.
+</t>
+<t>
+   A server generating a <x:ref>416 (Range Not Satisfiable)</x:ref> response
+   to a byte-range request &SHOULD; send a Content-Range header field with an
+   <x:ref>unsatisfied-range</x:ref> value, as in the following example:
+</t>
+<artwork type="example">
+  Content-Range: bytes */1234
+</artwork>
+<t>
+   The complete-length in a 416 response indicates the current length of the
+   selected representation.
+</t>
+<t>
+   The Content-Range header field has no meaning for status codes that do
+   not explicitly describe its semantic. For this specification, only the
+   <x:ref>206 (Partial Content)</x:ref> and
+   <x:ref>416 (Range Not Satisfiable)</x:ref> status codes describe a meaning
+   for Content-Range.
+</t>
+<t>
+   The following are examples of Content-Range values in which the
+   selected representation contains a total of 1234 bytes:
+</t>
+<ul>
+   <li><t>The first 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 0-499/1234
+</artwork>
+   </li>
+   <li><t>The second 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 500-999/1234
+</artwork>
+   </li>
+   <li><t>All except for the first 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 500-1233/1234
+</artwork>
+   </li>
+   <li><t>The last 500 bytes:</t>
+<artwork type="example" x:indent-with="     ">
+Content-Range: bytes 734-1233/1234
+</artwork>
+   </li>
+</ul>
+</section>
+
 <section title="Media Type multipart/byteranges" anchor="multipart.byteranges">
 <iref item="Media Type" subitem="multipart/byteranges" primary="true"/>
 <iref item="multipart/byteranges Media Type" primary="true"/>
@@ -8083,468 +8881,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 </section>
 
-<section title="Content-Encoding" anchor="field.content-encoding">
-  <x:anchor-alias value="header.content-encoding"/>
-  <iref primary="true" item="Fields" subitem="Content-Encoding" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Encoding" x:for-anchor=""/><iref primary="true" item="Content-Encoding header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Encoding"/>
-<t>
-   The "Content-Encoding" header field indicates what content codings
-   have been applied to the representation, beyond those inherent in the media
-   type, and thus what decoding mechanisms have to be applied in order to
-   obtain data in the media type referenced by the <x:ref>Content-Type</x:ref>
-   header field.
-   Content-Encoding is primarily used to allow a representation's data to be
-   compressed without losing the identity of its underlying media type.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Encoding"/>
-  <x:ref>Content-Encoding</x:ref> = #<x:ref>content-coding</x:ref>
-</sourcecode>
-<t>
-   An example of its use is
-</t>
-<artwork type="example">
-  Content-Encoding: gzip
-</artwork>
-<t>
-   If one or more encodings have been applied to a representation, the sender
-   that applied the encodings &MUST; generate a Content-Encoding header field
-   that lists the content codings in the order in which they were applied.
-   Note that the coding named "identity" is reserved for its special role
-   in <x:ref>Accept-Encoding</x:ref>, and thus &SHOULD-NOT; be included.
-</t>
-<t>
-   Additional information about the encoding parameters can be provided
-   by other header fields not defined by this specification.
-</t>
-<t>
-   Unlike Transfer-Encoding (<xref target="field.transfer-encoding"/>), the codings listed
-   in Content-Encoding are a characteristic of the representation; the
-   representation is defined in terms of the coded form, and all other
-   metadata about the representation is about the coded form unless otherwise
-   noted in the metadata definition. Typically, the representation is only
-   decoded just prior to rendering or analogous usage.
-</t>
-<t>
-   If the media type includes an inherent encoding, such as a data format
-   that is always compressed, then that encoding would not be restated in 
-   Content-Encoding even if it happens to be the same algorithm as one
-   of the content codings.  Such a content coding would only be listed if,
-   for some bizarre reason, it is applied a second time to form the
-   representation.  Likewise, an origin server might choose to publish the
-   same data as multiple representations that differ only in whether
-   the coding is defined as part of <x:ref>Content-Type</x:ref> or
-   Content-Encoding, since some user agents will behave differently in their
-   handling of each response (e.g., open a "Save as ..." dialog instead of
-   automatic decompression and rendering of content).
-</t>
-<t>
-   An origin server &MAY; respond with a status code of
-   <x:ref>415 (Unsupported Media Type)</x:ref> if a representation in the
-   request message has a content coding that is not acceptable.
-</t>
-</section>
-
-<section title="Content-Language" anchor="field.content-language">
-  <x:anchor-alias value="header.content-language"/>
-  <iref primary="true" item="Fields" subitem="Content-Language" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Language" x:for-anchor=""/><iref primary="true" item="Content-Language header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Language"/>
-<t>
-   The "Content-Language" header field describes the natural
-   language(s) of the intended audience for the representation. Note that this might
-   not be equivalent to all the languages used within the representation.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Language"/>
-  <x:ref>Content-Language</x:ref> = #<x:ref>language-tag</x:ref>
-</sourcecode>
-<t>
-   Language tags are defined in <xref target="language.tags"/>. The primary purpose of
-   Content-Language is to allow a user to identify and differentiate
-   representations according to the users' own preferred language. Thus, if the
-   content is intended only for a Danish-literate audience, the
-   appropriate field is
-</t>
-<artwork type="example">
-  Content-Language: da
-</artwork>
-<t>
-   If no Content-Language is specified, the default is that the content
-   is intended for all language audiences. This might mean that the
-   sender does not consider it to be specific to any natural language,
-   or that the sender does not know for which language it is intended.
-</t>
-<t>
-   Multiple languages &MAY; be listed for content that is intended for
-   multiple audiences. For example, a rendition of the "Treaty of
-   Waitangi", presented simultaneously in the original Maori and English
-   versions, would call for
-</t>
-<artwork type="example">
-  Content-Language: mi, en
-</artwork>
-<t>
-   However, just because multiple languages are present within a representation
-   does not mean that it is intended for multiple linguistic audiences.
-   An example would be a beginner's language primer, such as "A First
-   Lesson in Latin", which is clearly intended to be used by an
-   English-literate audience. In this case, the Content-Language would
-   properly only include "en".
-</t>
-<t>
-   Content-Language &MAY; be applied to any media type &mdash; it is not
-   limited to textual documents.
-</t>
-</section>
-
-<section title="Content-Length" anchor="field.content-length">
-  <x:anchor-alias value="header.content-length"/>
-  <iref primary="true" item="Fields" subitem="Content-Length" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Length" x:for-anchor=""/><iref primary="true" item="Content-Length header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Length"/>
-<t>
-   The "Content-Length" header field indicates the associated representation's
-   data length as a decimal non-negative integer number of octets.
-   When transferring a representation in a message, Content-Length refers
-   specifically to the amount of data enclosed so that it can be used to
-   delimit framing of the message body
-   (e.g., <xref target="body.content-length"/>).
-   In other cases, Content-Length indicates the selected representation's
-   current length, which can be used by recipients to estimate transfer time
-   or compare to previously stored representations.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Length"/>
-  <x:ref>Content-Length</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</sourcecode>
-<t>
-   An example is
-</t>
-<artwork type="example">
-  Content-Length: 3495
-</artwork>
-<t>
-   A sender &MUST-NOT; send a Content-Length header field in any message that
-   contains a <x:ref>Transfer-Encoding</x:ref> header field.
-</t>
-<t>
-   A user agent &SHOULD; send a Content-Length in a request message when no
-   <x:ref>Transfer-Encoding</x:ref> is sent and the request method defines
-   a meaning for an enclosed payload body. For example, a Content-Length
-   header field is normally sent in a POST request even when the value is
-   0 (indicating an empty payload body).  A user agent &SHOULD-NOT; send a
-   Content-Length header field when the request message does not contain a
-   payload body and the method semantics do not anticipate such a body.
-</t>
-<t>
-   A server &MAY; send a Content-Length header field in a response to a HEAD
-   request (<xref target="HEAD"/>); a server &MUST-NOT; send Content-Length in such a
-   response unless its field value equals the decimal number of octets that
-   would have been sent in the payload body of a response if the same
-   request had used the GET method.
-</t>
-<t>
-   A server &MAY; send a Content-Length header field in a
-   <x:ref>304 (Not Modified)</x:ref> response to a conditional GET request
-   (<xref target="status.304"/>); a server &MUST-NOT; send Content-Length in such a
-   response unless its field value equals the decimal number of octets that
-   would have been sent in the payload body of a <x:ref>200 (OK)</x:ref>
-   response to the same request.
-</t>
-<t>
-   A server &MUST-NOT; send a Content-Length header field in any response
-   with a status code of
-   <x:ref>1xx (Informational)</x:ref> or <x:ref>204 (No Content)</x:ref>.
-   A server &MUST-NOT; send a Content-Length header field in any
-   <x:ref>2xx (Successful)</x:ref> response to a CONNECT request (<xref target="CONNECT"/>).
-</t>
-<t>
-   Aside from the cases defined above, in the absence of Transfer-Encoding,
-   an origin server &SHOULD; send a Content-Length header field when the
-   payload body size is known prior to sending the complete header section.
-   This will allow downstream recipients to measure transfer progress,
-   know when a received message is complete, and potentially reuse the
-   connection for additional requests.
-</t>
-<t>
-   Any Content-Length field value greater than or equal to zero is valid.
-   Since there is no predefined limit to the length of a payload, a
-   recipient &MUST; anticipate potentially large decimal numerals and
-   prevent parsing errors due to integer conversion overflows
-   (<xref target="attack.protocol.element.length"/>).
-</t>
-<t>
-   If a message is received that has a Content-Length header field value
-   consisting of the same decimal value as a comma-separated list (<xref
-   target="abnf.extension"/>) &mdash; for example, "Content-Length: 42, 42" &mdash;
-   indicating that duplicate Content-Length header fields have been generated
-   or combined by an upstream message processor, then the recipient &MUST;
-   either reject the message as invalid or replace the duplicated field
-   values with a single valid Content-Length field containing that decimal
-   value prior to determining the message body length or forwarding the
-   message.
-</t>
-</section>
-
-<section title="Content-Location" anchor="field.content-location">
-  <x:anchor-alias value="header.content-location"/>
-  <iref primary="true" item="Fields" subitem="Content-Location" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Location" x:for-anchor=""/><iref primary="true" item="Content-Location header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Location"/>
-<t>
-   The "Content-Location" header field references a URI that can be used
-   as an identifier for a specific resource corresponding to the
-   representation in this message's payload.
-   In other words, if one were to perform a GET request on this URI at the time
-   of this message's generation, then a <x:ref>200 (OK)</x:ref> response would
-   contain the same representation that is enclosed as payload in this message.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Location"/>
-  <x:ref>Content-Location</x:ref> = <x:ref>absolute-URI</x:ref> / <x:ref>partial-URI</x:ref>
-</sourcecode>
-<t>
-   The field value is either an <x:ref>absolute-URI</x:ref> or a
-   <x:ref>partial-URI</x:ref>. In the latter case (<xref target="uri"/>),
-   the referenced URI is relative to the target URI
-   (<xref target="RFC3986" x:fmt="," x:sec="5"/>).
-</t>
-<t>
-   The Content-Location value is not a replacement for the target URI 
-   (<xref target="target.resource"/>).  It is representation metadata.
-   It has the same syntax and semantics as the header field of the same name
-   defined for MIME body parts in <xref target="RFC2557" x:fmt="of" x:sec="4"/>.
-   However, its appearance in an HTTP message has some special implications
-   for HTTP recipients.
-</t>
-<t>
-   If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
-   response message and its value refers (after conversion to absolute form)
-   to a URI that is the same as the target URI, then
-   the recipient &MAY; consider the payload to be a current representation of
-   that resource at the time indicated by the message origination date.
-   For a GET (<xref target="GET"/>) or HEAD (<xref target="HEAD"/>) request,
-   this is the same as the default semantics when no Content-Location is
-   provided by the server.
-   For a state-changing request like PUT (<xref target="PUT"/>) or
-   POST (<xref target="POST"/>), it implies that the server's response
-   contains the new representation of that resource, thereby distinguishing it
-   from representations that might only report about the action
-   (e.g., "It worked!").
-   This allows authoring applications to update their local copies without
-   the need for a subsequent GET request.
-</t>
-<t>
-   If Content-Location is included in a <x:ref>2xx (Successful)</x:ref>
-   response message and its field value refers to a URI that differs from the
-   target URI, then the origin server claims that the URI
-   is an identifier for a different resource corresponding to the enclosed
-   representation. Such a claim can only be trusted if both identifiers share
-   the same resource owner, which cannot be programmatically determined via
-   HTTP.
-</t>
-<ul>
-  <li>For a response to a GET or HEAD request, this is an indication that the
-     target URI refers to a resource that is subject to content
-     negotiation and the Content-Location field value is a more specific
-     identifier for the <x:ref>selected representation</x:ref>.</li>
-  <li>For a <x:ref>201 (Created)</x:ref> response to a state-changing method,
-     a Content-Location field value that is identical to the
-     <x:ref>Location</x:ref> field value indicates that this payload is a
-     current representation of the newly created resource.</li>
-  <li>Otherwise, such a Content-Location indicates that this payload is a
-     representation reporting on the requested action's status and that the
-     same report is available (for future access with GET) at the given URI.
-     For example, a purchase transaction made via a POST request might
-     include a receipt document as the payload of the <x:ref>200 (OK)</x:ref>
-     response; the Content-Location field value provides an identifier for
-     retrieving a copy of that same receipt in the future.</li>
-</ul>
-<t>
-   A user agent that sends Content-Location in a request message is stating
-   that its value refers to where the user agent originally obtained the
-   content of the enclosed representation (prior to any modifications made by
-   that user agent).  In other words, the user agent is providing a back link
-   to the source of the original representation.
-</t>
-<t>
-   An origin server that receives a Content-Location field in a request
-   message &MUST; treat the information as transitory request context rather
-   than as metadata to be saved verbatim as part of the representation.
-   An origin server &MAY; use that context to guide in processing the
-   request or to save it for other uses, such as within source links or
-   versioning metadata. However, an origin server &MUST-NOT; use such context
-   information to alter the request semantics.
-</t>
-<t>
-   For example, if a client makes a PUT request on a negotiated resource and
-   the origin server accepts that PUT (without redirection), then the new
-   state of that resource is expected to be consistent with the one
-   representation supplied in that PUT; the Content-Location cannot be used as
-   a form of reverse content selection identifier to update only one of the
-   negotiated representations. If the user agent had wanted the latter
-   semantics, it would have applied the PUT directly to the Content-Location
-   URI.
-</t>
-</section>
-
-<section title="Content-Range" anchor="field.content-range">
-  <x:anchor-alias value="header.content-range"/>
-  <iref primary="true" item="Fields" subitem="Content-Range" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Range" x:for-anchor=""/><iref primary="true" item="Content-Range header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Range"/>
-  <x:anchor-alias value="range-resp"/>
-  <x:anchor-alias value="incl-range"/>
-  <x:anchor-alias value="unsatisfied-range"/>
-  <x:anchor-alias value="complete-length"/>
-<t>
-   The "Content-Range" header field is sent in a single part
-   <x:ref>206 (Partial Content)</x:ref> response to indicate the partial range
-   of the <x:ref>selected representation</x:ref> enclosed as the message payload, sent in
-   each part of a multipart 206 response to indicate the range enclosed within
-   each body part, and sent in <x:ref>416 (Range Not Satisfiable)</x:ref>
-   responses to provide information about the selected representation.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Range"/><iref primary="true" item="Grammar" subitem="range-resp"/><iref primary="true" item="Grammar" subitem="incl-range"/><iref primary="true" item="Grammar" subitem="unsatisfied-range"/><iref primary="true" item="Grammar" subitem="complete-length"/><iref primary="false" item="Grammar" subitem="first-pos"/><iref primary="false" item="Grammar" subitem="last-pos"/>
-  <x:ref>Content-Range</x:ref>       = <x:ref>range-unit</x:ref> <x:ref>SP</x:ref>
-                        ( <x:ref>range-resp</x:ref> / <x:ref>unsatisfied-range</x:ref> )
-
-  <x:ref>range-resp</x:ref>          = <x:ref>incl-range</x:ref> "/" ( <x:ref>complete-length</x:ref> / "*" )
-  <x:ref>incl-range</x:ref>          = <x:ref>first-pos</x:ref> "-" <x:ref>last-pos</x:ref>
-  <x:ref>unsatisfied-range</x:ref>   = "*/" <x:ref>complete-length</x:ref>
-
-  <x:ref>complete-length</x:ref>     = 1*<x:ref>DIGIT</x:ref>
-</sourcecode>
-<t>
-   If a <x:ref>206 (Partial Content)</x:ref> response contains a
-   <x:ref>Content-Range</x:ref> header field with a <x:ref>range unit</x:ref>
-   (<xref target="range.units"/>) that the recipient does not understand, the
-   recipient &MUST-NOT; attempt to recombine it with a stored representation.
-   A proxy that receives such a message &SHOULD; forward it downstream.
-</t>
-<t>
-   For byte ranges, a sender &SHOULD; indicate the complete length of the
-   representation from which the range has been extracted, unless the complete
-   length is unknown or difficult to determine. An asterisk character ("*") in
-   place of the complete-length indicates that the representation length was
-   unknown when the header field was generated.
-</t>
-<t>
-   The following example illustrates when the complete length of the selected
-   representation is known by the sender to be 1234 bytes:
-</t>
-<artwork type="example">
-  Content-Range: bytes 42-1233/1234
-</artwork>
-<t>
-   and this second example illustrates when the complete length is unknown:
-</t>
-<artwork type="example">
-  Content-Range: bytes 42-1233/*
-</artwork>
-<t>
-   A Content-Range field value is invalid if it contains a
-   <x:ref>range-resp</x:ref> that has a <x:ref>last-pos</x:ref>
-   value less than its <x:ref>first-pos</x:ref> value, or a
-   <x:ref>complete-length</x:ref> value less than or equal to its
-   <x:ref>last-pos</x:ref> value. The recipient of an invalid
-   <x:ref>Content-Range</x:ref> &MUST-NOT; attempt to recombine the received
-   content with a stored representation.
-</t>
-<t>
-   A server generating a <x:ref>416 (Range Not Satisfiable)</x:ref> response
-   to a byte-range request &SHOULD; send a Content-Range header field with an
-   <x:ref>unsatisfied-range</x:ref> value, as in the following example:
-</t>
-<artwork type="example">
-  Content-Range: bytes */1234
-</artwork>
-<t>
-   The complete-length in a 416 response indicates the current length of the
-   selected representation.
-</t>
-<t>
-   The Content-Range header field has no meaning for status codes that do
-   not explicitly describe its semantic. For this specification, only the
-   <x:ref>206 (Partial Content)</x:ref> and
-   <x:ref>416 (Range Not Satisfiable)</x:ref> status codes describe a meaning
-   for Content-Range.
-</t>
-<t>
-   The following are examples of Content-Range values in which the
-   selected representation contains a total of 1234 bytes:
-</t>
-<ul>
-   <li><t>The first 500 bytes:</t>
-<artwork type="example" x:indent-with="     ">
-Content-Range: bytes 0-499/1234
-</artwork>
-   </li>
-   <li><t>The second 500 bytes:</t>
-<artwork type="example" x:indent-with="     ">
-Content-Range: bytes 500-999/1234
-</artwork>
-   </li>
-   <li><t>All except for the first 500 bytes:</t>
-<artwork type="example" x:indent-with="     ">
-Content-Range: bytes 500-1233/1234
-</artwork>
-   </li>
-   <li><t>The last 500 bytes:</t>
-<artwork type="example" x:indent-with="     ">
-Content-Range: bytes 734-1233/1234
-</artwork>
-   </li>
-</ul>
-</section>
-
-<section title="Content-Type" anchor="field.content-type">
-  <x:anchor-alias value="header.content-type"/>
-  <iref primary="true" item="Fields" subitem="Content-Type" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Content-Type" x:for-anchor=""/><iref primary="true" item="Content-Type header field" x:for-anchor=""/>
-  <x:anchor-alias value="Content-Type"/>
-<t>
-   The "Content-Type" header field indicates the media type of the
-   associated representation: either the representation enclosed in
-   the message payload or the <x:ref>selected representation</x:ref>, as determined by the
-   message semantics.  The indicated media type defines both the data format
-   and how that data is intended to be processed by a recipient, within the
-   scope of the received message semantics, after any content codings
-   indicated by <x:ref>Content-Encoding</x:ref> are decoded.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Content-Type"/>
-  <x:ref>Content-Type</x:ref> = <x:ref>media-type</x:ref>
-</sourcecode>
-<t>
-   Media types are defined in <xref target="media.type"/>. An example of the
-   field is
-</t>
-<artwork type="example">
-  Content-Type: text/html; charset=ISO-8859-4
-</artwork>
-<t>
-   A sender that generates a message containing a payload body &SHOULD;
-   generate a Content-Type header field in that message unless the intended
-   media type of the enclosed representation is unknown to the sender.
-   If a Content-Type header field is not present, the recipient &MAY; either
-   assume a media type of
-   "application/octet-stream" (<xref target="RFC2046" x:fmt="," x:sec="4.5.1"/>)
-   or examine the data to determine its type.
-</t>
-<t>
-   In practice, resource owners do not always properly configure their origin
-   server to provide the correct Content-Type for a given representation.
-   Some user agents examine a payload's content and, in certain cases,
-   override the received type (for example, see <xref target="Sniffing"/>).
-   This "MIME sniffing" risks drawing incorrect conclusions about the data,
-   which might expose the user to additional security risks (e.g., "privilege
-   escalation"). Furthermore, it is impossible to determine the sender's
-   intended processing model by examining the data format: many data formats
-   match multiple media types that differ only in processing semantics.
-   Implementers are encouraged to provide a means to disable such sniffing.
-</t>
-<t>
-   Furthermore, although Content-Type is defined as a singleton field, it is
-   sometimes incorrectly generated multiple times, resulting in a combined
-   field value that appears to be a list.
-   Recipients often attempt to handle this error by using the last syntactically
-   valid member of the list, but note that some implementations might have different
-   error handling behaviors, leading to interoperability and/or security issues.
-</t>
-</section>
-
 <section title="Date" anchor="field.date">
   <x:anchor-alias value="header.date"/>
   <iref primary="true" item="Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Date header field" x:for-anchor=""/>
@@ -8593,223 +8929,6 @@ Content-Range: bytes 734-1233/1234
    the server is expected to adjust its interpretation of the user's request
    based on differences between the user agent and server clocks.
 </t>
-</section>
-
-<section title="ETag" anchor="field.etag">
-  <x:anchor-alias value="header.etag"/>
-  <iref primary="true" item="Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="Trailer Fields" subitem="ETag" x:for-anchor=""/><iref primary="true" item="ETag field" x:for-anchor=""/>
-  <x:anchor-alias value="ETag"/>
-  <x:anchor-alias value="entity-tag"/>
-  <x:anchor-alias value="opaque-tag"/>
-  <x:anchor-alias value="weak"/>
-  <x:anchor-alias value="etagc"/>
-<t>
-   The "ETag" field in a response provides the current entity-tag for
-   the <x:ref>selected representation</x:ref>, as determined at the conclusion of handling
-   the request.
-   An entity-tag is an opaque validator for differentiating between
-   multiple representations of the same resource, regardless of whether
-   those multiple representations are due to resource state changes over
-   time, content negotiation resulting in multiple representations being
-   valid at the same time, or both. An entity-tag consists of an opaque
-   quoted string, possibly prefixed by a weakness indicator.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="ETag"/><iref primary="true" item="Grammar" subitem="entity-tag"/><iref primary="true" item="Grammar" subitem="weak"/><iref primary="true" item="Grammar" subitem="opaque-tag"/><iref primary="true" item="Grammar" subitem="etagc"/>
-  <x:ref>ETag</x:ref>       = <x:ref>entity-tag</x:ref>
-
-  <x:ref>entity-tag</x:ref> = [ <x:ref>weak</x:ref> ] <x:ref>opaque-tag</x:ref>
-  <x:ref>weak</x:ref>       = %s"W/"
-  <x:ref>opaque-tag</x:ref> = <x:ref>DQUOTE</x:ref> *<x:ref>etagc</x:ref> <x:ref>DQUOTE</x:ref>
-  <x:ref>etagc</x:ref>      = %x21 / %x23-7E / <x:ref>obs-text</x:ref>
-             ; <x:ref>VCHAR</x:ref> except double quotes, plus obs-text
-</sourcecode>
-<aside>
-  <t>
-    &Note; Previously, opaque-tag was defined to be a quoted-string
-    (<xref target="RFC2616" x:fmt="," x:sec="3.11"/>); thus, some recipients
-    might perform backslash unescaping. Servers therefore ought to avoid
-    backslash characters in entity tags.
-  </t>
-</aside>
-<t>
-   An entity-tag can be more reliable for validation than a modification
-   date in situations where it is inconvenient to store modification
-   dates, where the one-second resolution of HTTP date values is not
-   sufficient, or where modification dates are not consistently maintained.
-</t>
-<t>
-  Examples:
-</t>
-<artwork type="example">
-  ETag: "xyzzy"
-  ETag: W/"xyzzy"
-  ETag: ""
-</artwork>
-<t>
-   An entity-tag can be either a weak or strong validator, with
-   strong being the default.  If an origin server provides an entity-tag
-   for a representation and the generation of that entity-tag does not satisfy
-   all of the characteristics of a strong validator
-   (<xref target="weak.and.strong.validators"/>), then the origin server
-   &MUST; mark the entity-tag as weak by prefixing its opaque value
-   with "W/" (case-sensitive).
-</t>
-<t>
-   A sender &MAY; send the Etag field in a trailer section (see
-   <xref target="trailer.fields"/>). However, since trailers are often
-   ignored, it is preferable to send Etag as a header field unless the
-   entity-tag is generated while sending the message body.
-</t>
-
-<section title="Generation" anchor="entity.tag.generation">
-<t>
-   The principle behind entity-tags is that only the service author
-   knows the implementation of a resource well enough to select the
-   most accurate and efficient validation mechanism for that resource,
-   and that any such mechanism can be mapped to a simple sequence of
-   octets for easy comparison.  Since the value is opaque, there is no
-   need for the client to be aware of how each entity-tag is constructed.
-</t>
-<t>
-   For example, a resource that has implementation-specific versioning
-   applied to all changes might use an internal revision number, perhaps
-   combined with a variance identifier for content negotiation, to
-   accurately differentiate between representations.
-   Other implementations might use a collision-resistant hash of
-   representation content, a combination of various file attributes, or
-   a modification timestamp that has sub-second resolution.
-</t>
-<t>
-   An origin server &SHOULD; send an ETag for any selected representation
-   for which detection of changes can be reasonably and consistently
-   determined, since the entity-tag's use in conditional requests and
-   evaluating cache freshness (<xref target="Caching"/>) can result in a substantial
-   reduction of HTTP network traffic and can be a significant factor in
-   improving service scalability and reliability.
-</t>
-</section>
-
-<section title="Comparison" anchor="entity.tag.comparison">
-  <x:anchor-alias value="validator.comparison"/>
-  <x:anchor-alias value="strong comparison"/>
-  <x:anchor-alias value="weak comparison"/>
-<t>
-   There are two entity-tag comparison functions, depending on whether or not
-   the comparison context allows the use of weak validators:
-</t>
-<ul>
-   <li><x:dfn>Strong comparison</x:dfn>: two entity-tags are equivalent if both
-       are not weak and their opaque-tags match character-by-character.</li>
-   <li><x:dfn>Weak comparison</x:dfn>: two entity-tags are equivalent if their opaque-tags
-       match character-by-character, regardless of either or both
-       being tagged as "weak".</li>
-</ul>
-<t>
-   The example below shows the results for a set of entity-tag pairs and both
-   the weak and strong comparison function results:
-</t>
-<table align="left">
-  <thead>
-    <tr>
-      <th>ETag 1</th>
-      <th>ETag 2</th>
-      <th>Strong Comparison</th>
-      <th>Weak Comparison</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>W/"1"</td>
-      <td>W/"1"</td>
-      <td>no match</td>
-      <td>match</td>
-    </tr>
-    <tr>
-      <td>W/"1"</td>
-      <td>W/"2"</td>
-      <td>no match</td>
-      <td>no match</td>
-    </tr>
-    <tr>
-      <td>W/"1"</td>
-      <td>"1"</td>
-      <td>no match</td>
-      <td>match</td>
-    </tr>
-    <tr>
-      <td>"1"</td>
-      <td>"1"</td>
-      <td>match</td>
-      <td>match</td>
-    </tr>
-  </tbody>
-</table>
-</section>
-
-<section title="Example: Entity-Tags Varying on Content-Negotiated Resources" anchor="example.entity.tag.vs.conneg">
-<t>
-   Consider a resource that is subject to content negotiation
-   (<xref target="content.negotiation"/>), and where the representations sent in response to
-   a GET request vary based on the <x:ref>Accept-Encoding</x:ref> request
-   header field (<xref target="field.accept-encoding"/>):
-</t>
-<t>
-   >> Request:
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;"  x:indent-with="  ">
-GET /index HTTP/1.1
-Host: www.example.com
-Accept-Encoding: gzip
-
-</artwork>
-<t>
-   In this case, the response might or might not use the gzip content coding.
-   If it does not, the response might look like:
-</t>
-<t>
-   >> Response:
-</t>
-<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
-HTTP/1.1 200 OK
-Date: Fri, 26 Mar 2010 00:05:00 GMT
-ETag: "123-a"
-Content-Length: <x:length-of target="exbody2"/>
-Vary: Accept-Encoding
-Content-Type: text/plain
-
-<x:span anchor="exbody2">Hello World!
-Hello World!
-Hello World!
-Hello World!
-Hello World!
-</x:span></artwork>
-<t>
-   An alternative representation that does use gzip content coding would be:
-</t>
-<t>
-   >> Response:
-</t>
-<artwork type="message/http; msgtype=&#34;response&#34;"  x:indent-with="  ">
-HTTP/1.1 200 OK
-Date: Fri, 26 Mar 2010 00:05:00 GMT
-ETag: "123-b"
-Content-Length: 43
-Vary: Accept-Encoding
-Content-Type: text/plain
-Content-Encoding: gzip
-
-<spanx>...binary data...</spanx></artwork>
-<aside>
-  <t>
-    &Note; Content codings are a property of the representation data,
-    so a strong entity-tag for a content-encoded representation has to be
-    distinct from the entity tag of an unencoded representation to prevent
-    potential conflicts during cache updates and range requests. In contrast,
-    transfer codings (<xref target="transfer.codings"/>) apply only during message transfer
-    and do not result in distinct entity-tags.
-  </t>
-</aside>
-</section>
 </section>
 
 <section title="Expect" anchor="field.expect">
@@ -9001,157 +9120,6 @@ Expect: 100-continue
    authentication, since most recipients will assume that the field value is
    public information.
 </t>
-</section>
-
-<section title="Host" anchor="field.host">
-  <x:anchor-alias value="header.host"/>
-  <iref primary="true" item="Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Host header field" x:for-anchor=""/>
-  <x:anchor-alias value="Host"/>
-<t>
-   The "Host" header field in a request provides the host and port
-   information from the target URI, enabling the origin
-   server to distinguish among resources while servicing requests
-   for multiple host names on a single IP address.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Host"/>
-  <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="uri"/>
-</sourcecode>
-<t>
-   Since the Host field value is critical information for handling a request,
-   a user agent &SHOULD; generate Host as the first field in the header section.
-</t>
-<t>
-   For example, a GET request to the origin server for
-   &lt;http://www.example.org/pub/WWW/&gt; would begin with:
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-GET /pub/WWW/ HTTP/1.1
-Host: www.example.org
-</artwork>
-<t>
-   Since the Host header field acts as an application-level routing
-   mechanism, it is a frequent target for malware seeking to poison
-   a shared cache or redirect a request to an unintended server.
-   An interception proxy is particularly vulnerable if it relies on
-   the Host field value for redirecting requests to internal
-   servers, or for use as a cache key in a shared cache, without
-   first verifying that the intercepted connection is targeting a
-   valid IP address for that host.
-</t>
-</section>
-
-<section title="Last-Modified" anchor="field.last-modified">
-  <x:anchor-alias value="header.last-modified"/>
-  <iref primary="true" item="Fields" subitem="Last-Modified" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Last-Modified" x:for-anchor=""/><iref primary="true" item="Last-Modified header field" x:for-anchor=""/>
-  <x:anchor-alias value="Last-Modified"/>
-<t>
-   The "Last-Modified" header field in a response provides a timestamp
-   indicating the date and time at which the origin server believes the
-   <x:ref>selected representation</x:ref> was last modified, as determined at the conclusion
-   of handling the request.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Last-Modified"/>
-  <x:ref>Last-Modified</x:ref> = <x:ref>HTTP-date</x:ref>
-</sourcecode>
-<t>
-   An example of its use is
-</t>
-<artwork type="example">
-  Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
-</artwork>
-
-<section title="Generation" anchor="lastmod.generation">
-<t>
-   An origin server &SHOULD; send Last-Modified for any selected
-   representation for which a last modification date can be reasonably
-   and consistently determined, since its use in conditional requests
-   and evaluating cache freshness (<xref target="Caching"/>) results in a substantial
-   reduction of HTTP traffic on the Internet and can be a significant
-   factor in improving service scalability and reliability.
-</t>
-<t>
-   A representation is typically the sum of many parts behind the
-   resource interface.  The last-modified time would usually be
-   the most recent time that any of those parts were changed.
-   How that value is determined for any given resource is an
-   implementation detail beyond the scope of this specification.
-   What matters to HTTP is how recipients of the Last-Modified
-   header field can use its value to make conditional requests
-   and test the validity of locally cached responses.
-</t>
-<t>
-   An origin server &SHOULD; obtain the Last-Modified value of the
-   representation as close as possible to the time that it generates the
-   <x:ref>Date</x:ref> field value for its response. This allows a recipient to
-   make an accurate assessment of the representation's modification time,
-   especially if the representation changes near the time that the
-   response is generated.
-</t>
-<t>
-   An origin server with a clock &MUST-NOT; send a Last-Modified date
-   that is later than the server's time of message origination (<x:ref>Date</x:ref>).
-   If the last modification time is derived from implementation-specific
-   metadata that evaluates to some time in the future, according to the
-   origin server's clock, then the origin server &MUST; replace that
-   value with the message origination date. This prevents a future
-   modification date from having an adverse impact on cache validation.
-</t>
-<t>
-   An origin server without a clock &MUST-NOT; assign Last-Modified
-   values to a response unless these values were associated
-   with the resource by some other system or user with a reliable clock.
-</t>
-</section>
-
-<section title="Comparison" anchor="lastmod.comparison">
-<t>
-   A Last-Modified time, when used as a validator in a request, is
-   implicitly weak unless it is possible to deduce that it is strong,
-   using the following rules:
-</t>
-<ul>
-   <li>The validator is being compared by an origin server to the
-       actual current validator for the representation and,</li>
-   <li>That origin server reliably knows that the associated representation did
-       not change twice during the second covered by the presented
-       validator.</li>
-</ul>
-<t>
-   or
-</t>
-<ul>
-   <li>The validator is about to be used by a client in an <x:ref>If-Modified-Since</x:ref>,
-       <x:ref>If-Unmodified-Since</x:ref>, or <x:ref>If-Range</x:ref> header
-       field, because the client has a cache entry for the associated
-       representation, and</li>
-   <li>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
-       time when the origin server sent the original response, and</li>
-   <li>The presented Last-Modified time is at least 60 seconds before
-       the Date value.</li>
-</ul>
-<t>
-   or
-</t>
-<ul>
-   <li>The validator is being compared by an intermediate cache to the
-       validator stored in its cache entry for the representation, and</li>
-   <li>That cache entry includes a <x:ref>Date</x:ref> value, which gives the
-       time when the origin server sent the original response, and</li>
-   <li>The presented Last-Modified time is at least 60 seconds before
-       the Date value.</li>
-</ul>
-<t>
-   This method relies on the fact that if two different responses were
-   sent by the origin server during the same second, but both had the
-   same Last-Modified time, then at least one of those responses would
-   have a <x:ref>Date</x:ref> value equal to its Last-Modified time. The
-   arbitrary 60-second limit guards against the possibility that the Date and
-   Last-Modified values are generated from different clocks or at somewhat
-   different times during the preparation of the response. An
-   implementation &MAY; use a value larger than 60 seconds, if it is
-   believed that 60 seconds is too short.
-</t>
-</section>
 </section>
 
 <section title="Location" anchor="field.location">
@@ -10192,6 +10160,45 @@ Upgrade: websocket
    application-specific purposes, but are not commonly used in practice.
    Implementors of alternative range units ought to consider how they would
    work with content codings and general-purpose intermediaries.
+</t>
+</section>
+</section>
+
+<section title="Content Coding Extensibility" anchor="content.coding.extensibility">
+
+<section title="Content Coding Registry" anchor="content.coding.registry">
+<t>
+   The "HTTP Content Coding Registry", maintained by
+   IANA at <eref target="https://www.iana.org/assignments/http-parameters/"/>,
+   registers <x:ref>content-coding</x:ref> names.
+</t>
+<t>
+   Content coding registrations &MUST; include the following fields:
+</t>
+<ul>
+  <li>Name</li>
+  <li>Description</li>
+  <li>Pointer to specification text</li>
+</ul>
+<t>
+   Names of content codings &MUST-NOT; overlap with names of transfer codings
+   (<xref target="transfer.codings"/>), unless the encoding transformation is
+   identical (as is the case for the compression codings defined in
+   <xref target="content.codings"/>).
+</t>
+<t>
+   Values to be added to this namespace require IETF Review
+   (see <xref target="RFC8126" x:fmt="of" x:sec="4.8"/>) and &MUST;
+   conform to the purpose of content coding defined in
+   <xref target="content.codings"/>.
+</t>
+</section>
+
+<section title="Considerations for New Content Codings" anchor="considerations.for.new.content.codings">
+<t>
+   New content codings ought to be self-descriptive whenever possible, with
+   optional parameters discoverable within the coding format itself, rather
+   than rely on external metadata that might be lost during transit.
 </t>
 </section>
 </section>
