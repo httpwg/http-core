@@ -4882,6 +4882,256 @@ Expect: 100-continue
     </tr>
   </tbody>
 </table>
+
+<section title="Allow" anchor="field.allow">
+  <x:anchor-alias value="header.allow"/>
+  <iref primary="true" item="Fields" subitem="Allow" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Allow" x:for-anchor=""/><iref primary="true" item="Allow header field" x:for-anchor=""/>
+  <x:anchor-alias value="Allow"/>
+<t>
+   The "Allow" header field lists the set of methods advertised as
+   supported by the <x:ref>target resource</x:ref>. The purpose of this field
+   is strictly to inform the recipient of valid request methods associated
+   with the resource.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Allow"/>
+  <x:ref>Allow</x:ref> = #<x:ref>method</x:ref>
+</sourcecode>
+<t>
+   Example of use:
+</t>
+<artwork type="example">
+  Allow: GET, HEAD, PUT
+</artwork>
+<t>
+   The actual set of allowed methods is defined by the origin server at the
+   time of each request. An origin server &MUST; generate an Allow field in a
+   <x:ref>405 (Method Not Allowed)</x:ref> response and &MAY; do so in any
+   other response. An empty Allow field value indicates that the resource
+   allows no methods, which might occur in a 405 response if the resource has
+   been temporarily disabled by configuration.
+</t>
+<t>
+   A proxy &MUST-NOT; modify the Allow header field &mdash; it does not need
+   to understand all of the indicated methods in order to handle them
+   according to the generic message handling rules.
+</t>
+</section>
+
+<section title="Date" anchor="field.date">
+  <x:anchor-alias value="header.date"/>
+  <iref primary="true" item="Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Date header field" x:for-anchor=""/>
+  <x:anchor-alias value="Date"/>
+<t>
+   The "Date" header field represents the date and time at which
+   the message was originated, having the same semantics as the Origination
+   Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
+   The field value is an HTTP-date, as defined in <xref target="http.date"/>.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Date"/>
+  <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
+</sourcecode>
+<t>
+   An example is
+</t>
+<artwork type="example">
+  Date: Tue, 15 Nov 1994 08:12:31 GMT
+</artwork>
+<t>
+   When a Date header field is generated, the sender &SHOULD; generate its
+   field value as the best available approximation of the date and time of
+   message generation. In theory, the date ought to represent the moment just
+   before the payload is generated. In practice, the date can be generated at
+   any time during message origination.
+</t>
+<t>
+   An origin server &MUST-NOT; send a Date header field if it does not have a
+   clock capable of providing a reasonable approximation of the current
+   instance in Coordinated Universal Time.
+   An origin server &MAY; send a Date header field if the response is in the
+   <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
+   class of status codes.
+   An origin server &MUST; send a Date header field in all other cases.
+</t>
+<t>
+   A recipient with a clock that receives a response message without a Date
+   header field &MUST; record the time it was received and append a
+   corresponding Date header field to the message's header section if it is
+   cached or forwarded downstream.
+</t>
+<t>
+   A user agent &MAY; send a Date header field in a request, though generally
+   will not do so unless it is believed to convey useful information to the
+   server. For example, custom applications of HTTP might convey a Date if
+   the server is expected to adjust its interpretation of the user's request
+   based on differences between the user agent and server clocks.
+</t>
+</section>
+
+<section title="Location" anchor="field.location">
+  <x:anchor-alias value="header.location"/>
+  <iref primary="true" item="Fields" subitem="Location" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Location" x:for-anchor=""/><iref primary="true" item="Location header field" x:for-anchor=""/>
+  <x:anchor-alias value="Location"/>
+<t>
+   The "Location" header field is used in some responses to refer to a
+   specific resource in relation to the response. The type of relationship is
+   defined by the combination of request method and status code semantics.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Location"/>
+  <x:ref>Location</x:ref> = <x:ref>URI-reference</x:ref>
+</sourcecode>
+<t>
+   The field value consists of a single URI-reference. When it has the form
+   of a relative reference (<xref target="RFC3986" x:fmt="," x:sec="4.2"/>),
+   the final value is computed by resolving it against the target
+   URI (<xref target="RFC3986" x:fmt="," x:sec="5"/>).
+</t>
+<t>
+   For <x:ref>201 (Created)</x:ref> responses, the Location value refers to
+   the primary resource created by the request.
+   For <x:ref>3xx (Redirection)</x:ref> responses, the Location value refers
+   to the preferred target resource for automatically redirecting the request.
+</t>
+<t>
+   If the Location value provided in a <x:ref>3xx (Redirection)</x:ref>
+   response does not have a fragment component, a user agent &MUST; process the
+   redirection as if the value inherits the fragment component of the URI
+   reference used to generate the target URI (i.e., the redirection
+   inherits the original reference's fragment, if any).
+</t>
+<t>
+   For example, a GET request generated for the URI reference
+   "http://www.example.org/~tim" might result in a
+   <x:ref>303 (See Other)</x:ref> response containing the header field:
+</t>
+<artwork type="example">
+  Location: /People.html#tim
+</artwork>
+<t>
+   which suggests that the user agent redirect to
+   "http://www.example.org/People.html#tim"
+</t>
+<t>
+   Likewise, a GET request generated for the URI reference
+   "http://www.example.org/index.html#larry" might result in a
+   <x:ref>301 (Moved Permanently)</x:ref> response containing the header
+   field:
+</t>
+<artwork type="example">
+  Location: http://www.example.net/index.html
+</artwork>
+<t>
+   which suggests that the user agent redirect to
+   "http://www.example.net/index.html#larry", preserving the original fragment
+   identifier.
+</t>
+<t>
+   There are circumstances in which a fragment identifier in a Location
+   value would not be appropriate. For example, the Location header field in a
+   <x:ref>201 (Created)</x:ref> response is supposed to provide a URI that is
+   specific to the created resource.
+</t>
+<aside>
+  <t>
+    &Note; Some recipients attempt to recover from Location fields
+    that are not valid URI references. This specification does not mandate or
+    define such processing, but does allow it for the sake of robustness.
+    A Location field value cannot allow a list of members because the comma list separator
+    is a valid data character within a URI-reference. If an invalid message is sent with multiple
+    Location field instances, a recipient along the path might combine the field instances into
+    one value. Recovery of a valid Location field value from that situation is difficult and not
+    interoperable across implementations.
+  </t>
+</aside>
+<aside>
+  <t>
+    &Note; The <x:ref>Content-Location</x:ref> header field
+    (<xref target="field.content-location"/>) differs from Location in that the
+    Content-Location refers to the most specific resource corresponding to the
+    enclosed representation. It is therefore possible for a response to contain
+    both the Location and Content-Location header fields.
+  </t>
+</aside>
+</section>
+
+<section title="Retry-After" anchor="field.retry-after">
+  <x:anchor-alias value="header.retry-after"/>
+  <iref primary="true" item="Fields" subitem="Retry-After" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Retry-After" x:for-anchor=""/><iref primary="true" item="Retry-After header field" x:for-anchor=""/>
+  <x:anchor-alias value="Retry-After"/>
+<t>
+   Servers send the "Retry-After" header field to indicate how long the user
+   agent ought to wait before making a follow-up request. When sent with a
+   <x:ref>503 (Service Unavailable)</x:ref> response, Retry-After indicates
+   how long the service is expected to be unavailable to the client.
+   When sent with any <x:ref>3xx (Redirection)</x:ref> response, Retry-After
+   indicates the minimum time that the user agent is asked to wait before
+   issuing the redirected request.
+</t>
+<t>
+   The value of this field can be either an HTTP-date or a number
+   of seconds to delay after the response is received.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Retry-After"/>
+  <x:ref>Retry-After</x:ref> = <x:ref>HTTP-date</x:ref> / <x:ref>delay-seconds</x:ref>
+</sourcecode>
+<t anchor="rule.delay-seconds">
+  <x:anchor-alias value="delay-seconds"/>
+   A delay-seconds value is a non-negative decimal integer, representing time
+   in seconds.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="delay-seconds"/>
+  <x:ref>delay-seconds</x:ref>  = 1*<x:ref>DIGIT</x:ref>
+</sourcecode>
+<t>
+   Two examples of its use are
+</t>
+<artwork type="example">
+  Retry-After: Fri, 31 Dec 1999 23:59:59 GMT
+  Retry-After: 120
+</artwork>
+<t>
+   In the latter example, the delay is 2 minutes.
+</t>
+</section>
+
+<section title="Server" anchor="field.server">
+  <x:anchor-alias value="header.server"/>
+  <iref primary="true" item="Fields" subitem="Server" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Server" x:for-anchor=""/><iref primary="true" item="Server header field" x:for-anchor=""/>
+  <x:anchor-alias value="Server"/>
+<t>
+   The "Server" header field contains information about the
+   software used by the origin server to handle the request, which is often
+   used by clients to help identify the scope of reported interoperability
+   problems, to work around or tailor requests to avoid particular server
+   limitations, and for analytics regarding server or operating system use.
+   An origin server &MAY; generate a Server field in its responses.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Server"/>
+  <x:ref>Server</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
+</sourcecode>
+<t>
+   The Server field value consists of one or more product identifiers, each
+   followed by zero or more comments (<xref target="comments"/>), which together
+   identify the origin server software and its significant subproducts.
+   By convention, the product identifiers are listed in decreasing order of
+   their significance for identifying the origin server software. Each product
+   identifier consists of a name and optional version, as defined in
+   <xref target="field.user-agent"/>.
+</t>
+<t>
+   Example:
+</t>
+<artwork type="example">
+  Server: CERN/3.0 libwww/2.17
+</artwork>
+<t>
+   An origin server &SHOULD-NOT; generate a Server field containing needlessly
+   fine-grained detail and &SHOULD; limit the addition of subproducts by third
+   parties. Overly long and detailed Server field values increase response
+   latency and potentially reveal internal implementation details that might
+   make it (slightly) easier for attackers to find and exploit known security
+   holes.
+</t>
+</section>
 </section>
 </section>
 
@@ -9308,260 +9558,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
   ",   ,"
 </artwork>
 </section>
-</section>
-
-<section title="Header Field Definitions" anchor="core.fields">
-
-<section title="Allow" anchor="field.allow">
-  <x:anchor-alias value="header.allow"/>
-  <iref primary="true" item="Fields" subitem="Allow" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Allow" x:for-anchor=""/><iref primary="true" item="Allow header field" x:for-anchor=""/>
-  <x:anchor-alias value="Allow"/>
-<t>
-   The "Allow" header field lists the set of methods advertised as
-   supported by the <x:ref>target resource</x:ref>. The purpose of this field
-   is strictly to inform the recipient of valid request methods associated
-   with the resource.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Allow"/>
-  <x:ref>Allow</x:ref> = #<x:ref>method</x:ref>
-</sourcecode>
-<t>
-   Example of use:
-</t>
-<artwork type="example">
-  Allow: GET, HEAD, PUT
-</artwork>
-<t>
-   The actual set of allowed methods is defined by the origin server at the
-   time of each request. An origin server &MUST; generate an Allow field in a
-   <x:ref>405 (Method Not Allowed)</x:ref> response and &MAY; do so in any
-   other response. An empty Allow field value indicates that the resource
-   allows no methods, which might occur in a 405 response if the resource has
-   been temporarily disabled by configuration.
-</t>
-<t>
-   A proxy &MUST-NOT; modify the Allow header field &mdash; it does not need
-   to understand all of the indicated methods in order to handle them
-   according to the generic message handling rules.
-</t>
-</section>
-
-<section title="Date" anchor="field.date">
-  <x:anchor-alias value="header.date"/>
-  <iref primary="true" item="Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Date header field" x:for-anchor=""/>
-  <x:anchor-alias value="Date"/>
-<t>
-   The "Date" header field represents the date and time at which
-   the message was originated, having the same semantics as the Origination
-   Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
-   The field value is an HTTP-date, as defined in <xref target="http.date"/>.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Date"/>
-  <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
-</sourcecode>
-<t>
-   An example is
-</t>
-<artwork type="example">
-  Date: Tue, 15 Nov 1994 08:12:31 GMT
-</artwork>
-<t>
-   When a Date header field is generated, the sender &SHOULD; generate its
-   field value as the best available approximation of the date and time of
-   message generation. In theory, the date ought to represent the moment just
-   before the payload is generated. In practice, the date can be generated at
-   any time during message origination.
-</t>
-<t>
-   An origin server &MUST-NOT; send a Date header field if it does not have a
-   clock capable of providing a reasonable approximation of the current
-   instance in Coordinated Universal Time.
-   An origin server &MAY; send a Date header field if the response is in the
-   <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
-   class of status codes.
-   An origin server &MUST; send a Date header field in all other cases.
-</t>
-<t>
-   A recipient with a clock that receives a response message without a Date
-   header field &MUST; record the time it was received and append a
-   corresponding Date header field to the message's header section if it is
-   cached or forwarded downstream.
-</t>
-<t>
-   A user agent &MAY; send a Date header field in a request, though generally
-   will not do so unless it is believed to convey useful information to the
-   server. For example, custom applications of HTTP might convey a Date if
-   the server is expected to adjust its interpretation of the user's request
-   based on differences between the user agent and server clocks.
-</t>
-</section>
-
-<section title="Location" anchor="field.location">
-  <x:anchor-alias value="header.location"/>
-  <iref primary="true" item="Fields" subitem="Location" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Location" x:for-anchor=""/><iref primary="true" item="Location header field" x:for-anchor=""/>
-  <x:anchor-alias value="Location"/>
-<t>
-   The "Location" header field is used in some responses to refer to a
-   specific resource in relation to the response. The type of relationship is
-   defined by the combination of request method and status code semantics.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Location"/>
-  <x:ref>Location</x:ref> = <x:ref>URI-reference</x:ref>
-</sourcecode>
-<t>
-   The field value consists of a single URI-reference. When it has the form
-   of a relative reference (<xref target="RFC3986" x:fmt="," x:sec="4.2"/>),
-   the final value is computed by resolving it against the target
-   URI (<xref target="RFC3986" x:fmt="," x:sec="5"/>).
-</t>
-<t>
-   For <x:ref>201 (Created)</x:ref> responses, the Location value refers to
-   the primary resource created by the request.
-   For <x:ref>3xx (Redirection)</x:ref> responses, the Location value refers
-   to the preferred target resource for automatically redirecting the request.
-</t>
-<t>
-   If the Location value provided in a <x:ref>3xx (Redirection)</x:ref>
-   response does not have a fragment component, a user agent &MUST; process the
-   redirection as if the value inherits the fragment component of the URI
-   reference used to generate the target URI (i.e., the redirection
-   inherits the original reference's fragment, if any).
-</t>
-<t>
-   For example, a GET request generated for the URI reference
-   "http://www.example.org/~tim" might result in a
-   <x:ref>303 (See Other)</x:ref> response containing the header field:
-</t>
-<artwork type="example">
-  Location: /People.html#tim
-</artwork>
-<t>
-   which suggests that the user agent redirect to
-   "http://www.example.org/People.html#tim"
-</t>
-<t>
-   Likewise, a GET request generated for the URI reference
-   "http://www.example.org/index.html#larry" might result in a
-   <x:ref>301 (Moved Permanently)</x:ref> response containing the header
-   field:
-</t>
-<artwork type="example">
-  Location: http://www.example.net/index.html
-</artwork>
-<t>
-   which suggests that the user agent redirect to
-   "http://www.example.net/index.html#larry", preserving the original fragment
-   identifier.
-</t>
-<t>
-   There are circumstances in which a fragment identifier in a Location
-   value would not be appropriate. For example, the Location header field in a
-   <x:ref>201 (Created)</x:ref> response is supposed to provide a URI that is
-   specific to the created resource.
-</t>
-<aside>
-  <t>
-    &Note; Some recipients attempt to recover from Location fields
-    that are not valid URI references. This specification does not mandate or
-    define such processing, but does allow it for the sake of robustness.
-    A Location field value cannot allow a list of members because the comma list separator
-    is a valid data character within a URI-reference. If an invalid message is sent with multiple
-    Location field instances, a recipient along the path might combine the field instances into
-    one value. Recovery of a valid Location field value from that situation is difficult and not
-    interoperable across implementations.
-  </t>
-</aside>
-<aside>
-  <t>
-    &Note; The <x:ref>Content-Location</x:ref> header field
-    (<xref target="field.content-location"/>) differs from Location in that the
-    Content-Location refers to the most specific resource corresponding to the
-    enclosed representation. It is therefore possible for a response to contain
-    both the Location and Content-Location header fields.
-  </t>
-</aside>
-</section>
-
-<section title="Retry-After" anchor="field.retry-after">
-  <x:anchor-alias value="header.retry-after"/>
-  <iref primary="true" item="Fields" subitem="Retry-After" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Retry-After" x:for-anchor=""/><iref primary="true" item="Retry-After header field" x:for-anchor=""/>
-  <x:anchor-alias value="Retry-After"/>
-<t>
-   Servers send the "Retry-After" header field to indicate how long the user
-   agent ought to wait before making a follow-up request. When sent with a
-   <x:ref>503 (Service Unavailable)</x:ref> response, Retry-After indicates
-   how long the service is expected to be unavailable to the client.
-   When sent with any <x:ref>3xx (Redirection)</x:ref> response, Retry-After
-   indicates the minimum time that the user agent is asked to wait before
-   issuing the redirected request.
-</t>
-<t>
-   The value of this field can be either an HTTP-date or a number
-   of seconds to delay after the response is received.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Retry-After"/>
-  <x:ref>Retry-After</x:ref> = <x:ref>HTTP-date</x:ref> / <x:ref>delay-seconds</x:ref>
-</sourcecode>
-<t anchor="rule.delay-seconds">
-  <x:anchor-alias value="delay-seconds"/>
-   A delay-seconds value is a non-negative decimal integer, representing time
-   in seconds.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="delay-seconds"/>
-  <x:ref>delay-seconds</x:ref>  = 1*<x:ref>DIGIT</x:ref>
-</sourcecode>
-<t>
-   Two examples of its use are
-</t>
-<artwork type="example">
-  Retry-After: Fri, 31 Dec 1999 23:59:59 GMT
-  Retry-After: 120
-</artwork>
-<t>
-   In the latter example, the delay is 2 minutes.
-</t>
-</section>
-
-<section title="Server" anchor="field.server">
-  <x:anchor-alias value="header.server"/>
-  <iref primary="true" item="Fields" subitem="Server" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Server" x:for-anchor=""/><iref primary="true" item="Server header field" x:for-anchor=""/>
-  <x:anchor-alias value="Server"/>
-<t>
-   The "Server" header field contains information about the
-   software used by the origin server to handle the request, which is often
-   used by clients to help identify the scope of reported interoperability
-   problems, to work around or tailor requests to avoid particular server
-   limitations, and for analytics regarding server or operating system use.
-   An origin server &MAY; generate a Server field in its responses.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Server"/>
-  <x:ref>Server</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
-</sourcecode>
-<t>
-   The Server field value consists of one or more product identifiers, each
-   followed by zero or more comments (<xref target="comments"/>), which together
-   identify the origin server software and its significant subproducts.
-   By convention, the product identifiers are listed in decreasing order of
-   their significance for identifying the origin server software. Each product
-   identifier consists of a name and optional version, as defined in
-   <xref target="field.user-agent"/>.
-</t>
-<t>
-   Example:
-</t>
-<artwork type="example">
-  Server: CERN/3.0 libwww/2.17
-</artwork>
-<t>
-   An origin server &SHOULD-NOT; generate a Server field containing needlessly
-   fine-grained detail and &SHOULD; limit the addition of subproducts by third
-   parties. Overly long and detailed Server field values increase response
-   latency and potentially reveal internal implementation details that might
-   make it (slightly) easier for attackers to find and exploit known security
-   holes.
-</t>
-</section>
-
 </section>
 </section>
 
