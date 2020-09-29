@@ -1450,6 +1450,387 @@ Content-Type: text/plain
 </section>
 </section>
 
+<section title="Message Routing" anchor="message.routing">
+<t>
+   HTTP is used in a wide variety of applications, ranging from
+   general-purpose computers to home appliances.  In some cases,
+   communication options are hard-coded in a client's configuration.
+   However, most HTTP clients rely on the same resource identification
+   mechanism and configuration techniques as general-purpose Web browsers.
+</t>
+<t>
+   HTTP request message routing is determined by each client based on the
+   target resource, the client's proxy configuration, and
+   establishment or reuse of an inbound connection.  The corresponding
+   response routing follows the same connection chain back to the client.
+</t>
+
+<section title="Routing Inbound" anchor="routing.inbound">
+<t>
+   Once the target URI and its origin are determined, a client decides whether
+   a network request is necessary to accomplish the desired semantics and,
+   if so, where that request is to be directed.
+</t>
+
+<section title="To a Cache" anchor="routing.cache">
+<t>
+   If the client has a cache <xref target="Caching"/> and the request can be
+   satisfied by it, then the request is
+   usually directed there first.
+</t>
+</section>
+
+<section title="To a Proxy" anchor="routing.proxy">
+<t>
+   If the request is not satisfied by a cache, then a typical client will
+   check its configuration to determine whether a proxy is to be used to
+   satisfy the request.  Proxy configuration is implementation-dependent,
+   but is often based on URI prefix matching, selective authority matching,
+   or both, and the proxy itself is usually identified by an "http" or
+   "https" URI.  If a proxy is applicable, the client connects inbound by
+   establishing (or reusing) a connection to that proxy.
+</t>
+</section>
+
+<section title="To the Origin" anchor="routing.origin">
+<t>
+   If no proxy is applicable, a typical client will invoke a handler routine,
+   usually specific to the target URI's scheme, to connect directly
+   to an origin for the target resource.  How that is accomplished is
+   dependent on the target URI scheme and defined by its associated
+   specification.
+</t>
+</section>
+</section>
+
+<section title="Response Correlation" anchor="response.correlation">
+<t>
+   A connection might be used for multiple request/response exchanges. The
+   mechanism used to correlate between request and response messages is
+   version dependent; some versions of HTTP use implicit ordering of
+   messages, while others use an explicit identifier.
+</t>
+<t>
+   Responses (both <x:ref>final</x:ref> and <x:ref>interim</x:ref>) can be sent
+   at any time after a
+   request is received, even if it is not yet complete. However, clients
+   (including intermediaries) might abandon a request if the response is not
+   forthcoming within a reasonable period of time.
+</t>
+</section>
+
+<section title="Message Forwarding" anchor="message.forwarding">
+<t>
+   As described in <xref target="intermediaries"/>, intermediaries can serve
+   a variety of roles in the processing of HTTP requests and responses.
+   Some intermediaries are used to improve performance or availability.
+   Others are used for access control or to filter content.
+   Since an HTTP stream has characteristics similar to a pipe-and-filter
+   architecture, there are no inherent limits to the extent an intermediary
+   can enhance (or interfere) with either direction of the stream.
+</t>
+<t>
+   An intermediary not acting as a tunnel &MUST; implement the
+   <x:ref>Connection</x:ref> header field, as specified in
+   <xref target="field.connection"/>, and exclude fields from being forwarded
+   that are only intended for the incoming connection.
+</t>
+<t>
+   An intermediary &MUST-NOT; forward a message to itself unless it is
+   protected from an infinite request loop. In general, an intermediary ought
+   to recognize its own server names, including any aliases, local variations,
+   or literal IP addresses, and respond to such requests directly.
+</t>
+<t>
+   An HTTP message can be parsed as a stream for incremental processing or
+   forwarding downstream.  However, recipients cannot rely on incremental
+   delivery of partial messages, since some implementations will buffer or
+   delay message forwarding for the sake of network efficiency, security
+   checks, or payload transformations.
+</t>
+
+<section title="Connection" anchor="field.connection">
+  <x:anchor-alias value="header.connection"/>
+  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
+  <iref primary="true" item="close" x:for-anchor=""/>
+  <x:anchor-alias value="Connection"/>
+  <x:anchor-alias value="connection-option"/>
+  <x:anchor-alias value="close"/>
+<t>
+   The "Connection" header field allows the sender to list desired
+   control options for the current connection.
+</t>
+<t>
+   When a field aside from Connection is used to supply control
+   information for or about the current connection, the sender &MUST; list
+   the corresponding field name within the Connection header field.
+   Note that some versions of HTTP prohibit the use of fields for such
+   information, and therefore do not allow the Connection field.
+</t>
+<t>
+   Intermediaries &MUST; parse a received Connection
+   header field before a message is forwarded and, for each
+   connection-option in this field, remove any header or trailer field(s) from
+   the message with the same name as the connection-option, and then
+   remove the Connection header field itself (or replace it with the
+   intermediary's own connection options for the forwarded message).
+</t>
+<t>
+   Hence, the Connection header field provides a declarative way of
+   distinguishing fields that are only intended for the
+   immediate recipient ("hop-by-hop") from those fields that are
+   intended for all recipients on the chain ("end-to-end"), enabling the
+   message to be self-descriptive and allowing future connection-specific
+   extensions to be deployed without fear that they will be blindly
+   forwarded by older intermediaries.
+</t>
+<t>
+   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
+   semantics are known to require removal before forwarding, whether or not they appear as a Connection
+   option, after applying those fields' semantics. This includes but is not limited to:
+</t>
+<ul>
+   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
+   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
+   <li>TE (<xref target="field.te"/>)</li>
+   <li>Trailer (<xref target="field.trailer"/>)</li>
+   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
+   <li>Upgrade (<xref target="field.upgrade"/>)</li>
+</ul>
+<t>
+   The Connection header field's value has the following grammar:
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
+  <x:ref>Connection</x:ref>        = #<x:ref>connection-option</x:ref>
+  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Connection options are case-insensitive.
+</t>
+<t>
+   A sender &MUST-NOT; send a connection option corresponding to a
+   field that is intended for all recipients of the payload.
+   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
+   connection option (<xref target="field.cache-control"/>).
+</t>
+<t>
+   The connection options do not always correspond to a field
+   present in the message, since a connection-specific field
+   might not be needed if there are no parameters associated with a
+   connection option. In contrast, a connection-specific field that
+   is received without a corresponding connection option usually indicates
+   that the field has been improperly forwarded by an intermediary and
+   ought to be ignored by the recipient.
+</t>
+<t>
+   When defining new connection options, specification authors ought to
+   document it as reserved field name and register that definition in the
+   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
+   target="field-name.registry"/>), to avoid collisions.
+</t>
+</section>
+
+<section title="Max-Forwards" anchor="field.max-forwards">
+  <x:anchor-alias value="header.max-forwards"/>
+  <iref primary="true" item="Fields" subitem="Max-Forwards" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Max-Forwards" x:for-anchor=""/><iref primary="true" item="Max-Forwards header field" x:for-anchor=""/>
+  <x:anchor-alias value="Max-Forwards"/>
+<t>
+   The "Max-Forwards" header field provides a mechanism with the
+   TRACE (<xref target="TRACE"/>) and OPTIONS (<xref target="OPTIONS"/>)
+   request methods to limit the number of times that the request is forwarded by
+   proxies. This can be useful when the client is attempting to
+   trace a request that appears to be failing or looping mid-chain.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Max-Forwards"/>
+  <x:ref>Max-Forwards</x:ref> = 1*<x:ref>DIGIT</x:ref>
+</sourcecode>
+<t>
+   The Max-Forwards value is a decimal integer indicating the remaining
+   number of times this request message can be forwarded.
+</t>
+<t>
+   Each intermediary that receives a TRACE or OPTIONS request containing a
+   Max-Forwards header field &MUST; check and update its value prior to
+   forwarding the request. If the received value is zero (0), the intermediary
+   &MUST-NOT; forward the request; instead, the intermediary &MUST; respond as
+   the final recipient. If the received Max-Forwards value is greater than
+   zero, the intermediary &MUST; generate an updated Max-Forwards field in the
+   forwarded message with a field value that is the lesser of a) the received
+   value decremented by one (1) or b) the recipient's maximum supported value
+   for Max-Forwards.
+</t>
+<t>
+   A recipient &MAY; ignore a Max-Forwards header field received with any
+   other request methods.
+</t>
+</section>
+
+<section title="Via" anchor="field.via">
+  <x:anchor-alias value="header.via"/>
+  <iref primary="true" item="Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Via header field" x:for-anchor=""/>
+  <x:anchor-alias value="pseudonym"/>
+  <x:anchor-alias value="received-by"/>
+  <x:anchor-alias value="received-protocol"/>
+  <x:anchor-alias value="Via"/>
+<t>
+   The "Via" header field indicates the presence of intermediate protocols and
+   recipients between the user agent and the server (on requests) or between
+   the origin server and the client (on responses), similar to the
+   "Received" header field in email
+   (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>).
+   Via can be used for tracking message forwards,
+   avoiding request loops, and identifying the protocol capabilities of
+   senders along the request/response chain.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
+  <x:ref>Via</x:ref> = #( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
+
+  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
+                    ; see <xref target="field.upgrade"/>
+  <x:ref>received-by</x:ref>       = <x:ref>pseudonym</x:ref> [ ":" <x:ref>port</x:ref> ]
+  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Each member of the Via field value represents a proxy or gateway that has
+   forwarded the message. Each intermediary appends its own information
+   about how the message was received, such that the end result is ordered
+   according to the sequence of forwarding recipients.
+</t>
+<t>
+   A proxy &MUST; send an appropriate Via header field, as described below, in
+   each message that it forwards.
+   An HTTP-to-HTTP gateway &MUST; send an appropriate Via header field in
+   each inbound request message and &MAY; send a Via header field in
+   forwarded response messages.
+</t>
+<t>
+   For each intermediary, the received-protocol indicates the protocol and
+   protocol version used by the upstream sender of the message. Hence, the
+   Via field value records the advertised protocol capabilities of the
+   request/response chain such that they remain visible to downstream
+   recipients; this can be useful for determining what backwards-incompatible
+   features might be safe to use in response, or within a later request, as
+   described in <xref target="protocol.version"/>. For brevity, the protocol-name
+   is omitted when the received protocol is HTTP.
+</t>
+<t>
+   The received-by portion is normally the host and optional
+   port number of a recipient server or client that subsequently forwarded the
+   message.
+   However, if the real host is considered to be sensitive information, a
+   sender &MAY; replace it with a pseudonym. If a port is not provided,
+   a recipient &MAY; interpret that as meaning it was received on the default
+   TCP port, if any, for the received-protocol.
+</t>
+<t>
+   A sender &MAY; generate comments to identify the
+   software of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
+   <x:ref>Server</x:ref> header fields. However, comments in Via
+   are optional, and a recipient &MAY; remove them prior to forwarding the
+   message.
+</t>
+<t>
+   For example, a request message could be sent from an HTTP/1.0 user
+   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
+   forward the request to a public proxy at p.example.net, which completes
+   the request by forwarding it to the origin server at www.example.com.
+   The request received by www.example.com would then have the following
+   Via header field:
+</t>
+<artwork type="example">
+  Via: 1.0 fred, 1.1 p.example.net
+</artwork>
+<t>
+   An intermediary used as a portal through a network firewall
+   &SHOULD-NOT; forward the names and ports of hosts within the firewall
+   region unless it is explicitly enabled to do so. If not enabled, such an
+   intermediary &SHOULD; replace each received-by host of any host behind the
+   firewall by an appropriate pseudonym for that host.
+</t>
+<t>
+   An intermediary &MAY; combine an ordered subsequence of Via header
+   field list members into a single member if the entries have identical
+   received-protocol values. For example,
+</t>
+<artwork type="example">
+  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
+</artwork>
+<t>
+  could be collapsed to
+</t>
+<artwork type="example">
+  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
+</artwork>
+<t>
+   A sender &SHOULD-NOT; combine multiple list members unless they are all
+   under the same organizational control and the hosts have already been
+   replaced by pseudonyms. A sender &MUST-NOT; combine members that
+   have different received-protocol values.
+</t>
+</section>
+</section>
+
+<section title="Transformations" anchor="message.transformations">
+   <iref primary="true" item="transforming proxy"/>
+   <iref primary="true" item="non-transforming proxy"/>
+<t>
+   Some intermediaries include features for transforming messages and their
+   payloads. A proxy might, for example, convert between image formats in
+   order to save cache space or to reduce the amount of traffic on a slow
+   link. However, operational problems might occur when these transformations
+   are applied to payloads intended for critical applications, such as medical
+   imaging or scientific data analysis, particularly when integrity checks or
+   digital signatures are used to ensure that the payload received is
+   identical to the original.
+</t>
+<t>
+   An HTTP-to-HTTP proxy is called a "<x:dfn>transforming proxy</x:dfn>"
+   if it is designed or configured to modify messages in a semantically
+   meaningful way (i.e., modifications, beyond those required by normal
+   HTTP processing, that change the message in a way that would be
+   significant to the original sender or potentially significant to
+   downstream recipients).  For example, a transforming proxy might be
+   acting as a shared annotation server (modifying responses to include
+   references to a local annotation database), a malware filter, a
+   format transcoder, or a privacy filter. Such transformations are presumed
+   to be desired by whichever client (or client organization) selected the
+   proxy.
+</t>
+<t>
+   If a proxy receives a target URI with a host name that is not a
+   fully qualified domain name, it &MAY; add its own domain to the host name
+   it received when forwarding the request.  A proxy &MUST-NOT; change the
+   host name if the target URI contains a fully qualified domain name.
+</t>
+<t>
+   A proxy &MUST-NOT; modify the "absolute-path" and "query" parts of the
+   received target URI when forwarding it to the next inbound server,
+   except as noted above to replace an empty path with "/" or "*".
+</t>
+<t>
+   A proxy &MUST-NOT; transform the payload (<xref target="payload"/>) of a message that
+   contains a no-transform cache-control response directive (<xref target="field.cache-control"/>).
+   Note that this does not include changes to the message body that do not affect
+   the payload, such as transfer codings (<xref target="transfer.codings"/>).
+</t>
+<t>
+   A proxy &MAY; transform the payload of a message
+   that does not contain a no-transform cache-control directive.
+   A proxy that transforms the payload of a <x:ref>200 (OK)</x:ref> response
+   can inform downstream recipients that a transformation has been
+   applied by changing the response status code to
+   <x:ref>203 (Non-Authoritative Information)</x:ref> (<xref target="status.203"/>).
+</t>
+<t>
+   A proxy &SHOULD-NOT; modify header fields that provide information about
+   the endpoints of the communication chain, the resource state, or the
+   <x:ref>selected representation</x:ref> (other than the payload) unless the field's
+   definition specifically allows such modification or the modification is
+   deemed necessary for privacy or security.
+</t>
+</section>
+</section>
+
 <section title="Representations" anchor="representations">
    <iref primary="true" item="representation"/>
    <x:anchor-alias value="representation"/>
@@ -3272,387 +3653,6 @@ Host: www.example.org
    trailers.
 </t>
 </section>
-</section>
-</section>
-
-<section title="Message Routing" anchor="message.routing">
-<t>
-   HTTP is used in a wide variety of applications, ranging from
-   general-purpose computers to home appliances.  In some cases,
-   communication options are hard-coded in a client's configuration.
-   However, most HTTP clients rely on the same resource identification
-   mechanism and configuration techniques as general-purpose Web browsers.
-</t>
-<t>
-   HTTP request message routing is determined by each client based on the
-   target resource, the client's proxy configuration, and
-   establishment or reuse of an inbound connection.  The corresponding
-   response routing follows the same connection chain back to the client.
-</t>
-
-<section title="Routing Inbound" anchor="routing.inbound">
-<t>
-   Once the target URI and its origin are determined, a client decides whether
-   a network request is necessary to accomplish the desired semantics and,
-   if so, where that request is to be directed.
-</t>
-
-<section title="To a Cache" anchor="routing.cache">
-<t>
-   If the client has a cache <xref target="Caching"/> and the request can be
-   satisfied by it, then the request is
-   usually directed there first.
-</t>
-</section>
-
-<section title="To a Proxy" anchor="routing.proxy">
-<t>
-   If the request is not satisfied by a cache, then a typical client will
-   check its configuration to determine whether a proxy is to be used to
-   satisfy the request.  Proxy configuration is implementation-dependent,
-   but is often based on URI prefix matching, selective authority matching,
-   or both, and the proxy itself is usually identified by an "http" or
-   "https" URI.  If a proxy is applicable, the client connects inbound by
-   establishing (or reusing) a connection to that proxy.
-</t>
-</section>
-
-<section title="To the Origin" anchor="routing.origin">
-<t>
-   If no proxy is applicable, a typical client will invoke a handler routine,
-   usually specific to the target URI's scheme, to connect directly
-   to an origin for the target resource.  How that is accomplished is
-   dependent on the target URI scheme and defined by its associated
-   specification.
-</t>
-</section>
-</section>
-
-<section title="Response Correlation" anchor="response.correlation">
-<t>
-   A connection might be used for multiple request/response exchanges. The
-   mechanism used to correlate between request and response messages is
-   version dependent; some versions of HTTP use implicit ordering of
-   messages, while others use an explicit identifier.
-</t>
-<t>
-   Responses (both <x:ref>final</x:ref> and <x:ref>interim</x:ref>) can be sent
-   at any time after a
-   request is received, even if it is not yet complete. However, clients
-   (including intermediaries) might abandon a request if the response is not
-   forthcoming within a reasonable period of time.
-</t>
-</section>
-
-<section title="Message Forwarding" anchor="message.forwarding">
-<t>
-   As described in <xref target="intermediaries"/>, intermediaries can serve
-   a variety of roles in the processing of HTTP requests and responses.
-   Some intermediaries are used to improve performance or availability.
-   Others are used for access control or to filter content.
-   Since an HTTP stream has characteristics similar to a pipe-and-filter
-   architecture, there are no inherent limits to the extent an intermediary
-   can enhance (or interfere) with either direction of the stream.
-</t>
-<t>
-   An intermediary not acting as a tunnel &MUST; implement the
-   <x:ref>Connection</x:ref> header field, as specified in
-   <xref target="field.connection"/>, and exclude fields from being forwarded
-   that are only intended for the incoming connection.
-</t>
-<t>
-   An intermediary &MUST-NOT; forward a message to itself unless it is
-   protected from an infinite request loop. In general, an intermediary ought
-   to recognize its own server names, including any aliases, local variations,
-   or literal IP addresses, and respond to such requests directly.
-</t>
-<t>
-   An HTTP message can be parsed as a stream for incremental processing or
-   forwarding downstream.  However, recipients cannot rely on incremental
-   delivery of partial messages, since some implementations will buffer or
-   delay message forwarding for the sake of network efficiency, security
-   checks, or payload transformations.
-</t>
-
-<section title="Connection" anchor="field.connection">
-  <x:anchor-alias value="header.connection"/>
-  <iref primary="true" item="Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Connection" x:for-anchor=""/><iref primary="true" item="Connection header field" x:for-anchor=""/>
-  <iref primary="true" item="close" x:for-anchor=""/>
-  <x:anchor-alias value="Connection"/>
-  <x:anchor-alias value="connection-option"/>
-  <x:anchor-alias value="close"/>
-<t>
-   The "Connection" header field allows the sender to list desired
-   control options for the current connection.
-</t>
-<t>
-   When a field aside from Connection is used to supply control
-   information for or about the current connection, the sender &MUST; list
-   the corresponding field name within the Connection header field.
-   Note that some versions of HTTP prohibit the use of fields for such
-   information, and therefore do not allow the Connection field.
-</t>
-<t>
-   Intermediaries &MUST; parse a received Connection
-   header field before a message is forwarded and, for each
-   connection-option in this field, remove any header or trailer field(s) from
-   the message with the same name as the connection-option, and then
-   remove the Connection header field itself (or replace it with the
-   intermediary's own connection options for the forwarded message).
-</t>
-<t>
-   Hence, the Connection header field provides a declarative way of
-   distinguishing fields that are only intended for the
-   immediate recipient ("hop-by-hop") from those fields that are
-   intended for all recipients on the chain ("end-to-end"), enabling the
-   message to be self-descriptive and allowing future connection-specific
-   extensions to be deployed without fear that they will be blindly
-   forwarded by older intermediaries.
-</t>
-<t>
-   Furthermore, intermediaries &SHOULD; remove or replace field(s) whose
-   semantics are known to require removal before forwarding, whether or not they appear as a Connection
-   option, after applying those fields' semantics. This includes but is not limited to:
-</t>
-<ul>
-   <li>Proxy-Connection (<xref target="compatibility.with.http.1.0.persistent.connections"/>)</li>
-   <li>Keep-Alive (<xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/>)</li>
-   <li>TE (<xref target="field.te"/>)</li>
-   <li>Trailer (<xref target="field.trailer"/>)</li>
-   <li>Transfer-Encoding (<xref target="field.transfer-encoding"/>)</li>
-   <li>Upgrade (<xref target="field.upgrade"/>)</li>
-</ul>
-<t>
-   The Connection header field's value has the following grammar:
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Connection"/><iref primary="true" item="Grammar" subitem="connection-option"/>
-  <x:ref>Connection</x:ref>        = #<x:ref>connection-option</x:ref>
-  <x:ref>connection-option</x:ref> = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Connection options are case-insensitive.
-</t>
-<t>
-   A sender &MUST-NOT; send a connection option corresponding to a
-   field that is intended for all recipients of the payload.
-   For example, <x:ref>Cache-Control</x:ref> is never appropriate as a
-   connection option (<xref target="field.cache-control"/>).
-</t>
-<t>
-   The connection options do not always correspond to a field
-   present in the message, since a connection-specific field
-   might not be needed if there are no parameters associated with a
-   connection option. In contrast, a connection-specific field that
-   is received without a corresponding connection option usually indicates
-   that the field has been improperly forwarded by an intermediary and
-   ought to be ignored by the recipient.
-</t>
-<t>
-   When defining new connection options, specification authors ought to
-   document it as reserved field name and register that definition in the
-   Hypertext Transfer Protocol (HTTP) Field Name Registry (<xref
-   target="field-name.registry"/>), to avoid collisions.
-</t>
-</section>
-
-<section title="Max-Forwards" anchor="field.max-forwards">
-  <x:anchor-alias value="header.max-forwards"/>
-  <iref primary="true" item="Fields" subitem="Max-Forwards" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Max-Forwards" x:for-anchor=""/><iref primary="true" item="Max-Forwards header field" x:for-anchor=""/>
-  <x:anchor-alias value="Max-Forwards"/>
-<t>
-   The "Max-Forwards" header field provides a mechanism with the
-   TRACE (<xref target="TRACE"/>) and OPTIONS (<xref target="OPTIONS"/>)
-   request methods to limit the number of times that the request is forwarded by
-   proxies. This can be useful when the client is attempting to
-   trace a request that appears to be failing or looping mid-chain.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Max-Forwards"/>
-  <x:ref>Max-Forwards</x:ref> = 1*<x:ref>DIGIT</x:ref>
-</sourcecode>
-<t>
-   The Max-Forwards value is a decimal integer indicating the remaining
-   number of times this request message can be forwarded.
-</t>
-<t>
-   Each intermediary that receives a TRACE or OPTIONS request containing a
-   Max-Forwards header field &MUST; check and update its value prior to
-   forwarding the request. If the received value is zero (0), the intermediary
-   &MUST-NOT; forward the request; instead, the intermediary &MUST; respond as
-   the final recipient. If the received Max-Forwards value is greater than
-   zero, the intermediary &MUST; generate an updated Max-Forwards field in the
-   forwarded message with a field value that is the lesser of a) the received
-   value decremented by one (1) or b) the recipient's maximum supported value
-   for Max-Forwards.
-</t>
-<t>
-   A recipient &MAY; ignore a Max-Forwards header field received with any
-   other request methods.
-</t>
-</section>
-
-<section title="Via" anchor="field.via">
-  <x:anchor-alias value="header.via"/>
-  <iref primary="true" item="Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Via" x:for-anchor=""/><iref primary="true" item="Via header field" x:for-anchor=""/>
-  <x:anchor-alias value="pseudonym"/>
-  <x:anchor-alias value="received-by"/>
-  <x:anchor-alias value="received-protocol"/>
-  <x:anchor-alias value="Via"/>
-<t>
-   The "Via" header field indicates the presence of intermediate protocols and
-   recipients between the user agent and the server (on requests) or between
-   the origin server and the client (on responses), similar to the
-   "Received" header field in email
-   (<xref target="RFC5322" x:fmt="of" x:sec="3.6.7"/>).
-   Via can be used for tracking message forwards,
-   avoiding request loops, and identifying the protocol capabilities of
-   senders along the request/response chain.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Via"/><iref primary="true" item="Grammar" subitem="received-protocol"/><iref primary="true" item="Grammar" subitem="protocol-name"/><iref primary="true" item="Grammar" subitem="protocol-version"/><iref primary="true" item="Grammar" subitem="received-by"/><iref primary="true" item="Grammar" subitem="pseudonym"/>
-  <x:ref>Via</x:ref> = #( <x:ref>received-protocol</x:ref> <x:ref>RWS</x:ref> <x:ref>received-by</x:ref> [ <x:ref>RWS</x:ref> <x:ref>comment</x:ref> ] )
-
-  <x:ref>received-protocol</x:ref> = [ <x:ref>protocol-name</x:ref> "/" ] <x:ref>protocol-version</x:ref>
-                    ; see <xref target="field.upgrade"/>
-  <x:ref>received-by</x:ref>       = <x:ref>pseudonym</x:ref> [ ":" <x:ref>port</x:ref> ]
-  <x:ref>pseudonym</x:ref>         = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Each member of the Via field value represents a proxy or gateway that has
-   forwarded the message. Each intermediary appends its own information
-   about how the message was received, such that the end result is ordered
-   according to the sequence of forwarding recipients.
-</t>
-<t>
-   A proxy &MUST; send an appropriate Via header field, as described below, in
-   each message that it forwards.
-   An HTTP-to-HTTP gateway &MUST; send an appropriate Via header field in
-   each inbound request message and &MAY; send a Via header field in
-   forwarded response messages.
-</t>
-<t>
-   For each intermediary, the received-protocol indicates the protocol and
-   protocol version used by the upstream sender of the message. Hence, the
-   Via field value records the advertised protocol capabilities of the
-   request/response chain such that they remain visible to downstream
-   recipients; this can be useful for determining what backwards-incompatible
-   features might be safe to use in response, or within a later request, as
-   described in <xref target="protocol.version"/>. For brevity, the protocol-name
-   is omitted when the received protocol is HTTP.
-</t>
-<t>
-   The received-by portion is normally the host and optional
-   port number of a recipient server or client that subsequently forwarded the
-   message.
-   However, if the real host is considered to be sensitive information, a
-   sender &MAY; replace it with a pseudonym. If a port is not provided,
-   a recipient &MAY; interpret that as meaning it was received on the default
-   TCP port, if any, for the received-protocol.
-</t>
-<t>
-   A sender &MAY; generate comments to identify the
-   software of each recipient, analogous to the <x:ref>User-Agent</x:ref> and
-   <x:ref>Server</x:ref> header fields. However, comments in Via
-   are optional, and a recipient &MAY; remove them prior to forwarding the
-   message.
-</t>
-<t>
-   For example, a request message could be sent from an HTTP/1.0 user
-   agent to an internal proxy code-named "fred", which uses HTTP/1.1 to
-   forward the request to a public proxy at p.example.net, which completes
-   the request by forwarding it to the origin server at www.example.com.
-   The request received by www.example.com would then have the following
-   Via header field:
-</t>
-<artwork type="example">
-  Via: 1.0 fred, 1.1 p.example.net
-</artwork>
-<t>
-   An intermediary used as a portal through a network firewall
-   &SHOULD-NOT; forward the names and ports of hosts within the firewall
-   region unless it is explicitly enabled to do so. If not enabled, such an
-   intermediary &SHOULD; replace each received-by host of any host behind the
-   firewall by an appropriate pseudonym for that host.
-</t>
-<t>
-   An intermediary &MAY; combine an ordered subsequence of Via header
-   field list members into a single member if the entries have identical
-   received-protocol values. For example,
-</t>
-<artwork type="example">
-  Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy
-</artwork>
-<t>
-  could be collapsed to
-</t>
-<artwork type="example">
-  Via: 1.0 ricky, 1.1 mertz, 1.0 lucy
-</artwork>
-<t>
-   A sender &SHOULD-NOT; combine multiple list members unless they are all
-   under the same organizational control and the hosts have already been
-   replaced by pseudonyms. A sender &MUST-NOT; combine members that
-   have different received-protocol values.
-</t>
-</section>
-</section>
-
-<section title="Transformations" anchor="message.transformations">
-   <iref primary="true" item="transforming proxy"/>
-   <iref primary="true" item="non-transforming proxy"/>
-<t>
-   Some intermediaries include features for transforming messages and their
-   payloads. A proxy might, for example, convert between image formats in
-   order to save cache space or to reduce the amount of traffic on a slow
-   link. However, operational problems might occur when these transformations
-   are applied to payloads intended for critical applications, such as medical
-   imaging or scientific data analysis, particularly when integrity checks or
-   digital signatures are used to ensure that the payload received is
-   identical to the original.
-</t>
-<t>
-   An HTTP-to-HTTP proxy is called a "<x:dfn>transforming proxy</x:dfn>"
-   if it is designed or configured to modify messages in a semantically
-   meaningful way (i.e., modifications, beyond those required by normal
-   HTTP processing, that change the message in a way that would be
-   significant to the original sender or potentially significant to
-   downstream recipients).  For example, a transforming proxy might be
-   acting as a shared annotation server (modifying responses to include
-   references to a local annotation database), a malware filter, a
-   format transcoder, or a privacy filter. Such transformations are presumed
-   to be desired by whichever client (or client organization) selected the
-   proxy.
-</t>
-<t>
-   If a proxy receives a target URI with a host name that is not a
-   fully qualified domain name, it &MAY; add its own domain to the host name
-   it received when forwarding the request.  A proxy &MUST-NOT; change the
-   host name if the target URI contains a fully qualified domain name.
-</t>
-<t>
-   A proxy &MUST-NOT; modify the "absolute-path" and "query" parts of the
-   received target URI when forwarding it to the next inbound server,
-   except as noted above to replace an empty path with "/" or "*".
-</t>
-<t>
-   A proxy &MUST-NOT; transform the payload (<xref target="payload"/>) of a message that
-   contains a no-transform cache-control response directive (<xref target="field.cache-control"/>).
-   Note that this does not include changes to the message body that do not affect
-   the payload, such as transfer codings (<xref target="transfer.codings"/>).
-</t>
-<t>
-   A proxy &MAY; transform the payload of a message
-   that does not contain a no-transform cache-control directive.
-   A proxy that transforms the payload of a <x:ref>200 (OK)</x:ref> response
-   can inform downstream recipients that a transformation has been
-   applied by changing the response status code to
-   <x:ref>203 (Non-Authoritative Information)</x:ref> (<xref target="status.203"/>).
-</t>
-<t>
-   A proxy &SHOULD-NOT; modify header fields that provide information about
-   the endpoints of the communication chain, the resource state, or the
-   <x:ref>selected representation</x:ref> (other than the payload) unless the field's
-   definition specifically allows such modification or the modification is
-   deemed necessary for privacy or security.
-</t>
 </section>
 </section>
 
