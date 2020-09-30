@@ -19,8 +19,8 @@
         </tr>
       </thead>
       <tbody>
-        <xsl:apply-templates select="//section[iref[contains(@item,' method') and @primary='true']]">
-          <xsl:sort select="iref[contains(@item,' method') and @primary='true']/@item"/>
+        <xsl:apply-templates select="//*[iref[@item='Method' and @primary='true']]">
+          <xsl:sort select="iref[@item='Method' and @primary='true']/@subitem"/>
         </xsl:apply-templates>
       </tbody>
     </table>
@@ -82,9 +82,8 @@
 <xsl:template match="tbody/text()" mode="tostring"/>
 <xsl:template match="td[xref]/text()" mode="tostring"/>
 
-<xsl:template match="section">
-  <xsl:variable name="t" select="iref[contains(@item,' method')]/@item"/>
-  <xsl:variable name="text" select="substring-before($t,' method')"/>
+<xsl:template match="*[iref[@item='Method' and @primary='true']]">
+  <xsl:variable name="text" select="iref[@item='Method']/@subitem"/>
 
   <xsl:variable name="safe" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
     <xsl:choose>
@@ -105,7 +104,7 @@
     <td><xsl:value-of select="$text"/></td>
     <td><xsl:value-of select="$safe"/></td>
     <td><xsl:value-of select="$idempotent"/></td>
-    <td><xref target="{@anchor}" format="counter"/></td>
+    <td><xref target="{ancestor-or-self::section[1]/@anchor}" format="counter"/></td>
   </tr>
 </xsl:template>
 
