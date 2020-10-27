@@ -7,6 +7,10 @@
 
 <xsl:output indent="yes" omit-xml-declaration="yes"/>
 
+<!-- character translation tables -->
+<xsl:variable name="tr-from" select="'abcdefghijklmnopqrstuvwxyz*'" />
+<xsl:variable name="tr-to" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ~'" />
+
 <xsl:template match="/">
   <xsl:variable name="table">
     <table anchor="iana.method.registration.table">
@@ -20,7 +24,7 @@
       </thead>
       <tbody>
         <xsl:apply-templates select="//*[iref[@item='Method' and @primary='true']]">
-          <xsl:sort select="iref[@item='Method' and @primary='true']/@subitem"/>
+          <xsl:sort select="translate(iref[@item='Method' and @primary='true']/@subitem,$tr-from,$tr-to)"/>
         </xsl:apply-templates>
       </tbody>
     </table>
