@@ -8,8 +8,8 @@
 <xsl:output indent="yes" omit-xml-declaration="yes"/>
 
 <!-- character translation tables -->
-<xsl:variable name="lcase" select="'abcdefghijklmnopqrstuvwxyz'" />
-<xsl:variable name="ucase" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'" />
+<xsl:variable name="tr-from" select="'abcdefghijklmnopqrstuvwxyz*'" />
+<xsl:variable name="tr-to" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ~'" />
 
 <xsl:template match="/">
   <xsl:variable name="table">
@@ -19,12 +19,13 @@
           <th>Field Name</th>
           <th>Status</th>
           <th>Ref.</th>
+          <th>Comments</th>
         </tr>
       </thead>
       <xsl:text>&#10;</xsl:text>
       <tbody>
-        <xsl:apply-templates select="//section[iref[@item='Fields' and @primary='true']]">
-          <xsl:sort select="translate(iref[@item='Fields' and @primary='true']/@subitem,$ucase,$lcase)"/>
+        <xsl:apply-templates select="//*[iref[@item='Fields' and @primary='true']]">
+          <xsl:sort select="translate(iref[@item='Fields' and @primary='true']/@subitem,$tr-from,$tr-to)"/>
         </xsl:apply-templates>
       </tbody>
     </table>
@@ -86,20 +87,36 @@
 <xsl:template match="tbody/text()" mode="tostring"/>
 <xsl:template match="td[xref]/text()" mode="tostring"/>
 
-<xsl:template match="section">
+<xsl:template match="*[iref[@item='Fields' and @primary='true']]">
   <xsl:variable name="status" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
     <xsl:choose>
       <xsl:when test="rdf:Description/p2:status"><xsl:value-of select="rdf:Description/p2:status"/></xsl:when>
       <xsl:otherwise>standard</xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
+  <xsl:variable name="comments" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
+    <xsl:choose>
+      <xsl:when test="rdf:Description/p2:comments"><xsl:value-of select="rdf:Description/p2:comments"/></xsl:when>
+      <xsl:otherwise></xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  <xsl:variable name="ref" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
+    <xsl:choose>
+      <xsl:when test="rdf:Description/p2:ref"><xsl:value-of select="rdf:Description/p2:ref"/></xsl:when>
+      <xsl:otherwise><xsl:value-of select="ancestor-or-self::section[1]/@anchor"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  <xsl:variable name="hide-in-iana-table" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#" select="rdf:Description/p2:hide-in-iana-table='yes'"/>
   <xsl:variable name="t" select="iref[@item='Fields']/@subitem"/>
-  <xsl:text>&#10;</xsl:text>
-  <tr>
-    <td><xsl:value-of select="$t"/></td>
-    <td><xsl:value-of select="$status"/></td>
-    <td><xref target="{@anchor}" format="counter"/></td>
-  </tr>  
+  <xsl:if test="not($hide-in-iana-table)">
+    <xsl:text>&#10;</xsl:text>
+    <tr>
+      <td><xsl:value-of select="$t"/></td>
+      <td><xsl:value-of select="$status"/></td>
+      <td><xref target="{$ref}" format="counter"/></td>
+      <td><xsl:value-of select="$comments"/></td>
+    </tr>
+  </xsl:if>
 </xsl:template>
 
 </xsl:transform>

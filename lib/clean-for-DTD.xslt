@@ -2318,15 +2318,36 @@
 </xsl:template>
 
 <!-- Display names for references -->
-<xsl:template match="displayreference" mode="cleanup"/>
+<xsl:template match="displayreference" mode="cleanup">
+  <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3">
+    <xsl:copy>
+      <xsl:apply-templates select="@*|node()" mode="cleanup"/>
+    </xsl:copy>
+  </xsl:if>
+</xsl:template>
+
 <xsl:template match="reference/@anchor[.=/rfc/back/displayreference/@target]" mode="cleanup">
   <xsl:attribute name="anchor">
-    <xsl:call-template name="generate-ref-name"/>
+    <xsl:choose>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+        <xsl:value-of select="."/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="generate-ref-name"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:attribute>
 </xsl:template>
 <xsl:template match="xref/@target[.=/rfc/back/displayreference/@target]" mode="cleanup">
   <xsl:attribute name="target">
-    <xsl:call-template name="generate-ref-name"/>
+    <xsl:choose>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+        <xsl:value-of select="."/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="generate-ref-name"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:attribute>
 </xsl:template>
 

@@ -393,7 +393,7 @@
 
 <section title="Storing Header and Trailer Fields" anchor="storing.fields">
 <t>
-   Caches &MUST; include all received header fields &mdash; including
+   Caches &MUST; include all received response header fields &mdash; including
    unrecognised ones &mdash; when storing a response; this assures that new HTTP
    header fields can be successfully deployed. However, the following exceptions
    are made:
@@ -681,7 +681,7 @@
 </t>
 <ul>
    <li>Although all date formats are specified to be case-sensitive, 
-      a cache recipient &SHOULD; match day, week, and time-zone names
+      a cache recipient &SHOULD; match the field value
       case-insensitively.</li>
    <li>If a cache recipient's internal implementation of time has less
       resolution than the value of an HTTP-date, the recipient &MUST;
@@ -690,7 +690,7 @@
    <li>A cache recipient &MUST-NOT; allow local time zones to influence the
       calculation or comparison of an age or expiration time.</li>
    <li>A cache recipient &SHOULD; consider a date with a zone abbreviation
-      other than GMT or UTC to be invalid for calculating expiration.</li>
+      other than "GMT" to be invalid for calculating expiration.</li>
 </ul>
 <t>
    Note that freshness applies only to cache operation; it cannot be used to
@@ -723,9 +723,12 @@
 </t>
 <t>
    When there is more than one value present for a given directive (e.g., two
-   <x:ref>Expires</x:ref> header fields, multiple Cache-Control: max-age
-   directives), the directive's value is considered invalid. Caches are
-   encouraged to consider responses that have invalid freshness information to
+   <x:ref>Expires</x:ref> header field lines or multiple Cache-Control: max-age
+   directives), either the first occurrence should be used, or the response should
+   be considered stale. If directives conflict (e.g.,
+   both max-age and no-cache are present), the most restrictive directive should
+   be honored. Caches are encouraged to consider responses that have
+   invalid freshness information (e.g., a max-age directive with non-integer content) to
    be stale.
 </t>
 </section>
@@ -866,7 +869,7 @@
 </t>
 <t>
    A cache &MUST-NOT; generate a stale response if it is prohibited by an
-   explicit in-protocol directive (e.g., by a "no-store" or "no-cache" cache
+   explicit in-protocol directive (e.g., by a "no-cache" cache
    directive, a "must-revalidate" cache-response-directive, or an applicable
    "s-maxage" or "proxy-revalidate" cache-response-directive; see <xref
    target="cache-response-directive"/>).
@@ -1026,14 +1029,15 @@
      A full response (i.e., one with a payload body) indicates that none
      of the stored responses nominated in the conditional request is
      suitable. Instead, the cache &MUST; use the full response to
-     satisfy the request and &MAY; replace the stored response(s).
+     satisfy the request. The cache &MAY; store such a full response,
+     subject to its constraints (see <xref target="response.cacheability"/>).
    </li>
    <li>
      However, if a cache receives a <x:ref>5xx (Server Error)</x:ref>
      response while attempting to validate a response, it can either
      forward this response to the requesting client, or act as if the
      server failed to respond. In the latter case, the cache &MAY; send a
-     previously stored response (see <xref
+     previously stored response, subject to its constraints on doing so (see <xref
      target="serving.stale.responses" />).
    </li>
 </ul>
@@ -1061,16 +1065,16 @@
      cache &MUST-NOT; use the new response to update any stored responses.
    </li>
    <li>
-     If the new response contains a weak validator and that validator
-     corresponds to one of the cache's stored responses, then the most
+     If the new response contains a <x:dfn>weak validator</x:dfn> and that
+     validator corresponds to one of the cache's stored responses, then the most
      recent of those matching stored responses is identified for update.
    </li>
    <li>
      If the new response does not include any form of validator (such as 
-     where a client generates an If-Modified-Since request from a
-     source other than the Last-Modified response header field), and there is
-     only one stored response, and that stored response also lacks a
-     validator, then that stored response is identified for update.
+     where a client generates an <x:ref>If-Modified-Since</x:ref> request from
+     a source other than the <x:ref>Last-Modified</x:ref> response header
+     field), and there is only one stored response, and that stored response
+     also lacks a validator, then that stored response is identified for update.
    </li>
 </ul>
 <t>
@@ -1132,15 +1136,6 @@
    Because unsafe request methods (<xref target="safe.methods"/>) such as PUT, POST or DELETE
    have the potential for changing state on the origin server, intervening
    caches are required to invalidate stored responses to keep their contents up to date.
-   <x:dfn>Invalidate</x:dfn> means that the cache will either remove all
-   stored responses whose target URI matches the given URI, or will mark them
-   as "invalid" and in need of a mandatory validation before they can be sent
-   in response to a subsequent request.
-</t>
-<t>
-   Note that this does not guarantee that all appropriate responses are
-   invalidated globally; a state-changing request would only invalidate
-   responses in the caches it travels through.
 </t>
 <t>
    A cache &MUST; invalidate the target URI
@@ -1161,8 +1156,19 @@
    to a request with a method whose safety is unknown.
 </t>
 <t>
-   Here, a "non-error response" is one with a <x:ref>2xx (Successful)</x:ref>
+   <x:dfn>Invalidate</x:dfn> means that the cache will either remove all
+   stored responses whose target URI matches the given URI, or will mark them
+   as "invalid" and in need of a mandatory validation before they can be sent
+   in response to a subsequent request.
+</t>
+<t>
+   A "non-error response" is one with a <x:ref>2xx (Successful)</x:ref>
    or <x:ref>3xx (Redirection)</x:ref> status code.
+</t>
+<t>
+   Note that this does not guarantee that all appropriate responses are
+   invalidated globally; a state-changing request would only invalidate
+   responses in the caches it travels through.
 </t>
 </section>
 </section>
@@ -1182,6 +1188,7 @@
          <th>Field Name</th>
          <th>Status</th>
          <th>Ref.</th>
+         <th>Comments</th>
       </tr>
    </thead>
    <tbody>
@@ -1191,6 +1198,7 @@
          <td>
             <xref target="field.age" format="counter"/>
          </td>
+         <td/>
       </tr>
       <tr>
          <td>Cache-Control</td>
@@ -1198,6 +1206,7 @@
          <td>
             <xref target="field.cache-control" format="counter"/>
          </td>
+         <td/>
       </tr>
       <tr>
          <td>Expires</td>
@@ -1205,6 +1214,7 @@
          <td>
             <xref target="field.expires" format="counter"/>
          </td>
+         <td/>
       </tr>
       <tr>
          <td>Pragma</td>
@@ -1212,6 +1222,7 @@
          <td>
             <xref target="field.pragma" format="counter"/>
          </td>
+         <td/>
       </tr>
       <tr>
          <td>Warning</td>
@@ -1219,6 +1230,7 @@
          <td>
             <xref target="field.warning" format="counter"/>
          </td>
+         <td/>
       </tr>
    </tbody>
 </table>
@@ -1241,9 +1253,17 @@
 </sourcecode>
 <t>
    The Age field value is a non-negative integer, representing time in seconds
-   (see <xref target="delta-seconds"/>). A cache &SHOULD; consider a response
-   to be stale if an Age header field is present and its value is invalid (i.e.,
-   contains a list or something other than a non-negative integer).
+   (see <xref target="delta-seconds"/>).
+</t>
+<t>
+   Although it is defined as a singleton header field, a cache encountering a
+   message with multiple Age field lines &SHOULD; use the
+   first field line, discarding subsequent ones.
+</t>
+<t>
+   If the field value (after discarding additional lines, as per above) is invalid
+   (e.g., it contains a list or something other than a non-negative integer),
+   a cache &SHOULD; consider the response to be stale.
 </t>
 <t>
    The presence of an Age header field implies that the response was not
@@ -2056,7 +2076,7 @@
    Please update the "Hypertext Transfer Protocol (HTTP) Field
    Name Registry" at <eref
    target="https://www.iana.org/assignments/http-fields"/> with the
-   field names listed in the two tables of <xref
+   field names listed in the table in <xref
    target="header.field.definitions"/>.
 </t>
 </section>
@@ -2340,6 +2360,10 @@
    (<xref target="field.age"/>)
 </t>
 <t>
+   Handling of duplicate and conflicting cache directives has been clarified.
+   (<xref target="calculating.freshness.lifetime"/>)
+</t>
+<t>
    Some cache directives defined by this specification now have stronger
    prohibitions against generating the quoted form of their values, since
    this has been found to create interoperability problems. Consumers of
@@ -2488,6 +2512,13 @@
 
 <section title="Since draft-ietf-httpbis-cache-12" anchor="changes.since.12">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="serving.stale.responses"/>, remove 'no-store', as it won't be in cache in the first place (<eref target="https://github.com/httpwg/http-core/issues/447"/>)</li>
+  <li>In <xref target="storing.fields"/>, make it clear that only response headers need be stored (<eref target="https://github.com/httpwg/http-core/issues/457"/>)</li>
+  <li>In <xref target="calculating.freshness.lifetime"/> clarify how to handle invalid and conflicting directives (<eref target="https://github.com/httpwg/http-core/issues/460"/>)</li>
+  <li>In <xref target="validation.response"/>, clarify requirement on storing a full response to a conditional request (<eref target="https://github.com/httpwg/http-core/issues/463"/>)</li>
+  <li>In <xref target="field.age"/>, clarify error handling (<eref target="https://github.com/httpwg/http-core/issues/471"/>)</li>
+  <li>In <xref target="expiration.model"/>, remove spurious "UTC" (<eref target="https://github.com/httpwg/http-core/issues/472"/>)</li>
+  <li>In <xref target="expiration.model"/>, correct the date-related rule names to consider case-insensitive (<eref target="https://github.com/httpwg/http-core/issues/473"/>)</li>
 </ul>
 </section>
 </section>
