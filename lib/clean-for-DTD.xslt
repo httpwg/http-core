@@ -290,8 +290,17 @@
 </xsl:template>
 
 <xsl:template match="postalLine" mode="cleanup">
-  <xsl:comment>converted from v3 &lt;postalLine&gt;</xsl:comment>
-  <street><xsl:value-of select="."/></street>
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <postalLine>
+        <xsl:apply-templates mode="cleanup"/>
+      </postalLine>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:comment>converted from v3 &lt;postalLine&gt;</xsl:comment>
+      <street><xsl:value-of select="."/></street>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <xsl:template match="x:ref" mode="cleanup">
@@ -630,7 +639,7 @@
 <xsl:template match="postal" mode="cleanup">
   <postal>
     <xsl:apply-templates select="@*" mode="cleanup"/>
-    <xsl:if test="not(street) and not(postalLine)">
+    <xsl:if test="not(street) and not(postalLine) and not($xml2rfc-ext-xml2rfc-voc >= 3)">
       <!-- street is mandatory in V2 -->
       <street/>
     </xsl:if>
