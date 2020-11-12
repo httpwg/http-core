@@ -205,7 +205,7 @@
 <t>
    HTTP/2 (<xref target="RFC7540"/>) introduced a multiplexed session layer
    on top of the existing TLS and TCP protocols for exchanging concurrent
-   HTTP messages with efficient header field compression and server push.
+   HTTP messages with efficient field compression and server push.
    HTTP/3 (<xref target="HTTP3"/>) provides greater independence for concurrent
    messages by using QUIC as a secure multiplexed transport over UDP instead of
    TCP.
@@ -1416,17 +1416,24 @@ Content-Type: text/plain
 <section title="Framing" anchor="message.framing">
 <iref primary="true" item="complete"/>
 <iref primary="true" item="incomplete"/>
-<t><cref>
-   Message framing defines how each message begins and ends, such that the
-   message can be distinguished from other message (or noise) on the same
-   connection. Framing is specific to each major version of HTTP.
-</cref></t>
 <t>
-   One of the functions of message framing is to assure that
-   messages are <x:dfn>complete</x:dfn>. A message is considered complete
-   when all of the octets indicated by its framing are available. Note that,
+   Message framing indicates how each message begins and ends, such that each
+   message can be distinguished from other messages or noise on the same
+   connection. Each major version of HTTP defines its own framing mechanism.
+</t>
+<t>
+   HTTP/0.9 and early deployments of HTTP/1.0 used closure of the underlying
+   connection to end each response. For backwards compatibility, this implicit
+   framing is also allowed in HTTP/1.1. However, implicit framing can fail to
+   distinguish an incomplete response if the connection closes early. For
+   that reason, almost all modern implementations use explicit framing in
+   the form of length-delimited sequences of message data.
+</t>
+<t>
+   A message is considered <x:dfn>complete</x:dfn> when all of the octets
+   indicated by its framing are available. Note that,
    when no explicit framing is used, a response message that is ended
-   by the transport connection's close is considered complete even though it
+   by the underlying connection's close is considered complete even though it
    might be indistinguishable from an incomplete response, unless a
    transport-level error indicates that it is not complete.
 </t>
@@ -1451,9 +1458,11 @@ Content-Type: text/plain
 <section title="Header Fields" anchor="header.fields">
 <t>
    <iref item="field"/>
+   <iref item="section"/>
    HTTP messages use key/value pairs to convey data about the
    message, its payload, the target resource, or the connection.
    They are called "HTTP fields" or just "<x:dfn>fields</x:dfn>".
+   Fields occur in groups called "<x:dfn>field sections</x:dfn>" or just "sections".
 </t>
 <t>
    <iref item="header section"/>
@@ -1541,7 +1550,7 @@ Content-Type: text/plain
    duplicate header fields that would impact request processing.
 </t>
 <t>
-   A recipient &MAY; combine multiple field lines with the same field name
+   A recipient &MAY; combine multiple field lines within a field section that have the same field name
    into one field line, without changing the semantics of the message, by
    appending each subsequent field line value to the initial field line value
    in order, separated by a comma and <x:ref>OWS</x:ref> (optional whitespace).
@@ -3713,7 +3722,7 @@ Upgrade: websocket
    <iref primary="true" item="validator"/>
    <iref item="selected representation"/>
 <t>
-   Validator header fields convey metadata about the
+   Validator fields convey metadata about the
    <x:ref>selected representation</x:ref> (<xref target="representations"/>).
    In responses to safe requests, validator fields describe the selected
    representation chosen by the origin server while handling the response.
@@ -4718,7 +4727,7 @@ Content-Encoding: gzip
    intentionally hidden by the server.
 </t>
 <t>
-   An origin server &MUST-NOT; send a validator header field
+   An origin server &MUST-NOT; send a validator field
    (<xref target="response.validator"/>), such as an <x:ref>ETag</x:ref> or
    <x:ref>Last-Modified</x:ref> field, in a successful response to PUT unless
    the request's representation data was saved without any transformation
@@ -5316,11 +5325,11 @@ Expect: 100-continue
 <t>
    If the target URI was obtained from a source that does not have its own
    URI (e.g., input from the user keyboard, or an entry within the user's
-   bookmarks/favorites), the user agent &MUST; either exclude the Referer field
+   bookmarks/favorites), the user agent &MUST; either exclude the Referer header field
    or send it with a value of "about:blank".
 </t>
 <t>
-   The Referer field has the potential to reveal information about the request
+   The Referer header field has the potential to reveal information about the request
    context or browsing history of the user, which is a privacy concern if the
    referring resource's identifier reveals personal information (such as an
    account name) or a resource that is supposed to be confidential (such as
@@ -5362,7 +5371,7 @@ Expect: 100-continue
    codings the client is willing to accept in the response.
 </t>
 <t>
-   The TE field-value consists of a list of tokens, each allowing for
+   The TE field value consists of a list of tokens, each allowing for
    optional parameters (as described in <xref target="parameter"/>).
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="t-ranking"/><iref primary="true" item="Grammar" subitem="rank"/>
@@ -5413,7 +5422,7 @@ Expect: 100-continue
    the scope of reported interoperability problems, to work around or tailor
    responses to avoid particular user agent limitations, and for analytics
    regarding browser or operating system use. A user agent &SHOULD; send
-   a User-Agent field in each request unless specifically configured not
+   a User-Agent header field in each request unless specifically configured not
    to do so.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="User-Agent"/>
@@ -5447,7 +5456,7 @@ Expect: 100-continue
   User-Agent: CERN-LineMode/2.15 libwww/2.17b3
 </artwork>
 <t>
-   A user agent &SHOULD-NOT; generate a User-Agent field containing needlessly
+   A user agent &SHOULD-NOT; generate a User-Agent header field containing needlessly
    fine-grained detail and &SHOULD; limit the addition of subproducts by third
    parties. Overly long and detailed User-Agent field values increase request
    latency and the risk of a user being identified against their wishes
@@ -5538,7 +5547,7 @@ Expect: 100-continue
 </artwork>
 <t>
    The actual set of allowed methods is defined by the origin server at the
-   time of each request. An origin server &MUST; generate an Allow field in a
+   time of each request. An origin server &MUST; generate an Allow header field in a
    <x:ref>405 (Method Not Allowed)</x:ref> response and &MAY; do so in any
    other response. An empty Allow field value indicates that the resource
    allows no methods, which might occur in a 405 response if the resource has
@@ -5666,12 +5675,12 @@ Expect: 100-continue
 </t>
 <aside>
   <t>
-    &Note; Some recipients attempt to recover from Location fields
+    &Note; Some recipients attempt to recover from Location header fields
     that are not valid URI references. This specification does not mandate or
     define such processing, but does allow it for the sake of robustness.
     A Location field value cannot allow a list of members because the comma list separator
     is a valid data character within a URI-reference. If an invalid message is sent with multiple
-    Location field instances, a recipient along the path might combine the field instances into
+    Location field lines, a recipient along the path might combine those field lines into
     one value. Recovery of a valid Location field value from that situation is difficult and not
     interoperable across implementations.
   </t>
@@ -5701,7 +5710,7 @@ Expect: 100-continue
    issuing the redirected request.
 </t>
 <t>
-   The value of this field can be either an HTTP-date or a number
+   The Retry-After field value can be either an HTTP-date or a number
    of seconds to delay after the response is received.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Retry-After"/>
@@ -5737,13 +5746,13 @@ Expect: 100-continue
    used by clients to help identify the scope of reported interoperability
    problems, to work around or tailor requests to avoid particular server
    limitations, and for analytics regarding server or operating system use.
-   An origin server &MAY; generate a Server field in its responses.
+   An origin server &MAY; generate a Server header field in its responses.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Server"/>
   <x:ref>Server</x:ref> = <x:ref>product</x:ref> *( <x:ref>RWS</x:ref> ( <x:ref>product</x:ref> / <x:ref>comment</x:ref> ) )
 </sourcecode>
 <t>
-   The Server field value consists of one or more product identifiers, each
+   The Server header field value consists of one or more product identifiers, each
    followed by zero or more comments (<xref target="comments"/>), which together
    identify the origin server software and its significant subproducts.
    By convention, the product identifiers are listed in decreasing order of
@@ -5758,7 +5767,7 @@ Expect: 100-continue
   Server: CERN/3.0 libwww/2.17
 </artwork>
 <t>
-   An origin server &SHOULD-NOT; generate a Server field containing needlessly
+   An origin server &SHOULD-NOT; generate a Server header field containing needlessly
    fine-grained detail and &SHOULD; limit the addition of subproducts by third
    parties. Overly long and detailed Server field values increase response
    latency and potentially reveal internal implementation details that might
@@ -5988,7 +5997,7 @@ Expect: 100-continue
 </t>
 <t>
    A proxy forwarding a response &MUST-NOT; modify any
-   <x:ref>WWW-Authenticate</x:ref> fields in that response.
+   <x:ref>WWW-Authenticate</x:ref> header fields in that response.
 </t>
 <t>
    User agents are advised to take special care in parsing the field value, as
@@ -6049,9 +6058,9 @@ Expect: 100-continue
 </t>
 <t>
    A proxy forwarding a request &MUST-NOT; modify any
-   <x:ref>Authorization</x:ref> fields in that request.
+   <x:ref>Authorization</x:ref> header fields in that request.
    See <xref target="caching.authenticated.responses"/> for details of and requirements
-   pertaining to handling of the Authorization field by HTTP caches.
+   pertaining to handling of the Authorization header field by HTTP caches.
 </t>
 </section>
 
@@ -6060,7 +6069,7 @@ Expect: 100-continue
   <iref primary="true" item="Fields" subitem="Authentication-Info" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Authentication-Info" x:for-anchor=""/><iref primary="true" item="Authentication-Info header field" x:for-anchor=""/>
   <x:anchor-alias value="Authentication-Info"/>
 <t>
-   HTTP authentication schemes can use the Authentication-Info response header
+   HTTP authentication schemes can use the Authentication-Info response
    field to communicate information after the client's authentication credentials have been accepted.
    This information can include a finalization message from the server (e.g., it can contain the
    server authentication).
@@ -6077,7 +6086,7 @@ Expect: 100-continue
   <x:ref>Authentication-Info</x:ref> = #<x:ref>auth-param</x:ref>
 </sourcecode>
 <t>
-   The Authentication-Info header field can be used in any HTTP response,
+   The Authentication-Info field can be used in any HTTP response,
    independently of request method and status code. Its semantics are defined
    by the authentication scheme indicated by the <x:ref>Authorization</x:ref> header field
    (<xref target="field.authorization"/>) of the corresponding request.
@@ -6147,7 +6156,7 @@ Expect: 100-continue
 <t>
    Unlike <x:ref>Authorization</x:ref>, the Proxy-Authorization header field
    applies only to the next inbound proxy that demanded authentication using
-   the <x:ref>Proxy-Authenticate</x:ref> field. When multiple proxies are used
+   the <x:ref>Proxy-Authenticate</x:ref> header field. When multiple proxies are used
    in a chain, the Proxy-Authorization header field is consumed by the first
    inbound proxy that was expecting to receive credentials. A proxy &MAY;
    relay the credentials from the client request to the next proxy if that is
@@ -6237,7 +6246,7 @@ Expect: 100-continue
    the available representations for a response (the dimensions over which it
    might vary, such as language, content-coding, etc.) compared to various
    information supplied in the request, including both the explicit
-   negotiation fields below and implicit
+   negotiation header fields below and implicit
    characteristics, such as the client's network address or parts of the
    <x:ref>User-Agent</x:ref> field.
 </t>
@@ -6569,9 +6578,9 @@ Expect: 100-continue
   Accept-Charset: iso-8859-5, unicode-1-1;q=0.8
 </artwork>
 <t>
-   The special value "*", if present in the Accept-Charset field,
+   The special value "*", if present in the Accept-Charset header field,
    matches every charset that is not mentioned elsewhere in the
-   Accept-Charset field.
+   field.
 </t>
 <t>
    &Note; Accept-Charset is deprecated because UTF-8 has become nearly
@@ -6612,7 +6621,7 @@ Expect: 100-continue
    Each codings value &MAY; be given an associated quality value
    representing the preference for that encoding, as defined in <xref target="quality.values"/>.
    The asterisk "*" symbol in an Accept-Encoding field matches any available
-   content-coding not explicitly listed in the header field.
+   content-coding not explicitly listed in the field.
 </t>
 <t>
    For example,
@@ -6629,10 +6638,10 @@ Expect: 100-continue
    acceptable using these rules:
 </t>
 <ol>
-   <li>If no Accept-Encoding field is in the request, any content-coding is
+   <li>If no Accept-Encoding header field is in the request, any content-coding is
        considered acceptable by the user agent.</li>
    <li>If the representation has no content-coding, then it is acceptable
-       by default unless specifically excluded by the Accept-Encoding field
+       by default unless specifically excluded by the Accept-Encoding header field
        stating either "identity;q=0" or "*;q=0" without a more specific
        entry for "identity".</li>
    <li>If the representation's content-coding is one of the content-codings
@@ -6847,18 +6856,18 @@ Expect: 100-continue
 <t>
    indicates that the origin server might have used the
    request's <x:ref>Accept-Encoding</x:ref> and <x:ref>Accept-Language</x:ref>
-   fields (or lack thereof) as determining factors while choosing the content
+   header fields (or lack thereof) as determining factors while choosing the content
    for this response.
 </t>
 <t>
-   An origin server might send Vary with a list of fields for two purposes:
+   An origin server might send Vary with a list of header fields for two purposes:
 </t>
 <ol>
   <li>
     <t>
        To inform cache recipients that they &MUST-NOT; use this response
        to satisfy a later request unless the later request has the
-       same values for the listed fields as the original request
+       same values for the listed header fields as the original request
        (<xref target="caching.negotiated.responses"/>). In other words, Vary expands the cache key
        required to match a new request to the stored cache entry.
     </t>
@@ -6895,7 +6904,7 @@ Expect: 100-continue
    listed preferences are called <x:dfn>request payload negotiation</x:dfn>
    because they intend to influence selection of an appropriate payload for
    subsequent requests to that resource. For example,
-   the <x:ref>Accept-Encoding</x:ref> field
+   the <x:ref>Accept-Encoding</x:ref> header field
    (<xref target="field.accept-encoding"/>) can be sent in a response to
    indicate preferred content codings for subsequent requests to that
    resource <xref target="RFC7694"/>.
@@ -7208,7 +7217,7 @@ Expect: 100-continue
 </t>
 <t>
    When used for cache updates, a cache will typically use the value of the
-   cached message's <x:ref>Last-Modified</x:ref> field to generate the field
+   cached message's <x:ref>Last-Modified</x:ref> header field to generate the field
    value of If-Modified-Since. This behavior is most interoperable for cases
    where clocks are poorly synchronized or when the server has chosen to only
    honor exact timestamp matches (due to a problem with Last-Modified dates
@@ -7217,7 +7226,7 @@ Expect: 100-continue
    However, caches occasionally generate the field value based on other data,
    such as the <x:ref>Date</x:ref> header field of the cached message or the
    local clock time that the message was received, particularly when the
-   cached message does not contain a <x:ref>Last-Modified</x:ref> field.
+   cached message does not contain a <x:ref>Last-Modified</x:ref> header field.
 </t>
 <t>
    When used for limiting the scope of retrieval to a recent time window, a
@@ -7225,7 +7234,7 @@ Expect: 100-continue
    its own local clock or a <x:ref>Date</x:ref> header field received from the
    server in a prior response. Origin servers that choose an exact timestamp
    match based on the selected representation's <x:ref>Last-Modified</x:ref>
-   field will not be able to help the user agent limit its data transfers to
+   header field will not be able to help the user agent limit its data transfers to
    only those changed during the specified window.
 </t>
 <t>
@@ -8196,7 +8205,7 @@ Content-Range: exampleunit 11.2-14.3/25
 <t>
    A proxy &MUST; forward 1xx responses unless the proxy itself
    requested the generation of the 1xx response. For example, if a
-   proxy adds an "Expect: 100-continue" field when it forwards a request,
+   proxy adds an "Expect: 100-continue" header field when it forwards a request,
    then it need not forward the corresponding <x:ref>100 (Continue)</x:ref>
    response(s).
 </t>
@@ -8314,12 +8323,12 @@ Content-Range: exampleunit 11.2-14.3/25
    been fulfilled and has resulted in one or more new resources being created.
    The primary resource created by the request is identified by either a
    <x:ref>Location</x:ref> header field in the response or, if no
-   <x:ref>Location</x:ref> field is received, by the target URI.
+   <x:ref>Location</x:ref> header field is received, by the target URI.
 </t>
 <t>
    The 201 response payload typically describes and links to the resource(s)
    created. See <xref target="response.validator"/> for a discussion of the
-   meaning and purpose of validator header fields, such as
+   meaning and purpose of validator fields, such as
    <x:ref>ETag</x:ref> and <x:ref>Last-Modified</x:ref>, in a 201 response.
 </t>
 </section>
@@ -8404,8 +8413,8 @@ Content-Range: exampleunit 11.2-14.3/25
    to be prevalent, such as within distributed version control systems.
 </t>
 <t>
-   A 204 response is terminated by the first empty line after the header
-   fields because it cannot contain a message body.
+   A 204 response is terminated by the end of the header section
+   because it cannot contain a message body or trailers.
 </t>
 <t>
    A 204 response is heuristically cacheable; i.e., unless otherwise indicated by
@@ -8453,10 +8462,10 @@ Content-Range: exampleunit 11.2-14.3/25
    <x:ref>Vary</x:ref>.
 </t>
 <t>
-   A <x:ref>Content-Length</x:ref> field present in a 206 response indicates
+   A <x:ref>Content-Length</x:ref> header field present in a 206 response indicates
    the number of octets in the body of this message, which is usually not the
    complete length of the selected representation.
-   Each <x:ref>Content-Range</x:ref> field includes information about the
+   Each <x:ref>Content-Range</x:ref> header field includes information about the
    selected representation's complete length.
 </t>
 <t>
@@ -8509,7 +8518,7 @@ Content-Type: image/gif
    corresponding to the range being enclosed in that body part.
    If the selected representation would have had a <x:ref>Content-Type</x:ref>
    header field in a <x:ref>200 (OK)</x:ref> response, the server &SHOULD;
-   generate that same <x:ref>Content-Type</x:ref> field in the header area of
+   generate that same <x:ref>Content-Type</x:ref> header field in the header area of
    each body part. For example:
 </t>
 <artwork type="message/http; msgtype=&#34;response&#34;" x:indent-with="  ">
@@ -8630,7 +8639,7 @@ Content-Range: bytes 7000-7999/8000
 <ol>
   <li>
     Redirects that indicate this resource might be available at a
-    different URI, as provided by the <x:ref>Location</x:ref> field,
+    different URI, as provided by the <x:ref>Location</x:ref> header field,
     as in the status codes <x:ref>301 (Moved Permanently)</x:ref>,
     <x:ref>302 (Found)</x:ref>, <x:ref>307 (Temporary Redirect)</x:ref>, and
     <x:ref>308 (Permanent Redirect)</x:ref>.
@@ -8642,7 +8651,7 @@ Content-Range: bytes 7000-7999/8000
   </li>
   <li>
     Redirection to a different resource, identified by the
-    <x:ref>Location</x:ref> field, that can represent an indirect
+    <x:ref>Location</x:ref> header field, that can represent an indirect
     response to the request, as in the <x:ref>303 (See Other)</x:ref>
     status code.
   </li>
@@ -8943,8 +8952,8 @@ Content-Range: bytes 7000-7999/8000
    304 response to that client.
 </t>
 <t>
-   A 304 response cannot contain a message-body; it is always
-   terminated by the first empty line after the header fields.
+   A 304 response is terminated by the end of the header section
+   because it cannot contain a message body or trailers.
 </t>
 </section>
 
@@ -9869,7 +9878,7 @@ Content-Type: text/plain
     be to ignore the field, but this might not always be the right
     choice).</t>
     <t>Note that intermediaries and software libraries might combine
-    multiple field instances into a single one, despite the
+    multiple field lines into a single one, despite the
     field being defined as a singleton. A robust format enables
     recipients to discover these situations (good example: "Content-Type",
     as the comma can only appear inside quoted strings;
@@ -10670,7 +10679,7 @@ Content-Type: text/plain
 <t>
    Please update the registry of URI Schemes <xref target="BCP35"/> at
    <eref target="https://www.iana.org/assignments/uri-schemes/"/> with the
-   permanent schemes listed in the first table of <xref target="resources"/>.
+   permanent schemes listed in the table in <xref target="uri.schemes"/>.
 </t>
 </section>
 
@@ -11128,7 +11137,7 @@ Content-Type: text/plain
 </dl>
 </section>
 
-<section title="HTTP Field Name Registration" anchor="header.field.registration">
+<section title="Field Name Registration" anchor="field.name.registration">
 <t>      
    Please create a new registry as outlined in <xref
    target="field-name.registry"/>.
@@ -13024,7 +13033,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    <xref target="origin"/>, <xref target="routing.origin"/>)
 </t>
 <t>
-   "Field value" now refers to the value after multiple instances are combined
+   "Field value" now refers to the value after multiple field lines are combined
    with commas &mdash; by far the most common use. To refer to a single header
    line's value, use "field line value".
    (<xref target="header.fields"/>)
@@ -13291,7 +13300,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>Deprecate Accept-Charset (<eref target="https://github.com/httpwg/http-core/issues/61"/>)</li>
   <li>In <xref target="evaluation"/>, mention Cache-Control: immutable (<eref target="https://github.com/httpwg/http-core/issues/69"/>)</li>
   <li>In <xref target="field-order"/>, clarify when header field combination is allowed (<eref target="https://github.com/httpwg/http-core/issues/74"/>)</li>
-  <li>In <xref target="header.field.registration"/>, instruct IANA to mark Content-MD5 as obsolete (<eref target="https://github.com/httpwg/http-core/issues/93"/>)</li>
+  <li>In <xref target="field.name.registration"/>, instruct IANA to mark Content-MD5 as obsolete (<eref target="https://github.com/httpwg/http-core/issues/93"/>)</li>
   <li>Use RFC 7405 ABNF notation for case-sensitive string constants (<eref target="https://github.com/httpwg/http-core/issues/133"/>)</li>
   <li>Rework <xref target="messages"/> to be more version-independent (<eref target="https://github.com/httpwg/http-core/issues/142"/>)</li>
   <li>In <xref target="DELETE"/>, clarify that DELETE needs to be successful to invalidate cache (<eref target="https://github.com/httpwg/http-core/issues/167"/>, <eref target="https://www.rfc-editor.org/errata/eid5541"/>)</li>
@@ -13346,7 +13355,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="status.codes"/>, formally define "final" and "interim" status codes (<eref target="https://github.com/httpwg/http-core/issues/245"/>)</li>
   <li>In <xref target="DELETE"/>, caution against a request body more strongly (<eref target="https://github.com/httpwg/http-core/issues/258"/>)</li>
   <li>In <xref target="field.etag"/>, note that Etag can be used in trailers (<eref target="https://github.com/httpwg/http-core/issues/262"/>)</li>
-  <li>In <xref target="header.field.registration"/>, consider reserved fields as well (<eref target="https://github.com/httpwg/http-core/issues/273"/>)</li>
+  <li>In <xref target="field.name.registration"/>, consider reserved fields as well (<eref target="https://github.com/httpwg/http-core/issues/273"/>)</li>
   <li>In <xref target="http.userinfo"/>, be more correct about what was deprecated by RFC 3986 (<eref target="https://github.com/httpwg/http-core/issues/278"/>, <eref target="https://www.rfc-editor.org/errata/eid5964"/>)</li>
   <li>In <xref target="field-order"/>, recommend comma SP when combining field lines (<eref target="https://github.com/httpwg/http-core/issues/148"/>)</li>
   <li>In <xref target="field.host"/>, make explicit requirements on origin server to use authority from absolute-form when available (<eref target="https://github.com/httpwg/http-core/issues/191"/>)</li>
@@ -13386,7 +13395,7 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li><xref target="collected.abnf"/> now uses the sender variant of the "#" list expansion (<eref target="https://github.com/httpwg/http-core/issues/192"/>)</li>
   <li>In <xref target="field.vary"/>, make the field list-based even when "*" is present (<eref target="https://github.com/httpwg/http-core/issues/272"/>)</li>
   <li>In <xref target="field-name.registry"/>, add optional "Comments" entry (<eref target="https://github.com/httpwg/http-core/issues/273"/>)</li>
-  <li>In <xref target="header.field.registration"/>, reserve "*" as field name (<eref target="https://github.com/httpwg/http-core/issues/274"/>)</li>
+  <li>In <xref target="field.name.registration"/>, reserve "*" as field name (<eref target="https://github.com/httpwg/http-core/issues/274"/>)</li>
   <li>In <xref target="method.registration"/>, reserve "*" as method name (<eref target="https://github.com/httpwg/http-core/issues/274"/>)</li>
   <li>In <xref target="field.if-match"/> and <xref target="field.if-none-match"/>, state that multiple "*" is unlikely to be interoperable (<eref target="https://github.com/httpwg/http-core/issues/305"/>)</li>
   <li>In <xref target="field.accept"/>, avoid use of obsolete media type parameter on text/html (<eref target="https://github.com/httpwg/http-core/issues/375"/>, <eref target="https://www.rfc-editor.org/errata/eid6149"/>)</li>
@@ -13453,8 +13462,9 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
 <section title="Since draft-ietf-httpbis-semantics-12" anchor="changes.since.12">
 <ul x:when-empty="None yet.">
   <li>In <xref target="field-extensibility"/>, explain why new fields need to be backwards-compatible (<eref target="https://github.com/httpwg/http-core/issues/448"/>)</li>
+  <li>In <xref target="field-order"/>, constrain field combination to be within a section (<eref target="https://github.com/httpwg/http-core/issues/454"/>)</li>
   <li>In <xref target="http.date"/>, mention that caching relaxes date sensitivity (<eref target="https://github.com/httpwg/http-core/issues/473"/>)</li>
-  <li>In <xref target="header.field.registration"/>, moved "*" field registration into main table (<eref target="https://github.com/httpwg/http-core/issues/476"/>)</li>
+  <li>In <xref target="field.name.registration"/>, moved "*" field registration into main table (<eref target="https://github.com/httpwg/http-core/issues/476"/>)</li>
   <li>In <xref target="intro.evolution"/>, reference <xref target="HTTP09"/> (<eref target="https://github.com/httpwg/http-core/issues/497"/>)</li>
 </ul>
 </section>
