@@ -34,7 +34,8 @@
 <?github-issue-label cache?>
 
 <rfc category="std" docName="draft-ietf-httpbis-cache-&ID-VERSION;" ipr="pre5378Trust200902"
-  obsoletes="7234" x:maturity-level="proposed" xmlns:x="http://purl.org/net/xml2rfc/ext" xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+  obsoletes="7234" x:maturity-level="proposed" xmlns:x="http://purl.org/net/xml2rfc/ext" xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+  tocDepth="4">
 <x:feedback template="mailto:ietf-http-wg@w3.org?subject={docname},%20%22{section}%22&amp;body=&lt;{ref}&gt;:"/>
 <front>
 
@@ -532,6 +533,15 @@
    see <xref target="invalidation" />.
 </t>
 <t>
+   A response that is stored or storable can be used to satisfy multiple
+   requests, provided that it is allowed to reuse that response for the requests
+   in question. This enables caches to "collapse" multiple incoming requests into a single forward
+   request upon a cache miss, thereby reducing load on the origin server and network.
+   However, note that if the response returned is not able to be used for some or all
+   of the collapsed requests, additional latency might be introduced, because they will
+   need to be forwarded to be satisfied.
+</t>
+<t>
    When more than one suitable response is stored, a cache &MUST; use the 
    most recent one (as determined by the <x:ref>Date</x:ref> header
    field). It can also forward the request with "Cache-Control: max-age=0" or
@@ -723,9 +733,12 @@
 </t>
 <t>
    When there is more than one value present for a given directive (e.g., two
-   <x:ref>Expires</x:ref> header fields, multiple Cache-Control: max-age
-   directives), the directive's value is considered invalid. Caches are
-   encouraged to consider responses that have invalid freshness information to
+   <x:ref>Expires</x:ref> header field lines or multiple Cache-Control: max-age
+   directives), either the first occurrence should be used, or the response should
+   be considered stale. If directives conflict (e.g.,
+   both max-age and no-cache are present), the most restrictive directive should
+   be honored. Caches are encouraged to consider responses that have
+   invalid freshness information (e.g., a max-age directive with non-integer content) to
    be stale.
 </t>
 </section>
@@ -735,7 +748,7 @@
 <t>
    Since origin servers do not always provide explicit expiration times, a
    cache &MAY; assign a heuristic expiration time when an explicit time is not
-   specified, employing algorithms that use other header field values (such as
+   specified, employing algorithms that use other field values (such as
    the <x:ref>Last-Modified</x:ref> time) to estimate a plausible expiration
    time. This specification does not provide specific algorithms, but does
    impose worst-case constraints on their results.
@@ -866,7 +879,7 @@
 </t>
 <t>
    A cache &MUST-NOT; generate a stale response if it is prohibited by an
-   explicit in-protocol directive (e.g., by a "no-store" or "no-cache" cache
+   explicit in-protocol directive (e.g., by a "no-cache" cache
    directive, a "must-revalidate" cache-response-directive, or an applicable
    "s-maxage" or "proxy-revalidate" cache-response-directive; see <xref
    target="cache-response-directive"/>).
@@ -997,7 +1010,7 @@
    following cases is true:
    1) the selected stored response has a <x:ref>Last-Modified</x:ref>
    field value that is earlier than or equal to the conditional timestamp;
-   2) no <x:ref>Last-Modified</x:ref> field is present in the selected stored
+   2) no <x:ref>Last-Modified</x:ref> header field is present in the selected stored
    response, but it has a <x:ref>Date</x:ref> field value that is earlier than
    or equal to the conditional timestamp; or,
    3) neither <x:ref>Last-Modified</x:ref> nor <x:ref>Date</x:ref> is present
@@ -1026,15 +1039,16 @@
      A full response (i.e., one with a payload body) indicates that none
      of the stored responses nominated in the conditional request is
      suitable. Instead, the cache &MUST; use the full response to
-     satisfy the request and &MAY; replace the stored response(s).
+     satisfy the request. The cache &MAY; store such a full response,
+     subject to its constraints (see <xref target="response.cacheability"/>).
    </li>
    <li>
      However, if a cache receives a <x:ref>5xx (Server Error)</x:ref>
      response while attempting to validate a response, it can either
      forward this response to the requesting client, or act as if the
-     server failed to respond. In the latter case, the cache &MAY; send a
-     previously stored response (see <xref
-     target="serving.stale.responses" />).
+     server failed to respond. In the latter case, the cache can send a
+     previously stored response, subject to its constraints on doing so (see <xref
+     target="serving.stale.responses" />), or retry the validation request.
    </li>
 </ul>
 </section>
@@ -1061,16 +1075,16 @@
      cache &MUST-NOT; use the new response to update any stored responses.
    </li>
    <li>
-     If the new response contains a weak validator and that validator
-     corresponds to one of the cache's stored responses, then the most
+     If the new response contains a <x:dfn>weak validator</x:dfn> and that
+     validator corresponds to one of the cache's stored responses, then the most
      recent of those matching stored responses is identified for update.
    </li>
    <li>
      If the new response does not include any form of validator (such as 
-     where a client generates an If-Modified-Since request from a
-     source other than the Last-Modified response header field), and there is
-     only one stored response, and that stored response also lacks a
-     validator, then that stored response is identified for update.
+     where a client generates an <x:ref>If-Modified-Since</x:ref> request from
+     a source other than the <x:ref>Last-Modified</x:ref> response header
+     field), and there is only one stored response, and that stored response
+     also lacks a validator, then that stored response is identified for update.
    </li>
 </ul>
 <t>
@@ -1135,21 +1149,19 @@
 </t>
 <t>
    A cache &MUST; invalidate the target URI
-   (<xref target="target.resource"/>) and the URI(s) in the
+   (<xref target="target.resource"/>) when a non-error status code is received in response to
+   an unsafe request method (including methods whose safety is unknown).
+</t>
+<t>
+   A cache &MAY; invalidate other URIs when a non-error status code is received
+   in response to an unsafe request method (including methods whose safety is unknown).
+   In particular, the URI(s) in the
    <x:ref>Location</x:ref> and <x:ref>Content-Location</x:ref> response header
-   fields (if present) when a non-error status code is received in response to
-   an unsafe request method.
-</t>
-<t>
-   However, a cache &MUST-NOT; invalidate a URI from a <x:ref>Location</x:ref>
-   or <x:ref>Content-Location</x:ref> response header field if the host part of
-   that URI differs from the host part in the target URI
+   fields (if present) are candidates for invalidation; other URIs might be discovered
+   through mechanisms not specified in this document.
+   However, a cache &MUST-NOT; trigger an invalidation under these conditions
+   if the origin (<xref target="origin"/>) of the URI to be invalidated differs from that of the target URI
    (<xref target="target.resource"/>). This helps prevent denial-of-service attacks.
-</t>
-<t>
-   A cache &MUST; invalidate the target URI 
-   (<xref target="target.resource"/>) when it receives a non-error response 
-   to a request with a method whose safety is unknown.
 </t>
 <t>
    <x:dfn>Invalidate</x:dfn> means that the cache will either remove all
@@ -1176,62 +1188,6 @@
    This section defines the syntax and semantics of HTTP fields
    related to caching.
 </t>
-<?BEGININC build/draft-ietf-httpbis-cache-latest.iana-headers ?>
-<!--AUTOGENERATED FROM extract-header-defs.xslt, do not edit manually-->
-<table align="left" anchor="iana.header.registration.table">
-   <thead>
-      <tr>
-         <th>Field Name</th>
-         <th>Status</th>
-         <th>Ref.</th>
-         <th>Comments</th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>Age</td>
-         <td>standard</td>
-         <td>
-            <xref target="field.age" format="counter"/>
-         </td>
-         <td/>
-      </tr>
-      <tr>
-         <td>Cache-Control</td>
-         <td>standard</td>
-         <td>
-            <xref target="field.cache-control" format="counter"/>
-         </td>
-         <td/>
-      </tr>
-      <tr>
-         <td>Expires</td>
-         <td>standard</td>
-         <td>
-            <xref target="field.expires" format="counter"/>
-         </td>
-         <td/>
-      </tr>
-      <tr>
-         <td>Pragma</td>
-         <td>standard</td>
-         <td>
-            <xref target="field.pragma" format="counter"/>
-         </td>
-         <td/>
-      </tr>
-      <tr>
-         <td>Warning</td>
-         <td>obsoleted</td>
-         <td>
-            <xref target="field.warning" format="counter"/>
-         </td>
-         <td/>
-      </tr>
-   </tbody>
-</table>
-<!--(END)-->
-<?ENDINC build/draft-ietf-httpbis-cache-latest.iana-headers ?>
 
 <section title="Age" anchor="field.age">
   <x:anchor-alias value="header.age"/>
@@ -1239,7 +1195,7 @@
    <x:anchor-alias value="Age"/>
    <x:anchor-alias value="age-value"/>
 <t>
-   The "Age" header field conveys the sender's estimate of the
+   The "Age" response header field conveys the sender's estimate of the
    time since the response was generated or successfully validated at the
    origin server. Age values are calculated as specified in <xref
    target="age.calculations" />.
@@ -1249,9 +1205,17 @@
 </sourcecode>
 <t>
    The Age field value is a non-negative integer, representing time in seconds
-   (see <xref target="delta-seconds"/>). A cache &SHOULD; consider a response
-   to be stale if an Age field is present and its value is invalid (i.e.,
-   contains a list or something other than a non-negative integer).
+   (see <xref target="delta-seconds"/>).
+</t>
+<t>
+   Although it is defined as a singleton header field, a cache encountering a
+   message with multiple Age field lines &SHOULD; use the
+   first field line, discarding subsequent ones.
+</t>
+<t>
+   If the field value (after discarding additional lines, as per above) is invalid
+   (e.g., it contains a list or something other than a non-negative integer),
+   a cache &SHOULD; consider the response to be stale.
 </t>
 <t>
    The presence of an Age header field implies that the response was not
@@ -1691,10 +1655,10 @@
 </t>
 <t>
    If a qualified private response directive is present, with an argument that
-   lists one or more field names, then only the listed fields are limited to a
-   single user: a shared cache &MUST-NOT; store the listed fields if they
+   lists one or more field names, then only the listed header fields are limited to a
+   single user: a shared cache &MUST-NOT; store the listed header fields if they
    are present in the original response, but &MAY; store the remainder of the
-   response message without those fields, subject
+   response message without those header fields, subject
    the constraints defined in <xref target="response.cacheability"/>.
 </t>
 <t>
@@ -1864,16 +1828,16 @@
    <iref primary="true" item="Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Fields" subitem="Expires" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Expires" x:for-anchor=""/><iref item="Expires header field" primary="true" x:for-anchor=""/>
    <x:anchor-alias value="Expires"/>
 <t>
-   The "Expires" header field gives the date/time after which the
+   The "Expires" response header field gives the date/time after which the
    response is considered stale. See <xref target="expiration.model" /> for
    further discussion of the freshness model.
 </t>
 <t>
-   The presence of an Expires field does not imply that the original resource
+   The presence of an Expires header field does not imply that the original resource
    will change or cease to exist at, before, or after that time.
 </t>
 <t>
-   The Expires value is an HTTP-date timestamp, as defined in <xref target="http.date"/>.
+   The Expires field value is an HTTP-date timestamp, as defined in <xref target="http.date"/>.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Expires"/>
   <x:ref>Expires</x:ref> = <x:ref>HTTP-date</x:ref>
@@ -1889,17 +1853,17 @@
    value "0", as representing a time in the past (i.e., "already expired").
 </t>
 <t>
-   If a response includes a <x:ref>Cache-Control</x:ref> field with
+   If a response includes a <x:ref>Cache-Control</x:ref> header field with
    the max-age directive (<xref target="cache-response-directive.max-age"/>),
-   a recipient &MUST; ignore the Expires field.
+   a recipient &MUST; ignore the Expires header field.
    Likewise, if a response includes the s-maxage directive
    (<xref target="cache-response-directive.s-maxage" />), a shared cache
-   recipient &MUST; ignore the Expires field. In both these cases, the value
+   recipient &MUST; ignore the Expires header field. In both these cases, the value
    in Expires is only intended for recipients that have not yet implemented
-   the Cache-Control field.
+   the Cache-Control header field.
 </t>
 <t>
-   An origin server without a clock &MUST-NOT; generate an Expires field
+   An origin server without a clock &MUST-NOT; generate an Expires header field
    unless its value represents a fixed time in the past (always expired)
    or its value has been associated with the resource by a system or user
    with a reliable clock.
@@ -1921,7 +1885,7 @@
    <x:anchor-alias value="Pragma"/>
    <x:anchor-alias value="pragma-directive"/>
 <t>
-   The "Pragma" header field was defined for HTTP/1.0 caches, so that clients
+   The "Pragma" request header field was defined for HTTP/1.0 caches, so that clients
    could specify a "no-cache" request (as <x:ref>Cache-Control</x:ref> was
    not defined until HTTP/1.1).
 </t>
@@ -2062,14 +2026,73 @@
    "IETF (iesg@ietf.org) - Internet Engineering Task Force".
 </t>
 
-<section title="Field Registration" anchor="header.field.registration">
+<section title="Field Name Registration" anchor="field.name.registration">
 <t>
-   Please update the "Hypertext Transfer Protocol (HTTP) Field
-   Name Registry" at <eref
-   target="https://www.iana.org/assignments/http-fields"/> with the
-   field names listed in the table in <xref
-   target="header.field.definitions"/>.
+   First, introduce the new "Hypertext Transfer Protocol (HTTP) Field
+   Name Registry" at <eref target="https://www.iana.org/assignments/http-fields"/> 
+   as described in 
+   <xref target="Semantics" x:rel="#field.name.registration"/>. 
 </t>
+<t>
+   Then, please update the registry with the field names listed in the table
+   below:
+</t>
+<?BEGININC build/draft-ietf-httpbis-cache-latest.iana-headers ?>
+<!--AUTOGENERATED FROM extract-header-defs.xslt, do not edit manually-->
+<table align="left" anchor="iana.header.registration.table">
+   <thead>
+      <tr>
+         <th>Field Name</th>
+         <th>Status</th>
+         <th>Ref.</th>
+         <th>Comments</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>Age</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.age" format="counter"/>
+         </td>
+         <td/>
+      </tr>
+      <tr>
+         <td>Cache-Control</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.cache-control" format="counter"/>
+         </td>
+         <td/>
+      </tr>
+      <tr>
+         <td>Expires</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.expires" format="counter"/>
+         </td>
+         <td/>
+      </tr>
+      <tr>
+         <td>Pragma</td>
+         <td>standard</td>
+         <td>
+            <xref target="field.pragma" format="counter"/>
+         </td>
+         <td/>
+      </tr>
+      <tr>
+         <td>Warning</td>
+         <td>obsoleted</td>
+         <td>
+            <xref target="field.warning" format="counter"/>
+         </td>
+         <td/>
+      </tr>
+   </tbody>
+</table>
+<!--(END)-->
+<?ENDINC build/draft-ietf-httpbis-cache-latest.iana-headers ?>
 </section>
 
 <section title="Cache Directive Registration" anchor="cache.directive.registration">
@@ -2128,6 +2151,7 @@
       <x:has anchor="field-values"/>
       <x:has anchor="message.transformations"/>
       <x:has anchor="messages"/>
+      <x:has anchor="origin"/>
       <x:has anchor="overview.of.status.codes"/>
       <x:has anchor="precedence"/>
       <x:has anchor="preconditions"/>
@@ -2347,6 +2371,20 @@
 
 <section title="Changes from RFC 7234" anchor="changes.from.rfc.7234">
 <t>
+   Handling of duplicate and conflicting cache directives has been clarified.
+   (<xref target="calculating.freshness.lifetime"/>)
+</t>
+<t>
+   Cache invalidation of the URIs in the Location and Content-Location
+   header fields is no longer required, but still allowed.
+   (<xref target="invalidation"/>)
+</t>
+<t>
+   Cache invalidation of the URIs in the Location and Content-Location header fields is disallowed
+   when the origin is different; previously, it was the host.
+   (<xref target="invalidation"/>)
+</t>
+<t>
    Handling invalid and multiple Age header field values has been clarified.
    (<xref target="field.age"/>)
 </t>
@@ -2499,10 +2537,17 @@
 
 <section title="Since draft-ietf-httpbis-cache-12" anchor="changes.since.12">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="serving.stale.responses"/>, remove 'no-store', as it won't be in cache in the first place (<eref target="https://github.com/httpwg/http-core/issues/447"/>)</li>
   <li>In <xref target="storing.fields"/>, make it clear that only response headers need be stored (<eref target="https://github.com/httpwg/http-core/issues/457"/>)</li>
+  <li>In <xref target="calculating.freshness.lifetime"/> clarify how to handle invalid and conflicting directives (<eref target="https://github.com/httpwg/http-core/issues/460"/>)</li>
+  <li>In <xref target="validation.response"/>, mention retry of failed validation requests (<eref target="https://github.com/httpwg/http-core/issues/462"/>)</li>
+  <li>In <xref target="validation.response"/>, clarify requirement on storing a full response to a conditional request (<eref target="https://github.com/httpwg/http-core/issues/463"/>)</li>
+  <li>In <xref target="field.age"/>, clarify error handling (<eref target="https://github.com/httpwg/http-core/issues/471"/>)</li>
   <li>In <xref target="expiration.model"/>, remove spurious "UTC" (<eref target="https://github.com/httpwg/http-core/issues/472"/>)</li>
   <li>In <xref target="expiration.model"/>, correct the date-related rule names to consider case-insensitive (<eref target="https://github.com/httpwg/http-core/issues/473"/>)</li>
   <li>In <xref target="history.lists"/>, strengthen recommendation for application caches to pay attention to cache directives (<eref target="https://github.com/httpwg/http-core/issues/474"/>)</li>
+  <li>In <xref target="constructing.responses.from.caches"/>, mention collapsed requests (<eref target="https://github.com/httpwg/http-core/issues/475"/>)</li>
+  <li>In <xref target="invalidation"/>, relax requirements on Content-Location and Location invalidation (<eref target="https://github.com/httpwg/http-core/issues/478"/>)</li>
 </ul>
 </section>
 </section>
