@@ -533,6 +533,15 @@
    see <xref target="invalidation" />.
 </t>
 <t>
+   A response that is stored or storable can be used to satisfy multiple
+   requests, provided that it is allowed to reuse that response for the requests
+   in question. This enables caches to "collapse" multiple incoming requests into a single forward
+   request upon a cache miss, thereby reducing load on the origin server and network.
+   However, note that if the response returned is not able to be used for some or all
+   of the collapsed requests, additional latency might be introduced, because they will
+   need to be forwarded to be satisfied.
+</t>
+<t>
    When more than one suitable response is stored, a cache &MUST; use the 
    most recent one (as determined by the <x:ref>Date</x:ref> header
    field). It can also forward the request with "Cache-Control: max-age=0" or
@@ -1037,9 +1046,9 @@
      However, if a cache receives a <x:ref>5xx (Server Error)</x:ref>
      response while attempting to validate a response, it can either
      forward this response to the requesting client, or act as if the
-     server failed to respond. In the latter case, the cache &MAY; send a
+     server failed to respond. In the latter case, the cache can send a
      previously stored response, subject to its constraints on doing so (see <xref
-     target="serving.stale.responses" />).
+     target="serving.stale.responses" />), or retry the validation request.
    </li>
 </ul>
 </section>
@@ -1140,21 +1149,19 @@
 </t>
 <t>
    A cache &MUST; invalidate the target URI
-   (<xref target="target.resource"/>) and the URI(s) in the
+   (<xref target="target.resource"/>) when a non-error status code is received in response to
+   an unsafe request method (including methods whose safety is unknown).
+</t>
+<t>
+   A cache &MAY; invalidate other URIs when a non-error status code is received
+   in response to an unsafe request method (including methods whose safety is unknown).
+   In particular, the URI(s) in the
    <x:ref>Location</x:ref> and <x:ref>Content-Location</x:ref> response header
-   fields (if present) when a non-error status code is received in response to
-   an unsafe request method.
-</t>
-<t>
-   However, a cache &MUST-NOT; invalidate a URI from a <x:ref>Location</x:ref>
-   or <x:ref>Content-Location</x:ref> response header field if the host part of
-   that URI differs from the host part in the target URI
+   fields (if present) are candidates for invalidation; other URIs might be discovered
+   through mechanisms not specified in this document.
+   However, a cache &MUST-NOT; trigger an invalidation under these conditions
+   if the origin (<xref target="origin"/>) of the URI to be invalidated differs from that of the target URI
    (<xref target="target.resource"/>). This helps prevent denial-of-service attacks.
-</t>
-<t>
-   A cache &MUST; invalidate the target URI 
-   (<xref target="target.resource"/>) when it receives a non-error response 
-   to a request with a method whose safety is unknown.
 </t>
 <t>
    <x:dfn>Invalidate</x:dfn> means that the cache will either remove all
@@ -2141,6 +2148,7 @@
       <x:has anchor="field-values"/>
       <x:has anchor="message.transformations"/>
       <x:has anchor="messages"/>
+      <x:has anchor="origin"/>
       <x:has anchor="overview.of.status.codes"/>
       <x:has anchor="precedence"/>
       <x:has anchor="preconditions"/>
@@ -2360,12 +2368,22 @@
 
 <section title="Changes from RFC 7234" anchor="changes.from.rfc.7234">
 <t>
-   Handling invalid and multiple Age header field values has been clarified.
-   (<xref target="field.age"/>)
-</t>
-<t>
    Handling of duplicate and conflicting cache directives has been clarified.
    (<xref target="calculating.freshness.lifetime"/>)
+</t>
+<t>
+   Cache invalidation of the URIs in the Location and Content-Location
+   header fields is no longer required, but still allowed.
+   (<xref target="invalidation"/>)
+</t>
+<t>
+   Cache invalidation of the URIs in the Location and Content-Location header fields is disallowed
+   when the origin is different; previously, it was the host.
+   (<xref target="invalidation"/>)
+</t>
+<t>
+   Handling invalid and multiple Age header field values has been clarified.
+   (<xref target="field.age"/>)
 </t>
 <t>
    Some cache directives defined by this specification now have stronger
@@ -2519,10 +2537,13 @@
   <li>In <xref target="serving.stale.responses"/>, remove 'no-store', as it won't be in cache in the first place (<eref target="https://github.com/httpwg/http-core/issues/447"/>)</li>
   <li>In <xref target="storing.fields"/>, make it clear that only response headers need be stored (<eref target="https://github.com/httpwg/http-core/issues/457"/>)</li>
   <li>In <xref target="calculating.freshness.lifetime"/> clarify how to handle invalid and conflicting directives (<eref target="https://github.com/httpwg/http-core/issues/460"/>)</li>
+  <li>In <xref target="validation.response"/>, mention retry of failed validation requests (<eref target="https://github.com/httpwg/http-core/issues/462"/>)</li>
   <li>In <xref target="validation.response"/>, clarify requirement on storing a full response to a conditional request (<eref target="https://github.com/httpwg/http-core/issues/463"/>)</li>
   <li>In <xref target="field.age"/>, clarify error handling (<eref target="https://github.com/httpwg/http-core/issues/471"/>)</li>
   <li>In <xref target="expiration.model"/>, remove spurious "UTC" (<eref target="https://github.com/httpwg/http-core/issues/472"/>)</li>
   <li>In <xref target="expiration.model"/>, correct the date-related rule names to consider case-insensitive (<eref target="https://github.com/httpwg/http-core/issues/473"/>)</li>
+  <li>In <xref target="constructing.responses.from.caches"/>, mention collapsed requests (<eref target="https://github.com/httpwg/http-core/issues/475"/>)</li>
+  <li>In <xref target="invalidation"/>, relax requirements on Content-Location and Location invalidation (<eref target="https://github.com/httpwg/http-core/issues/478"/>)</li>
 </ul>
 </section>
 </section>
