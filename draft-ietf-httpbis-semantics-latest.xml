@@ -34,6 +34,7 @@
 <?rfc-ext xml2rfc-backend="202007"?>
 
 <rfc obsoletes="2818,7230,7231,7232,7233,7235,7538,7615,7694"
+     updates="3864"
      category="std" x:maturity-level="proposed"
      ipr="pre5378Trust200902" docName="draft-ietf-httpbis-semantics-&ID-VERSION;"
      xmlns:x='http://purl.org/net/xml2rfc/ext'
@@ -7848,6 +7849,13 @@ bytes=500-700,601-999
    the satisfiable ranges requested.
 </t>
 <t>
+   The above does not imply that a server will send all requested ranges.
+   In some cases, it may only be possible (or efficient) to send a portion of
+   the requested ranges first, while expecting the client to re-request the
+   remaining portions later if they are still desired
+   (see <xref target="status.206"/>).
+</t>
+<t>
    If all of the preconditions are true, the server supports the Range header
    field for the target resource, and the specified range(s) are invalid or
    unsatisfiable, the server &SHOULD; send a
@@ -8454,11 +8462,28 @@ Content-Range: exampleunit 11.2-14.3/25
 <t>
    The <x:dfn>206 (Partial Content)</x:dfn> status code indicates that the
    server is successfully fulfilling a range request for the target resource
-   by transferring one or more parts of the <x:ref>selected representation</x:ref>.
+   by transferring one or more parts of the
+   <x:ref>selected representation</x:ref>.
+</t>
+<t>
+   A server that supports range requests (<xref target="range.requests"/>) will
+   usually attempt to satisfy all of the requested ranges, since sending
+   less data will likely result in another client request for the remainder.
+   However, a server might want to send only a subset of the data requested
+   for reasons of its own, such as temporary unavailability, cache efficiency,
+   load balancing, etc. Since a 206 response is self-descriptive, the client
+   can still understand a response that only partially satisfies its range
+   request.
+</t>
+<t>
+   A client &MUST; inspect a 206 response's <x:ref>Content-Type</x:ref> and
+   <x:ref>Content-Range</x:ref> field(s) to determine what parts are enclosed
+   and whether additional requests are needed.
 </t>
 <t>
    When a 206 response is generated, the server &MUST; generate the following
-   header fields, in addition to those required in the subsections below, if the field would
+   header fields, in addition to those required in the subsections below,
+   if the field would
    have been sent in a <x:ref>200 (OK)</x:ref> response to the same request:
    <x:ref>Date</x:ref>, <x:ref>Cache-Control</x:ref>, <x:ref>ETag</x:ref>,
    <x:ref>Expires</x:ref>, <x:ref>Content-Location</x:ref>, and
@@ -11141,6 +11166,12 @@ Content-Type: text/plain
 </section>
 
 <section title="Field Name Registration" anchor="field.name.registration">
+<t>
+   This specification updates the HTTP related aspects of the existing
+   registration procedures for message header fields defined in <xref target="RFC3864"/>.
+   It defines both a new registration procedure and moves HTTP field
+   definitions into a separate registry.
+</t>
 <t>      
    Please create a new registry as outlined in <xref
    target="field-name.registry"/>.
@@ -11150,7 +11181,6 @@ Content-Type: text/plain
    Message Header Registries with the protocol 'http' are to be moved to it,
    with the following changes applied:
 </t>
-
 <ol>
    <li>The 'Applicable Protocol' field is to be omitted.</li>
    <li>Entries with a status of 'standard', 'experimental', 'reserved', or
@@ -12624,6 +12654,18 @@ Content-Type: text/plain
   <seriesInfo name="RFC" value="6648"/>
 </reference>
 
+<reference anchor="RFC3864">
+  <front>
+    <title>Registration Procedures for Message Header Fields</title>
+    <author initials="G." surname="Klyne" fullname="G. Klyne"/>
+    <author initials="M." surname="Nottingham" fullname="M. Nottingham"/>
+    <author initials="J." surname="Mogul" fullname="J. Mogul"/>
+    <date year="2004" month="September"/>
+  </front>
+  <seriesInfo name="BCP" value="90"/>
+  <seriesInfo name="RFC" value="3864"/>
+</reference>
+
 <reference anchor="RFC5322">
   <front>
     <title>Internet Message Format</title>
@@ -13464,12 +13506,15 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
 
 <section title="Since draft-ietf-httpbis-semantics-12" anchor="changes.since.12">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="acks"/>, added acks for the work since 2014 (<eref target="https://github.com/httpwg/http-core/issues/442"/>)</li>
+  <li>In <xref target="status.206"/>, specifically require that a client check the 206 response header fields to determine what ranges are enclosed, since it cannot assume they exactly match those requested (<eref target="https://github.com/httpwg/http-core/issues/445"/>)</li>
   <li>In <xref target="field-extensibility"/>, explain why new fields need to be backwards-compatible (<eref target="https://github.com/httpwg/http-core/issues/448"/>)</li>
   <li>In <xref target="field-order"/>, constrain field combination to be within a section (<eref target="https://github.com/httpwg/http-core/issues/454"/>)</li>
   <li>In <xref target="http.date"/>, mention that caching relaxes date sensitivity (<eref target="https://github.com/httpwg/http-core/issues/473"/>)</li>
   <li>In <xref target="field.name.registration"/>, moved "*" field registration into main table (<eref target="https://github.com/httpwg/http-core/issues/476"/>)</li>
   <li>In <xref target="intro.evolution"/>, reference <xref target="HTTP09"/> (<eref target="https://github.com/httpwg/http-core/issues/497"/>)</li>
   <li>In <xref target="status.1xx"/>, align language about bodies and trailers with 204 and 304 (<eref target="https://github.com/httpwg/http-core/issues/503"/>)</li>
+  <li>In <xref target="field.name.registration"/>, note that this document updates <xref target="RFC3864"/> (<eref target="https://github.com/httpwg/http-core/issues/515"/>)</li>
 </ul>
 </section>
 </section>
@@ -13489,10 +13534,6 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    Eric Rescorla, and Yves Lafon.
 </t>
 <t>
-   See <xref target="RFC7230" x:fmt="of" x:sec="10"/> for further
-   acknowledgements from prior revisions.
-</t>
-<t>
    In addition, this document has reincorporated the HTTP Authentication
    Framework, previously defined in
    <xref target="RFC7235" x:fmt="none">RFC 7235</xref> and
@@ -13504,7 +13545,86 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    for further acknowledgements.
 </t>
 <t>
-  <cref anchor="newacks">New acks to be added here.</cref>
+   Since 2014, the following contributors have helped improve the HTTP
+   specification by reporting bugs, asking smart questions, drafting or
+   reviewing text, and evaluating open issues:
+</t>
+<t>
+   <contact fullname="Alan Egerton"/>,
+   <contact fullname="Alex Rousskov"/>,
+   <contact fullname="Amichai Rothman"/>,
+   <contact fullname="Amos Jeffries"/>,
+   <contact fullname="Anders Kaseorg"/>,
+   <contact fullname="Andreas Gebhardt"/>,
+   <contact fullname="Anne van Kesteren"/>,
+   <contact fullname="Armin Abfalterer"/>,
+   <contact fullname="Aron Duby"/>,
+   <contact fullname="Asanka Herath"/>,
+   <contact fullname="Asbj&#xf8;rn Ulsberg"/>,
+   <contact fullname="Attila Gulyas"/>,
+   <contact fullname="Austin Wright"/>,
+   <contact fullname="Barry Pollard"/>,
+   <contact fullname="Ben Burkert"/>,
+   <contact fullname="Bj&#xf6;rn H&#xf6;hrmann"/>,
+   <contact fullname="Brad Fitzpatrick"/>,
+   <contact fullname="Chris Pacejo"/>,
+   <contact fullname="Colin Bendell"/>,
+   <contact fullname="Cory Benfield"/>,
+   <contact fullname="Cory Nelson"/>,
+   <contact fullname="Daisuke Miyakawa"/>,
+   <contact fullname="Daniel Stenberg"/>,
+   <contact fullname="Danil Suits"/>,
+   <contact fullname="David Benjamin"/>,
+   <contact fullname="David Matson"/>,
+   <contact fullname="David Schinazi"/>,
+   <contact fullname="&#x414;&#x438;&#x43b;&#x44f;&#x43d; &#x41f;&#x430;&#x43b;&#x430;&#x443;&#x437;&#x43e;&#x432;" asciiFullname="Dilyan Palauzov"/>,
+   <contact fullname="Eric Anderson"/>,
+   <contact fullname="Eric Rescorla"/>,
+   <contact fullname="Erwin Pe"/>,
+   <contact fullname="Etan Kissling"/>,
+   <contact fullname="Evert Pot"/>,
+   <contact fullname="Evgeny Vrublevsky"/>,
+   <contact fullname="Florian Best"/>,
+   <contact fullname="Igor Lubashev"/>,
+   <contact fullname="James Callahan"/>,
+   <contact fullname="Jeffrey Yasskin"/>,
+   <contact fullname="Kalin Gyokov"/>,
+   <contact fullname="Kannan Goundan"/>,
+   <contact fullname="Kazuho Oku"/>,
+   <contact fullname="Ken Murchison"/>,
+   <contact fullname="Lucas Pardue"/>,
+   <contact fullname="Martin D&#xfc;rst"/>,
+   <contact fullname="Martin Thomson"/>,
+   <contact fullname="Martynas Jusevi&#x10d;ius"/>,
+   <contact fullname="Matt Menke"/>,
+   <contact fullname="Matthias Pigulla"/>,
+   <contact fullname="Michael Osipov"/>,
+   <contact fullname="Mike Bishop"/>,
+   <contact fullname="Mike Pennisi"/>,
+   <contact fullname="Mike West"/>,
+   <contact fullname="Nicholas Hurley"/>,
+   <contact fullname="Nikita Piskunov"/>,
+   <contact fullname="Patrick McManus"/>,
+   <contact fullname="Piotr Sikora"/>,
+   <contact fullname="Poul-Henning Kamp"/>,
+   <contact fullname="Rick van Rein"/>,
+   <contact fullname="Roberto Polli"/>,
+   <contact fullname="Semyon Kholodnov"/>,
+   <contact fullname="Simon Pieters"/>,
+   <contact fullname="Simon Sch&#xfc;ppel"/>,
+   <contact fullname="Todd Greer"/>,
+   <contact fullname="Tommy Pauly"/>,
+   <contact fullname="Vasiliy Faronov"/>,
+   <contact fullname="Vladimir Lashchev"/>,
+   <contact fullname="Wenbo Zhu"/>,
+   <contact fullname="William A. Rowe Jr."/>,
+   <contact fullname="Willy Tarreau"/>,
+   <contact fullname="Xingwei Liu"/>, and
+   <contact fullname="Yishuai Li"/>.
+</t>
+<t>
+   See <xref target="RFC7230" x:fmt="of" x:sec="10"/> for further
+   acknowledgements from prior revisions.
 </t>
 </section>
 </back>
