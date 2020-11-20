@@ -421,6 +421,55 @@
 </t>
 </section>
 
+<section title="Updating Stored Header Fields" anchor="update">
+<t>
+   Caches are required to update a stored response's header fields from another
+   (typically newer) response in several situations; for example, see <xref
+   target="combining.responses"/>, <xref target="freshening.responses"/> and
+   <xref target="head.effects"/>.
+</t>
+<t>
+   When doing so, the cache &MUST; use the header fields in the provided
+   response to replace all instances of the corresponding header fields in
+   the stored response, with the following exceptions:
+</t>
+<ul>
+   <li>Header fields excepted from storage in <xref target="storing.fields"/>,</li>
+   <li>Header fields that the cache's stored representation of the response depends upon, as described below,</li>
+   <li>Header fields that are automatically processed and removed by the recipient, as described below, and</li>
+   <li>The Content-Length header field.</li>
+</ul>
+<t>
+   In some cases, caches (especially in user agents) store processed
+   representations of the received response, rather than the response itself,
+   and updating header fields that affect that processing can result in
+   inconsistent behavior and security issues. Caches in this situation &MAY;
+   omit these header fields from updating stored representations on an
+   exceptional basis, but &SHOULD; limit such omission to those fields
+   necessary to assure integrity of the stored representation.
+</t>
+<t>
+   For example, a browser might store a response's body after removing
+   content-codings, thereby making its metadata inaccurate. 
+   Updating that stored metadata with a different Content-Encoding
+   header field would be problematic. Likewise, a browser might store a
+   post-parse tree representation of HTML, rather than the body received in
+   the response; updating the Content-Type header field would not be workable
+   in this case, because any assumptions about the format made in parsing would
+   now be invalid.
+</t>
+<t>
+   Furthermore, some fields are automatically processed and removed by the
+   HTTP implementation; for example, the Content-Range header field.
+   Implementations &MAY; automatically omit such header fields from updates,
+   even when the processing does not actually occur.
+</t>
+<t>
+   Note that the Content-* prefix is not a signal that a header field is omitted
+   from update; it is only a convention for naming content-related fields.
+</t>
+</section>
+
 <section title="Storing Incomplete Responses" anchor="incomplete.responses">
 <t>
    If the request method is GET, the response status code is <x:ref>200
@@ -476,9 +525,8 @@
 </t>
 <t>
    When combining the new response with one or more stored responses, a cache
-   &MUST; use the header fields provided in the new response, aside from
-   <x:ref>Content-Range</x:ref>, to replace all instances of the
-   corresponding header fields in the stored response.
+   &MUST; update the stored response header fields using the header fields
+   provided in the new response, as per <xref target="update"/>.
 </t>
 </section>
 
@@ -1090,45 +1138,9 @@
    </li>
 </ul>
 <t>
-   For each stored response identified for update, the cache &MUST; use the
-   header fields provided in the <x:ref>304 (Not Modified)</x:ref> response
-   to replace all instances of the corresponding header fields in the stored
-   response, with the following exceptions:
-</t>
-<ul>
-   <li>Header fields excepted from storage in <xref target="storing.fields"/>,</li>
-   <li>Header fields that the cache's stored representation of the response depends upon, as described below,</li>
-   <li>Header fields that are automatically processed and removed by the recipient, as described below, and</li>
-   <li>The Content-Length header field.</li>
-</ul>
-<t>
-   In some cases, caches (especially in user agents) store processed
-   representations of the received response, rather than the response itself,
-   and updating header fields that affect that processing can result in
-   inconsistent behavior and security issues. Caches in this situation &MAY;
-   omit these header fields from updating stored representations on an
-   exceptional basis, but &SHOULD; limit such omission to those fields
-   necessary to assure integrity of the stored representation.
-</t>
-<t>
-   For example, a browser might store a response's body after removing
-   content-codings, thereby making its metadata inaccurate. 
-   Updating that stored metadata with a different Content-Encoding
-   header field would be problematic. Likewise, a browser might store a
-   post-parse tree representation of HTML, rather than the body received in
-   the response; updating the Content-Type header field would not be workable
-   in this case, because any assumptions about the format made in parsing would
-   now be invalid.
-</t>
-<t>
-   Furthermore, some fields are automatically processed and removed by the
-   HTTP implementation; for example, the Content-Range header field.
-   Implementations &MAY; automatically omit such header fields from updates,
-   even when the processing does not actually occur.
-</t>
-<t>
-   Note that the Content-* prefix is not a signal that a header field is omitted
-   from update; it is only a convention for naming content-related fields.
+   For each stored response identified, the cache &MUST; update
+   its header fields with the header fields provided in the <x:ref>304 (Not
+   Modified)</x:ref> response, as per <xref target="update"/>.
 </t>
 </section>
 
@@ -1160,17 +1172,15 @@
 <t>
    If a cache updates a stored response with the metadata provided in a HEAD
    response, the cache &MUST; use the header fields provided in the HEAD
-   response to replace all instances of the corresponding header fields in
-   the stored response (subject to the exceptions in <xref
-   target="freshening.responses"/>) and append new header fields to the
+   response to update the stored response (see <xref
+   target="update"/>) and append new header fields to the
    stored response's header section unless otherwise restricted by the
    <x:ref>Cache-Control</x:ref> header field.
 </t>
 </section>
 </section>
 
-
-<section title="Invalidation" anchor="invalidation">
+<section title="Invalidating Stored Responses" anchor="invalidation">
 <t>
    Because unsafe request methods (<xref target="safe.methods"/>) such as PUT, POST or DELETE
    have the potential for changing state on the origin server, intervening
