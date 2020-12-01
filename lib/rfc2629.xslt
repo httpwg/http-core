@@ -5745,6 +5745,25 @@
 <!-- keep the root for the case when we process XSLT-inline markup -->
 <xsl:variable name="src" select="/" />
 
+<xsl:template name="render-section-ref-title">
+  <xsl:param name="to" />
+
+  <xsl:choose>
+    <xsl:when test="$to/name">
+      <xsl:call-template name="render-name-ref">
+        <xsl:with-param name="n" select="$to/name/node()"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:when test="$to/@title">
+      <xsl:value-of select="normalize-space($to/@title)"/>
+    </xsl:when>
+    <xsl:when test="$to/self::abstract">Abstract</xsl:when>
+    <xsl:when test="$to/self::references">References</xsl:when>
+    <xsl:otherwise/>
+  </xsl:choose>
+</xsl:template>
+
+
 <xsl:template name="render-section-ref">
   <xsl:param name="from" />
   <xsl:param name="to" />
@@ -5774,19 +5793,9 @@
       </xsl:choose>
     </xsl:when>
     <xsl:when test="$from/@format='title'">
-      <xsl:choose>
-        <xsl:when test="$to/name">
-          <xsl:call-template name="render-name-ref">
-            <xsl:with-param name="n" select="$to/name/node()"/>
-          </xsl:call-template>
-        </xsl:when>
-        <xsl:when test="$to/@title">
-          <xsl:value-of select="normalize-space($to/@title)"/>
-        </xsl:when>
-        <xsl:when test="$to/self::abstract">Abstract</xsl:when>
-        <xsl:when test="$to/self::references">References</xsl:when>
-        <xsl:otherwise/>
-      </xsl:choose>
+      <xsl:call-template name="render-section-ref-title">
+        <xsl:with-param name="to" select="$to"/>
+      </xsl:call-template>
     </xsl:when>
     <xsl:when test="$from/@format='none'">
       <!-- Nothing to do -->
@@ -8924,6 +8933,13 @@ dd, li, p {
       </xsl:variable>
       <xsl:variable name="n">
         <xsl:choose>
+          <xsl:when test="starts-with($_n,$unnumbered)">
+            <xsl:text>"</xsl:text>
+            <xsl:call-template name="render-section-ref-title">
+              <xsl:with-param name="to" select="ancestor::section"/>
+            </xsl:call-template>
+            <xsl:text>"</xsl:text>
+          </xsl:when>
           <xsl:when test="$_n!=''">
             <xsl:value-of select="$_n"/>
           </xsl:when>
@@ -8974,6 +8990,13 @@ dd, li, p {
   </xsl:variable>
   <xsl:variable name="n">
     <xsl:choose>
+      <xsl:when test="starts-with($_n,$unnumbered)">
+        <xsl:text>"</xsl:text>
+        <xsl:call-template name="render-section-ref-title">
+          <xsl:with-param name="to" select="ancestor::section"/>
+        </xsl:call-template>
+        <xsl:text>"</xsl:text>
+      </xsl:when>
       <xsl:when test="$_n!=''">
         <xsl:value-of select="$_n"/>
       </xsl:when>
@@ -12051,11 +12074,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1334 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1334 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1335 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1335 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/11/18 19:03:14 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/11/18 19:03:14 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/11/30 17:42:24 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/11/30 17:42:24 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
