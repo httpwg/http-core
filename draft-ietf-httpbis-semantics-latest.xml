@@ -1373,124 +1373,51 @@ Content-Type: text/plain
 </section>
 </section>
 
-<section title="Message Abstraction" anchor="message.abstraction">
-<iref primary="true" item="message abstraction"/>
-<iref item="message"/>
-<t>
-   Each major version of HTTP defines its own syntax for the communication of
-   messages. However, they share a common data abstraction.
-</t>
-<t>
-   A message consists of control data to describe and route the message,
-   optional header fields that modify or extend the message semantics,
-   describe the sender, the payload, or provide additional context,
-   a potentially unbounded stream of payload data, and optional
-   trailer fields for metadata collected while sending the payload.
-</t>
-<t>
-   Messages are intended to be self-descriptive. This means that everything a
-   recipient needs to know about the message can be determined by looking at
-   the message itself, after decoding or reconstituting parts that have been
-   compressed or elided in transit, without requiring an understanding of the
-   sender's current application state (established via prior messages).
-</t>
+<section title="Fields" anchor="fields">
+<iref primary="true" item="field"/>
 
-<section title="Framing and Completeness" anchor="message.framing">
-<iref primary="true" item="complete"/>
-<iref primary="true" item="incomplete"/>
+<section title="Field Names" anchor="field-names">
+  <x:anchor-alias value="header.names"/>
+  <x:anchor-alias value="field-name"/>
 <t>
-   Message framing indicates how each message begins and ends, such that each
-   message can be distinguished from other messages or noise on the same
-   connection. Each major version of HTTP defines its own framing mechanism.
+   The field-name token labels the corresponding field value as having the
+   semantics defined by that field.  For example, the <x:ref>Date</x:ref>
+   header field is defined in <xref target="field.date"/> as containing the origination
+   timestamp for the message in which it appears.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-name"/>
+  <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
+</sourcecode>
+<t>
+   Field names are case-insensitive and ought to be registered within the
+   "Hypertext Transfer Protocol (HTTP) Field Name Registry"; see <xref target="field-name.registry"/>.
 </t>
 <t>
-   HTTP/0.9 and early deployments of HTTP/1.0 used closure of the underlying
-   connection to end each response. For backwards compatibility, this implicit
-   framing is also allowed in HTTP/1.1. However, implicit framing can fail to
-   distinguish an incomplete response if the connection closes early. For
-   that reason, almost all modern implementations use explicit framing in
-   the form of length-delimited sequences of message data.
+   The interpretation of a field does not change between minor
+   versions of the same major HTTP version, though the default behavior of a
+   recipient in the absence of such a field can change. Unless specified
+   otherwise, fields are defined for all versions of HTTP.
+   In particular, the <x:ref>Host</x:ref> and <x:ref>Connection</x:ref>
+   fields ought to be implemented by all HTTP/1.x implementations
+   whether or not they advertise conformance with HTTP/1.1.
 </t>
 <t>
-   A message is considered <x:dfn>complete</x:dfn> when all of the octets
-   indicated by its framing are available. Note that,
-   when no explicit framing is used, a response message that is ended
-   by the underlying connection's close is considered complete even though it
-   might be indistinguishable from an incomplete response, unless a
-   transport-level error indicates that it is not complete.
+   New fields can be introduced without changing the protocol version if
+   their defined semantics allow them to be safely ignored by recipients
+   that do not recognize them; see <xref target="field-extensibility"/>.
+</t>
+<t>
+   A proxy &MUST; forward unrecognized header fields unless the
+   field name is listed in the <x:ref>Connection</x:ref> header field
+   (<xref target="field.connection"/>) or the proxy is specifically
+   configured to block, or otherwise transform, such fields.
+   Other recipients &SHOULD; ignore unrecognized header and trailer fields.
+   These requirements allow HTTP's functionality to be enhanced without
+   requiring prior update of deployed intermediaries.
 </t>
 </section>
 
-<section title="Control Data" anchor="message.control.data">
-<iref primary="true" item="control data"/>
-<t>
-   Every HTTP message has a protocol version. Depending on the version in use, it
-   might be carried in the message explicitly, or it might be inferred by the
-   connection that the message is carried on. A message can change versions as it
-   passes through intermediaries, because the semantics of a HTTP message are
-   independent of its version.
-</t>
-<t>
-   A client &SHOULD; send a request version equal to the highest
-   version to which the client is conformant and
-   whose major version is no higher than the highest version supported
-   by the server, if this is known.  A client &MUST-NOT; send a
-   version to which it is not conformant.
-</t>
-<t>
-   A client &MAY; send a lower request version if it is known that
-   the server incorrectly implements the HTTP specification, but only
-   after the client has attempted at least one normal request and determined
-   from the response status code or header fields (e.g., <x:ref>Server</x:ref>) that
-   the server improperly handles higher request versions.
-</t>
-<t>
-   A server &SHOULD; send a response version equal to the highest version to
-   which the server is conformant that has a major version less than or equal
-   to the one received in the request.
-   A server &MUST-NOT; send a version to which it is not conformant.
-   A server can send a <x:ref>505 (HTTP Version Not Supported)</x:ref>
-   response if it wishes, for any reason, to refuse service of the client's
-   major protocol version.
-</t>
-<t>
-   When an HTTP message is received with a major version number that the
-   recipient implements, but a higher minor version number than what the
-   recipient implements, the recipient &SHOULD; process the message as if it
-   were in the highest minor version within that major version to which the
-   recipient is conformant. A recipient can assume that a message with a
-   higher minor version, when sent to a recipient that has not yet indicated
-   support for that higher version, is sufficiently backwards-compatible to be
-   safely processed by any implementation of the same major version.
-</t>
-</section>
-
-<section title="Header Fields" anchor="header.fields">
-<t>
-   <iref item="field"/>
-   <iref item="section"/>
-   HTTP messages use key/value pairs to convey data about the
-   message, its payload, the target resource, or the connection.
-   They are called "HTTP fields" or just "<x:dfn>fields</x:dfn>".
-   Fields occur in groups called "<x:dfn>field sections</x:dfn>" or just "sections".
-</t>
-<t>
-   <iref item="header section"/>
-   Fields that are sent/received before the message body are referred to as
-   "header fields" (or just "headers", colloquially) and are located within the
-   "<x:dfn>header section</x:dfn>" of a message. We refer to some named fields
-   specifically as a "header field" when they are only allowed to be sent in
-   the header section.
-</t>
-<t>
-   <iref item="trailer section"/>
-   Fields that are sent/received after the header section has ended (usually
-   after the message body begins to stream) are referred to as
-   "trailer fields" (or just "trailers", colloquially) and located within a
-   "<x:dfn>trailer section</x:dfn>". One or more trailer sections are only
-   possible when supported by the version of HTTP in use and enabled by an
-   extensible mechanism for framing message sections.
-</t>
+<section title="Field Lines and Combined Field Value" anchor="field.lines">
 <t>
    <iref item="field line"/>
    <iref item="field name"/>
@@ -1522,43 +1449,10 @@ Content-Type: text/plain
    field line value is "Baz". The field value for "Example-Field" is a list
    with three members: "Foo", "Bar", and "Baz".
 </t>
-<t>
-   The interpretation of a field does not change between minor
-   versions of the same major HTTP version, though the default behavior of a
-   recipient in the absence of such a field can change. Unless specified
-   otherwise, fields are defined for all versions of HTTP.
-   In particular, the <x:ref>Host</x:ref> and <x:ref>Connection</x:ref>
-   fields ought to be implemented by all HTTP/1.x implementations
-   whether or not they advertise conformance with HTTP/1.1.
-</t>
-<t>
-   New fields can be introduced without changing the protocol version if
-   their defined semantics allow them to be safely ignored by recipients
-   that do not recognize them; see <xref target="field-extensibility"/>.
-</t>
-<t>
-   A proxy &MUST; forward unrecognized header fields unless the
-   field name is listed in the <x:ref>Connection</x:ref> header field
-   (<xref target="field.connection"/>) or the proxy is specifically
-   configured to block, or otherwise transform, such fields.
-   Other recipients &SHOULD; ignore unrecognized header and trailer fields.
-   These requirements allow HTTP's functionality to be enhanced without
-   requiring prior update of deployed intermediaries.
-</t>
+</section>
 
 <section title="Field Ordering and Combination" anchor="field-order">
   <x:anchor-alias value="header.order"/>
-<t>
-   The order in which field lines with differing names are
-   received in a message is not significant. However, it is good practice to send
-   header fields that contain control data first, such as <x:ref>Host</x:ref>
-   on requests and <x:ref>Date</x:ref> on responses, so that implementations
-   can decide when not to handle a message as early as possible.
-   A server &MUST-NOT; apply a request to the target resource until the entire
-   request header section is received, since later header field lines might include
-   conditionals, authentication credentials, or deliberately misleading
-   duplicate header fields that would impact request processing.
-</t>
 <t>
    A recipient &MAY; combine multiple field lines within a field section that have the same field name
    into one field line, without changing the semantics of the message, by
@@ -1593,6 +1487,19 @@ Content-Type: text/plain
    details.)
   </t>
 </aside>
+<t>
+   The order in which field lines with differing names are
+   received in a message is not significant. However, it is good practice to send
+   header fields that contain control data first, such as <x:ref>Host</x:ref>
+   on requests and <x:ref>Date</x:ref> on responses, so that implementations
+   can decide when not to handle a message as early as possible.
+</t>
+<t>
+   A server &MUST-NOT; apply a request to the target resource until the entire
+   request header section is received, since later header field lines might include
+   conditionals, authentication credentials, or deliberately misleading
+   duplicate header fields that would impact request processing.
+</t>
 </section>
 
 <section title="Field Limits" anchor="field-limits">
@@ -1616,24 +1523,6 @@ Content-Type: text/plain
    than the client wishes to process if the field semantics are such that the
    dropped value(s) can be safely ignored without changing the
    message framing or response semantics.
-</t>
-</section>
-
-<section title="Field Names" anchor="field-names">
-  <x:anchor-alias value="header.names"/>
-  <x:anchor-alias value="field-name"/>
-<t>
-   The field-name token labels the corresponding field value as having the
-   semantics defined by that field.  For example, the <x:ref>Date</x:ref>
-   header field is defined in <xref target="field.date"/> as containing the origination
-   timestamp for the message in which it appears.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-name"/>
-  <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
-</sourcecode>
-<t>
-   Field names are case-insensitive and ought to be registered within the
-   "Hypertext Transfer Protocol (HTTP) Field Name Registry"; see <xref target="field-name.registry"/>.
 </t>
 </section>
 
@@ -1736,244 +1625,6 @@ Content-Type: text/plain
       has been extracted by a generic field parser).
    </t>
 </aside>
-</section>
-</section>
-
-<section title="Message Payload" anchor="payload">
-<iref item="payload"/>
-<t>
-   Some HTTP messages transfer a complete or partial representation as the
-   message "<x:dfn>payload</x:dfn>".  In some cases, a payload might contain
-   only the associated representation's header fields (e.g., responses to
-   HEAD) or only some part(s) of the representation data
-   (e.g., the <x:ref>206 (Partial Content)</x:ref> status code).
-</t>
-
-<section title="Purpose" anchor="payload.purpose">
-<t>
-   The purpose of a payload in a request is defined by the method semantics.
-   For example, a representation in the payload of a PUT request
-   (<xref target="PUT"/>) represents the desired state of the
-   <x:ref>target resource</x:ref> if the request is successfully applied,
-   whereas a representation in the payload of a POST request
-   (<xref target="POST"/>) represents information to be processed by the
-   target resource.
-</t>
-<t>
-   In a response, the payload's purpose is defined by both the request method
-   and the response status code.
-   For example, the payload of a <x:ref>200 (OK)</x:ref> response to GET
-   (<xref target="GET"/>) represents the current state of the
-   <x:ref>target resource</x:ref>, as observed at the time of the message
-   origination date (<xref target="field.date"/>), whereas the payload of
-   the same status code in a response to POST might represent either the
-   processing result or the new state of the target resource after applying
-   the processing. Response messages with an error status code usually contain
-   a payload that represents the error condition, such that it describes the
-   error state and what next steps are suggested for resolving it.
-</t>
-</section>
-
-<section title="Identifying Message Payloads" anchor="identifying.payload">
-<t>
-   When a complete or partial representation is transferred in a message
-   payload, it is often desirable for the sender to supply, or the recipient
-   to determine, an identifier for a resource corresponding to that
-   representation.
-</t>
-<t>
-   For a request message:
-</t>
-<ul>
-   <li>If the request has a <x:ref>Content-Location</x:ref> header field,
-       then the sender asserts that the payload is a representation of the
-       resource identified by the Content-Location field value. However,
-       such an assertion cannot be trusted unless it can be verified by
-       other means (not defined by this specification). The information
-       might still be useful for revision history links.</li>
-   <li>Otherwise, the payload is unidentified.</li>
-</ul>
-<t>
-   For a response message, the following rules are applied in order until a
-   match is found:
-</t>
-<ol>
-   <li>If the request method is GET or HEAD and the response status code is
-       <x:ref>200 (OK)</x:ref>, 
-       <x:ref>204 (No Content)</x:ref>,
-       <x:ref>206 (Partial Content)</x:ref>, or
-       <x:ref>304 (Not Modified)</x:ref>,
-       the payload is a representation of the resource identified by the
-       target URI (<xref target="target.resource"/>).</li>
-   <li>If the request method is GET or HEAD and the response status code is
-       <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
-       a potentially modified or enhanced representation of the
-       <x:ref>target resource</x:ref> as provided by an intermediary.</li>
-   <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field value is a reference to the same URI as the target URI, 
-       the payload is a representation of the target resource.</li>
-   <li>If the response has a <x:ref>Content-Location</x:ref> header field
-       and its field value is a reference to a URI different from the
-       target URI, then the sender asserts that the payload is a
-       representation of the resource identified by the Content-Location
-       field value. However, such an assertion cannot be trusted unless
-       it can be verified by other means (not defined by this specification).</li>
-   <li>Otherwise, the payload is unidentified.</li>
-</ol>
-</section>
-
-<section title="Payload Metadata" anchor="message.payload.metadata">
-<t>
-   Header fields that specifically describe the payload, rather than the
-   associated representation, are referred to as "payload header fields".
-   Payload header fields are defined in other parts of this specification,
-   due to their impact on message parsing.
-</t>
-</section>
-
-<section title="Payload Body" anchor="payload.body">
-<t>
-   The payload body contains the data of a request or response. This is
-   distinct from the message body (e.g., <xref target="message.body"/>),
-   which is how the payload body is transferred "on the wire", and might be
-   encoded, depending on the HTTP version in use.
-</t>
-<t>
-   It is also distinct from a request or response's representation data
-   (<xref target="representation.data"/>), which can be inferred from
-   protocol operation, rather than necessarily appearing "on the wire."
-</t>
-<t>
-   The presence of a payload body in a request depends on whether the request
-   method used defines semantics for it.
-</t>
-<t>
-   The presence of a payload body in a response depends on both the request
-   method to which it is responding and the response status code (<xref
-   target="status.codes"/>).
-</t>
-<t>
-   Responses to the HEAD request method (<xref target="HEAD"/>) never include
-   a payload body because the associated response header fields indicate only
-   what their values would have been if the request method had been GET
-   (<xref target="GET"/>).
-</t>
-<t>
-   <x:ref>2xx (Successful)</x:ref> responses to a CONNECT request method
-   (<xref target="CONNECT"/>) switch the connection to tunnel mode instead of
-   having a payload body.
-</t>
-<t>
-   All <x:ref>1xx (Informational)</x:ref>, <x:ref>204 (No Content)</x:ref>, and
-   <x:ref>304 (Not Modified)</x:ref> responses do not include a payload body.
-</t>
-<t>
-   All other responses do include a payload body, although that body
-   might be of zero length.
-</t>
-</section>
-</section>
-
-<section title="Trailer Fields" anchor="trailer.fields">
-   <iref item="trailer fields"/>
-   <iref item="trailers"/>
-
-<section title="Purpose" anchor="trailers.purpose">
-<t>
-   In some HTTP versions, additional
-   metadata can be sent after the initial header section has been completed
-   (during or after transmission of the payload body), such as a message
-   integrity check, digital signature, or post-processing status.
-   For example, the chunked coding in HTTP/1.1 allows a trailer section after
-   the payload body (<xref target="chunked.trailer.section"/>) which can contain
-   trailer fields: field names and values that share the same syntax and
-   namespace as header fields but that are received after the header section.
-</t>
-<t>
-   Trailer fields ought to be processed and stored separately from the fields
-   in the header section to avoid contradicting message semantics known at
-   the time the header section was complete. The presence or absence of
-   certain header fields might impact choices made for the routing or
-   processing of the message as a whole before the trailers are received;
-   those choices cannot be unmade by the later discovery of trailer fields.
-</t>
-</section>
-
-<section title="Limitations" anchor="trailers.limitations">
-<t>
-   Many fields cannot be processed outside the header section because
-   their evaluation is necessary prior to receiving the message body, such as
-   those that describe message framing, routing, authentication,
-   request modifiers, response controls, or payload format.
-   A sender &MUST-NOT; generate a trailer field unless the sender knows the
-   corresponding header field name's definition permits the field to be sent
-   in trailers.
-</t>
-<t>
-   Trailer fields can be difficult to process by intermediaries that forward
-   messages from one protocol version to another. If the entire message can be
-   buffered in transit, some intermediaries could merge trailer fields into
-   the header section (as appropriate) before it is forwarded. However, in
-   most cases, the trailers are simply discarded.
-   A recipient &MUST-NOT; merge a trailer field into a header section unless
-   the recipient understands the corresponding header field definition and
-   that definition explicitly permits and defines how trailer field values
-   can be safely merged.
-</t>
-<t>
-   The presence of the keyword "trailers" in the TE header field (<xref
-   target="field.te"/>) indicates that the client is willing to accept
-   trailer fields, on behalf of itself and any downstream clients. For
-   requests from an intermediary, this implies that all
-   downstream clients are willing to accept trailer fields in the forwarded
-   response. Note that the presence of "trailers" does not mean that the
-   client(s) will process any particular trailer field in the response; only
-   that the trailer section(s) will not be dropped by any of the clients.
-</t>
-<t>
-   Because of the potential for trailer fields to be discarded in transit, a
-   server &SHOULD-NOT; generate trailer fields that it believes are necessary
-   for the user agent to receive.
-</t>
-</section>
-
-<section title="Processing Trailer Fields" anchor="trailers.processing">
-<t>
-   Like header fields, trailer fields with the same name are processed in the
-   order received; multiple trailer field lines with the same name have the
-   equivalent semantics as appending the multiple values as a list of members,
-   even when the field lines are received in separate trailer sections.
-   Trailer fields that might be generated more than once during a message
-   &MUST; be defined as a list value even if each member value is only
-   processed once per field line received.
-</t>
-<t>
-   Trailer fields are expected (but not required) to be processed one trailer
-   section at a time. That is, for each trailer section received, a recipient
-   that is looking for trailer fields will parse the received section into
-   fields, invoke any associated processing for those fields at that point
-   in the message processing, and then append those fields to the set of
-   trailer fields received for the overall message.
-</t>
-<t>
-   This behavior allows for iterative processing of trailer fields that contain
-   incremental signatures or mid-stream status information, and fields that
-   might refer to each other's values within the same section. However,
-   there is no guarantee that trailer sections won't shift in relation to the
-   message body stream, or won't be recombined (or dropped) in transit, so
-   trailer fields that refer to data outside the present trailer section need
-   to use self-descriptive references (i.e., refer to the data by name,
-   ordinal position, or an octet range) rather than assume it is the data
-   most recently received.
-</t>
-<t>
-   Likewise, at the end of a message, a recipient &MAY; treat the entire set
-   of received trailer fields as one data structure to be considered as the
-   message concludes. Additional processing expectations, if any, can be
-   defined within the field specification for a field intended for use in
-   trailers.
-</t>
-</section>
 </section>
 
 <section title="Common Rules for Defining Field Values" anchor="field-components">
@@ -2357,6 +2008,367 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
     logging, etc.
   </t>
 </aside>
+</section>
+</section>
+</section>
+
+<section title="Message Abstraction" anchor="message.abstraction">
+<iref primary="true" item="message abstraction"/>
+<iref item="message"/>
+<t>
+   Each major version of HTTP defines its own syntax for the communication of
+   messages. However, they share a common data abstraction.
+</t>
+<t>
+   A message consists of control data to describe and route the message,
+   optional header fields that modify or extend the message semantics,
+   describe the sender, the payload, or provide additional context,
+   a potentially unbounded stream of payload data, and optional
+   trailer fields for metadata collected while sending the payload.
+</t>
+<t>
+   Messages are intended to be self-descriptive. This means that everything a
+   recipient needs to know about the message can be determined by looking at
+   the message itself, after decoding or reconstituting parts that have been
+   compressed or elided in transit, without requiring an understanding of the
+   sender's current application state (established via prior messages).
+</t>
+
+<section title="Framing and Completeness" anchor="message.framing">
+<iref primary="true" item="complete"/>
+<iref primary="true" item="incomplete"/>
+<t>
+   Message framing indicates how each message begins and ends, such that each
+   message can be distinguished from other messages or noise on the same
+   connection. Each major version of HTTP defines its own framing mechanism.
+</t>
+<t>
+   HTTP/0.9 and early deployments of HTTP/1.0 used closure of the underlying
+   connection to end each response. For backwards compatibility, this implicit
+   framing is also allowed in HTTP/1.1. However, implicit framing can fail to
+   distinguish an incomplete response if the connection closes early. For
+   that reason, almost all modern implementations use explicit framing in
+   the form of length-delimited sequences of message data.
+</t>
+<t>
+   A message is considered <x:dfn>complete</x:dfn> when all of the octets
+   indicated by its framing are available. Note that,
+   when no explicit framing is used, a response message that is ended
+   by the underlying connection's close is considered complete even though it
+   might be indistinguishable from an incomplete response, unless a
+   transport-level error indicates that it is not complete.
+</t>
+</section>
+
+<section title="Control Data" anchor="message.control.data">
+<iref primary="true" item="control data"/>
+<t>
+   Every HTTP message has a protocol version. Depending on the version in use, it
+   might be carried in the message explicitly, or it might be inferred by the
+   connection that the message is carried on. A message can change versions as it
+   passes through intermediaries, because the semantics of a HTTP message are
+   independent of its version.
+</t>
+<t>
+   A client &SHOULD; send a request version equal to the highest
+   version to which the client is conformant and
+   whose major version is no higher than the highest version supported
+   by the server, if this is known.  A client &MUST-NOT; send a
+   version to which it is not conformant.
+</t>
+<t>
+   A client &MAY; send a lower request version if it is known that
+   the server incorrectly implements the HTTP specification, but only
+   after the client has attempted at least one normal request and determined
+   from the response status code or header fields (e.g., <x:ref>Server</x:ref>) that
+   the server improperly handles higher request versions.
+</t>
+<t>
+   A server &SHOULD; send a response version equal to the highest version to
+   which the server is conformant that has a major version less than or equal
+   to the one received in the request.
+   A server &MUST-NOT; send a version to which it is not conformant.
+   A server can send a <x:ref>505 (HTTP Version Not Supported)</x:ref>
+   response if it wishes, for any reason, to refuse service of the client's
+   major protocol version.
+</t>
+<t>
+   When an HTTP message is received with a major version number that the
+   recipient implements, but a higher minor version number than what the
+   recipient implements, the recipient &SHOULD; process the message as if it
+   were in the highest minor version within that major version to which the
+   recipient is conformant. A recipient can assume that a message with a
+   higher minor version, when sent to a recipient that has not yet indicated
+   support for that higher version, is sufficiently backwards-compatible to be
+   safely processed by any implementation of the same major version.
+</t>
+</section>
+
+<section title="Header Fields" anchor="header.fields">
+<t>
+   <iref item="field"/>
+   <iref item="section"/>
+   HTTP messages use key/value pairs to convey data about the
+   message, its payload, the target resource, or the connection.
+   They are called "HTTP fields" or just "<x:dfn>fields</x:dfn>".
+   Fields occur in groups called "<x:dfn>field sections</x:dfn>" or just "sections".
+</t>
+<t>
+   <iref item="header section"/>
+   Fields that are sent/received before the message body are referred to as
+   "header fields" (or just "headers", colloquially) and are located within the
+   "<x:dfn>header section</x:dfn>" of a message. We refer to some named fields
+   specifically as a "header field" when they are only allowed to be sent in
+   the header section.
+</t>
+</section>
+
+<section title="Message Payload" anchor="payload">
+<iref item="payload"/>
+<t>
+   Some HTTP messages transfer a complete or partial representation as the
+   message "<x:dfn>payload</x:dfn>".  In some cases, a payload might contain
+   only the associated representation's header fields (e.g., responses to
+   HEAD) or only some part(s) of the representation data
+   (e.g., the <x:ref>206 (Partial Content)</x:ref> status code).
+</t>
+
+<section title="Purpose" anchor="payload.purpose">
+<t>
+   The purpose of a payload in a request is defined by the method semantics.
+   For example, a representation in the payload of a PUT request
+   (<xref target="PUT"/>) represents the desired state of the
+   <x:ref>target resource</x:ref> if the request is successfully applied,
+   whereas a representation in the payload of a POST request
+   (<xref target="POST"/>) represents information to be processed by the
+   target resource.
+</t>
+<t>
+   In a response, the payload's purpose is defined by both the request method
+   and the response status code.
+   For example, the payload of a <x:ref>200 (OK)</x:ref> response to GET
+   (<xref target="GET"/>) represents the current state of the
+   <x:ref>target resource</x:ref>, as observed at the time of the message
+   origination date (<xref target="field.date"/>), whereas the payload of
+   the same status code in a response to POST might represent either the
+   processing result or the new state of the target resource after applying
+   the processing. Response messages with an error status code usually contain
+   a payload that represents the error condition, such that it describes the
+   error state and what next steps are suggested for resolving it.
+</t>
+</section>
+
+<section title="Identifying Message Payloads" anchor="identifying.payload">
+<t>
+   When a complete or partial representation is transferred in a message
+   payload, it is often desirable for the sender to supply, or the recipient
+   to determine, an identifier for a resource corresponding to that
+   representation.
+</t>
+<t>
+   For a request message:
+</t>
+<ul>
+   <li>If the request has a <x:ref>Content-Location</x:ref> header field,
+       then the sender asserts that the payload is a representation of the
+       resource identified by the Content-Location field value. However,
+       such an assertion cannot be trusted unless it can be verified by
+       other means (not defined by this specification). The information
+       might still be useful for revision history links.</li>
+   <li>Otherwise, the payload is unidentified.</li>
+</ul>
+<t>
+   For a response message, the following rules are applied in order until a
+   match is found:
+</t>
+<ol>
+   <li>If the request method is GET or HEAD and the response status code is
+       <x:ref>200 (OK)</x:ref>, 
+       <x:ref>204 (No Content)</x:ref>,
+       <x:ref>206 (Partial Content)</x:ref>, or
+       <x:ref>304 (Not Modified)</x:ref>,
+       the payload is a representation of the resource identified by the
+       target URI (<xref target="target.resource"/>).</li>
+   <li>If the request method is GET or HEAD and the response status code is
+       <x:ref>203 (Non-Authoritative Information)</x:ref>, the payload is
+       a potentially modified or enhanced representation of the
+       <x:ref>target resource</x:ref> as provided by an intermediary.</li>
+   <li>If the response has a <x:ref>Content-Location</x:ref> header field
+       and its field value is a reference to the same URI as the target URI, 
+       the payload is a representation of the target resource.</li>
+   <li>If the response has a <x:ref>Content-Location</x:ref> header field
+       and its field value is a reference to a URI different from the
+       target URI, then the sender asserts that the payload is a
+       representation of the resource identified by the Content-Location
+       field value. However, such an assertion cannot be trusted unless
+       it can be verified by other means (not defined by this specification).</li>
+   <li>Otherwise, the payload is unidentified.</li>
+</ol>
+</section>
+
+<section title="Payload Metadata" anchor="message.payload.metadata">
+<t>
+   Header fields that specifically describe the payload, rather than the
+   associated representation, are referred to as "payload header fields".
+   Payload header fields are defined in other parts of this specification,
+   due to their impact on message parsing.
+</t>
+</section>
+
+<section title="Payload Body" anchor="payload.body">
+<t>
+   The payload body contains the data of a request or response. This is
+   distinct from the message body (e.g., <xref target="message.body"/>),
+   which is how the payload body is transferred "on the wire", and might be
+   encoded, depending on the HTTP version in use.
+</t>
+<t>
+   It is also distinct from a request or response's representation data
+   (<xref target="representation.data"/>), which can be inferred from
+   protocol operation, rather than necessarily appearing "on the wire."
+</t>
+<t>
+   The presence of a payload body in a request depends on whether the request
+   method used defines semantics for it.
+</t>
+<t>
+   The presence of a payload body in a response depends on both the request
+   method to which it is responding and the response status code (<xref
+   target="status.codes"/>).
+</t>
+<t>
+   Responses to the HEAD request method (<xref target="HEAD"/>) never include
+   a payload body because the associated response header fields indicate only
+   what their values would have been if the request method had been GET
+   (<xref target="GET"/>).
+</t>
+<t>
+   <x:ref>2xx (Successful)</x:ref> responses to a CONNECT request method
+   (<xref target="CONNECT"/>) switch the connection to tunnel mode instead of
+   having a payload body.
+</t>
+<t>
+   All <x:ref>1xx (Informational)</x:ref>, <x:ref>204 (No Content)</x:ref>, and
+   <x:ref>304 (Not Modified)</x:ref> responses do not include a payload body.
+</t>
+<t>
+   All other responses do include a payload body, although that body
+   might be of zero length.
+</t>
+</section>
+</section>
+
+<section title="Trailer Fields" anchor="trailer.fields">
+   <iref item="trailer fields"/>
+   <iref item="trailers"/>
+
+<section title="Purpose" anchor="trailers.purpose">
+<t>
+   <iref item="trailer section"/>
+   Fields that are sent/received after the header
+   section has ended (usually after the message body begins to stream) are
+   referred to as "trailer fields" (or just "trailers", colloquially) and
+   located within a "<x:dfn>trailer section</x:dfn>".
+</t>
+<t>
+   In some HTTP versions, additional
+   metadata can be sent after the initial header section has been completed
+   (during or after transmission of the payload body), such as a message
+   integrity check, digital signature, or post-processing status.
+</t>
+<t>
+   Trailer fields ought to be processed and stored separately from the fields
+   in the header section to avoid contradicting message semantics known at
+   the time the header section was complete. The presence or absence of
+   certain header fields might impact choices made for the routing or
+   processing of the message as a whole before the trailers are received;
+   those choices cannot be unmade by the later discovery of trailer fields.
+</t>
+</section>
+
+<section title="Limitations" anchor="trailers.limitations">
+<t>
+   One or more trailer sections are only possible when supported by the version
+   of HTTP in use and enabled by an extensible mechanism for framing message
+   sections.
+   For example, the chunked coding in HTTP/1.1 allows a trailer section after
+   the payload body (<xref target="chunked.trailer.section"/>) which can contain
+   trailer fields: field names and values that share the same syntax and
+   namespace as header fields but that are received after the header section.
+</t>
+<t>
+   Many fields cannot be processed outside the header section because
+   their evaluation is necessary prior to receiving the message body, such as
+   those that describe message framing, routing, authentication,
+   request modifiers, response controls, or payload format.
+   A sender &MUST-NOT; generate a trailer field unless the sender knows the
+   corresponding header field name's definition permits the field to be sent
+   in trailers.
+</t>
+<t>
+   Trailer fields can be difficult to process by intermediaries that forward
+   messages from one protocol version to another. If the entire message can be
+   buffered in transit, some intermediaries could merge trailer fields into
+   the header section (as appropriate) before it is forwarded. However, in
+   most cases, the trailers are simply discarded.
+   A recipient &MUST-NOT; merge a trailer field into a header section unless
+   the recipient understands the corresponding header field definition and
+   that definition explicitly permits and defines how trailer field values
+   can be safely merged.
+</t>
+<t>
+   The presence of the keyword "trailers" in the TE header field (<xref
+   target="field.te"/>) indicates that the client is willing to accept
+   trailer fields, on behalf of itself and any downstream clients. For
+   requests from an intermediary, this implies that all
+   downstream clients are willing to accept trailer fields in the forwarded
+   response. Note that the presence of "trailers" does not mean that the
+   client(s) will process any particular trailer field in the response; only
+   that the trailer section(s) will not be dropped by any of the clients.
+</t>
+<t>
+   Because of the potential for trailer fields to be discarded in transit, a
+   server &SHOULD-NOT; generate trailer fields that it believes are necessary
+   for the user agent to receive.
+</t>
+</section>
+
+<section title="Processing Trailer Fields" anchor="trailers.processing">
+<t>
+   Like header fields, trailer fields with the same name are processed in the
+   order received; multiple trailer field lines with the same name have the
+   equivalent semantics as appending the multiple values as a list of members,
+   even when the field lines are received in separate trailer sections.
+   Trailer fields that might be generated more than once during a message
+   &MUST; be defined as a list value even if each member value is only
+   processed once per field line received.
+</t>
+<t>
+   Trailer fields are expected (but not required) to be processed one trailer
+   section at a time. That is, for each trailer section received, a recipient
+   that is looking for trailer fields will parse the received section into
+   fields, invoke any associated processing for those fields at that point
+   in the message processing, and then append those fields to the set of
+   trailer fields received for the overall message.
+</t>
+<t>
+   This behavior allows for iterative processing of trailer fields that contain
+   incremental signatures or mid-stream status information, and fields that
+   might refer to each other's values within the same section. However,
+   there is no guarantee that trailer sections won't shift in relation to the
+   message body stream, or won't be recombined (or dropped) in transit, so
+   trailer fields that refer to data outside the present trailer section need
+   to use self-descriptive references (i.e., refer to the data by name,
+   ordinal position, or an octet range) rather than assume it is the data
+   most recently received.
+</t>
+<t>
+   Likewise, at the end of a message, a recipient &MAY; treat the entire set
+   of received trailer fields as one data structure to be considered as the
+   message concludes. Additional processing expectations, if any, can be
+   defined within the field specification for a field intended for use in
+   trailers.
+</t>
 </section>
 </section>
 </section>
