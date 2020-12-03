@@ -1375,15 +1375,21 @@ Content-Type: text/plain
 
 <section title="Fields" anchor="fields">
 <iref primary="true" item="field"/>
+<t>
+   HTTP uses "<x:dfn>fields</x:dfn>" to provide data in the form of extensible
+   key/value pairs with a registered key namespace. Fields are sent and
+   received within the header and trailer sections of messages
+   (<xref target="message.abstraction"/>).
+</t>
 
 <section title="Field Names" anchor="field-names">
   <x:anchor-alias value="header.names"/>
   <x:anchor-alias value="field-name"/>
 <t>
-   The field-name token labels the corresponding field value as having the
-   semantics defined by that field.  For example, the <x:ref>Date</x:ref>
-   header field is defined in <xref target="field.date"/> as containing the origination
-   timestamp for the message in which it appears.
+   A field name labels the corresponding field value as having the
+   semantics defined by that name.  For example, the <x:ref>Date</x:ref>
+   header field is defined in <xref target="field.date"/> as containing the
+   origination timestamp for the message in which it appears.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-name"/>
   <x:ref>field-name</x:ref>     = <x:ref>token</x:ref>
@@ -1412,8 +1418,8 @@ Content-Type: text/plain
    (<xref target="field.connection"/>) or the proxy is specifically
    configured to block, or otherwise transform, such fields.
    Other recipients &SHOULD; ignore unrecognized header and trailer fields.
-   These requirements allow HTTP's functionality to be enhanced without
-   requiring prior update of deployed intermediaries.
+   Adhering to these requirements allows HTTP's functionality to be extended
+   without updating or removing deployed intermediaries.
 </t>
 </section>
 
@@ -1422,19 +1428,20 @@ Content-Type: text/plain
    <iref item="field line"/>
    <iref item="field name"/>
    <iref item="field line value"/>
-   Both sections are composed of any number of "<x:dfn>field lines</x:dfn>",
+   Field sections are composed of any number of "<x:dfn>field lines</x:dfn>",
    each with a "<x:dfn>field name</x:dfn>" (see <xref target="field-names"/>)
    identifying the field, and a "<x:dfn>field line value</x:dfn>" that conveys
-   data for the field.
+   data for that instance of the field.
 </t>
 <t>
    <iref item="field value"/>
-   Each field name present in a section has a corresponding "<x:dfn>field value</x:dfn>"
-   for that section, composed from all field line values with that given
-   field name in that section, concatenated together and separated with
-   commas. See <xref target="field-order"/> for further discussion of the
-   semantics of field ordering and combination in messages, and <xref
-   target="field-values"/> for more discussion of field values.
+   When a field name is only present once in a section, the combined
+   "<x:dfn>field value</x:dfn>" for that field consists of the corresponding
+   field line value.
+   When a field name is repeated within a section, its combined field value
+   consists of the list of corresponding field line values within that section,
+   concatenated in order, with each non-empty field line value separated by a
+   comma.
 </t>
 <t>
    For example, this section:
@@ -1451,10 +1458,11 @@ Content-Type: text/plain
 </t>
 </section>
 
-<section title="Field Ordering and Combination" anchor="field-order">
+<section title="Field Order" anchor="field-order">
   <x:anchor-alias value="header.order"/>
 <t>
-   A recipient &MAY; combine multiple field lines within a field section that have the same field name
+   A recipient &MAY; combine multiple field lines within a field section that
+   have the same field name
    into one field line, without changing the semantics of the message, by
    appending each subsequent field line value to the initial field line value
    in order, separated by a comma and <x:ref>OWS</x:ref> (optional whitespace).
@@ -1488,16 +1496,17 @@ Content-Type: text/plain
   </t>
 </aside>
 <t>
-   The order in which field lines with differing names are
-   received in a message is not significant. However, it is good practice to send
-   header fields that contain control data first, such as <x:ref>Host</x:ref>
-   on requests and <x:ref>Date</x:ref> on responses, so that implementations
-   can decide when not to handle a message as early as possible.
+   The order in which field lines with differing field names are received in a
+   section is not significant. However, it is good practice to send header
+   fields that contain additional control data first, such as
+   <x:ref>Host</x:ref> on requests and <x:ref>Date</x:ref> on responses, so
+   that implementations can decide when not to handle a message as early as
+   possible.
 </t>
 <t>
    A server &MUST-NOT; apply a request to the target resource until the entire
-   request header section is received, since later header field lines might include
-   conditionals, authentication credentials, or deliberately misleading
+   request header section is received, since later header field lines might
+   include conditionals, authentication credentials, or deliberately misleading
    duplicate header fields that would impact request processing.
 </t>
 </section>
@@ -1840,7 +1849,7 @@ Content-Type: text/plain
    <x:anchor-alias value="parameters"/>
    <x:anchor-alias value="parameter-name"/>
    <x:anchor-alias value="parameter-value"/>
-   Parameters are zero or more instances of a name=value pair; they are often used in field
+   Parameters are instances of name=value pairs; they are often used in field
    values as a common syntax for appending auxiliary information to an item.
    Each parameter is usually delimited by an immediately preceding semicolon.
 </t>
@@ -2014,24 +2023,48 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <section title="Message Abstraction" anchor="message.abstraction">
 <iref primary="true" item="message abstraction"/>
-<iref item="message"/>
+<iref primary="true" item="message"/>
+<iref primary="true" item="self-descriptive"/>
 <t>
-   Each major version of HTTP defines its own syntax for the communication of
-   messages. However, they share a common data abstraction.
+   Each major version of HTTP defines its own syntax for communicating
+   messages. This section defines an abstract data type for HTTP messages
+   based on a generalization of those message characteristics, common structure,
+   and capacity for conveying semantics. This abstraction is used to define
+   requirements on senders and recipients that are independent of the HTTP
+   version, such that a message in one version can be relayed through other
+   versions without changing its meaning.
 </t>
 <t>
-   A message consists of control data to describe and route the message,
-   optional header fields that modify or extend the message semantics,
-   describe the sender, the payload, or provide additional context,
-   a potentially unbounded stream of payload data, and optional
-   trailer fields for metadata collected while sending the payload.
+   A <x:dfn>message</x:dfn> consists of control data to describe and route the
+   message, a headers lookup table of key/value pairs for extending that
+   control data and conveying additional information about the sender, message,
+   payload, or context, a potentially unbounded stream of payload data, and a
+   trailers lookup table of key/value pairs for communicating information
+   obtained while sending the payload.
 </t>
 <t>
-   Messages are intended to be self-descriptive. This means that everything a
-   recipient needs to know about the message can be determined by looking at
-   the message itself, after decoding or reconstituting parts that have been
-   compressed or elided in transit, without requiring an understanding of the
-   sender's current application state (established via prior messages).
+   Framing and control data is sent first, followed by a header section
+   containing fields for the headers table. When a message includes a payload,
+   the payload data is sent after the header section and potentially
+   interleaved with zero or more trailer sections containing fields for the
+   trailers table.
+</t>
+<t>
+   Messages are expected to be processed as a stream, wherein the purpose of
+   that stream and its continued processing is revealed while being read.
+   Hence, control data describes what the recipient needs to know immediately,
+   header fields describe what needs to be known before receiving a payload,
+   the payload (when present) presumably contains what the recipient wants or
+   needs to fulfill the message semantics, and trailer fields provide
+   additional metadata that can be dropped (safely ignored) when not desired.
+</t>
+<t>
+   Messages are intended to be <x:dfn>self-descriptive</x:dfn>:
+   everything a recipient needs to know about the message can be determined by
+   looking at the message itself, after decoding or reconstituting parts that
+   have been compressed or elided in transit, without requiring an
+   understanding of the sender's current application state (established via
+   prior messages).
 </t>
 
 <section title="Framing and Completeness" anchor="message.framing">
@@ -2044,7 +2077,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 <t>
    HTTP/0.9 and early deployments of HTTP/1.0 used closure of the underlying
-   connection to end each response. For backwards compatibility, this implicit
+   connection to end a response. For backwards compatibility, this implicit
    framing is also allowed in HTTP/1.1. However, implicit framing can fail to
    distinguish an incomplete response if the connection closes early. For
    that reason, almost all modern implementations use explicit framing in
@@ -2063,11 +2096,31 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <section title="Control Data" anchor="message.control.data">
 <iref primary="true" item="control data"/>
 <t>
-   Every HTTP message has a protocol version. Depending on the version in use, it
-   might be carried in the message explicitly, or it might be inferred by the
-   connection that the message is carried on. A message can change versions as it
-   passes through intermediaries, because the semantics of a HTTP message are
-   independent of its version.
+   Messages start with control data that describe its primary purpose. Request
+   message control data includes a request method (<xref target="methods"/>),
+   request target (<xref target="request.target"/>), and protocol version
+   (<xref target="protocol.version"/>). Response message control data includes
+   a status code (<xref target="status.codes"/>), optional reason phrase, and
+   protocol version.
+</t>
+<t>
+   In HTTP/1.1 <xref target="Messaging"/> and earlier, control data is sent
+   as the first line of a message. In HTTP/2 (<xref target="RFC7540"/>) and
+   HTTP/3 (<xref target="HTTP3"/>), control data is sent as pseudo-header
+   fields with a reserved name prefix (e.g., ":authority").
+</t>
+<t>
+   Every HTTP message has a protocol version. Depending on the version in use,
+   it might be identified within the message explicitly or inferred by the
+   connection over which the message is received. Recipients use that version
+   information to determine limitations or potential for later communication
+   with that sender.
+</t>
+<t>
+   When a message is forwarded by an intermediary, the protocol version is
+   updated to reflect the version used by that intermediary.
+   The <x:ref>Via</x:ref> header field (<xref target="field.via"/>) is used to
+   communicate upstream protocol information within a forwarded message.
 </t>
 <t>
    A client &SHOULD; send a request version equal to the highest
@@ -2105,22 +2158,24 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </section>
 
 <section title="Header Fields" anchor="header.fields">
-<t>
+   <iref primary="true" item="header section"/>
    <iref item="field"/>
-   <iref item="section"/>
-   HTTP messages use key/value pairs to convey data about the
-   message, its payload, the target resource, or the connection.
-   They are called "HTTP fields" or just "<x:dfn>fields</x:dfn>".
-   Fields occur in groups called "<x:dfn>field sections</x:dfn>" or just "sections".
+<t>
+   Fields (<xref target="fields"/>) that are sent/received before the payload
+   are referred to as "header fields" (or just "headers", colloquially).
 </t>
 <t>
-   <iref item="header section"/>
-   Fields that are sent/received before the message body are referred to as
-   "header fields" (or just "headers", colloquially) and are located within the
-   "<x:dfn>header section</x:dfn>" of a message. We refer to some named fields
-   specifically as a "header field" when they are only allowed to be sent in
-   the header section.
+   The "<x:dfn>header section</x:dfn>" of a message consists of a sequence of
+   of header fields. Each header field might modify or extend message
+   semantics, describe the sender, define the payload, or provide additional
+   context.
 </t>
+<aside>
+  <t>
+    &Note; We refer to named fields specifically as a "header field" when they
+    are only allowed to be sent in the header section.
+  </t>
+</aside>
 </section>
 
 <section title="Message Payload" anchor="payload">
@@ -2259,22 +2314,16 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </section>
 
 <section title="Trailer Fields" anchor="trailer.fields">
-   <iref item="trailer fields"/>
-   <iref item="trailers"/>
-
-<section title="Purpose" anchor="trailers.purpose">
+<iref primary="true" item="trailer section"/>
+<iref primary="true" item="trailer fields"/>
+<iref primary="true" item="trailers"/>
 <t>
-   <iref item="trailer section"/>
-   Fields that are sent/received after the header
-   section has ended (usually after the message body begins to stream) are
+   Fields (<xref target="fields"/>) that are sent/received after the header
+   section has ended (usually after the payload data begins to stream) are
    referred to as "trailer fields" (or just "trailers", colloquially) and
    located within a "<x:dfn>trailer section</x:dfn>".
-</t>
-<t>
-   In some HTTP versions, additional
-   metadata can be sent after the initial header section has been completed
-   (during or after transmission of the payload body), such as a message
-   integrity check, digital signature, or post-processing status.
+   Trailer fields can be useful for supplying message integrity checks, digital
+   signatures, delivery metrics, or post-processing status information.
 </t>
 <t>
    Trailer fields ought to be processed and stored separately from the fields
@@ -2284,7 +2333,6 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    processing of the message as a whole before the trailers are received;
    those choices cannot be unmade by the later discovery of trailer fields.
 </t>
-</section>
 
 <section title="Limitations" anchor="trailers.limitations">
 <t>
