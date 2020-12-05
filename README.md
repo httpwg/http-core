@@ -28,7 +28,7 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 * [RFC7234](https://httpwg.org/specs/rfc7234.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7234.txt), [tracker](https://datatracker.ietf.org/doc/rfc7234/))
 * [Open Issues](https://github.com/httpwg/http-core/labels/caching)
 
-### HTTP/1.1 Message Syntax and Routing
+### HTTP/1.1 (formerly "HTTP/1.1 Message Syntax and Routing")
 
 * [Editors' Draft](https://httpwg.org/http-core/draft-ietf-httpbis-messaging-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-messaging-latest.xml))
 * [draft-ietf-httpbis-messaging](https://datatracker.ietf.org/doc/draft-ietf-httpbis-messaging/)
