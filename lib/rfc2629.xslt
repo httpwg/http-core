@@ -3359,17 +3359,7 @@
 
 <xsl:template match="ol[string-length(@type)>1]">
   <xsl:variable name="start">
-    <xsl:choose>
-      <xsl:when test="@group">
-        <xsl:call-template name="ol-start">
-          <xsl:with-param name="node" select="."/>
-        </xsl:call-template>
-      </xsl:when>
-      <xsl:when test="@start">
-        <xsl:value-of select="@start"/>
-      </xsl:when>
-      <xsl:otherwise>1</xsl:otherwise>
-    </xsl:choose>
+    <xsl:call-template name="ol-start"/>
   </xsl:variable>
   <div>
     <xsl:call-template name="attach-paragraph-number-as-id"/>
@@ -3484,8 +3474,9 @@
   </xsl:choose>
 </xsl:template>
 
+<!-- compute start index of a (v3) list -->
 <xsl:template name="ol-start">
-  <xsl:param name="node"/>
+  <xsl:param name="node" select="."/>
   <xsl:variable name="group" select="$node/@group"/>
   <xsl:variable name="prec" select="$node/preceding::ol[@group=$group]"/>
   <xsl:choose>
@@ -3508,24 +3499,15 @@
   <xsl:call-template name="check-no-text-content"/>
 
   <xsl:variable name="start">
-    <xsl:choose>
-      <xsl:when test="@group">
-        <xsl:call-template name="ol-start">
-          <xsl:with-param name="node" select="."/>
-        </xsl:call-template>
-      </xsl:when>
-      <xsl:when test="@start">
-        <xsl:value-of select="@start"/>
-      </xsl:when>
-      <xsl:otherwise/>
-    </xsl:choose>
+    <xsl:call-template name="ol-start"/>
   </xsl:variable>
+
   <div>
     <xsl:if test="not(ancestor::list)">
       <xsl:call-template name="attach-paragraph-number-as-id"/>
     </xsl:if>
     <ol>
-      <xsl:if test="$start!=''">
+      <xsl:if test="$start!=1">
         <xsl:attribute name="start"><xsl:value-of select="$start"/></xsl:attribute>
       </xsl:if>
       <xsl:call-template name="copy-anchor"/>
@@ -3810,6 +3792,7 @@
 <xsl:template name="expand-format-percent">
   <xsl:param name="format"/>
   <xsl:param name="pos"/>
+  <xsl:param name="item" select="."/>
   
   <xsl:choose>
     <xsl:when test="$format=''"><!-- done--></xsl:when>
@@ -3818,6 +3801,7 @@
       <xsl:call-template name="expand-format-percent">
         <xsl:with-param name="format" select="substring($format,2)"/>
         <xsl:with-param name="pos" select="$pos"/>
+        <xsl:with-param name="item" select="$item"/>
       </xsl:call-template>
     </xsl:when>
     <xsl:otherwise>
@@ -3829,6 +3813,29 @@
         <xsl:when test="$f='d'"><xsl:number value="$pos"/></xsl:when>
         <xsl:when test="$f='i'"><xsl:number value="$pos" format="i"/></xsl:when>
         <xsl:when test="$f='I'"><xsl:number value="$pos" format="I"/></xsl:when>
+        <xsl:when test="$f='p'">
+          <xsl:variable name="list" select="$item/.."/>
+          <xsl:for-each select="$list/..">
+            <xsl:call-template name="expand-format-percent">
+              <xsl:with-param name="format">
+                <xsl:choose>
+                  <xsl:when test="../@type">
+                    <xsl:value-of select="../@type"/>
+                  </xsl:when>
+                  <xsl:otherwise>%d.</xsl:otherwise>
+                </xsl:choose>
+              </xsl:with-param>
+              <xsl:with-param name="pos">
+                <xsl:variable name="ps">
+                  <xsl:call-template name="ol-start">
+                    <xsl:with-param name="node" select=".."/>
+                  </xsl:call-template>
+                </xsl:variable>
+                <xsl:value-of select="$ps + position()"/>
+              </xsl:with-param>
+            </xsl:call-template>
+          </xsl:for-each>
+        </xsl:when>
         <xsl:otherwise>
           <xsl:call-template name="error">
             <xsl:with-param name="msg" select="concat('Unsupported % format: ', $f)"/>
@@ -3839,6 +3846,7 @@
       <xsl:call-template name="expand-format-percent">
         <xsl:with-param name="format" select="substring($format,3)"/>
         <xsl:with-param name="pos" select="$pos"/>
+        <xsl:with-param name="item" select="$item"/>
       </xsl:call-template>
     </xsl:otherwise>
   </xsl:choose>
@@ -5737,6 +5745,25 @@
 <!-- keep the root for the case when we process XSLT-inline markup -->
 <xsl:variable name="src" select="/" />
 
+<xsl:template name="render-section-ref-title">
+  <xsl:param name="to" />
+
+  <xsl:choose>
+    <xsl:when test="$to/name">
+      <xsl:call-template name="render-name-ref">
+        <xsl:with-param name="n" select="$to/name/node()"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:when test="$to/@title">
+      <xsl:value-of select="normalize-space($to/@title)"/>
+    </xsl:when>
+    <xsl:when test="$to/self::abstract">Abstract</xsl:when>
+    <xsl:when test="$to/self::references">References</xsl:when>
+    <xsl:otherwise/>
+  </xsl:choose>
+</xsl:template>
+
+
 <xsl:template name="render-section-ref">
   <xsl:param name="from" />
   <xsl:param name="to" />
@@ -5766,19 +5793,9 @@
       </xsl:choose>
     </xsl:when>
     <xsl:when test="$from/@format='title'">
-      <xsl:choose>
-        <xsl:when test="$to/name">
-          <xsl:call-template name="render-name-ref">
-            <xsl:with-param name="n" select="$to/name/node()"/>
-          </xsl:call-template>
-        </xsl:when>
-        <xsl:when test="$to/@title">
-          <xsl:value-of select="normalize-space($to/@title)"/>
-        </xsl:when>
-        <xsl:when test="$to/self::abstract">Abstract</xsl:when>
-        <xsl:when test="$to/self::references">References</xsl:when>
-        <xsl:otherwise/>
-      </xsl:choose>
+      <xsl:call-template name="render-section-ref-title">
+        <xsl:with-param name="to" select="$to"/>
+      </xsl:call-template>
     </xsl:when>
     <xsl:when test="$from/@format='none'">
       <!-- Nothing to do -->
@@ -6243,6 +6260,7 @@
         <xsl:call-template name="expand-format-percent">
           <xsl:with-param name="format" select="substring-after($listtype,'format ')"/>
           <xsl:with-param name="pos" select="$n + $s - 1"/>
+          <xsl:with-param name="item" select="$to"/>
         </xsl:call-template>
       </xsl:when>
       <xsl:otherwise>
@@ -8915,6 +8933,13 @@ dd, li, p {
       </xsl:variable>
       <xsl:variable name="n">
         <xsl:choose>
+          <xsl:when test="starts-with($_n,$unnumbered)">
+            <xsl:text>"</xsl:text>
+            <xsl:call-template name="render-section-ref-title">
+              <xsl:with-param name="to" select="ancestor::section"/>
+            </xsl:call-template>
+            <xsl:text>"</xsl:text>
+          </xsl:when>
           <xsl:when test="$_n!=''">
             <xsl:value-of select="$_n"/>
           </xsl:when>
@@ -8965,6 +8990,13 @@ dd, li, p {
   </xsl:variable>
   <xsl:variable name="n">
     <xsl:choose>
+      <xsl:when test="starts-with($_n,$unnumbered)">
+        <xsl:text>"</xsl:text>
+        <xsl:call-template name="render-section-ref-title">
+          <xsl:with-param name="to" select="ancestor::section"/>
+        </xsl:call-template>
+        <xsl:text>"</xsl:text>
+      </xsl:when>
       <xsl:when test="$_n!=''">
         <xsl:value-of select="$_n"/>
       </xsl:when>
@@ -12042,11 +12074,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1332 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1332 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1335 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1335 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2020/11/02 15:07:03 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/11/02 15:07:03 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2020/11/30 17:42:24 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2020/11/30 17:42:24 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">

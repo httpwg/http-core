@@ -418,11 +418,12 @@
    necessary to assure integrity of the stored representation.
 </t>
 <t>
-   For example, a browser might store a response's body after removing
-   content-codings, thereby making its metadata inaccurate. 
+   For example, a browser might decode the content coding of a response payload
+   while it is being received, creating a disconnect between the data it has
+   stored and the response payload's original metadata.
    Updating that stored metadata with a different <x:ref>Content-Encoding</x:ref>
    header field would be problematic. Likewise, a browser might store a
-   post-parse tree representation of HTML, rather than the body received in
+   post-parse tree representation of HTML, rather than the payload received in
    the response; updating the <x:ref>Content-Type</x:ref> header field would not be workable
    in this case, because any assumptions about the format made in parsing would
    now be invalid.
@@ -1116,11 +1117,11 @@
 <section title="Freshening Responses with HEAD" anchor="head.effects">
 <t>
    A response to the HEAD method is identical to what an equivalent request
-   made with a GET would have been, except it lacks a body. This property
+   made with a GET would have been, except it lacks payload data. This property
    of HEAD responses can be used to invalidate or update a cached GET
    response if the more efficient conditional GET request mechanism is not
    available (due to no validators being present in the stored response) or
-   if transmission of the representation body is not desired even if it has
+   if transmission of the payload data is not desired even if it has
    changed.
 </t>
 <t>
@@ -1490,13 +1491,13 @@
    A sender &SHOULD-NOT; generate the token form (even if quoting appears not
    to be needed for single-entry lists).
 </t>
-<t>
+<aside><t>
    &Note; Although it has been back-ported to many implementations, some
    HTTP/1.0 caches will not recognize or obey this directive. Also, the
    qualified form of the directive is often handled by caches as if an
    unqualified no-cache directive was received; i.e., the special handling
    for the qualified form is not widely implemented.
-</t>
+</t></aside>
 </section>
 
 <section title="no-store" anchor="cache-response-directive.no-store">
@@ -1584,14 +1585,14 @@
    A sender &SHOULD-NOT; generate the token form (even if quoting appears not
    to be needed for single-entry lists).
 </t>
-<t>
+<aside><t>
    &Note; This usage of the word "private" only controls
    where the response can be stored; it cannot ensure the privacy of the
    message content. Also, the qualified form of the directive is
    often handled by caches as if an unqualified private directive
    was received; i.e., the special handling for the qualified form is not
    widely implemented.
-</t>
+</t></aside>
 </section>
 
 <section title="proxy-revalidate" anchor="cache-response-directive.proxy-revalidate">
@@ -1856,10 +1857,20 @@
    This specification does not prohibit the application from taking HTTP caching into
    account; for example, a history mechanism might tell the user that a view
    is stale, or it might honor cache directives (e.g., Cache-Control:
-   no-store). In particular, when an application caches data and does not make this
+   no-store).
+</t>
+<t>
+   However, when an application caches data and does not make this
    apparent to or easily controllable by the user, it is strongly encouraged to
-   honour basic control mechanisms like Cache-Control: no-store, as they
-   indicate the resource's intent regarding caching.
+   define its operation with respect to HTTP cache directives, so as
+   not to surprise authors who expect caching semantics
+   to be honoured. For example, while it might be reasonable to define an
+   application cache "above" HTTP that allows a response containing
+   Cache-Control: no-store to be reused for requests that are directly related
+   to the request that fetched it (such as those created during the same page
+   load), it would likely be surprising and confusing to users and authors if it
+   were allowed to be reused for requests unrelated in any way to the one from
+   which it was obtained.
 </t>
 </section>
 
@@ -2354,7 +2365,7 @@
 
 <x:ref>delta-seconds</x:ref> = 1*DIGIT
 
-<x:ref>field-name</x:ref> = &lt;field-name, see <xref target="Semantics" x:fmt="," x:sec="5.3.3"/>&gt;
+<x:ref>field-name</x:ref> = &lt;field-name, see <xref target="Semantics" x:fmt="," x:sec="5.1"/>&gt;
 
 <x:ref>quoted-string</x:ref> = &lt;quoted-string, see <xref target="Semantics" x:fmt="," x:sec="5.6.4"/>&gt;
 
@@ -2546,6 +2557,7 @@
   <li>In <xref target="freshening.responses"/>, refine the exceptions to update on a 304 (<eref target="https://github.com/httpwg/http-core/issues/488"/>)</li>
   <li>Moved table of Cache-Control directives into <xref target="cache.directive.registration"/> (<eref target="https://github.com/httpwg/http-core/issues/506"/>)</li>
   <li>In <xref target="notation"/>, remove unused core ABNF rules (<eref target="https://github.com/httpwg/http-core/issues/529"/>)</li>
+   <li>Changed to using "payload data" when defining requirements about the data being conveyed within a message, instead of the terms "payload body" or "response body" or "representation body", since they often get confused with the HTTP/1.1 message body (which includes transfer coding) (<eref target="https://github.com/httpwg/http-core/issues/553"/>)</li>
 </ul>
 </section>
 </section>

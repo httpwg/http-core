@@ -325,7 +325,7 @@
 </t>
 <t>
    A sender &MUST-NOT; generate a bare CR (a CR character not immediately
-   followed by LF) within any protocol elements other than the payload body.
+   followed by LF) within any protocol elements other than the payload data.
    A recipient of such a bare CR &MUST; consider that element to be invalid or
    replace each bare CR with SP before processing the element or forwarding
    the message.
@@ -914,9 +914,9 @@ https://www.example.org
 <section title="Message Body" anchor="message.body">
   <x:anchor-alias value="message-body"/>
 <t>
-   The message body (if any) of an HTTP message is used to carry the payload
-   body (<xref target="payload.body"/>) of that request or response. The
-   message body is identical to the payload body unless a transfer coding has
+   The message body (if any) of an HTTP/1.1 message is used to carry payload
+   data (<xref target="payload"/>) for the request or response. The
+   message body is identical to the payload data unless a transfer coding has
    been applied, as described in <xref target="field.transfer-encoding"/>.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="message-body"/>
@@ -929,14 +929,13 @@ https://www.example.org
 <t>
    The presence of a message body in a request is signaled by a
    <x:ref>Content-Length</x:ref> or <x:ref>Transfer-Encoding</x:ref> header
-   field. Request message framing is independent of method semantics,
-   even if the method does not define any use for a message body.
+   field. Request message framing is independent of method semantics.
 </t>
 <t>
    The presence of a message body in a response depends on both the request
    method to which it is responding and the response status code (<xref
-   target="status.line"/>), and corresponds to when a payload body is
-   allowed; see <xref target="payload.body"/>.
+   target="status.line"/>), and corresponds to when payload data is
+   allowed; see <xref target="payload"/>.
 </t>
 
 <section title="Transfer-Encoding" anchor="field.transfer-encoding">
@@ -947,7 +946,7 @@ https://www.example.org
 <t>
    The Transfer-Encoding header field lists the transfer coding names
    corresponding to the sequence of transfer codings that have been
-   (or will be) applied to the payload body in order to form the message body.
+   (or will be) applied to the payload data in order to form the message body.
    Transfer codings are defined in <xref target="transfer.codings"/>.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Transfer-Encoding"/>
@@ -967,14 +966,14 @@ https://www.example.org
 <t>
    A recipient &MUST; be able to parse the chunked transfer coding
    (<xref target="chunked.encoding"/>) because it plays a crucial role in
-   framing messages when the payload body size is not known in advance.
+   framing messages when the payload data size is not known in advance.
    A sender &MUST-NOT; apply chunked more than once to a message body
    (i.e., chunking an already chunked message is not allowed).
-   If any transfer coding other than chunked is applied to a request payload
-   body, the sender &MUST; apply chunked as the final transfer coding to
+   If any transfer coding other than chunked is applied to a request's payload data,
+   the sender &MUST; apply chunked as the final transfer coding to
    ensure that the message is properly framed.
-   If any transfer coding other than chunked is applied to a response payload
-   body, the sender &MUST; either apply chunked as the final transfer coding
+   If any transfer coding other than chunked is applied to a response's payload data,
+   the sender &MUST; either apply chunked as the final transfer coding
    or terminate the message by closing the connection.
 </t>
 <t>
@@ -984,7 +983,7 @@ https://www.example.org
   Transfer-Encoding: gzip, chunked
 </artwork>
 <t>
-   indicates that the payload body has been compressed using the gzip
+   indicates that the payload data has been compressed using the gzip
    coding and then chunked using the chunked coding while forming the
    message body.
 </t>
@@ -1037,10 +1036,10 @@ https://www.example.org
 <t>
    When a message does not have a <x:ref>Transfer-Encoding</x:ref> header
    field, a Content-Length header field can provide the anticipated size,
-   as a decimal number of octets, for a potential payload body.
-   For messages that do include a payload body, the Content-Length field value
-   provides the framing information necessary for determining where the body
-   (and message) ends.  For messages that do not include a payload body, the
+   as a decimal number of octets, for potential payload data.
+   For messages that do include payload data, the Content-Length field value
+   provides the framing information necessary for determining where the data
+   (and message) ends.  For messages that do not include payload data, the
    Content-Length indicates the size of the selected representation
    (<xref target="field.content-length"/>).
 </t>
@@ -1177,7 +1176,7 @@ https://www.example.org
    If the final response to the last request on a connection has been
    completely received and there remains additional data to read, a user agent
    &MAY; discard the remaining data or attempt to determine if that data
-   belongs as part of the prior response body, which might be the case if the
+   belongs as part of the prior message body, which might be the case if the
    prior message's Content-Length value is incorrect. A client &MUST-NOT;
    process, cache, or forward such extra data as a separate response, since
    such behavior would be vulnerable to cache poisoning.
@@ -1189,7 +1188,7 @@ https://www.example.org
 <t>
    Transfer coding names are used to indicate an encoding
    transformation that has been, can be, or might need to be applied to a
-   payload body in order to ensure "safe transport" through the network.
+   payload's data in order to ensure "safe transport" through the network.
    This differs from a content coding in that the transfer coding is a
    property of the message rather than a property of the representation
    that is being transferred.
@@ -1212,7 +1211,7 @@ https://www.example.org
   <x:anchor-alias value="chunk-size"/>
   <x:anchor-alias value="last-chunk"/>
 <t>
-   The chunked transfer coding wraps the payload body in order to transfer it
+   The chunked transfer coding wraps payload data in order to transfer it
    as a series of chunks, each with its own size indicator, followed by an
    &OPTIONAL; trailer section containing trailer fields. Chunked enables content
    streams of unknown size to be transferred as a sequence of length-delimited
@@ -1292,7 +1291,7 @@ https://www.example.org
 <t>
    A trailer section allows the sender to include additional fields at the end
    of a chunked message in order to supply metadata that might be dynamically
-   generated while the message body is sent, such as a message integrity
+   generated while the payload data is sent, such as a message integrity
    check, digital signature, or post-processing status. The proper use and
    limitations of trailer fields are defined in <xref target="trailer.fields"/>.
 </t>
@@ -1320,7 +1319,7 @@ https://www.example.org
   read chunk-size, chunk-ext (if any), and CRLF
   while (chunk-size &gt; 0) {
      read chunk-data and CRLF
-     append chunk-data to decoded-body
+     append chunk-data to payload-data
      length := length + chunk-size
      read chunk-size, chunk-ext (if any), and CRLF
   }
@@ -2034,9 +2033,9 @@ https://www.example.org
 <section title="Security Considerations" anchor="security.considerations">
 <t>
    This section is meant to inform developers, information providers, and
-   users of known security considerations relevant to HTTP message syntax,
-   parsing, and routing. Security considerations about HTTP semantics and
-   payloads are addressed in <xref target="Semantics"/>.
+   users of known security considerations relevant to HTTP message syntax
+   and parsing. Security considerations about HTTP semantics,
+   payloads, and routing are addressed in <xref target="Semantics"/>.
 </t>
 
 <section title="Response Splitting" anchor="response.splitting">
@@ -2340,7 +2339,7 @@ https://www.example.org
     <x:has anchor="message.forwarding"/>
     <x:has anchor="methods"/>
     <x:has anchor="multipart.byteranges"/>
-    <x:has anchor="payload.body"/>
+    <x:has anchor="payload"/>
     <x:has anchor="protocol.version"/>
     <x:has anchor="quality.values"/>
     <x:has anchor="quoted.strings"/>
@@ -2808,8 +2807,8 @@ https://www.example.org
 <x:ref>comment</x:ref> = &lt;comment, see <xref target="Semantics" x:fmt="," x:sec="5.6.5"/>&gt;
 
 <x:ref>field-line</x:ref> = field-name ":" OWS field-value OWS
-<x:ref>field-name</x:ref> = &lt;field-name, see <xref target="Semantics" x:fmt="," x:sec="5.3.3"/>&gt;
-<x:ref>field-value</x:ref> = &lt;field-value, see <xref target="Semantics" x:fmt="," x:sec="5.3.4"/>&gt;
+<x:ref>field-name</x:ref> = &lt;field-name, see <xref target="Semantics" x:fmt="," x:sec="5.1"/>&gt;
+<x:ref>field-value</x:ref> = &lt;field-value, see <xref target="Semantics" x:fmt="," x:sec="5.5"/>&gt;
 
 <x:ref>last-chunk</x:ref> = 1*"0" [ chunk-ext ] CRLF
 
@@ -3053,7 +3052,7 @@ https://www.example.org
    connection management requirements specific to HTTP/1.1.
 </t>
 <t>
-   Prohibited generation of bare CRs outside of payload body.
+   Prohibited generation of bare CRs outside of payload data.
    (<xref target="message.parsing"/>)
 </t>
 <t>
@@ -3163,7 +3162,7 @@ https://www.example.org
   <li>In <xref target="message.format"/> and related Sections, move the trailing CRLF from the line grammars into the message format (<eref target="https://github.com/httpwg/http-core/issues/62"/>)</li>
   <li>Moved <xref target="http.version"/> down (<eref target="https://github.com/httpwg/http-core/issues/68"/>)</li>
   <li>In <xref target="field.upgrade"/>, use 'websocket' instead of 'HTTP/2.0' in examples (<eref target="https://github.com/httpwg/http-core/issues/112"/>)</li>
-  <li>Move version non-specific text from <xref target="message.body"/> into semantics as "payload body" (<eref target="https://github.com/httpwg/http-core/issues/159"/>)</li>
+  <li>Move version non-specific text from <xref target="message.body"/> into semantics as "payload" (<eref target="https://github.com/httpwg/http-core/issues/159"/>)</li>
   <li>In <xref target="tls.connection.closure"/>, add text from RFC 2818 (<eref target="https://github.com/httpwg/http-core/issues/236"/>)</li>
 </ul>
 </section>
@@ -3224,6 +3223,7 @@ https://www.example.org
    <li>Moved table of transfer codings into <xref target="transfer.coding.registration"/> (<eref target="https://github.com/httpwg/http-core/issues/506"/>)</li>
    <li>In <xref target="informative.references"/>, updated the URI for the <xref target="Linhart"/> paper (<eref target="https://github.com/httpwg/http-core/issues/517"/>)</li>
    <li>Changed document title to just "HTTP/1.1" (<eref target="https://github.com/httpwg/http-core/issues/524"/>)</li>
+   <li>Changed to using "payload data" when defining requirements about the data being conveyed within a message, instead of the terms "payload body" or "response body" or "representation body", since they often get confused with the HTTP/1.1 message body (which includes transfer coding) (<eref target="https://github.com/httpwg/http-core/issues/553"/>)</li>
 </ul>
 </section>
 </section>
