@@ -1292,7 +1292,7 @@ Content-Type: text/plain
 <t>
    The request target's host and port value are passed within each HTTP
    request, identifying the origin and distinguishing it from other namespaces
-   that might be controlled by the same server.
+   that might be controlled by the same server (<xref target="field.host"/>).
    It is the origin's responsibility to ensure that any services provided with
    control over its certificate's private key are equally responsible for
    managing the corresponding "https" namespaces, or at least prepared to
@@ -1405,7 +1405,7 @@ Content-Type: text/plain
    recipient in the absence of such a field can change. Unless specified
    otherwise, fields are defined for all versions of HTTP.
    In particular, the <x:ref>Host</x:ref> and <x:ref>Connection</x:ref>
-   fields ought to be implemented by all HTTP/1.x implementations
+   fields ought to be recognized by all HTTP implementations
    whether or not they advertise conformance with HTTP/1.1.
 </t>
 <t>
@@ -2473,22 +2473,30 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 </section>
 
-<section title="Host" anchor="field.host">
+<section title="Host and :authority" anchor="field.host">
   <x:anchor-alias value="header.host"/>
   <iref primary="true" item="Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Host" x:for-anchor=""/><iref primary="true" item="Host header field" x:for-anchor=""/>
   <x:anchor-alias value="Host"/>
+  <x:anchor-alias value="pseudo-authority"/>
 <t>
    The "Host" header field in a request provides the host and port
    information from the target URI, enabling the origin
    server to distinguish among resources while servicing requests
-   for multiple host names on a single IP address.
+   for multiple host names.
+</t>
+<t>
+   In HTTP/2 <xref target="RFC7540"/> and HTTP/3 <xref target="HTTP3"/>, the
+   Host header field is, in some cases, supplanted by the ":authority"
+   pseudo-header field of a request's control data.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Host"/>
   <x:ref>Host</x:ref> = <x:ref>uri-host</x:ref> [ ":" <x:ref>port</x:ref> ] ; <xref target="uri"/>
 </sourcecode>
 <t>
-   Since the Host field value is critical information for handling a request,
-   a user agent &SHOULD; generate Host as the first field in the header section.
+   The target URI's authority information is critical for handling a
+   request. A user agent &SHOULD; generate Host as the first field in the
+   header section of a request unless it has already generated that information
+   as an ":authority" pseudo-header field.
 </t>
 <t>
    For example, a GET request to the origin server for
@@ -2499,11 +2507,11 @@ GET /pub/WWW/ HTTP/1.1
 Host: www.example.org
 </artwork>
 <t>
-   Since the Host header field acts as an application-level routing
+   Since the host and port information acts as an application-level routing
    mechanism, it is a frequent target for malware seeking to poison
    a shared cache or redirect a request to an unintended server.
    An interception proxy is particularly vulnerable if it relies on
-   the Host field value for redirecting requests to internal
+   the host and port information for redirecting requests to internal
    servers, or for use as a cache key in a shared cache, without
    first verifying that the intercepted connection is targeting a
    valid IP address for that host.
@@ -8219,11 +8227,6 @@ Content-Range: exampleunit 11.2-14.3/25
    applicable along the same request path (through the same proxies).
 </t>
 <t>
-   The 203 response is similar to the Warning code of 214 Transformation
-   Applied (<xref target="field.warning"/>), which has the advantage of being applicable
-   to responses with any status code.
-</t>
-<t>
    A 203 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
@@ -10064,7 +10067,7 @@ Content-Type: text/plain
 <t>
    Authority for a given origin server can be delegated through protocol
    extensions; for example, <xref target="RFC7838"/>. Likewise, the set of
-   servers that a connection is considered authoritative for can be changed
+   servers for which a connection is considered authoritative can be changed
    with a protocol extension like <xref target="RFC8336"/>.
 </t>
 <t>
@@ -10988,18 +10991,6 @@ Content-Type: text/plain
 </table>
 <!--(END)-->
 <?ENDINC build/draft-ietf-httpbis-semantics-latest.iana-status-codes ?>
-<t>
-   Additionally, please update the following entry in the Hypertext Transfer
-   Protocol (HTTP) Status Code Registry:
-</t>
-<dl>
-  <dt>Value:</dt>
-  <dd>418</dd>
-  <dt>Description:</dt>
-  <dd>(Unused)</dd>
-  <dt>Reference</dt>
-  <dd><xref target="status.418"/></dd>
-</dl>
 </section>
 
 <section title="Field Name Registration" anchor="field.name.registration">
@@ -11602,7 +11593,6 @@ Content-Type: text/plain
     <x:has anchor="freshening.responses"/>
     <x:has anchor="head.effects"/>
     <x:has anchor="field.cache-control"/>
-    <x:has anchor="field.warning"/>
     <x:has anchor="heuristic.freshness"/>
     <x:has anchor="invalidation"/>
     <x:has anchor="validation.received"/>
@@ -13013,24 +13003,6 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    received-by.
    (<xref target="field.via"/>)
 </t>
-<t>
-   Added status code 308 (previously defined in <xref target="RFC7538"/>)
-   so that it's defined closer to status codes 301, 302, and 307.
-   (<xref target="status.308"/>)
-</t>
-<t>
-   Added status code 422 (previously defined in
-   <xref target="RFC4918" x:fmt="of" x:sec="11.2"/>) because of its general
-   applicability.
-   (<xref target="status.422"/>)
-</t>
-<t>
-   The description of an origin and authoritative access to origin servers has
-   been extended for both "http" and "https" URIs to account for alternative
-   services and secured connections that are not necessarily based on TCP.
-   (<xref target="http.uri"/>, <xref target="https.uri"/>,
-   <xref target="origin"/>, <xref target="routing.origin"/>)
-</t>
 </section>
 
 <section title="Changes from RFC 7231" anchor="changes.from.rfc.7231">
@@ -13099,13 +13071,28 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    The process of creating a redirected request has been clarified.
    (<xref target="status.3xx"/>)
 </t>
+<t>
+   Added status code 308 (previously defined in <xref target="RFC7538"/>)
+   so that it's defined closer to status codes 301, 302, and 307.
+   (<xref target="status.308"/>)
+</t>
+<t>
+   Added status code 422 (previously defined in
+   <xref target="RFC4918" x:fmt="of" x:sec="11.2"/>) because of its general
+   applicability.
+   (<xref target="status.422"/>)
+</t>
 </section>
 
 <section title="Changes from RFC 7232" anchor="changes.from.rfc.7232">
 <t>
-   Preconditions can now be evaluated before the request payload is processed
-   rather than waiting until the response would otherwise be successful.
-   (<xref target="evaluation"/>)
+   Previous revisions of HTTP imposed an arbitrary 60-second limit on the
+   determination of whether Last-Modified was a strong validator to guard
+   against the possibility that the Date and Last-Modified values are
+   generated from different clocks or at somewhat different times during the
+   preparation of the response. This specification has relaxed that to allow
+   reasonable discretion.
+   (<xref target="lastmod.comparison"/>)
 </t>
 <t>
    Removed edge case requirement on If-Match and If-Unmodified-Since that a
@@ -13120,13 +13107,9 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
    (<xref target="field.if-unmodified-since"/>)
 </t>
 <t>
-   Previous revisions of HTTP imposed an arbitrary 60-second limit on the
-   determination of whether Last-Modified was a strong validator to guard
-   against the possibility that the Date and Last-Modified values are
-   generated from different clocks or at somewhat different times during the
-   preparation of the response. This specification has relaxed that to allow
-   reasonable discretion.
-   (<xref target="lastmod.comparison"/>)
+   Preconditions can now be evaluated before the request payload is processed
+   rather than waiting until the response would otherwise be successful.
+   (<xref target="evaluation"/>)
 </t>
 </section>
 
@@ -13431,10 +13414,13 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>Moved table of content codings into <xref target="content.coding.registration"/>, moved table of range units into <xref target="range.unit.registration"/> (<eref target="https://github.com/httpwg/http-core/issues/506"/>)</li>
   <li>In <xref target="message.abstraction"/>, add an abstract data type for message to help define semantics without being dependent on the specific structure of HTTP/1.1 (<eref target="https://github.com/httpwg/http-core/issues/557"/>)</li>
   <li>In <xref target="lastmod.comparison"/>, relax arbitrary 60-second comparison limit (<eref target="https://github.com/httpwg/http-core/issues/510"/>)</li>
+  <li>In <xref target="field.host"/>, add ":authority" pseudo-header to Host discussion and make section applicable to both (<eref target="https://github.com/httpwg/http-core/issues/511"/>)</li>
   <li>In <xref target="field.name.registration"/>, note that this document updates <xref target="RFC3864"/> (<eref target="https://github.com/httpwg/http-core/issues/515"/>)</li>
   <li>In <xref target="protection.space"/>, replace "canonical root URI" by "origin" (<eref target="https://github.com/httpwg/http-core/issues/542"/>)</li>
   <li>In <xref target="field.expect"/>, remove obsolete note about a change in RFC 723x (<eref target="https://github.com/httpwg/http-core/issues/547"/>)</li>
-   <li>Changed to using "payload data" when defining requirements about the data being conveyed within a message, instead of the terms "payload body" or "response body" or "representation body", since they often get confused with the HTTP/1.1 message body (which includes transfer coding) (<eref target="https://github.com/httpwg/http-core/issues/553"/>)</li>
+  <li>Changed to using "payload data" when defining requirements about the data being conveyed within a message, instead of the terms "payload body" or "response body" or "representation body", since they often get confused with the HTTP/1.1 message body (which includes transfer coding) (<eref target="https://github.com/httpwg/http-core/issues/553"/>)</li>
+  <li>In <xref target="status.203"/>, remove an obsolete reference to the Warning response header field (<eref target="https://github.com/httpwg/http-core/issues/573"/>)</li>
+  <li>In <xref target="status.code.registration"/>, remove redundant text about status code 418 (<eref target="https://github.com/httpwg/http-core/issues/583"/>)</li>
 </ul>
 </section>
 </section>
