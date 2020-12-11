@@ -4824,14 +4824,19 @@ Content-Encoding: gzip
                <div id="rfc.iref.h.1"></div>
                <div id="rfc.iref.m.2"></div>
                <div id="rfc.section.9.3.2.p.1">
-                  <p>The HEAD method is identical to GET except that the server <em class="bcp14">MUST NOT</em> send payload data in the response (i.e., the response terminates at the end of the
-                     header section). The server <em class="bcp14">SHOULD</em> send the same header fields in response to a HEAD request as it would have sent if
-                     the request had been a GET, except that header fields that describe message body encoding
-                     or transmission (e.g., <a href="draft-ietf-httpbis-messaging-latest.html#field.transfer-encoding" class="smpl">Transfer-Encoding</a>) <em class="bcp14">MAY</em> be omitted.<a class="self" href="#rfc.section.9.3.2.p.1">¶</a></p>
+                  <p>The HEAD method is identical to GET except that the server <em class="bcp14">MUST NOT</em> send payload data in the response and the response always terminates at the end of
+                     the header section. HEAD is used to obtain metadata about the <a href="#selected.representation" class="smpl">selected representation</a> without transferring its representation data, often for the sake of testing hypertext
+                     links or finding recent modifications.<a class="self" href="#rfc.section.9.3.2.p.1">¶</a></p>
                </div>
                <div id="rfc.section.9.3.2.p.2">
-                  <p>HEAD is used to obtain metadata about the <a href="#selected.representation" class="smpl">selected representation</a> without transferring the representation data. It is often used to test hypertext links
-                     for validity, accessibility, and recent modification.<a class="self" href="#rfc.section.9.3.2.p.2">¶</a></p>
+                  <p>The server <em class="bcp14">SHOULD</em> send the same header fields in response to a HEAD request as it would have sent if
+                     the request method had been GET. However, a server <em class="bcp14">MAY</em> omit header fields for which a value is determined only while generating the payload
+                     data. For example, some servers buffer a dynamic response to GET until a minimum amount
+                     of data is generated so that they can more efficiently delimit small responses or
+                     make late decisions with regard to content selection. Such a response to GET might
+                     contain <a href="#field.content-length" class="smpl">Content-Length</a> and <a href="#field.vary" class="smpl">Vary</a> fields, for example, that are not generated within a HEAD response. These minor inconsistencies
+                     are considered preferable to generating and discarding the payload data for a HEAD
+                     request, since HEAD is usually requested for the sake of efficiency.<a class="self" href="#rfc.section.9.3.2.p.2">¶</a></p>
                </div>
                <div id="rfc.section.9.3.2.p.3">
                   <p>A payload within a HEAD request message has no defined semantics; sending payload
@@ -7336,53 +7341,57 @@ bytes=500-700,601-999
             <div id="rfc.section.14.2.p.3">
                <p>A server <em class="bcp14">MAY</em> ignore the Range header field. However, origin servers and intermediate caches ought
                   to support byte ranges when possible, since they support efficient recovery from partially
-                  failed transfers and partial retrieval of large representations. A server <em class="bcp14">MUST</em> ignore a Range header field received with a request method other than GET.<a class="self" href="#rfc.section.14.2.p.3">¶</a></p>
+                  failed transfers and partial retrieval of large representations.<a class="self" href="#rfc.section.14.2.p.3">¶</a></p>
             </div>
             <div id="rfc.section.14.2.p.4">
-               <p>An origin server <em class="bcp14">MUST</em> ignore a Range header field that contains a range unit it does not understand. A proxy <em class="bcp14">MAY</em> discard a Range header field that contains a range unit it does not understand.<a class="self" href="#rfc.section.14.2.p.4">¶</a></p>
+               <p>A server <em class="bcp14">MUST</em> ignore a Range header field received with a request method which is unrecognized or
+                  for which range handling is not defined. For this specification, <a href="#GET" class="smpl" id="rfc.extref.g.5">GET</a> is the only method for which range handling is defined.<a class="self" href="#rfc.section.14.2.p.4">¶</a></p>
             </div>
             <div id="rfc.section.14.2.p.5">
+               <p>An origin server <em class="bcp14">MUST</em> ignore a Range header field that contains a range unit it does not understand. A proxy <em class="bcp14">MAY</em> discard a Range header field that contains a range unit it does not understand.<a class="self" href="#rfc.section.14.2.p.5">¶</a></p>
+            </div>
+            <div id="rfc.section.14.2.p.6">
                <p>A server that supports range requests <em class="bcp14">MAY</em> ignore or reject a <a href="#field.range" class="smpl">Range</a> header field that consists of more than two overlapping ranges, or a set of many small
                   ranges that are not listed in ascending order, since both are indications of either
                   a broken client or a deliberate denial-of-service attack (<a href="#overlapping.ranges" title="Denial-of-Service Attacks Using Range">Section 17.14</a>). A client <em class="bcp14">SHOULD NOT</em> request multiple ranges that are inherently less efficient to process and transfer
-                  than a single range that encompasses the same data.<a class="self" href="#rfc.section.14.2.p.5">¶</a></p>
-            </div>
-            <div id="rfc.section.14.2.p.6">
-               <p>A server that supports range requests <em class="bcp14">MAY</em> ignore a <a href="#field.range" class="smpl">Range</a> header field when the selected representation has no payload data (i.e., the selected
-                  representation's data is of zero length).<a class="self" href="#rfc.section.14.2.p.6">¶</a></p>
+                  than a single range that encompasses the same data.<a class="self" href="#rfc.section.14.2.p.6">¶</a></p>
             </div>
             <div id="rfc.section.14.2.p.7">
+               <p>A server that supports range requests <em class="bcp14">MAY</em> ignore a <a href="#field.range" class="smpl">Range</a> header field when the selected representation has no payload data (i.e., the selected
+                  representation's data is of zero length).<a class="self" href="#rfc.section.14.2.p.7">¶</a></p>
+            </div>
+            <div id="rfc.section.14.2.p.8">
                <p>A client that is requesting multiple ranges <em class="bcp14">SHOULD</em> list those ranges in ascending order (the order in which they would typically be received
                   in a complete representation) unless there is a specific need to request a later part
                   earlier. For example, a user agent processing a large representation with an internal
                   catalog of parts might need to request later parts first, particularly if the representation
                   consists of pages stored in reverse order and the user agent wishes to transfer one
-                  page at a time.<a class="self" href="#rfc.section.14.2.p.7">¶</a></p>
-            </div>
-            <div id="rfc.section.14.2.p.8">
-               <p>The Range header field is evaluated after evaluating the precondition header fields
-                  defined in <a href="#preconditions" title="Preconditions">Section 13.1</a>, and only if the result in absence of the Range header field would be a <a href="#status.200" class="smpl">200 (OK)</a> response. In other words, Range is ignored when a conditional GET would result in
-                  a <a href="#status.304" class="smpl">304 (Not Modified)</a> response.<a class="self" href="#rfc.section.14.2.p.8">¶</a></p>
+                  page at a time.<a class="self" href="#rfc.section.14.2.p.8">¶</a></p>
             </div>
             <div id="rfc.section.14.2.p.9">
-               <p>The If-Range header field (<a href="#field.if-range" id="rfc.xref.field.if-range.1" title="If-Range">Section 13.1.5</a>) can be used as a precondition to applying the Range header field.<a class="self" href="#rfc.section.14.2.p.9">¶</a></p>
+               <p>The Range header field is evaluated after evaluating the precondition header fields
+                  defined in <a href="#preconditions" title="Preconditions">Section 13.1</a>, and only if the result in absence of the Range header field would be a <a href="#status.200" class="smpl">200 (OK)</a> response. In other words, Range is ignored when a conditional GET would result in
+                  a <a href="#status.304" class="smpl">304 (Not Modified)</a> response.<a class="self" href="#rfc.section.14.2.p.9">¶</a></p>
             </div>
             <div id="rfc.section.14.2.p.10">
+               <p>The If-Range header field (<a href="#field.if-range" id="rfc.xref.field.if-range.1" title="If-Range">Section 13.1.5</a>) can be used as a precondition to applying the Range header field.<a class="self" href="#rfc.section.14.2.p.10">¶</a></p>
+            </div>
+            <div id="rfc.section.14.2.p.11">
                <p>If all of the preconditions are true, the server supports the Range header field for
                   the target resource, and the specified range(s) are valid and satisfiable (as defined
                   in <a href="#byte.ranges" title="Byte Ranges">Section 14.1.2</a>), the server <em class="bcp14">SHOULD</em> send a <a href="#status.206" class="smpl">206 (Partial Content)</a> response with a payload containing one or more partial representations that correspond
-                  to the satisfiable ranges requested.<a class="self" href="#rfc.section.14.2.p.10">¶</a></p>
+                  to the satisfiable ranges requested.<a class="self" href="#rfc.section.14.2.p.11">¶</a></p>
             </div>
-            <div id="rfc.section.14.2.p.11">
+            <div id="rfc.section.14.2.p.12">
                <p>The above does not imply that a server will send all requested ranges. In some cases,
                   it may only be possible (or efficient) to send a portion of the requested ranges first,
                   while expecting the client to re-request the remaining portions later if they are
-                  still desired (see <a href="#status.206" id="rfc.xref.status.206.3" title="206 Partial Content">Section 15.3.7</a>).<a class="self" href="#rfc.section.14.2.p.11">¶</a></p>
+                  still desired (see <a href="#status.206" id="rfc.xref.status.206.3" title="206 Partial Content">Section 15.3.7</a>).<a class="self" href="#rfc.section.14.2.p.12">¶</a></p>
             </div>
-            <div id="rfc.section.14.2.p.12">
+            <div id="rfc.section.14.2.p.13">
                <p>If all of the preconditions are true, the server supports the Range header field for
                   the target resource, and the specified range(s) are invalid or unsatisfiable, the
-                  server <em class="bcp14">SHOULD</em> send a <a href="#status.416" class="smpl">416 (Range Not Satisfiable)</a> response.<a class="self" href="#rfc.section.14.2.p.12">¶</a></p>
+                  server <em class="bcp14">SHOULD</em> send a <a href="#status.416" class="smpl">416 (Range Not Satisfiable)</a> response.<a class="self" href="#rfc.section.14.2.p.13">¶</a></p>
             </div>
          </section>
          <section id="field.accept-ranges">
@@ -11004,6 +11013,9 @@ Content-Type: text/plain
                   indicating a range-set of more than one range. Moving the extension grammar into range
                   specifiers also allows protocol specific to byte ranges to be specified separately.<a class="self" href="#rfc.section.B.5.p.1">¶</a></p>
             </div>
+            <div id="rfc.section.B.5.p.2">
+               <p>It is now possible to define Range handling on extension methods. (<a href="#field.range" id="rfc.xref.field.range.6" title="Range">Section 14.2</a>)<a class="self" href="#rfc.section.B.5.p.2">¶</a></p>
+            </div>
          </section>
          <section id="changes.from.rfc.7235">
             <h3 id="rfc.section.B.6"><a href="#rfc.section.B.6">B.6.</a>&nbsp;<a href="#changes.from.rfc.7235">Changes from RFC 7235</a></h3>
@@ -11215,7 +11227,7 @@ Content-Type: text/plain
             <h3 id="rfc.section.C.9"><a href="#rfc.section.C.9">C.9.</a>&nbsp;<a href="#changes.since.07">Since draft-ietf-httpbis-semantics-07</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-semantics-07" title="plain text">📄</a> <a class="self" href="https://tools.ietf.org/rfcdiff?url2=draft-ietf-httpbis-semantics-08" title="diffs">🔍</a></h3>
             <div id="rfc.section.C.9.p.1">
                <ul>
-                  <li>In <a href="#field.range" id="rfc.xref.field.range.6" title="Range">Section 14.2</a>, explicitly reference the definition of representation data as including any content
+                  <li>In <a href="#field.range" id="rfc.xref.field.range.7" title="Range">Section 14.2</a>, explicitly reference the definition of representation data as including any content
                      codings (&lt;<a href="https://github.com/httpwg/http-core/issues/11">https://github.com/httpwg/http-core/issues/11</a>&gt;)</li>
                   <li>Move TE: trailers from <a href="#Messaging" id="rfc.xref.Messaging.28"><cite title="HTTP/1.1">[Messaging]</cite></a> into <a href="#trailers.limitations" title="Limitations on use of Trailers">Section 6.5.1</a> (&lt;<a href="https://github.com/httpwg/http-core/issues/18">https://github.com/httpwg/http-core/issues/18</a>&gt;)</li>
                   <li>In <a href="#field.content-length" id="rfc.xref.field.content-length.3" title="Content-Length">Section 8.7</a>, adjust requirements for handling multiple content-length values (&lt;<a href="https://github.com/httpwg/http-core/issues/59">https://github.com/httpwg/http-core/issues/59</a>&gt;)</li>
@@ -11247,7 +11259,7 @@ Content-Type: text/plain
                <ul>
                   <li>In <a href="#status.416" id="rfc.xref.status.416.3" title="416 Range Not Satisfiable">Section 15.5.17</a>, remove duplicate definition of what makes a range satisfiable and refer instead
                      to each range unit's definition (&lt;<a href="https://github.com/httpwg/http-core/issues/12">https://github.com/httpwg/http-core/issues/12</a>&gt;)</li>
-                  <li>In <a href="#byte.ranges" title="Byte Ranges">Section 14.1.2</a> and <a href="#field.range" id="rfc.xref.field.range.7" title="Range">Section 14.2</a>, clarify that a selected representation of zero length can only be satisfiable as
+                  <li>In <a href="#byte.ranges" title="Byte Ranges">Section 14.1.2</a> and <a href="#field.range" id="rfc.xref.field.range.8" title="Range">Section 14.2</a>, clarify that a selected representation of zero length can only be satisfiable as
                      a suffix range and that a server can still ignore Range for that case (&lt;<a href="https://github.com/httpwg/http-core/issues/12">https://github.com/httpwg/http-core/issues/12</a>&gt;)</li>
                   <li>In <a href="#field.accept" id="rfc.xref.field.accept.6" title="Accept">Section 12.5.1</a> and <a href="#status.415" id="rfc.xref.status.415.2" title="415 Unsupported Media Type">Section 15.5.16</a>, allow "Accept" as response field (&lt;<a href="https://github.com/httpwg/http-core/issues/48">https://github.com/httpwg/http-core/issues/48</a>&gt;)</li>
                   <li><a href="#collected.abnf" title="Collected ABNF">Appendix A</a> now uses the sender variant of the "#" list expansion (&lt;<a href="https://github.com/httpwg/http-core/issues/192">https://github.com/httpwg/http-core/issues/192</a>&gt;)</li>
@@ -11349,10 +11361,12 @@ Content-Type: text/plain
                      within a message, instead of the terms "payload body" or "response body" or "representation
                      body", since they often get confused with the HTTP/1.1 message body (which includes
                      transfer coding) (&lt;<a href="https://github.com/httpwg/http-core/issues/553">https://github.com/httpwg/http-core/issues/553</a>&gt;)</li>
+                  <li>Rewrite definition of <a href="#HEAD" class="smpl" id="rfc.extref.h.35">HEAD</a> method (&lt;<a href="https://github.com/httpwg/http-core/issues/559">https://github.com/httpwg/http-core/issues/559</a>&gt;)</li>
                   <li>In <a href="#field.if-range" id="rfc.xref.field.if-range.3" title="If-Range">Section 13.1.5</a>, fix an off-by-one bug about how many chars to consider when checking for etags (&lt;<a href="https://github.com/httpwg/http-core/issues/570">https://github.com/httpwg/http-core/issues/570</a>&gt;)</li>
                   <li>In <a href="#overview.of.status.codes" title="Overview of Status Codes">Section 15.1</a>, clarify that "no reason phrase" is fine as well (&lt;<a href="https://github.com/httpwg/http-core/issues/571">https://github.com/httpwg/http-core/issues/571</a>&gt;)</li>
                   <li>In <a href="#status.203" id="rfc.xref.status.203.3" title="203 Non-Authoritative Information">Section 15.3.4</a>, remove an obsolete reference to the Warning response header field (&lt;<a href="https://github.com/httpwg/http-core/issues/573">https://github.com/httpwg/http-core/issues/573</a>&gt;)</li>
                   <li>In <a href="#status.408" id="rfc.xref.status.408.3" title="408 Request Timeout">Section 15.5.9</a>, rephrase prose about connection re-use (&lt;<a href="https://github.com/httpwg/http-core/issues/579">https://github.com/httpwg/http-core/issues/579</a>&gt;)</li>
+                  <li>In <a href="#field.range" id="rfc.xref.field.range.9" title="Range">Section 14.2</a>, potentially allow Range handling on methods other than GET (&lt;<a href="https://github.com/httpwg/http-core/issues/581">https://github.com/httpwg/http-core/issues/581</a>&gt;)</li>
                   <li>In <a href="#status.code.registration" title="Status Code Registration">Section 18.3</a>, remove redundant text about status code 418 (&lt;<a href="https://github.com/httpwg/http-core/issues/583">https://github.com/httpwg/http-core/issues/583</a>&gt;)</li>
                   <li>In <a href="#confidentiality.of.credentials" title="Confidentiality of Credentials">Section 17.15.1</a>, rewrite requirement to refer to "secured connection" (&lt;<a href="https://github.com/httpwg/http-core/issues/587">https://github.com/httpwg/http-core/issues/587</a>&gt;)</li>
                   <li>Make reference to <a href="#RFC8446" id="rfc.xref.RFC8446.4"><cite title="The Transport Layer Security (TLS) Protocol Version 1.3">[RFC8446]</cite></a> normative (&lt;<a href="https://github.com/httpwg/http-core/issues/589">https://github.com/httpwg/http-core/issues/589</a>&gt;)</li>
@@ -11580,7 +11594,7 @@ Content-Type: text/plain
                            <li>Proxy-Authenticate&nbsp;&nbsp;<a href="#rfc.section.11.7.1"><b>11.7.1</b></a>, <a href="#rfc.xref.field.proxy-authenticate.1">15.5.8</a>, <a href="#rfc.xref.field.proxy-authenticate.2">18.4</a>, <a href="#rfc.xref.field.proxy-authenticate.3">C.9</a>, <a href="#rfc.xref.field.proxy-authenticate.4">C.12</a></li>
                            <li>Proxy-Authentication-Info&nbsp;&nbsp;<a href="#rfc.section.11.7.3"><b>11.7.3</b></a>, <a href="#rfc.xref.field.proxy-authentication-info.1">18.4</a></li>
                            <li>Proxy-Authorization&nbsp;&nbsp;<a href="#rfc.section.11.7.2"><b>11.7.2</b></a>, <a href="#rfc.xref.field.proxy-authorization.1">11.7.3</a>, <a href="#rfc.xref.field.proxy-authorization.2">15.5.8</a>, <a href="#rfc.xref.field.proxy-authorization.3">18.4</a></li>
-                           <li>Range&nbsp;&nbsp;<a href="#rfc.xref.field.range.1">9.3.1</a>, <a href="#rfc.xref.field.range.2">14.1</a>, <a href="#rfc.section.14.2"><b>14.2</b></a>, <a href="#rfc.xref.field.range.3">15.5.17</a>, <a href="#rfc.xref.field.range.4">16.1.2</a>, <a href="#rfc.xref.field.range.5">18.4</a>, <a href="#rfc.xref.field.range.6">C.9</a>, <a href="#rfc.xref.field.range.7">C.10</a></li>
+                           <li>Range&nbsp;&nbsp;<a href="#rfc.xref.field.range.1">9.3.1</a>, <a href="#rfc.xref.field.range.2">14.1</a>, <a href="#rfc.section.14.2"><b>14.2</b></a>, <a href="#rfc.xref.field.range.3">15.5.17</a>, <a href="#rfc.xref.field.range.4">16.1.2</a>, <a href="#rfc.xref.field.range.5">18.4</a>, <a href="#rfc.xref.field.range.6">B.5</a>, <a href="#rfc.xref.field.range.7">C.9</a>, <a href="#rfc.xref.field.range.8">C.10</a>, <a href="#rfc.xref.field.range.9">C.14</a></li>
                            <li>Referer&nbsp;&nbsp;<a href="#rfc.section.10.1.3"><b>10.1.3</b></a>, <a href="#rfc.xref.field.referer.1">17.9</a>, <a href="#rfc.xref.field.referer.2">18.4</a>, <a href="#rfc.xref.field.referer.3">C.9</a></li>
                            <li>Retry-After&nbsp;&nbsp;<a href="#rfc.section.10.2.4"><b>10.2.4</b></a>, <a href="#rfc.xref.field.retry-after.1">15.6.4</a>, <a href="#rfc.xref.field.retry-after.2">18.4</a></li>
                            <li>Server&nbsp;&nbsp;<a href="#rfc.section.10.2.5"><b>10.2.5</b></a>, <a href="#rfc.xref.field.server.1">17.11</a>, <a href="#rfc.xref.field.server.2">18.4</a></li>
@@ -11600,7 +11614,7 @@ Content-Type: text/plain
                <li><a id="rfc.index.G" href="#rfc.index.G"><b>G</b></a><ul>
                      <li>gateway&nbsp;&nbsp;<a href="#rfc.iref.g.1"><b>3.6</b></a></li>
                      <li><em>Georgiev</em>&nbsp;&nbsp;<a href="#rfc.xref.Georgiev.1">17.1</a>, <a href="#Georgiev"><b>19.2</b></a></li>
-                     <li>GET method&nbsp;&nbsp;<a href="#rfc.xref.GET.1">3.8</a>, <a href="#rfc.xref.GET.2">6.4.1</a>, <a href="#rfc.xref.GET.3">6.4.1</a>, <a href="#rfc.xref.GET.4">8.1</a>, <a href="#rfc.xref.GET.5">8.8</a>, <a href="#rfc.xref.GET.6">9.1</a>, <a href="#rfc.extref.g.4">9.2.1</a>, <a href="#rfc.iref.g.77"><b>9.3.1</b></a>, <a href="#rfc.xref.GET.7">18.2</a>, <a href="#rfc.xref.GET.8">B.3</a>, <a href="#rfc.xref.GET.9">C.7</a>, <a href="#rfc.xref.GET.10">C.12</a></li>
+                     <li>GET method&nbsp;&nbsp;<a href="#rfc.xref.GET.1">3.8</a>, <a href="#rfc.xref.GET.2">6.4.1</a>, <a href="#rfc.xref.GET.3">6.4.1</a>, <a href="#rfc.xref.GET.4">8.1</a>, <a href="#rfc.xref.GET.5">8.8</a>, <a href="#rfc.xref.GET.6">9.1</a>, <a href="#rfc.extref.g.4">9.2.1</a>, <a href="#rfc.iref.g.77"><b>9.3.1</b></a>, <a href="#rfc.extref.g.5">14.2</a>, <a href="#rfc.xref.GET.7">18.2</a>, <a href="#rfc.xref.GET.8">B.3</a>, <a href="#rfc.xref.GET.9">C.7</a>, <a href="#rfc.xref.GET.10">C.12</a></li>
                      <li><span class="tt">Grammar</span>&nbsp;&nbsp;
                         <ul>
                            <li><span class="tt">absolute-path</span>&nbsp;&nbsp;<a href="#rfc.iref.g.5"><b>4.1</b></a></li>
@@ -11760,7 +11774,7 @@ Content-Type: text/plain
                   </ul>
                </li>
                <li><a id="rfc.index.H" href="#rfc.index.H"><b>H</b></a><ul>
-                     <li>HEAD method&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.18">9.2.1</a>, <a href="#rfc.iref.h.1"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a></li>
+                     <li>HEAD method&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.18">9.2.1</a>, <a href="#rfc.iref.h.1"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a>, <a href="#rfc.extref.h.35">C.14</a></li>
                      <li>Header Fields&nbsp;&nbsp;
                         <ul>
                            <li>Accept&nbsp;&nbsp;<a href="#rfc.xref.field.accept.1">5.6.6</a>, <a href="#rfc.xref.field.accept.2">8.4.1</a>, <a href="#rfc.xref.field.accept.3">12.3</a>, <a href="#rfc.section.12.5.1"><b>12.5.1</b></a>, <a href="#rfc.xref.field.accept.4">15.5.16</a>, <a href="#rfc.xref.field.accept.5">18.4</a>, <a href="#rfc.xref.field.accept.6">C.10</a>, <a href="#rfc.xref.field.accept.7">C.10</a></li>
@@ -11795,7 +11809,7 @@ Content-Type: text/plain
                            <li>Proxy-Authenticate&nbsp;&nbsp;<a href="#rfc.section.11.7.1"><b>11.7.1</b></a>, <a href="#rfc.xref.field.proxy-authenticate.1">15.5.8</a>, <a href="#rfc.xref.field.proxy-authenticate.2">18.4</a>, <a href="#rfc.xref.field.proxy-authenticate.3">C.9</a>, <a href="#rfc.xref.field.proxy-authenticate.4">C.12</a></li>
                            <li>Proxy-Authentication-Info&nbsp;&nbsp;<a href="#rfc.section.11.7.3"><b>11.7.3</b></a>, <a href="#rfc.xref.field.proxy-authentication-info.1">18.4</a></li>
                            <li>Proxy-Authorization&nbsp;&nbsp;<a href="#rfc.section.11.7.2"><b>11.7.2</b></a>, <a href="#rfc.xref.field.proxy-authorization.1">11.7.3</a>, <a href="#rfc.xref.field.proxy-authorization.2">15.5.8</a>, <a href="#rfc.xref.field.proxy-authorization.3">18.4</a></li>
-                           <li>Range&nbsp;&nbsp;<a href="#rfc.xref.field.range.1">9.3.1</a>, <a href="#rfc.xref.field.range.2">14.1</a>, <a href="#rfc.section.14.2"><b>14.2</b></a>, <a href="#rfc.xref.field.range.3">15.5.17</a>, <a href="#rfc.xref.field.range.4">16.1.2</a>, <a href="#rfc.xref.field.range.5">18.4</a>, <a href="#rfc.xref.field.range.6">C.9</a>, <a href="#rfc.xref.field.range.7">C.10</a></li>
+                           <li>Range&nbsp;&nbsp;<a href="#rfc.xref.field.range.1">9.3.1</a>, <a href="#rfc.xref.field.range.2">14.1</a>, <a href="#rfc.section.14.2"><b>14.2</b></a>, <a href="#rfc.xref.field.range.3">15.5.17</a>, <a href="#rfc.xref.field.range.4">16.1.2</a>, <a href="#rfc.xref.field.range.5">18.4</a>, <a href="#rfc.xref.field.range.6">B.5</a>, <a href="#rfc.xref.field.range.7">C.9</a>, <a href="#rfc.xref.field.range.8">C.10</a>, <a href="#rfc.xref.field.range.9">C.14</a></li>
                            <li>Referer&nbsp;&nbsp;<a href="#rfc.section.10.1.3"><b>10.1.3</b></a>, <a href="#rfc.xref.field.referer.1">17.9</a>, <a href="#rfc.xref.field.referer.2">18.4</a>, <a href="#rfc.xref.field.referer.3">C.9</a></li>
                            <li>Retry-After&nbsp;&nbsp;<a href="#rfc.section.10.2.4"><b>10.2.4</b></a>, <a href="#rfc.xref.field.retry-after.1">15.6.4</a>, <a href="#rfc.xref.field.retry-after.2">18.4</a></li>
                            <li>Server&nbsp;&nbsp;<a href="#rfc.section.10.2.5"><b>10.2.5</b></a>, <a href="#rfc.xref.field.server.1">17.11</a>, <a href="#rfc.xref.field.server.2">18.4</a></li>
@@ -11873,8 +11887,8 @@ Content-Type: text/plain
                            <li>*&nbsp;&nbsp;<a href="#rfc.iref.m.9"><b>18.2</b></a></li>
                            <li>CONNECT&nbsp;&nbsp;<a href="#rfc.xref.CONNECT.1">6.4.1</a>, <a href="#rfc.xref.CONNECT.2">7.1.1</a>, <a href="#rfc.xref.CONNECT.3">8.7</a>, <a href="#rfc.xref.CONNECT.4">9.1</a>, <a href="#rfc.section.9.3.6"><b>9.3.6</b></a>, <a href="#rfc.xref.CONNECT.5">16</a>, <a href="#rfc.xref.CONNECT.6">18.2</a>, <a href="#rfc.xref.CONNECT.7">C.9</a>, <a href="#rfc.xref.CONNECT.8">C.9</a></li>
                            <li>DELETE&nbsp;&nbsp;<a href="#rfc.xref.DELETE.1">9.1</a>, <a href="#rfc.extref.d.38">9.2.2</a>, <a href="#rfc.iref.m.4"><b>9.3.5</b></a>, <a href="#rfc.xref.DELETE.2">18.2</a>, <a href="#rfc.xref.DELETE.3">B.3</a>, <a href="#rfc.xref.DELETE.4">C.5</a>, <a href="#rfc.xref.DELETE.5">C.8</a></li>
-                           <li>GET&nbsp;&nbsp;<a href="#rfc.xref.GET.1">3.8</a>, <a href="#rfc.xref.GET.2">6.4.1</a>, <a href="#rfc.xref.GET.3">6.4.1</a>, <a href="#rfc.xref.GET.4">8.1</a>, <a href="#rfc.xref.GET.5">8.8</a>, <a href="#rfc.xref.GET.6">9.1</a>, <a href="#rfc.extref.g.4">9.2.1</a>, <a href="#rfc.iref.m.1"><b>9.3.1</b></a>, <a href="#rfc.xref.GET.7">18.2</a>, <a href="#rfc.xref.GET.8">B.3</a>, <a href="#rfc.xref.GET.9">C.7</a>, <a href="#rfc.xref.GET.10">C.12</a></li>
-                           <li>HEAD&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.18">9.2.1</a>, <a href="#rfc.iref.m.2"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a></li>
+                           <li>GET&nbsp;&nbsp;<a href="#rfc.xref.GET.1">3.8</a>, <a href="#rfc.xref.GET.2">6.4.1</a>, <a href="#rfc.xref.GET.3">6.4.1</a>, <a href="#rfc.xref.GET.4">8.1</a>, <a href="#rfc.xref.GET.5">8.8</a>, <a href="#rfc.xref.GET.6">9.1</a>, <a href="#rfc.extref.g.4">9.2.1</a>, <a href="#rfc.iref.m.1"><b>9.3.1</b></a>, <a href="#rfc.extref.g.5">14.2</a>, <a href="#rfc.xref.GET.7">18.2</a>, <a href="#rfc.xref.GET.8">B.3</a>, <a href="#rfc.xref.GET.9">C.7</a>, <a href="#rfc.xref.GET.10">C.12</a></li>
+                           <li>HEAD&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.18">9.2.1</a>, <a href="#rfc.iref.m.2"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a>, <a href="#rfc.extref.h.35">C.14</a></li>
                            <li>OPTIONS&nbsp;&nbsp;<a href="#rfc.xref.OPTIONS.1">7.1.1</a>, <a href="#rfc.xref.OPTIONS.2">7.4.2</a>, <a href="#rfc.xref.OPTIONS.3">9.1</a>, <a href="#rfc.extref.o.15">9.2.1</a>, <a href="#rfc.iref.m.5"><b>9.3.7</b></a>, <a href="#rfc.xref.OPTIONS.4">18.2</a>, <a href="#rfc.xref.OPTIONS.5">B.3</a>, <a href="#rfc.xref.OPTIONS.6">C.6</a>, <a href="#rfc.xref.OPTIONS.7">C.7</a>, <a href="#rfc.xref.OPTIONS.8">C.9</a></li>
                            <li>POST&nbsp;&nbsp;<a href="#rfc.xref.POST.1">6.4.1</a>, <a href="#rfc.xref.POST.2">8.8</a>, <a href="#rfc.xref.POST.3">9.1</a>, <a href="#rfc.xref.POST.4">9.3.1</a>, <a href="#rfc.section.9.3.3"><b>9.3.3</b></a>, <a href="#rfc.xref.POST.5">18.2</a>, <a href="#rfc.xref.POST.6">C.4</a></li>
                            <li>PUT&nbsp;&nbsp;<a href="#rfc.xref.PUT.1">6.4.1</a>, <a href="#rfc.xref.PUT.2">8.8</a>, <a href="#rfc.xref.PUT.3">9.1</a>, <a href="#rfc.extref.p.28">9.2.2</a>, <a href="#rfc.iref.m.3"><b>9.3.4</b></a>, <a href="#rfc.xref.PUT.4">18.2</a>, <a href="#rfc.xref.PUT.5">C.14</a></li>
@@ -11911,7 +11925,7 @@ Content-Type: text/plain
                   </ul>
                </li>
                <li><a id="rfc.index.R" href="#rfc.index.R"><b>R</b></a><ul>
-                     <li>Range header field&nbsp;&nbsp;<a href="#rfc.xref.field.range.1">9.3.1</a>, <a href="#rfc.xref.field.range.2">14.1</a>, <a href="#rfc.section.14.2"><b>14.2</b></a>, <a href="#rfc.xref.field.range.3">15.5.17</a>, <a href="#rfc.xref.field.range.4">16.1.2</a>, <a href="#rfc.xref.field.range.5">18.4</a>, <a href="#rfc.xref.field.range.6">C.9</a>, <a href="#rfc.xref.field.range.7">C.10</a></li>
+                     <li>Range header field&nbsp;&nbsp;<a href="#rfc.xref.field.range.1">9.3.1</a>, <a href="#rfc.xref.field.range.2">14.1</a>, <a href="#rfc.section.14.2"><b>14.2</b></a>, <a href="#rfc.xref.field.range.3">15.5.17</a>, <a href="#rfc.xref.field.range.4">16.1.2</a>, <a href="#rfc.xref.field.range.5">18.4</a>, <a href="#rfc.xref.field.range.6">B.5</a>, <a href="#rfc.xref.field.range.7">C.9</a>, <a href="#rfc.xref.field.range.8">C.10</a>, <a href="#rfc.xref.field.range.9">C.14</a></li>
                      <li>Realm&nbsp;&nbsp;<a href="#rfc.section.11.5">11.5</a></li>
                      <li>recipient&nbsp;&nbsp;<a href="#rfc.section.3.3"><b>3.3</b></a></li>
                      <li>Referer header field&nbsp;&nbsp;<a href="#rfc.section.10.1.3"><b>10.1.3</b></a>, <a href="#rfc.xref.field.referer.1">17.9</a>, <a href="#rfc.xref.field.referer.2">18.4</a>, <a href="#rfc.xref.field.referer.3">C.9</a></li>
