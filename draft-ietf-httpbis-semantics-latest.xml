@@ -381,12 +381,6 @@
    components for field values.
 </t>
 <t>
-   The rule below is defined in <xref target="Messaging"/>; 
-</t>
-<sourcecode type="abnf7230">
-  <x:ref>transfer-coding</x:ref> = &lt;transfer-coding, see <xref target="Messaging" x:rel="#transfer.codings"/>&gt;
-</sourcecode>
-<t>
    This specification uses the terms
    "character",
    "character encoding scheme",
@@ -5299,8 +5293,8 @@ Expect: 100-continue
   <iref primary="true" item="Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="TE" x:for-anchor=""/><iref primary="true" item="TE header field" x:for-anchor=""/>
   <x:anchor-alias value="TE"/>
   <x:anchor-alias value="t-codings"/>
-  <x:anchor-alias value="t-ranking"/>
-  <x:anchor-alias value="rank"/>
+  <x:anchor-alias value="transfer-coding"/>
+  <x:anchor-alias value="transfer-parameter"/>
 <t>
    The "TE" header field in a request can be used to indicate that the sender
    will not discard trailer fields when it contains a "trailers" member, as
@@ -5312,14 +5306,13 @@ Expect: 100-continue
 </t>
 <t>
    The TE field value consists of a list of tokens, each allowing for
-   optional parameters (as described in <xref target="parameter"/>).
+   optional parameters (except for the special case "trailers").
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="t-ranking"/><iref primary="true" item="Grammar" subitem="rank"/>
-  <x:ref>TE</x:ref>        = #<x:ref>t-codings</x:ref>
-  <x:ref>t-codings</x:ref> = "trailers" / ( <x:ref>transfer-coding</x:ref> [ <x:ref>t-ranking</x:ref> ] )
-  <x:ref>t-ranking</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> "q=" <x:ref>rank</x:ref>
-  <x:ref>rank</x:ref>      = ( "0" [ "." 0*3<x:ref>DIGIT</x:ref> ] )
-            / ( "1" [ "." 0*3("0") ] )
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="TE"/><iref primary="true" item="Grammar" subitem="t-codings"/><iref primary="true" item="Grammar" subitem="transfer-coding"/><iref primary="true" item="Grammar" subitem="transfer-parameter"/>
+  <x:ref>TE</x:ref>                 = #<x:ref>t-codings</x:ref>
+  <x:ref>t-codings</x:ref>          = "trailers" / ( <x:ref>transfer-coding</x:ref> [ <x:ref>weight</x:ref> ] )
+  <x:ref>transfer-coding</x:ref>    = <x:ref>token</x:ref> *( <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>transfer-parameter</x:ref> )
+  <x:ref>transfer-parameter</x:ref> = <x:ref>token</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
 </sourcecode>
 </section>
 
@@ -9064,8 +9057,12 @@ Content-Range: bytes 7000-7999/8000
    The <x:dfn>408 (Request Timeout)</x:dfn> status code indicates
    that the server did not receive a complete request message within the time
    that it was prepared to wait.
-   If the client has an outstanding request in transit,
-   the client &MAY; repeat that request on a new connection.
+</t>
+<t>
+   If the client has an outstanding request in transit, it &MAY; repeat that
+   request. If the current connection is not usable (e.g., as it would be in
+   HTTP/1.1, because request delimitation is lost), a new connection will be
+   used.
 </t>
 </section>
 
@@ -12906,7 +12903,6 @@ Content-Type: text/plain
 <x:ref>range-spec</x:ref> = int-range / suffix-range / other-range
 <x:ref>range-unit</x:ref> = token
 <x:ref>ranges-specifier</x:ref> = range-unit "=" range-set
-<x:ref>rank</x:ref> = ( "0" [ "." *3DIGIT ] ) / ( "1" [ "." *3"0" ] )
 <x:ref>received-by</x:ref> = pseudonym [ ":" port ]
 <x:ref>received-protocol</x:ref> = [ protocol-name "/" ] protocol-version
 <x:ref>relative-part</x:ref> = &lt;relative-part, see <xref target="RFC3986" x:fmt="," x:sec="4.2"/>&gt;
@@ -12918,15 +12914,15 @@ Content-Type: text/plain
 <x:ref>suffix-length</x:ref> = 1*DIGIT
 <x:ref>suffix-range</x:ref> = "-" suffix-length
 
-<x:ref>t-codings</x:ref> = "trailers" / ( transfer-coding [ t-ranking ] )
-<x:ref>t-ranking</x:ref> = OWS ";" OWS "q=" rank
+<x:ref>t-codings</x:ref> = "trailers" / ( transfer-coding [ weight ] )
 <x:ref>tchar</x:ref> = "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "." /
  "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
 <x:ref>time-of-day</x:ref> = hour ":" minute ":" second
 <x:ref>token</x:ref> = 1*tchar
 <x:ref>token68</x:ref> = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" )
  *"="
-transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:sec="7"/>&gt;
+<x:ref>transfer-coding</x:ref> = token *( OWS ";" OWS transfer-parameter )
+<x:ref>transfer-parameter</x:ref> = token BWS "=" BWS ( token / quoted-string )
 <x:ref>type</x:ref> = token
 
 <x:ref>unsatisfied-range</x:ref> = "*/" complete-length
@@ -13416,12 +13412,14 @@ transfer-coding = &lt;transfer-coding, see <xref target="Messaging" x:fmt="," x:
   <li>In <xref target="lastmod.comparison"/>, relax arbitrary 60-second comparison limit (<eref target="https://github.com/httpwg/http-core/issues/510"/>)</li>
   <li>In <xref target="field.host"/>, add ":authority" pseudo-header to Host discussion and make section applicable to both (<eref target="https://github.com/httpwg/http-core/issues/511"/>)</li>
   <li>In <xref target="field.name.registration"/>, note that this document updates <xref target="RFC3864"/> (<eref target="https://github.com/httpwg/http-core/issues/515"/>)</li>
+  <li>Moved transfer-coding ABNF from <xref target="Messaging"/> to <xref target="field.te"/> and replaced "t-ranking" ABNF by equivalent "weight" (<eref target="https://github.com/httpwg/http-core/issues/531"/>)</li>
   <li>In <xref target="protection.space"/>, replace "canonical root URI" by "origin" (<eref target="https://github.com/httpwg/http-core/issues/542"/>)</li>
   <li>In <xref target="field.expect"/>, remove obsolete note about a change in RFC 723x (<eref target="https://github.com/httpwg/http-core/issues/547"/>)</li>
   <li>Changed to using "payload data" when defining requirements about the data being conveyed within a message, instead of the terms "payload body" or "response body" or "representation body", since they often get confused with the HTTP/1.1 message body (which includes transfer coding) (<eref target="https://github.com/httpwg/http-core/issues/553"/>)</li>
   <li>In <xref target="field.if-range"/>, fix an off-by-one bug about how many chars to consider when checking for etags (<eref target="https://github.com/httpwg/http-core/issues/570"/>)</li>
   <li>In <xref target="overview.of.status.codes"/>, clarify that "no reason phrase" is fine as well (<eref target="https://github.com/httpwg/http-core/issues/571"/>)</li>
   <li>In <xref target="status.203"/>, remove an obsolete reference to the Warning response header field (<eref target="https://github.com/httpwg/http-core/issues/573"/>)</li>
+  <li>In <xref target="status.408"/>, rephrase prose about connection re-use (<eref target="https://github.com/httpwg/http-core/issues/579"/>)</li>
   <li>In <xref target="status.code.registration"/>, remove redundant text about status code 418 (<eref target="https://github.com/httpwg/http-core/issues/583"/>)</li>
   <li>In <xref target="confidentiality.of.credentials"/>, rewrite requirement to refer to "secured connection" (<eref target="https://github.com/httpwg/http-core/issues/587"/>)</li>
   <li>Make reference to <xref target="RFC8446"/> normative (<eref target="https://github.com/httpwg/http-core/issues/589"/>)</li>
