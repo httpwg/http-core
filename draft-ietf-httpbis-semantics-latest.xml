@@ -604,7 +604,7 @@
 <t>
    A client sends requests to a server in the form of a <x:dfn>request</x:dfn>
    message with a method (<xref target="methods"/>) and request target
-   (<xref target="request.target"/>). The request might also contain
+   (<xref target="target.resource"/>). The request might also contain
    header fields (<xref target="header.fields"/>) for request modifiers,
    client information, and representation metadata,
    a payload (<xref target="payload"/>) to be processed
@@ -1137,11 +1137,11 @@ Content-Type: text/plain
    Some protocol elements that refer to a URI allow inclusion of a fragment,
    while others do not. They are distinguished by use of the ABNF rule for
    elements where fragment is allowed; otherwise, a specific rule that excludes
-   fragments is used (see <xref target="target.resource"/>).
+   fragments is used.
 </t>
 <aside>
   <t>
-    &Note; the fragment identifier component is not part of the actual scheme
+    &Note; The fragment identifier component is not part of the scheme
     definition for a URI scheme (see <xref target="RFC3986" x:fmt="of" x:sec="4.3"/>),
     thus does not appear in the ABNF definitions for the "http" and "https"
     URI schemes above.
@@ -2102,7 +2102,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    Messages start with control data that describe its primary purpose. Request
    message control data includes a request method (<xref target="methods"/>),
-   request target (<xref target="request.target"/>), and protocol version
+   request target (<xref target="target.resource"/>), and protocol version
    (<xref target="protocol.version"/>). Response message control data includes
    a status code (<xref target="status.codes"/>), optional reason phrase, and
    protocol version.
@@ -2414,44 +2414,47 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <section title="Routing HTTP Messages" anchor="routing">
 <t>
-   HTTP is used in a wide variety of applications, ranging from
-   general-purpose computers to home appliances.  In some cases,
-   communication options are hard-coded in a client's configuration.
-   However, most HTTP clients rely on the same resource identification
-   mechanism and configuration techniques as general-purpose Web browsers.
-</t>
-<t>
    HTTP request message routing is determined by each client based on the
    target resource, the client's proxy configuration, and
    establishment or reuse of an inbound connection.  The corresponding
    response routing follows the same connection chain back to the client.
 </t>
 
-<section title="Target Resources" anchor="target.resource">
+<section title="Determining the Target Resource" anchor="target.resource">
   <iref primary="true" item="target resource"/>
   <iref primary="true" item="target URI"/>
+  <iref primary="true" item="request target"/>
   <x:anchor-alias value="target resource"/>
   <x:anchor-alias value="target URI"/>
-
-<section title="Request Target" anchor="request.target">
-  <iref primary="true" item="request target"/>
   <x:anchor-alias value="request target"/>
+  <x:anchor-alias value="request.target"/>
+  <x:anchor-alias value="reconstructing.target.uri"/>
 <t>
-   The "<x:dfn>request target</x:dfn>" is
-   the protocol element that identifies the "<x:dfn>target resource</x:dfn>".
+   Although HTTP is used in a wide variety of applications, most clients rely
+   on the same resource identification mechanism and configuration techniques
+   as general-purpose Web browsers. Even when communication options are
+   hard-coded in a client's configuration, we can think of their combined
+   effect as a URI reference (<xref target="uri.references"/>).
 </t>
 <t>
-   Typically, the request target is a URI reference (<xref target="uri"/>)
-   which a user agent would resolve to its absolute form in order to obtain
-   the "<x:dfn>target URI</x:dfn>". The target URI excludes the reference's
+   A URI reference is resolved to its absolute form in order to obtain the
+   "<x:dfn>target URI</x:dfn>". The target URI excludes the reference's
    fragment component, if any, since fragment identifiers are reserved for
    client-side processing (<xref target="RFC3986" x:fmt="," x:sec="3.5"/>).
 </t>
 <t>
-   However, there are two special, method-specific forms allowed for the
-   request target in specific circumstances:
+   To perform an action on a "<x:dfn>target resource</x:dfn>", the client sends
+   a request message containing enough components of its parsed target URI to
+   enable recipients to identify that same resource. For historical reasons,
+   the parsed target URI components, collectively referred to as the
+   "<x:dfn>request target</x:dfn>", are sent within the message control data
+   and the <x:ref>Host</x:ref> header field (<xref target="field.host"/>).
 </t>
-<ul>   
+<t>
+   There are two unusual cases for which the request target components are in
+   a method-specific form:
+ </t>
+ <ul>   
    <li>
       For CONNECT (<xref target="CONNECT"/>), the request target is the host
       name and port number of the tunnel destination, separated by a colon.
@@ -2465,6 +2468,21 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    See the respective method definitions for details. These forms &MUST-NOT;
    be used with other methods.
 </t>
+<t>
+   Upon receipt of a client's request, a server reconstructs the target URI
+   from the received components in accordance with their local configuration
+   and incoming connection context. This reconstruction is specific to each
+   major protocol version. For example,
+   <xref target="h1.effective.request.uri"/> defines how a server
+   determines the target URI of an HTTP/1.1 request.
+</t>
+<aside anchor="effective.request.uri">
+  <t>
+    <iref primary="true" item="effective request URI"/>
+    &Note; Previous specifications defined the recomposed target URI as a
+    distinct concept, the <x:dfn>effective request URI</x:dfn>.
+  </t>
+</aside>
 </section>
 
 <section title="Host and :authority" anchor="field.host">
@@ -2512,43 +2530,6 @@ Host: www.example.org
 </t>
 </section>
 
-<section title="Reconstructing the Target URI" anchor="reconstructing.target.uri">
-<t>
-   Once an inbound connection is obtained,
-   the client sends an HTTP request message.
-</t>
-<t>
-   Depending on the nature of the request, the client's target URI might be
-   split into components and transmitted (or implied) within various parts of
-   a request message. These parts are recombined by each recipient, in
-   accordance with their local configuration and incoming connection context,
-   to determine the target URI.
-   <xref target="h1.effective.request.uri"/> defines how a server
-   determines the target URI for an HTTP/1.1 request.
-</t>
-<t>
-   Once the target URI has been reconstructed, an origin server needs
-   to decide whether or not to provide service for that URI via the connection
-   in which the request was received. For example, the request might have been
-   misdirected, deliberately or accidentally, such that the information within
-   a received <x:ref>Host</x:ref> header
-   field differs from the host or port upon which the connection has been
-   made. If the connection is from a trusted gateway, that inconsistency might
-   be expected; otherwise, it might indicate an attempt to bypass security
-   filters, trick the server into delivering non-public content, or poison a
-   cache. See <xref target="security.considerations"/> for security
-   considerations regarding message routing.
-</t>
-<aside anchor="effective.request.uri">
-  <t>
-    <iref primary="true" item="effective request URI"/>
-    &Note; previous specifications defined the recomposed target URI as a
-    distinct concept, the <x:dfn>effective request URI</x:dfn>.
-  </t>
-</aside>
-</section>
-</section>
-
 <section title="Routing Inbound Requests" anchor="routing.inbound">
 <t>
    Once the target URI and its origin are determined, a client decides whether
@@ -2585,6 +2566,23 @@ Host: www.example.org
    specification.
 </t>
 </section>
+</section>
+
+<section title="Rejecting Misdirected Requests" anchor="routing.reject">
+<t>
+   Before performing a request, a server decides whether or not to provide
+   service for the target URI via the connection in which the request is
+   received. For example, a request might have been misdirected,
+   deliberately or accidentally, such that the information within a received
+   <x:ref>Host</x:ref> header field differs from the connection's host or port.
+</t>
+<t>
+   If the connection is from a trusted gateway, such inconsistency might
+   be expected; otherwise, it might indicate an attempt to bypass security
+   filters, trick the server into delivering non-public content, or poison a
+   cache. See <xref target="security.considerations"/> for security
+   considerations regarding message routing.
+</t>
 </section>
 
 <section title="Response Correlation" anchor="response.correlation">
