@@ -6372,7 +6372,6 @@ Expect: 100-continue
   <x:anchor-alias value="header.accept"/>
   <iref primary="true" item="Fields" subitem="Accept" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Accept" x:for-anchor=""/><iref primary="true" item="Accept header field" x:for-anchor=""/>
   <x:anchor-alias value="Accept"/>
-  <x:anchor-alias value="accept-ext"/>
   <x:anchor-alias value="accept-params"/>
   <x:anchor-alias value="media-range"/>
 <t>
@@ -6387,15 +6386,13 @@ Expect: 100-continue
    about what content types are preferred in the payload of a subsequent
    request to the same resource.
 </t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept"/><iref primary="true" item="Grammar" subitem="media-range"/><iref primary="true" item="Grammar" subitem="accept-params"/><iref primary="true" item="Grammar" subitem="accept-ext"/>
-  <x:ref>Accept</x:ref> = #( <x:ref>media-range</x:ref> [ <x:ref>accept-params</x:ref> ] )
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Accept"/><iref primary="true" item="Grammar" subitem="media-range"/>
+  <x:ref>Accept</x:ref> = #( <x:ref>media-range</x:ref> [ <x:ref>weight</x:ref> ] )
 
   <x:ref>media-range</x:ref>    = ( "*/*"
                      / ( <x:ref>type</x:ref> "/" "*" )
                      / ( <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> )
                    ) <x:ref>parameters</x:ref>
-  <x:ref>accept-params</x:ref>  = <x:ref>weight</x:ref> *( <x:ref>accept-ext</x:ref> )
-  <x:ref>accept-ext</x:ref> = <x:ref>OWS</x:ref> ";" <x:ref>OWS</x:ref> <x:ref>token</x:ref> [ "=" ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> ) ]
 </sourcecode>
 <t>
    The asterisk "*" character is used to group media types into ranges,
@@ -6404,16 +6401,23 @@ Expect: 100-continue
    parameters that are applicable to that range.
 </t>
 <t>
-   Each media-range might be followed by zero or more applicable media type
-   parameters (e.g., <x:ref>charset</x:ref>), an optional "q" parameter for
-   indicating a relative weight (<xref target="quality.values"/>), and then zero or more extension
-   parameters. The "q" parameter is necessary if any extensions (accept-ext) are present,
-   since it acts as a separator between the two parameter sets.
+   Each media-range might be followed by optional applicable media type
+   parameters (e.g., <x:ref>charset</x:ref>), followed by an optional "q"
+   parameter for indicating a relative weight (<xref target="quality.values"/>).
+</t>
+<t>
+   Previous specifications allowed additional extension parameters to appear
+   after the weight parameter. The accept extension grammar (accept-ext) has
+   been removed because it had a complicated definition, was not being used in
+   practice, and is more easily deployed through new header fields. Senders
+   using weights &SHOULD; send "q" last (after all media-range parameters).
+   Recipients &SHOULD; process any parameter named "q" as weight, regardless of
+   parameter ordering.
 </t>
 <aside>
   <t>
-    &Note; Use of the "q" parameter name to separate media type
-    parameters from Accept extension parameters is due to historical
+    &Note; Use of the "q" parameter name to control content negotiation
+    is due to historical
     practice. Although this prevents any media type parameter named
     "q" from being used with a media range, such an event is believed
     to be unlikely given the lack of any "q" parameters in the IANA
@@ -12705,8 +12709,8 @@ Content-Type: text/plain
 
 <?BEGININC build/draft-ietf-httpbis-semantics-latest.abnf-appendix ?>
 <section xmlns:x="http://purl.org/net/xml2rfc/ext" title="Collected ABNF" anchor="collected.abnf"><t>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension.sender"/>.</t><sourcecode type="abnf" name="draft-ietf-httpbis-semantics-latest.parsed-abnf">
-<x:ref>Accept</x:ref> = [ ( media-range [ accept-params ] ) *( OWS "," OWS (
- media-range [ accept-params ] ) ) ]
+<x:ref>Accept</x:ref> = [ ( media-range [ weight ] ) *( OWS "," OWS ( media-range [
+ weight ] ) ) ]
 <x:ref>Accept-Charset</x:ref> = [ ( ( charset / "*" ) [ weight ] ) *( OWS "," OWS (
  ( charset / "*" ) [ weight ] ) ) ]
 <x:ref>Accept-Encoding</x:ref> = [ ( codings [ weight ] ) *( OWS "," OWS ( codings [
@@ -12784,8 +12788,6 @@ Content-Type: text/plain
 
 <x:ref>absolute-URI</x:ref> = &lt;absolute-URI, see <xref target="RFC3986" x:fmt="," x:sec="4.3"/>&gt;
 <x:ref>absolute-path</x:ref> = 1*( "/" segment )
-<x:ref>accept-ext</x:ref> = OWS ";" OWS token [ "=" ( token / quoted-string ) ]
-<x:ref>accept-params</x:ref> = weight *accept-ext
 <x:ref>acceptable-ranges</x:ref> = ( range-unit *( OWS "," OWS range-unit ) ) /
  "none"
 <x:ref>asctime-date</x:ref> = day-name SP date3 SP time-of-day SP year
@@ -13054,6 +13056,11 @@ Content-Type: text/plain
    Allow <x:ref>Accept</x:ref> and <x:ref>Accept-Encoding</x:ref> in response
    messages; the latter was introduced by <xref target="RFC7694"/>.
    (<xref target="request.payload.negotiation"/>)
+</t>
+<t>
+   "Accept Parameters" (accept-params) have been removed from the definition of
+   the Accept field.
+   (<xref target="field.accept"/>)
 </t>
 <t>
    The semantics of "*" in the <x:ref>Vary</x:ref> header field when other
@@ -13435,6 +13442,7 @@ Content-Type: text/plain
 
 <section title="Since draft-ietf-httpbis-semantics-13" anchor="changes.since.13">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="field.accept"/>, remove the unused "accept parameters" (<eref target="https://github.com/httpwg/http-core/issues/568"/>)</li>
   <li>In <xref target="intro.evolution"/>, mention that RFC 1945 describes HTTP/0.9 as well (<eref target="https://github.com/httpwg/http-core/issues/614"/>)</li>
 </ul>
 </section>
