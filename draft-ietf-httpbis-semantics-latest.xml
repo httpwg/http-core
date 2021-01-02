@@ -9651,7 +9651,7 @@ Content-Type: text/plain
 </t>
 <t>
    Any party can request registration of a HTTP field. See <xref
-   target="considerations.for.new.field.values"/> for considerations to take
+   target="considerations.for.new.fields"/> for considerations to take
    into account when creating a new HTTP field.
 </t>
 <t>
@@ -9720,6 +9720,56 @@ Content-Type: text/plain
 </t>
 </section>
 
+<section title="Considerations for New Fields" anchor="considerations.for.new.fields">
+<t>
+   HTTP header and trailer fields are a widely-used extension point for the protocol.
+   While they can be used in an ad hoc fashion, fields that are intended for
+   wider use need to be carefully documented to ensure interoperability.
+</t>
+<t>
+   In particular, authors of specifications defining new fields are advised to consider
+   and, where appropriate, document the following aspects:
+</t>
+<ul>
+   <li>Under what conditions the field can be used; e.g., only in
+     responses or requests, in all messages, only on responses to a
+     particular request method, etc.</li>
+   <li>Whether the field semantics are further refined by their context,
+     such as their use with certain request methods or status codes.</li>
+   <li>The scope of applicability for the information conveyed.
+     By default, fields apply only to the message they are
+     associated with, but some response fields are designed to apply to all
+     representations of a resource, the resource itself, or an even broader
+     scope. Specifications that expand the scope of a response field will
+     need to carefully consider issues such as content negotiation, the time
+     period of applicability, and (in some cases) multi-tenant server
+     deployments.</li>
+   <li>Under what conditions intermediaries are allowed to insert,
+     delete, or modify the field's value.</li>
+   <li>If the field is allowable in trailers; by
+     default, it will not be (see <xref target="trailers.limitations"/>).</li>
+   <li>Whether it is appropriate to list the field name in the
+     <x:ref>Connection</x:ref> header field (i.e., if the field is to
+     be hop-by-hop; see <xref target="field.connection"/>).</li>
+   <li>Whether the field introduces any additional security considerations, such
+     as disclosure of privacy-related data.</li>
+</ul>
+<t>
+   Request header fields have additional considerations that need to be documented
+   if the default behaviour is not appropriate:
+</t>
+<ul>
+   <li>If it is appropriate to list the field name in a
+     <x:ref>Vary</x:ref> response header field (e.g., when the request header
+     field is used by an origin server's content selection algorithm; see
+     <xref target="field.vary"/>).</li>
+   <li>If the field is intended to be stored when received in a PUT
+   request (see <xref target="PUT"/>).</li>
+   <li>If the field ought to be removed when automatically redirecting a
+   request, due to security concerns (see <xref target="status.3xx"/>).</li>
+</ul>
+
+
 <section title="Considerations for New Field Names" anchor="considerations.for.new.field.names">
 <t>
    Authors of specifications defining new fields are advised to choose a short
@@ -9729,7 +9779,7 @@ Content-Type: text/plain
 </t>
 <t>
    To that end, limited-use fields (such as a header confined to a single
-   application or use case) are encouraged to use a name that includes its name
+   application or use case) are encouraged to use a name that includes that use
    (or an abbreviation) as a prefix; for example, if the Foo Application needs
    a Description field, it might use "Foo-Desc"; "Description" is too generic,
    and "Foo-Description" is needlessly long.
@@ -9755,54 +9805,45 @@ Content-Type: text/plain
 
 <section title="Considerations for New Field Values" anchor="considerations.for.new.field.values">
 <t>
-   Authors of specifications defining new fields are advised to consider
-   documenting:
+   A major task in the definition of a new HTTP field is the specification of
+   the field value syntax: what senders should generate, and how recipients
+   should infer semantics from what is received.
 </t>
-<ul>
-  <li>
-    <t>Whether the field has a singleton or list-based value
-    (see <xref target="field-values"/>).</t>
-    <t>If it is a singleton field, document how to treat messages
-    where the multiple members are present (a sensible default would
-    be to ignore the field, but this might not always be the right
-    choice).</t>
-    <t>Note that intermediaries and software libraries might combine
-    multiple field lines into a single one, despite the
-    field being defined as a singleton. A robust format enables
-    recipients to discover these situations (good example: "Content-Type",
-    as the comma can only appear inside quoted strings;
-    bad example: "Location", as a comma can occur inside a URI).</t>
-  </li>
-  <li><t>Under what conditions the field can be used; e.g., only in
-    responses or requests, in all messages, only on responses to a
-    particular request method, etc.</t></li>
-   <li><t>What the scope of applicability for the information conveyed in
-    the field is. By default, fields apply only to the message they are
-    associated with, but some response fields are designed to apply to all
-    representations of a resource, the resource itself, or an even broader
-    scope. Specifications that expand the scope of a response field will
-    need to carefully consider issues such as content negotiation, the time
-    period of applicability, and (in some cases) multi-tenant server
-    deployments.</t></li>
-  <li><t>Whether the field should be stored by origin servers that
-    understand it upon a PUT request.</t></li>
-  <li><t>Whether the field semantics are further refined by the context,
-    such as by existing request methods or status codes.</t></li>
-  <li><t>Whether it is appropriate to list the field name in the
-    <x:ref>Connection</x:ref> header field (i.e., if the field is to
-    be hop-by-hop; see <xref target="field.connection"/>).</t></li>
-  <li><t>Under what conditions intermediaries are allowed to insert,
-    delete, or modify the field's value.</t></li>
-  <li><t>Whether it is appropriate to list the field name in a
-    <x:ref>Vary</x:ref> response header field (e.g., when the request header
-    field is used by an origin server's content selection algorithm; see
-    <xref target="field.vary"/>).</t></li>
-  <li><t>Whether the field is allowable in trailers (see
-    <xref target="trailer.fields"/>).</t></li>
-  <li><t>Whether the field ought to be preserved across redirects.</t></li>
-  <li><t>Whether it introduces any additional security considerations, such
-    as disclosure of privacy-related data.</t></li>
-</ul>
+<t>
+   Authors are encouraged (but not required) to use either the ABNF rules in
+   this specification or those in <xref target="RFCSTRF"/> to define the syntax
+   of new field values.
+</t>
+<t>
+   Authors are advised to carefully consider how the combination of multiple
+   field lines will impact them (see <xref target="field-order"/>). Because
+   senders might send erroneously send multiple values, and both intermediaries
+   and HTTP libraries can perform combination automatically, this applies to
+   all field values &mdash; even when only a single value is anticipated.
+</t>
+<t>
+   Therefore, authors are advised to delimit or encode values that contain
+   commas (e.g., with the <x:ref>quoted-string</x:ref> rule of
+   <xref target="quoted.strings"/>, the String data type of
+   <xref target="RFCSTRF"/>), or a field-specific encoding).
+   This ensures that commas within field data are not confused
+   with the commas that delimit a list value.
+</t>
+<t>
+   For example, the <x:ref>Content-Type</x:ref> field value only allows commas
+   inside quoted strings, which can be reliably parsed even when multiple
+   values are present. The <x:ref>Location</x:ref> field value provides a
+   counter-example that should not be emulated: because URIs can include
+   commas, it is not possible to reliably distinguish between a single value
+   that includes a comma from two values.
+</t>
+<t>
+   Authors of fields with a singleton value (see <xref
+   target="field-values"/>) are additionally advised to document how to treat
+   messages where the multiple members are present (a sensible default would
+   be to ignore the field, but this might not always be the right choice).
+</t>
+</section>
 </section>
 </section>
 
@@ -12699,6 +12740,16 @@ Content-Type: text/plain
     <date year="2017" month="October" />
   </front>
   <seriesInfo name='RFC' value='8288' />
+</reference>
+
+<reference anchor='RFCSTRF'>
+  <front>
+    <title>Structured Field Values for HTTP</title>
+    <author initials="M." surname="Nottingham" fullname="Mark Nottingham"/>
+    <author initials="P-H." surname="Kamp" fullname="Poul-Henning Kamp"/>
+    <date month='June' year='2020'/>
+  </front>
+  <seriesInfo name='Internet-Draft' value='draft-ietf-httpbis-header-structure-19'/>
 </reference>
 
 <reference anchor="OWASP" target="https://www.owasp.org/">
