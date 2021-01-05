@@ -139,7 +139,7 @@
    subsystem that controls storage, retrieval, and deletion of messages in it.
    A cache stores cacheable responses to reduce the response time and
    network bandwidth consumption on future equivalent requests. Any client or
-   server &MAY; use a cache, though a server that is acting as a tunnel cannot.
+   server &MAY; use a cache, though not when acting as a tunnel.
 </t>
 <iref item="shared cache" />
 <iref item="private cache" />
@@ -253,7 +253,7 @@
 <iref item="cache key" />
 <t>
    Proper cache operation preserves the semantics of HTTP transfers (<xref
-   target="Semantics"/>) while reducing the transfer of information already
+   target="Semantics"/>) while reducing the transmission of information already
    held in the cache. Although caching is an entirely &OPTIONAL; feature of
    HTTP, it can be assumed that reusing a cached response is desirable and
    that such reuse is the default behavior when no requirement or local
@@ -264,9 +264,9 @@
 </t>
 <iref item="cache key" />
 <t>
-   The base <x:dfn>cache key</x:dfn> comprises the request method and target
+   The <x:dfn>cache key</x:dfn> is comprised of, at a minimum, the request method and target
    URI used to retrieve the stored response; the method determines under which
-   circumstances that response can be used to satisfy a request. However, many
+   circumstances that response can be used to satisfy a subsequent request. However, many
    HTTP caches in common use today only cache GET responses, and therefore only
    use the URI as the cache key, forwarding other methods.
 </t>
@@ -274,7 +274,8 @@
    If a request target is subject to content negotiation, the cache might
    store multiple responses for it. Caches differentiate these responses
    by incorporating values of the original request's selecting header fields
-   into the cache key as well, as per <xref target="caching.negotiated.responses"/>.
+   into the cache key as well, using information in the <x:ref>Vary</x:ref>
+   response header field, as per <xref target="caching.negotiated.responses"/>.
 </t>
 <t>
   Caches might incorporate additional material into the cache key.
@@ -332,7 +333,7 @@
             (see <xref target="field.expires"/>);</li>
         <li>a max-age response directive
             (see <xref target="cache-response-directive.max-age" />);</li>
-        <li>if the cache is shared, an s-maxage response directive
+        <li>if the cache is shared: an s-maxage response directive
             (see <xref target="cache-response-directive.s-maxage" />);</li>
         <li>a Cache Control Extension that allows it to be cached
             (see <xref target="cache.control.extensions" />); or,</li>
@@ -464,6 +465,22 @@
 </t>
 </section>
 
+<section title="Combining Partial Content" anchor="combining.responses">
+<t>
+   A response might transfer only a partial representation if the
+   connection closed prematurely or if the request used one or more Range
+   specifiers (<xref target="field.range"/>).  After several such transfers, a cache might have
+   received several ranges of the same representation.  A cache &MAY; combine
+   these ranges into a single stored response, and reuse that response to
+   satisfy later requests, if they all share the same strong validator and
+   the cache complies with the client requirements in <xref target="combining.byte.ranges"/>.
+</t>
+<t>
+   When combining the new response with one or more stored responses, a cache
+   &MUST; update the stored response header fields using the header fields
+   provided in the new response, as per <xref target="update"/>.
+</t>
+</section>
 
 <section title="Storing Responses to Authenticated Requests" anchor="caching.authenticated.responses">
 <t>
@@ -480,23 +497,6 @@
    must-revalidate (<xref target="cache-response-directive.must-revalidate"/>),
    public (<xref target="cache-response-directive.public"/>), and
    s-maxage (<xref target="cache-response-directive.s-maxage"/>).
-</t>
-</section>
-
-<section title="Combining Partial Content" anchor="combining.responses">
-<t>
-   A response might transfer only a partial representation if the
-   connection closed prematurely or if the request used one or more Range
-   specifiers (<xref target="field.range"/>).  After several such transfers, a cache might have
-   received several ranges of the same representation.  A cache &MAY; combine
-   these ranges into a single stored response, and reuse that response to
-   satisfy later requests, if they all share the same strong validator and
-   the cache complies with the client requirements in <xref target="combining.byte.ranges"/>.
-</t>
-<t>
-   When combining the new response with one or more stored responses, a cache
-   &MUST; update the stored response header fields using the header fields
-   provided in the new response, as per <xref target="update"/>.
 </t>
 </section>
 
@@ -550,11 +550,12 @@
    Also, note that unsafe requests might invalidate already-stored responses;
    see <xref target="invalidation" />.
 </t>
+<iref item="collapsed requests" />
 <t>
    A response that is stored or storable can be used to satisfy multiple
    requests, provided that it is allowed to reuse that response for the requests
-   in question. This enables caches to "collapse" multiple incoming requests into a single forward
-   request upon a cache miss, thereby reducing load on the origin server and network.
+   in question. This enables caches to <x:dfn>collapse requests</x:dfn>, or combine multiple incoming requests into a single forward
+   one upon a cache miss, thereby reducing load on the origin server and network.
    However, note that if the response returned is not able to be used for some or all
    of the collapsed requests, additional latency might be introduced, because they will
    need to be forwarded to be satisfied.
@@ -608,9 +609,10 @@
 <t>
    A <x:ref>Vary</x:ref> header field value containing a member "*" always fails to match.
 </t>
+<iref item="selected response" />
 <t>
    The stored response with matching selecting header fields is known as the
-   selected response.
+   <x:dfn>selected response</x:dfn>.
 </t>
 <t>
    If multiple selected responses are available (potentially including
@@ -624,7 +626,7 @@
 <t>
    Some resources mistakenly omit the Vary header field from their default
    response (i.e., the one sent when no more preferable response is available), 
-   selecting it for requests to that resource even when 
+   with the effect of selecting it for requests to that resource even when 
    more preferable responses are available. When a cache has multiple responses for a
    target URI and one or more omits the Vary header field, it &SHOULD; use the
    most recent (see <xref target="age.calculations"/>) valid Vary field value available to select an appropriate response
@@ -663,7 +665,7 @@
    generated by, or successfully validated with, the origin server.  
 </t>
 <t>
-   When a response is "fresh" in the cache, it can be used to satisfy
+   When a response is fresh, it can be used to satisfy
    subsequent requests without contacting the origin server, thereby improving
    efficiency.
 </t>
@@ -924,7 +926,7 @@
    give the next inbound server an opportunity to select a valid stored
    response to use, updating the stored metadata in the process, or to replace
    the stored response(s) with a new response. This process is known as
-   "<x:dfn>validating</x:dfn>" or "<x:dfn>revalidating</x:dfn>" the stored
+   <x:dfn>validating</x:dfn> or <x:dfn>revalidating</x:dfn> the stored
    response.
 </t>
 
