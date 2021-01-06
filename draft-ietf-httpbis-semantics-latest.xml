@@ -4770,16 +4770,9 @@ Content-Encoding: gzip
    between the related resources.
 </t>
 <t>
-   An origin server that allows PUT on a given target resource &MUST; send a
-   <x:ref>400 (Bad Request)</x:ref> response to a PUT request that contains a
-   <x:ref>Content-Range</x:ref> header field (<xref target="field.content-range"/>), since
-   the payload is likely to be partial content that has been mistakenly PUT as
-   a full representation.
-   Partial content updates are possible by targeting a separately identified
-   resource with state that overlaps a portion of the larger resource, or by
-   using a different method that has been specifically defined for partial
-   updates (for example, the PATCH method defined in
-   <xref target="RFC5789"/>).
+   Some origin servers support use of the <x:ref>Content-Range</x:ref> header
+   field (<xref target="field.content-range"/>) as a request modifier to
+   perform a partial PUT, as defined in <xref target="partial-PUT"/>.
 </t>
 <t>
    Responses to the PUT method are not cacheable. If a successful PUT request
@@ -7788,9 +7781,10 @@ bytes=500-700,601-999
    A proxy that receives such a message &SHOULD; forward it downstream.
 </t>
 <t>
+   Content-Range can also be sent as a request modifier to request a
+   partial PUT, as defined in <xref target="partial-PUT"/>.
    A server &MUST; ignore a Content-Range header field received in a request
-   with a method for which Content-Range support is not defined. No request
-   method in this specification is defined to support Content-Range in a request.
+   with a method for which Content-Range support is not defined.
 </t>
 <t>
    For byte ranges, a sender &SHOULD; indicate the complete length of the
@@ -7866,6 +7860,66 @@ Content-Range: bytes 734-1233/1234
 </artwork>
    </li>
 </ul>
+</section>
+
+<section title="Partial PUT" anchor="partial-PUT">
+  <x:anchor-alias value="partial PUT"/>
+  <iref primary="false" item="Fields" subitem="Content-Range" x:for-anchor=""/><iref primary="false" item="Header Fields" subitem="Content-Range" x:for-anchor=""/><iref primary="false" item="Content-Range header field" x:for-anchor=""/>
+<t>
+   Some origin servers support <x:ref>PUT</x:ref> of a partial representation
+   when a <x:ref>Content-Range</x:ref> header field
+   (<xref target="field.content-range"/>) is included in the request and
+   its value indicates a single byte range that is a valid replacement for the
+   target resource's current representation (if any).
+   This requests that the state of the <x:ref>target resource</x:ref> be
+   replaced with the enclosed payload data written only within the indicated
+   range of bytes of the resource's current representation or, if there is no
+   current representation and the range begins at offset 0, as a new
+   representation beginning with the payload.
+</t>
+<t>
+   If the <x:ref>Content-Range</x:ref> value is syntactically invalid, does not
+   have a single range-unit of "bytes", or the origin server does not support
+   the use of <x:ref>Content-Range</x:ref> on a PUT for this target resource,
+   the origin server &SHOULD; respond with a <x:ref>400 (Bad Request)</x:ref>
+   status code.
+</t>
+<t>
+   If the <x:ref>Content-Range</x:ref> value is syntactically valid, has a
+   range-unit of "bytes", and indicates a single range-set that is either
+   within the existing range of the target resource's current representation
+   or, if the resource has no representation, begins at offset 0 (meaning it
+   can be the start of a new representation), then
+   the origin server &SHOULD; replace the target resource's representation with
+   the sequence of octets joined by concatenating:
+   the current representation's octets before the indicated range,
+   the request payload, and the current representation's octets after the
+   indicated range. Unfortunately, some implementations assume that the range
+   being replaced is identical in size to the payload being sent to replace
+   them, which may lead to an inconsistent representation if they are not.
+</t>
+<t>
+   If an origin server supports <x:ref>Content-Range</x:ref> on PUT but the
+   range given is inconsistent with the target resource's current
+   representation and cannot be interpreted as a complete replacement,
+   the origin server &SHOULD; respond with either the
+   <x:ref>412 (Precondition Failed)</x:ref> status code (if an applicable
+   precondition is false) or the <x:ref>409 (Conflict)</x:ref> status code
+   (if not).
+</t>
+<t>
+   Unfortunately, this partial PUT feature is not backards compatible with the
+   original definition of PUT and may result in the payload being written as a
+   complete replacement for the current representation; i.e., there is no
+   interoperable way to determine support other than by trial and error.
+</t>
+<t>
+   Partial content updates are also possible by targeting a separately
+   identified resource with state that overlaps a portion of the larger
+   resource, or by using a different method that has been specifically defined
+   for partial updates (for example, the PATCH method defined in
+   <xref target="RFC5789"/>).
+</t>
 </section>
 
 <section title="Media Type multipart/byteranges" anchor="multipart.byteranges">
@@ -12903,6 +12957,11 @@ Content-Type: text/plain
    applicability.
    (<xref target="status.422"/>)
 </t>
+<t>
+   Allowed use of the <x:ref>Content-Range</x:ref> header field
+   (<xref target="field.content-range"/>) as a request modifier on PUT.
+   (<xref target="PUT"/>)
+</t>
 </section>
 
 <section title="Changes from RFC 7232" anchor="changes.from.rfc.7232">
@@ -12949,6 +13008,12 @@ Content-Type: text/plain
 <t>
    It is now possible to define Range handling on extension methods.
    (<xref target="field.range"/>)
+</t>
+<t>
+   Defined use of the <x:ref>Content-Range</x:ref> header field
+   (<xref target="field.content-range"/>) as a request modifier to perform a
+   partial PUT.
+   (<xref target="partial-PUT"/>)
 </t>
 </section>
 
@@ -13261,7 +13326,7 @@ Content-Type: text/plain
 <ul x:when-empty="None yet.">
   <li>In <xref target="field.accept"/>, remove the unused "accept parameters" (<eref target="https://github.com/httpwg/http-core/issues/568"/>)</li>
   <li>In <xref target="history.and.evolution"/>, mention that RFC 1945 describes HTTP/0.9 as well (<eref target="https://github.com/httpwg/http-core/issues/614"/>)</li>
-  <li>In <xref target="field.content-range"/>, clarify that Content-Range is to be ignored in requests (<eref target="https://github.com/httpwg/http-core/issues/618"/>)</li>
+  <li>In <xref target="partial-PUT"/>, define use of the <x:ref>Content-Range</x:ref> header field (<xref target="field.content-range"/>) as a request modifier to perform a partial PUT, as defined in <xref target="partial-PUT"/> (<eref target="https://github.com/httpwg/http-core/issues/618"/>)</li>
   <li>In <xref target="status.421"/>, import the 421 (Misdirected Request) status code from <xref target="RFC7540"/> (<eref target="https://github.com/httpwg/http-core/issues/622"/>)</li>
 </ul>
 </section>
