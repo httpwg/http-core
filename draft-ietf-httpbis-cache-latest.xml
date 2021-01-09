@@ -311,9 +311,9 @@
   <li><t>the response status code is final (see
          <xref target="status.codes"/>);</t></li>
   <li><t>if the response status code is 206 or 304, or the "must-understand" cache directive (see <xref
-         target="field.cache-control"/>) is present: the cache understands the response status code;</t></li>
+         target="cache-response-directive.must-understand"/>) is present: the cache understands the response status code;</t></li>
   <li><t>the "no-store" cache directive is not present in the response
-         (see <xref target="field.cache-control"/>);</t></li>
+         (see <xref target="cache-response-directive.no-store"/>);</t></li>
   <li><t>if the cache is shared: the "private" response directive is either not
          present or allows a shared cache to store a modified response;
          see <xref target="cache-response-directive.private" />);</t></li>
@@ -744,7 +744,8 @@
    target="cache-response-directive.max-age" />) is present, use its value, or</li>
    <li>If the <x:ref>Expires</x:ref> response header field
    (<xref target="field.expires" />) is present, use its value minus the
-    value of the <x:ref>Date</x:ref> response header field, or</li>
+    value of the <x:ref>Date</x:ref> response header field
+    (using the time the message was received if it is not present, as per <xref target="field.date"/>), or</li>
    <li>Otherwise, no explicit expiration time is present in the response. A
    heuristic freshness lifetime might be applicable; see <xref
    target="heuristic.freshness" />.</li>
@@ -990,10 +991,11 @@
 </t>
 <t>
    The proper evaluation of conditional requests by a cache depends on the
-   received precondition header fields and their precedence, as defined in
-   <xref target="precedence"/>. The <x:ref>If-Match</x:ref> and
+   received precondition header fields and their precedence. In summary, the <x:ref>If-Match</x:ref> and
    <x:ref>If-Unmodified-Since</x:ref> conditional header fields are not
-   applicable to a cache.
+   applicable to a cache, and <x:ref>If-None-Match</x:ref> takes precedence over
+   <x:ref>If-Modified-Since</x:ref>. See <xref target="precedence"/> for
+   a complete specification of precondition precedence.
 </t>
 <t>
    A request containing an <x:ref>If-None-Match</x:ref> header field
@@ -1460,9 +1462,13 @@
 <t>
    The "must-understand" response directive limits caching of the response to
    a cache that understands and conforms to the requirements for that
-   response's status code. A cache &MUST-NOT; store a response containing the
-   must-understand directive if the cache does not understand the response
-   status code.
+   response's status code.
+</t>
+<t>
+   Responses containing "must-understand" &SHOULD; also contain the "no-store" directive;
+   caches that implement "must-understand" &SHOULD; ignore the "no-store" directive
+   in responses that contain both directives and a status code that the cache
+   understands and conforms to any related caching requirements.
 </t>
 </section>
 
@@ -1533,6 +1539,10 @@
    privacy. In particular, malicious or compromised caches might not
    recognize or obey this directive, and communications networks might be
    vulnerable to eavesdropping.
+</t>
+<t>
+   Note that the "must-understand" cache directive overrides "no-store" in certain
+   circumstances; see <xref target="cache-response-directive.must-understand"/>.
 </t>
 </section>
 
@@ -2528,6 +2538,7 @@
 <ul x:when-empty="None yet.">
   <li>In <xref target="cache-response-directive.must-revalidate"/>, clarify requirements around generating an error response (<eref target="https://github.com/httpwg/http-core/issues/608"/>)</li>
   <li>In <xref target="freshening.responses"/>, clarify how multiple validators are handled (<eref target="https://github.com/httpwg/http-core/issues/659"/>)</li>
+  <li>In <xref target="cache-response-directive.must-understand"/>, modify operation to be more backwards-compatible with existing implementations (<eref target="https://github.com/httpwg/http-core/issues/661"/>)</li>
 </ul>
 </section>
 </section>
