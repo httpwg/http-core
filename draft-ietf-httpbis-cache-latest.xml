@@ -311,9 +311,9 @@
   <li><t>the response status code is final (see
          <xref target="status.codes"/>);</t></li>
   <li><t>if the response status code is 206 or 304, or the "must-understand" cache directive (see <xref
-         target="field.cache-control"/>) is present: the cache understands the response status code;</t></li>
+         target="cache-response-directive.must-understand"/>) is present: the cache understands the response status code;</t></li>
   <li><t>the "no-store" cache directive is not present in the response
-         (see <xref target="field.cache-control"/>);</t></li>
+         (see <xref target="cache-response-directive.no-store"/>);</t></li>
   <li><t>if the cache is shared: the "private" response directive is either not
          present or allows a shared cache to store a modified response;
          see <xref target="cache-response-directive.private" />);</t></li>
@@ -419,12 +419,12 @@
    necessary to assure integrity of the stored representation.
 </t>
 <t>
-   For example, a browser might decode the content coding of a response payload
+   For example, a browser might decode the content coding of a response
    while it is being received, creating a disconnect between the data it has
-   stored and the response payload's original metadata.
+   stored and the response's original metadata.
    Updating that stored metadata with a different <x:ref>Content-Encoding</x:ref>
    header field would be problematic. Likewise, a browser might store a
-   post-parse tree representation of HTML, rather than the payload received in
+   post-parse tree representation of HTML, rather than the content received in
    the response; updating the <x:ref>Content-Type</x:ref> header field would not be workable
    in this case, because any assumptions about the format made in parsing would
    now be invalid.
@@ -744,7 +744,8 @@
    target="cache-response-directive.max-age" />) is present, use its value, or</li>
    <li>If the <x:ref>Expires</x:ref> response header field
    (<xref target="field.expires" />) is present, use its value minus the
-    value of the <x:ref>Date</x:ref> response header field, or</li>
+    value of the <x:ref>Date</x:ref> response header field
+    (using the time the message was received if it is not present, as per <xref target="field.date"/>), or</li>
    <li>Otherwise, no explicit expiration time is present in the response. A
    heuristic freshness lifetime might be applicable; see <xref
    target="heuristic.freshness" />.</li>
@@ -987,10 +988,11 @@
 </t>
 <t>
    The proper evaluation of conditional requests by a cache depends on the
-   received precondition header fields and their precedence, as defined in
-   <xref target="precedence"/>. The <x:ref>If-Match</x:ref> and
+   received precondition header fields and their precedence. In summary, the <x:ref>If-Match</x:ref> and
    <x:ref>If-Unmodified-Since</x:ref> conditional header fields are not
-   applicable to a cache.
+   applicable to a cache, and <x:ref>If-None-Match</x:ref> takes precedence over
+   <x:ref>If-Modified-Since</x:ref>. See <xref target="precedence"/> for
+   a complete specification of precondition precedence.
 </t>
 <t>
    A request containing an <x:ref>If-None-Match</x:ref> header field
@@ -1064,7 +1066,7 @@
      target="freshening.responses"/>.
    </li>
    <li>
-     A full response (i.e., one with a payload body) indicates that none
+     A full response (i.e., one containing content) indicates that none
      of the stored responses nominated in the conditional request is
      suitable. Instead, the cache &MUST; use the full response to
      satisfy the request. The cache &MAY; store such a full response,
@@ -1095,16 +1097,17 @@
 </t>
 <ul>
    <li>
-     If the new response contains a <x:dfn>strong validator</x:dfn> (see
-     <xref target="weak.and.strong.validators"/>), then that strong validator
-     identifies the selected representation for update. All the stored
-     responses with the same strong validator are identified for update. If
-     none of the stored responses contain the same strong validator, then the
+     If the new response contains one or more <x:dfn>strong validators</x:dfn> (see
+     <xref target="weak.and.strong.validators"/>), then each of those strong validators
+     identify the selected representation for update. All the stored
+     responses with one of those same strong validators are identified for update. If
+     none of the stored responses contain at least one of the same strong validators, then the
      cache &MUST-NOT; use the new response to update any stored responses.
    </li>
    <li>
-     If the new response contains a <x:dfn>weak validator</x:dfn> and that
-     validator corresponds to one of the cache's stored responses, then the most
+     If the new response contains no strong validators but does contain
+     one or more <x:dfn>weak validators</x:dfn>, and those
+     validators correspond to one of the cache's stored responses, then the most
      recent of those matching stored responses is identified for update.
    </li>
    <li>
@@ -1125,11 +1128,11 @@
 <section title="Freshening Responses with HEAD" anchor="head.effects">
 <t>
    A response to the HEAD method is identical to what an equivalent request
-   made with a GET would have been, except it lacks payload data. This property
+   made with a GET would have been, without sending the content. This property
    of HEAD responses can be used to invalidate or update a cached GET
    response if the more efficient conditional GET request mechanism is not
    available (due to no validators being present in the stored response) or
-   if transmission of the payload data is not desired even if it has
+   if transmission of the content is not desired even if it has
    changed.
 </t>
 <t>
@@ -1388,7 +1391,7 @@
 <t>
    The "no-transform" request directive indicates that the client is asking
    for intermediaries to avoid
-   transforming the payload, as defined in <xref
+   transforming the content, as defined in <xref
    target="message.transformations"/>.
 </t>
 </section>
@@ -1449,9 +1452,13 @@
 <t>
    The "must-understand" response directive limits caching of the response to
    a cache that understands and conforms to the requirements for that
-   response's status code. A cache &MUST-NOT; store a response containing the
-   must-understand directive if the cache does not understand the response
-   status code.
+   response's status code.
+</t>
+<t>
+   Responses containing "must-understand" &SHOULD; also contain the "no-store" directive;
+   caches that implement "must-understand" &SHOULD; ignore the "no-store" directive
+   in responses that contain both directives and a status code that the cache
+   understands and conforms to any related caching requirements.
 </t>
 </section>
 
@@ -1522,6 +1529,10 @@
    recognize or obey this directive, and communications networks might be
    vulnerable to eavesdropping.
 </t>
+<t>
+   Note that the "must-understand" cache directive overrides "no-store" in certain
+   circumstances; see <xref target="cache-response-directive.must-understand"/>.
+</t>
 </section>
 
 <section title="no-transform" anchor="cache-response-directive.no-transform">
@@ -1529,7 +1540,7 @@
 <t>
    The "no-transform" response directive indicates that an intermediary
    (regardless of whether it implements a cache) &MUST-NOT; transform the
-   payload, as defined in <xref target="message.transformations"/>.
+   content, as defined in <xref target="message.transformations"/>.
 </t>
 </section>
 
@@ -1898,7 +1909,7 @@
 <section title="Cache Poisoning" anchor="cache.poisoning">
 <t>
    Various attacks might be amplified by being stored in a shared cache. Such
-   "cache poisoning" attacks use the cache to distribute a malicious payload
+   "cache poisoning" attacks use the cache to distribute malicious content
    to many clients, and are especially effective when an attacker can use
    implementation flaws, elevated privileges, or other techniques to insert
    such a response into a cache.
@@ -2516,6 +2527,9 @@
 <ul x:when-empty="None yet.">
   <li>In <xref target="cache-response-directive.must-revalidate"/>, clarify requirements around generating an error response (<eref target="https://github.com/httpwg/http-core/issues/608"/>)</li>
   <li>In <xref target="age.calculations"/>, <xref target="field.cache-control"/>, and <xref target="cache-response-directive.no-cache"/>, remove notes about very old HTTP/1.0 behaviours (<eref target="https://github.com/httpwg/http-core/issues/660"/>)</li>
+  <li>In <xref target="freshening.responses"/>, clarify how multiple validators are handled (<eref target="https://github.com/httpwg/http-core/issues/659"/>)</li>
+  <li>In <xref target="cache-response-directive.must-understand"/>, modify operation to be more backwards-compatible with existing implementations (<eref target="https://github.com/httpwg/http-core/issues/661"/>)</li>
+  <li>Changed to using "content" instead of "payload" or "payload data" to avoid confusion with the payload of version-specific messaging frames (<eref target="https://github.com/httpwg/http-core/issues/654"/>)</li>
 </ul>
 </section>
 </section>
