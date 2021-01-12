@@ -1060,8 +1060,11 @@ h1:hover > a.self, h2:hover > a.self, h3:hover > a.self, li:hover > a.self, p:ho
                         <li><a href="#rfc.section.13.1.5">13.1.5.</a>&nbsp;&nbsp;&nbsp;<a href="#field.if-range">If-Range</a></li>
                      </ul>
                   </li>
-                  <li><a href="#rfc.section.13.2">13.2.</a>&nbsp;&nbsp;&nbsp;<a href="#evaluation">Evaluation of Preconditions</a></li>
-                  <li><a href="#rfc.section.13.3">13.3.</a>&nbsp;&nbsp;&nbsp;<a href="#precedence">Precedence of Preconditions</a></li>
+                  <li><a href="#rfc.section.13.2">13.2.</a>&nbsp;&nbsp;&nbsp;<a href="#evaluation">Evaluation of Preconditions</a><ul>
+                        <li><a href="#rfc.section.13.2.1">13.2.1.</a>&nbsp;&nbsp;&nbsp;<a href="#when-to-evaluate">When to Evaluate</a></li>
+                        <li><a href="#rfc.section.13.2.2">13.2.2.</a>&nbsp;&nbsp;&nbsp;<a href="#precedence">Precedence of Preconditions</a></li>
+                     </ul>
+                  </li>
                </ul>
             </li>
             <li><a href="#rfc.section.14">14.</a>&nbsp;&nbsp;&nbsp;<a href="#range.requests">Range Requests</a><ul>
@@ -6665,7 +6668,8 @@ Expect: 100-continue
          <div id="rfc.section.13.p.1">
             <p>A conditional request is an HTTP request with one or more request header fields that
                indicate a precondition to be tested before applying the request method to the target
-               resource. <a href="#evaluation" title="Evaluation of Preconditions">Section 13.2</a> defines when preconditions are applied. <a href="#precedence" title="Precedence of Preconditions">Section 13.3</a> defines the order of evaluation when more than one precondition is present.<a class="self" href="#rfc.section.13.p.1">¶</a></p>
+               resource. <a href="#evaluation" title="Evaluation of Preconditions">Section 13.2</a> defines when to evaluate preconditions and their order of precedence when more than
+               one precondition is present.<a class="self" href="#rfc.section.13.p.1">¶</a></p>
          </div>
          <div id="rfc.section.13.p.2">
             <p>Conditional GET requests are the most efficient mechanism for HTTP cache updates <a href="#Caching" id="rfc.xref.Caching.23"><cite title="HTTP Caching">[Caching]</cite></a>. Conditionals can also be applied to state-changing methods, such as PUT and DELETE,
@@ -6825,8 +6829,8 @@ Expect: 100-continue
                   </ol>
                </div>
                <div id="rfc.section.13.1.2.p.11">
-                  <p>An origin server <em class="bcp14">MUST NOT</em> perform the requested method if the condition evaluates to false; instead, the origin
-                     server <em class="bcp14">MUST</em> respond with either a) the <a href="#status.304" class="smpl">304 (Not Modified)</a> status code if the request method is GET or HEAD or b) the <a href="#status.412" class="smpl">412 (Precondition Failed)</a> status code for all other request methods.<a class="self" href="#rfc.section.13.1.2.p.11">¶</a></p>
+                  <p>An origin server <em class="bcp14">MUST NOT</em> perform the requested method if a received If-None-Match condition evaluates to false;
+                     instead, the origin server <em class="bcp14">MUST</em> respond with either a) the <a href="#status.304" class="smpl">304 (Not Modified)</a> status code if the request method is GET or HEAD or b) the <a href="#status.412" class="smpl">412 (Precondition Failed)</a> status code for all other request methods.<a class="self" href="#rfc.section.13.1.2.p.11">¶</a></p>
                </div>
                <div id="rfc.section.13.1.2.p.12">
                   <p>Requirements on cache handling of a received If-None-Match header field are defined
@@ -6891,14 +6895,26 @@ Expect: 100-continue
                      those changed during the specified window.<a class="self" href="#rfc.section.13.1.3.p.10">¶</a></p>
                </div>
                <div id="rfc.section.13.1.3.p.11">
-                  <p>An origin server that receives an If-Modified-Since header field <em class="bcp14">SHOULD</em> evaluate the condition as per <a href="#evaluation" title="Evaluation of Preconditions">Section 13.2</a> prior to performing the method. The origin server <em class="bcp14">SHOULD NOT</em> perform the requested method if the selected representation's last modification date
-                     is earlier than or equal to the date provided in the field value; instead, the origin
-                     server <em class="bcp14">SHOULD</em> generate a <a href="#status.304" class="smpl">304 (Not Modified)</a> response, including only those metadata that are useful for identifying or updating
-                     a previously cached response.<a class="self" href="#rfc.section.13.1.3.p.11">¶</a></p>
+                  <p>An origin server that receives an If-Modified-Since header field <em class="bcp14">SHOULD</em> evaluate the condition as per <a href="#evaluation" title="Evaluation of Preconditions">Section 13.2</a> prior to performing the method.<a class="self" href="#rfc.section.13.1.3.p.11">¶</a></p>
                </div>
-               <div id="rfc.section.13.1.3.p.12">
+               <div id="rfc.section.13.1.3.p.12" class="avoidbreakafter">
+                  <p>To evaluate a received If-Modified-Since header field:<a class="self" href="#rfc.section.13.1.3.p.12">¶</a></p>
+               </div>
+               <div id="rfc.section.13.1.3.p.13">
+                  <ol>
+                     <li>If the selected representation's last modification date is earlier or equal to the
+                        date provided in the field value, the condition is false.</li>
+                     <li>Otherwise, the condition is true.</li>
+                  </ol>
+               </div>
+               <div id="rfc.section.13.1.3.p.14">
+                  <p>An origin server <em class="bcp14">SHOULD NOT</em> perform the requested method if a received If-Modified-Since condition evaluates to
+                     false; instead, the origin server <em class="bcp14">SHOULD</em> generate a <a href="#status.304" class="smpl">304 (Not Modified)</a> response, including only those metadata that are useful for identifying or updating
+                     a previously cached response.<a class="self" href="#rfc.section.13.1.3.p.14">¶</a></p>
+               </div>
+               <div id="rfc.section.13.1.3.p.15">
                   <p>Requirements on cache handling of a received If-Modified-Since header field are defined
-                     in <a href="draft-ietf-httpbis-cache-latest.html#validation.received" title="Handling a Received Validation Request">Section 4.3.2</a> of <a href="#Caching" id="rfc.xref.Caching.25"><cite title="HTTP Caching">[Caching]</cite></a>.<a class="self" href="#rfc.section.13.1.3.p.12">¶</a></p>
+                     in <a href="draft-ietf-httpbis-cache-latest.html#validation.received" title="Handling a Received Validation Request">Section 4.3.2</a> of <a href="#Caching" id="rfc.xref.Caching.25"><cite title="HTTP Caching">[Caching]</cite></a>.<a class="self" href="#rfc.section.13.1.3.p.15">¶</a></p>
                </div>
             </section>
             <section id="field.if-unmodified-since">
@@ -6940,25 +6956,36 @@ Expect: 100-continue
                      request.<a class="self" href="#rfc.section.13.1.4.p.8">¶</a></p>
                </div>
                <div id="rfc.section.13.1.4.p.9">
-                  <p>An origin server that receives an If-Unmodified-Since header field <em class="bcp14">MUST</em> evaluate the condition as per <a href="#evaluation" title="Evaluation of Preconditions">Section 13.2</a> prior to performing the method.<a class="self" href="#rfc.section.13.1.4.p.9">¶</a></p>
+                  <p>An origin server that receives an If-Unmodified-Since header field without an If-Match
+                     header field <em class="bcp14">MUST</em> evaluate the condition as per <a href="#evaluation" title="Evaluation of Preconditions">Section 13.2</a> prior to performing the method.<a class="self" href="#rfc.section.13.1.4.p.9">¶</a></p>
                </div>
-               <div id="rfc.section.13.1.4.p.10">
-                  <p>If the selected representation has a last modification date, the origin server <em class="bcp14">MUST NOT</em> perform the requested method if that date is more recent than the date provided in
-                     the field value. Instead, the origin server <em class="bcp14">MAY</em> indicate that the conditional request failed by responding with a <a href="#status.412" class="smpl">412 (Precondition Failed)</a> status code. Alternatively, if the request is a state-changing operation that appears
-                     to have already been applied to the selected representation, the origin server <em class="bcp14">MAY</em> respond with a <a href="#status.2xx" class="smpl">2xx (Successful)</a> status code (i.e., the change requested by the user agent has already succeeded, but
-                     the user agent might not be aware of it, perhaps because the prior response was lost
-                     or an equivalent change was made by some other user agent).<a class="self" href="#rfc.section.13.1.4.p.10">¶</a></p>
+               <div id="rfc.section.13.1.4.p.10" class="avoidbreakafter">
+                  <p>To evaluate a received If-Unmodified-Since header field:<a class="self" href="#rfc.section.13.1.4.p.10">¶</a></p>
                </div>
                <div id="rfc.section.13.1.4.p.11">
+                  <ol>
+                     <li>If the selected representation's last modification date is earlier than or equal to
+                        the date provided in the field value, the condition is true.</li>
+                     <li>Otherwise, the condition is false.</li>
+                  </ol>
+               </div>
+               <div id="rfc.section.13.1.4.p.12">
+                  <p>An origin server <em class="bcp14">MUST NOT</em> perform the requested method if an If-Unmodified-Since condition evaluates to false.
+                     Instead, the origin server <em class="bcp14">MAY</em> indicate that the conditional request failed by responding with a <a href="#status.412" class="smpl">412 (Precondition Failed)</a> status code. Alternatively, if the request is a state-changing operation that appears
+                     to have already been applied to the selected representation, the origin server <em class="bcp14">MAY</em> respond with a <a href="#status.2xx" class="smpl">2xx (Successful)</a> status code (i.e., the change requested by the user agent has already succeeded, but
+                     the user agent might not be aware of it, perhaps because the prior response was lost
+                     or an equivalent change was made by some other user agent).<a class="self" href="#rfc.section.13.1.4.p.12">¶</a></p>
+               </div>
+               <div id="rfc.section.13.1.4.p.13">
                   <p>Allowing an origin server to send a success response when a change request appears
                      to have already been applied is more efficient for many authoring use cases, but comes
                      with some risk if multiple user agents are making change requests that are very similar
                      but not cooperative. In those cases, an origin server is better off being stringent
-                     in sending 412 for every failed precondition on an unsafe method.<a class="self" href="#rfc.section.13.1.4.p.11">¶</a></p>
+                     in sending 412 for every failed precondition on an unsafe method.<a class="self" href="#rfc.section.13.1.4.p.13">¶</a></p>
                </div>
-               <div id="rfc.section.13.1.4.p.12">
+               <div id="rfc.section.13.1.4.p.14">
                   <p>The If-Unmodified-Since header field can be ignored by caches and intermediaries because
-                     it is not applicable to a stored response.<a class="self" href="#rfc.section.13.1.4.p.12">¶</a></p>
+                     it is not applicable to a stored response.<a class="self" href="#rfc.section.13.1.4.p.14">¶</a></p>
                </div>
             </section>
             <section id="field.if-range">
@@ -6982,146 +7009,173 @@ Expect: 100-continue
 </pre>
                </div>
                <div id="rfc.section.13.1.5.p.5">
-                  <p>A client <em class="bcp14">MUST NOT</em> generate an If-Range header field in a request that does not contain a <a href="#field.range" class="smpl">Range</a> header field. A server <em class="bcp14">MUST</em> ignore an If-Range header field received in a request that does not contain a <a href="#field.range" class="smpl">Range</a> header field. An origin server <em class="bcp14">MUST</em> ignore an If-Range header field received in a request for a target resource that does
-                     not support Range requests.<a class="self" href="#rfc.section.13.1.5.p.5">¶</a></p>
+                  <p>A valid <a href="#field.etag" class="smpl">entity-tag</a> can be distinguished from a valid <a href="#http.date" class="smpl">HTTP-date</a> by examining the first three characters for a DQUOTE.<a class="self" href="#rfc.section.13.1.5.p.5">¶</a></p>
                </div>
                <div id="rfc.section.13.1.5.p.6">
-                  <p>A client <em class="bcp14">MUST NOT</em> generate an If-Range header field containing an entity-tag that is marked as weak.
-                     A client <em class="bcp14">MUST NOT</em> generate an If-Range header field containing an <a href="#http.date" class="smpl">HTTP-date</a> unless the client has no entity-tag for the corresponding representation and the date
-                     is a strong validator in the sense defined by <a href="#lastmod.comparison" title="Comparison">Section 8.9.2.2</a>.<a class="self" href="#rfc.section.13.1.5.p.6">¶</a></p>
+                  <p>A client <em class="bcp14">MUST NOT</em> generate an If-Range header field in a request that does not contain a <a href="#field.range" class="smpl">Range</a> header field. A server <em class="bcp14">MUST</em> ignore an If-Range header field received in a request that does not contain a <a href="#field.range" class="smpl">Range</a> header field. An origin server <em class="bcp14">MUST</em> ignore an If-Range header field received in a request for a target resource that does
+                     not support Range requests.<a class="self" href="#rfc.section.13.1.5.p.6">¶</a></p>
                </div>
                <div id="rfc.section.13.1.5.p.7">
-                  <p>A server that evaluates an If-Range precondition <em class="bcp14">MUST</em> use the strong comparison function when comparing entity-tags (<a href="#entity.tag.comparison" title="Comparison">Section 8.9.3.2</a>) and <em class="bcp14">MUST</em> evaluate the condition as false if an <a href="#http.date" class="smpl">HTTP-date</a> validator is provided that is not a strong validator in the sense defined by <a href="#lastmod.comparison" title="Comparison">Section 8.9.2.2</a>. A valid <a href="#field.etag" class="smpl">entity-tag</a> can be distinguished from a valid <a href="#http.date" class="smpl">HTTP-date</a> by examining the first three characters for a DQUOTE.<a class="self" href="#rfc.section.13.1.5.p.7">¶</a></p>
+                  <p>A client <em class="bcp14">MUST NOT</em> generate an If-Range header field containing an entity-tag that is marked as weak.
+                     A client <em class="bcp14">MUST NOT</em> generate an If-Range header field containing an <a href="#http.date" class="smpl">HTTP-date</a> unless the client has no entity-tag for the corresponding representation and the date
+                     is a strong validator in the sense defined by <a href="#lastmod.comparison" title="Comparison">Section 8.9.2.2</a>.<a class="self" href="#rfc.section.13.1.5.p.7">¶</a></p>
                </div>
                <div id="rfc.section.13.1.5.p.8">
-                  <p>If the validator given in the If-Range header field matches the current validator
-                     for the selected representation of the target resource, then the server <em class="bcp14">SHOULD</em> process the <a href="#field.range" class="smpl">Range</a> header field as requested. If the validator does not match, the server <em class="bcp14">MUST</em> ignore the <a href="#field.range" class="smpl">Range</a> header field. Note that this comparison by exact match, including when the validator
-                     is an <a href="#http.date" class="smpl">HTTP-date</a>, differs from the "earlier than or equal to" comparison used when evaluating an <a href="#field.if-unmodified-since" class="smpl">If-Unmodified-Since</a> conditional.<a class="self" href="#rfc.section.13.1.5.p.8">¶</a></p>
+                  <p>A server that receives an If-Range header field on a Range request <em class="bcp14">MUST</em> evaluate the condition as per <a href="#evaluation" title="Evaluation of Preconditions">Section 13.2</a> prior to performing the method.<a class="self" href="#rfc.section.13.1.5.p.8">¶</a></p>
+               </div>
+               <div id="rfc.section.13.1.5.p.9" class="avoidbreakafter">
+                  <p>To evaluate a received If-Range header field containing an <a href="#http.date" class="smpl">HTTP-date</a>:<a class="self" href="#rfc.section.13.1.5.p.9">¶</a></p>
+               </div>
+               <div id="rfc.section.13.1.5.p.10">
+                  <ol>
+                     <li>If the <a href="#http.date" class="smpl">HTTP-date</a> validator provided is not a strong validator in the sense defined by <a href="#lastmod.comparison" title="Comparison">Section 8.9.2.2</a>, the condition is false.</li>
+                     <li>If the <a href="#http.date" class="smpl">HTTP-date</a> validator provided exactly matches the <a href="#field.last-modified" class="smpl">Last-Modified</a> field value for the selected representation, the condition is true.</li>
+                     <li>Otherwise, the condition is false.</li>
+                  </ol>
+               </div>
+               <div id="rfc.section.13.1.5.p.11" class="avoidbreakafter">
+                  <p>To evaluate a received If-Range header field containing an <a href="#field.etag" class="smpl">entity-tag</a>:<a class="self" href="#rfc.section.13.1.5.p.11">¶</a></p>
+               </div>
+               <div id="rfc.section.13.1.5.p.12">
+                  <ol>
+                     <li>If the <a href="#field.etag" class="smpl">entity-tag</a> validator provided exactly matches the <a href="#field.etag" class="smpl">ETag</a> field value for the selected representation using the strong comparison function (<a href="#entity.tag.comparison" title="Comparison">Section 8.9.3.2</a>), the condition is true.</li>
+                     <li>Otherwise, the condition is false.</li>
+                  </ol>
+               </div>
+               <div id="rfc.section.13.1.5.p.13">
+                  <p>A recipient of an If-Range header field <em class="bcp14">MUST</em> ignore the <a href="#field.range" class="smpl">Range</a> header field if the If-Range condition evaluates to false. Otherwise, the recipient <em class="bcp14">SHOULD</em> process the <a href="#field.range" class="smpl">Range</a> header field as requested.<a class="self" href="#rfc.section.13.1.5.p.13">¶</a></p>
+               </div>
+               <div id="rfc.section.13.1.5.p.14">
+                  <p>Note that the If-Range comparison by exact match, including when the validator is
+                     an <a href="#http.date" class="smpl">HTTP-date</a>, differs from the "earlier than or equal to" comparison used when evaluating an <a href="#field.if-unmodified-since" class="smpl">If-Unmodified-Since</a> conditional.<a class="self" href="#rfc.section.13.1.5.p.14">¶</a></p>
                </div>
             </section>
          </section>
          <section id="evaluation">
             <h3 id="rfc.section.13.2"><a href="#rfc.section.13.2">13.2.</a>&nbsp;<a href="#evaluation">Evaluation of Preconditions</a></h3>
-            <div id="rfc.section.13.2.p.1">
-               <p>Except when excluded below, a recipient cache or origin server <em class="bcp14">MUST</em> evaluate received request preconditions after it has successfully performed its normal
-                  request checks and just before it would process the request content (if any) or perform
-                  the action associated with the request method. A server <em class="bcp14">MUST</em> ignore all received preconditions if its response to the same request without those
-                  conditions, prior to processing the request content, would have been a status code
-                  other than a <a href="#status.2xx" class="smpl">2xx (Successful)</a> or <a href="#status.412" class="smpl">412 (Precondition Failed)</a>. In other words, redirects and failures that can be detected before significant processing
-                  occurs take precedence over the evaluation of preconditions.<a class="self" href="#rfc.section.13.2.p.1">¶</a></p>
-            </div>
-            <div id="rfc.section.13.2.p.2">
-               <p>A server that is not the origin server for the target resource and cannot act as a
-                  cache for requests on the target resource <em class="bcp14">MUST NOT</em> evaluate the conditional request header fields defined by this specification, and
-                  it <em class="bcp14">MUST</em> forward them if the request is forwarded, since the generating client intends that
-                  they be evaluated by a server that can provide a current representation. Likewise,
-                  a server <em class="bcp14">MUST</em> ignore the conditional request header fields defined by this specification when received
-                  with a request method that does not involve the selection or modification of a <a href="#selected.representation" class="smpl">selected representation</a>, such as CONNECT, OPTIONS, or TRACE.<a class="self" href="#rfc.section.13.2.p.2">¶</a></p>
-            </div>
-            <div id="rfc.section.13.2.p.3">
-               <p>Note that protocol extensions can modify the conditions under which revalidation is
-                  triggered. For example, the "immutable" cache directive (defined by <a href="#RFC8246" id="rfc.xref.RFC8246.1"><cite title="HTTP Immutable Responses">[RFC8246]</cite></a>) instructs caches to forgo revalidation of fresh responses even when requested by
-                  the client.<a class="self" href="#rfc.section.13.2.p.3">¶</a></p>
-            </div>
-            <div id="rfc.section.13.2.p.4">
-               <p>Conditional request header fields that are defined by extensions to HTTP might place
-                  conditions on all recipients, on the state of the target resource in general, or on
-                  a group of resources. For instance, the "If" header field in WebDAV can make a request
-                  conditional on various aspects of multiple resources, such as locks, if the recipient
-                  understands and implements that field (<a href="#RFC4918" id="rfc.xref.RFC4918.2"><cite title="HTTP Extensions for Web Distributed Authoring and Versioning (WebDAV)">[RFC4918]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc4918.html#section-10.4">Section 10.4</a>).<a class="self" href="#rfc.section.13.2.p.4">¶</a></p>
-            </div>
-            <div id="rfc.section.13.2.p.5">
-               <p>Although conditional request header fields are defined as being usable with the HEAD
-                  method (to keep HEAD's semantics consistent with those of GET), there is no point
-                  in sending a conditional HEAD because a successful response is around the same size
-                  as a <a href="#status.304" class="smpl">304 (Not Modified)</a> response and more useful than a <a href="#status.412" class="smpl">412 (Precondition Failed)</a> response.<a class="self" href="#rfc.section.13.2.p.5">¶</a></p>
-            </div>
-         </section>
-         <section id="precedence">
-            <h3 id="rfc.section.13.3"><a href="#rfc.section.13.3">13.3.</a>&nbsp;<a href="#precedence">Precedence of Preconditions</a></h3>
-            <div id="rfc.section.13.3.p.1">
-               <p>When more than one conditional request header field is present in a request, the order
-                  in which the fields are evaluated becomes important. In practice, the fields defined
-                  in this document are consistently implemented in a single, logical order, since "lost
-                  update" preconditions have more strict requirements than cache validation, a validated
-                  cache is more efficient than a partial response, and entity tags are presumed to be
-                  more accurate than date validators.<a class="self" href="#rfc.section.13.3.p.1">¶</a></p>
-            </div>
-            <div id="rfc.section.13.3.p.2" class="avoidbreakafter">
-               <p>A recipient cache or origin server <em class="bcp14">MUST</em> evaluate the request preconditions defined by this specification in the following
-                  order:<a class="self" href="#rfc.section.13.3.p.2">¶</a></p>
-            </div>
-            <div id="rfc.section.13.3.p.3">
-               <ol>
-                  <li id="precedence1">
-                     <div class="avoidbreakafter">
-                        <p>When recipient is the origin server and <a href="#field.if-match" class="smpl">If-Match</a> is present, evaluate the <a href="#field.if-match" class="smpl">If-Match</a> precondition:</p>
-                     </div> 
-                     <div>
-                        <ul>
-                           <li>if true, continue to step <a href="#precedence3">3</a></li>
-                           <li>if false, respond <a href="#status.412" class="smpl">412 (Precondition Failed)</a> unless it can be determined that the state-changing request has already succeeded
-                              (see <a href="#field.if-match" id="rfc.xref.field.if-match.1" title="If-Match">Section 13.1.1</a>)</li>
-                        </ul>
-                     </div> </li>
-                  <li id="precedence2">
-                     <div class="avoidbreakafter">
-                        <p>When recipient is the origin server, <a href="#field.if-match" class="smpl">If-Match</a> is not present, and <a href="#field.if-unmodified-since" class="smpl">If-Unmodified-Since</a> is present, evaluate the <a href="#field.if-unmodified-since" class="smpl">If-Unmodified-Since</a> precondition:</p>
-                     </div> 
-                     <div>
-                        <ul>
-                           <li>if true, continue to step <a href="#precedence3">3</a></li>
-                           <li>if false, respond <a href="#status.412" class="smpl">412 (Precondition Failed)</a> unless it can be determined that the state-changing request has already succeeded
-                              (see <a href="#field.if-unmodified-since" id="rfc.xref.field.if-unmodified-since.1" title="If-Unmodified-Since">Section 13.1.4</a>)</li>
-                        </ul>
-                     </div> </li>
-                  <li id="precedence3">
-                     <div class="avoidbreakafter">
-                        <p>When <a href="#field.if-none-match" class="smpl">If-None-Match</a> is present, evaluate the <a href="#field.if-none-match" class="smpl">If-None-Match</a> precondition:</p>
-                     </div> 
-                     <div>
-                        <ul>
-                           <li>if true, continue to step <a href="#precedence5">5</a></li>
-                           <li>if false for GET/HEAD, respond <a href="#status.304" class="smpl">304 (Not Modified)</a></li>
-                           <li>if false for other methods, respond <a href="#status.412" class="smpl">412 (Precondition Failed)</a></li>
-                        </ul>
-                     </div> </li>
-                  <li id="precedence4">
-                     <div class="avoidbreakafter">
-                        <p>When the method is GET or HEAD, <a href="#field.if-none-match" class="smpl">If-None-Match</a> is not present, and <a href="#field.if-modified-since" class="smpl">If-Modified-Since</a> is present, evaluate the <a href="#field.if-modified-since" class="smpl">If-Modified-Since</a> precondition:</p>
-                     </div> 
-                     <div>
-                        <ul>
-                           <li>if true, continue to step <a href="#precedence5">5</a></li>
-                           <li>if false, respond <a href="#status.304" class="smpl">304 (Not Modified)</a></li>
-                        </ul>
-                     </div> </li>
-                  <li id="precedence5">
-                     <div class="avoidbreakafter">
-                        <p>When the method is GET and both <a href="#field.range" class="smpl">Range</a> and <a href="#field.if-range" class="smpl">If-Range</a> are present, evaluate the <a href="#field.if-range" class="smpl">If-Range</a> precondition:</p>
-                     </div> 
-                     <div>
-                        <ul>
-                           <li>if the validator matches and the Range specification is applicable to the <a href="#selected.representation" class="smpl">selected representation</a>, respond <a href="#status.206" class="smpl">206 (Partial Content)</a></li>
-                        </ul>
-                     </div> </li>
-                  <li id="precedencelast">
-                     <div>
-                        <p>Otherwise,</p>
-                     </div> 
-                     <div>
-                        <ul>
-                           <li>all conditions are met, so perform the requested action and respond according to its
-                              success or failure.</li>
-                        </ul>
-                     </div> </li>
-               </ol>
-            </div>
-            <div id="rfc.section.13.3.p.4">
-               <p>Any extension to HTTP that defines additional conditional request header fields ought
-                  to define its own expectations regarding the order for evaluating such fields in relation
-                  to those defined in this document and other conditionals that might be found in practice.<a class="self" href="#rfc.section.13.3.p.4">¶</a></p>
-            </div>
+            <section id="when-to-evaluate">
+               <h4 id="rfc.section.13.2.1"><a href="#rfc.section.13.2.1">13.2.1.</a>&nbsp;<a href="#when-to-evaluate">When to Evaluate</a></h4>
+               <div id="rfc.section.13.2.1.p.1">
+                  <p>Except when excluded below, a recipient cache or origin server <em class="bcp14">MUST</em> evaluate received request preconditions after it has successfully performed its normal
+                     request checks and just before it would process the request content (if any) or perform
+                     the action associated with the request method. A server <em class="bcp14">MUST</em> ignore all received preconditions if its response to the same request without those
+                     conditions, prior to processing the request content, would have been a status code
+                     other than a <a href="#status.2xx" class="smpl">2xx (Successful)</a> or <a href="#status.412" class="smpl">412 (Precondition Failed)</a>. In other words, redirects and failures that can be detected before significant processing
+                     occurs take precedence over the evaluation of preconditions.<a class="self" href="#rfc.section.13.2.1.p.1">¶</a></p>
+               </div>
+               <div id="rfc.section.13.2.1.p.2">
+                  <p>A server that is not the origin server for the target resource and cannot act as a
+                     cache for requests on the target resource <em class="bcp14">MUST NOT</em> evaluate the conditional request header fields defined by this specification, and
+                     it <em class="bcp14">MUST</em> forward them if the request is forwarded, since the generating client intends that
+                     they be evaluated by a server that can provide a current representation. Likewise,
+                     a server <em class="bcp14">MUST</em> ignore the conditional request header fields defined by this specification when received
+                     with a request method that does not involve the selection or modification of a <a href="#selected.representation" class="smpl">selected representation</a>, such as CONNECT, OPTIONS, or TRACE.<a class="self" href="#rfc.section.13.2.1.p.2">¶</a></p>
+               </div>
+               <div id="rfc.section.13.2.1.p.3">
+                  <p>Note that protocol extensions can modify the conditions under which revalidation is
+                     triggered. For example, the "immutable" cache directive (defined by <a href="#RFC8246" id="rfc.xref.RFC8246.1"><cite title="HTTP Immutable Responses">[RFC8246]</cite></a>) instructs caches to forgo revalidation of fresh responses even when requested by
+                     the client.<a class="self" href="#rfc.section.13.2.1.p.3">¶</a></p>
+               </div>
+               <div id="rfc.section.13.2.1.p.4">
+                  <p>Conditional request header fields that are defined by extensions to HTTP might place
+                     conditions on all recipients, on the state of the target resource in general, or on
+                     a group of resources. For instance, the "If" header field in WebDAV can make a request
+                     conditional on various aspects of multiple resources, such as locks, if the recipient
+                     understands and implements that field (<a href="#RFC4918" id="rfc.xref.RFC4918.2"><cite title="HTTP Extensions for Web Distributed Authoring and Versioning (WebDAV)">[RFC4918]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc4918.html#section-10.4">Section 10.4</a>).<a class="self" href="#rfc.section.13.2.1.p.4">¶</a></p>
+               </div>
+               <div id="rfc.section.13.2.1.p.5">
+                  <p>Although conditional request header fields are defined as being usable with the HEAD
+                     method (to keep HEAD's semantics consistent with those of GET), there is no point
+                     in sending a conditional HEAD because a successful response is around the same size
+                     as a <a href="#status.304" class="smpl">304 (Not Modified)</a> response and more useful than a <a href="#status.412" class="smpl">412 (Precondition Failed)</a> response.<a class="self" href="#rfc.section.13.2.1.p.5">¶</a></p>
+               </div>
+            </section>
+            <section id="precedence">
+               <h4 id="rfc.section.13.2.2"><a href="#rfc.section.13.2.2">13.2.2.</a>&nbsp;<a href="#precedence">Precedence of Preconditions</a></h4>
+               <div id="rfc.section.13.2.2.p.1">
+                  <p>When more than one conditional request header field is present in a request, the order
+                     in which the fields are evaluated becomes important. In practice, the fields defined
+                     in this document are consistently implemented in a single, logical order, since "lost
+                     update" preconditions have more strict requirements than cache validation, a validated
+                     cache is more efficient than a partial response, and entity tags are presumed to be
+                     more accurate than date validators.<a class="self" href="#rfc.section.13.2.2.p.1">¶</a></p>
+               </div>
+               <div id="rfc.section.13.2.2.p.2" class="avoidbreakafter">
+                  <p>A recipient cache or origin server <em class="bcp14">MUST</em> evaluate the request preconditions defined by this specification in the following
+                     order:<a class="self" href="#rfc.section.13.2.2.p.2">¶</a></p>
+               </div>
+               <div id="rfc.section.13.2.2.p.3">
+                  <ol>
+                     <li id="precedence1">
+                        <div class="avoidbreakafter">
+                           <p>When recipient is the origin server and <a href="#field.if-match" class="smpl">If-Match</a> is present, evaluate the <a href="#field.if-match" class="smpl">If-Match</a> precondition:</p>
+                        </div> 
+                        <div>
+                           <ul>
+                              <li>if true, continue to step <a href="#precedence3">3</a></li>
+                              <li>if false, respond <a href="#status.412" class="smpl">412 (Precondition Failed)</a> unless it can be determined that the state-changing request has already succeeded
+                                 (see <a href="#field.if-match" id="rfc.xref.field.if-match.1" title="If-Match">Section 13.1.1</a>)</li>
+                           </ul>
+                        </div> </li>
+                     <li id="precedence2">
+                        <div class="avoidbreakafter">
+                           <p>When recipient is the origin server, <a href="#field.if-match" class="smpl">If-Match</a> is not present, and <a href="#field.if-unmodified-since" class="smpl">If-Unmodified-Since</a> is present, evaluate the <a href="#field.if-unmodified-since" class="smpl">If-Unmodified-Since</a> precondition:</p>
+                        </div> 
+                        <div>
+                           <ul>
+                              <li>if true, continue to step <a href="#precedence3">3</a></li>
+                              <li>if false, respond <a href="#status.412" class="smpl">412 (Precondition Failed)</a> unless it can be determined that the state-changing request has already succeeded
+                                 (see <a href="#field.if-unmodified-since" id="rfc.xref.field.if-unmodified-since.1" title="If-Unmodified-Since">Section 13.1.4</a>)</li>
+                           </ul>
+                        </div> </li>
+                     <li id="precedence3">
+                        <div class="avoidbreakafter">
+                           <p>When <a href="#field.if-none-match" class="smpl">If-None-Match</a> is present, evaluate the <a href="#field.if-none-match" class="smpl">If-None-Match</a> precondition:</p>
+                        </div> 
+                        <div>
+                           <ul>
+                              <li>if true, continue to step <a href="#precedence5">5</a></li>
+                              <li>if false for GET/HEAD, respond <a href="#status.304" class="smpl">304 (Not Modified)</a></li>
+                              <li>if false for other methods, respond <a href="#status.412" class="smpl">412 (Precondition Failed)</a></li>
+                           </ul>
+                        </div> </li>
+                     <li id="precedence4">
+                        <div class="avoidbreakafter">
+                           <p>When the method is GET or HEAD, <a href="#field.if-none-match" class="smpl">If-None-Match</a> is not present, and <a href="#field.if-modified-since" class="smpl">If-Modified-Since</a> is present, evaluate the <a href="#field.if-modified-since" class="smpl">If-Modified-Since</a> precondition:</p>
+                        </div> 
+                        <div>
+                           <ul>
+                              <li>if true, continue to step <a href="#precedence5">5</a></li>
+                              <li>if false, respond <a href="#status.304" class="smpl">304 (Not Modified)</a></li>
+                           </ul>
+                        </div> </li>
+                     <li id="precedence5">
+                        <div class="avoidbreakafter">
+                           <p>When the method is GET and both <a href="#field.range" class="smpl">Range</a> and <a href="#field.if-range" class="smpl">If-Range</a> are present, evaluate the <a href="#field.if-range" class="smpl">If-Range</a> precondition:</p>
+                        </div> 
+                        <div>
+                           <ul>
+                              <li>if the validator matches and the Range specification is applicable to the <a href="#selected.representation" class="smpl">selected representation</a>, respond <a href="#status.206" class="smpl">206 (Partial Content)</a></li>
+                           </ul>
+                        </div> </li>
+                     <li id="precedencelast">
+                        <div>
+                           <p>Otherwise,</p>
+                        </div> 
+                        <div>
+                           <ul>
+                              <li>all conditions are met, so perform the requested action and respond according to its
+                                 success or failure.</li>
+                           </ul>
+                        </div> </li>
+                  </ol>
+               </div>
+               <div id="rfc.section.13.2.2.p.4">
+                  <p>Any extension to HTTP that defines additional conditional request header fields ought
+                     to define its own expectations regarding the order for evaluating such fields in relation
+                     to those defined in this document and other conditionals that might be found in practice.<a class="self" href="#rfc.section.13.2.2.p.4">¶</a></p>
+               </div>
+            </section>
          </section>
       </section>
       <section id="range.requests">
@@ -11420,7 +11474,7 @@ Content-Type: text/plain
                      within a message, instead of the terms "payload body" or "response body" or "representation
                      body", since they often get confused with the HTTP/1.1 message body (which includes
                      transfer coding) (&lt;<a href="https://github.com/httpwg/http-core/issues/553">https://github.com/httpwg/http-core/issues/553</a>&gt;)</li>
-                  <li>Rewrite definition of <a href="#HEAD" class="smpl" id="rfc.extref.h.36">HEAD</a> method (&lt;<a href="https://github.com/httpwg/http-core/issues/559">https://github.com/httpwg/http-core/issues/559</a>&gt;)</li>
+                  <li>Rewrite definition of <a href="#HEAD" class="smpl" id="rfc.extref.h.38">HEAD</a> method (&lt;<a href="https://github.com/httpwg/http-core/issues/559">https://github.com/httpwg/http-core/issues/559</a>&gt;)</li>
                   <li>In <a href="#field.if-range" id="rfc.xref.field.if-range.3" title="If-Range">Section 13.1.5</a>, fix an off-by-one bug about how many chars to consider when checking for etags (&lt;<a href="https://github.com/httpwg/http-core/issues/570">https://github.com/httpwg/http-core/issues/570</a>&gt;)</li>
                   <li>In <a href="#overview.of.status.codes" title="Overview of Status Codes">Section 15.1</a>, clarify that "no reason phrase" is fine as well (&lt;<a href="https://github.com/httpwg/http-core/issues/571">https://github.com/httpwg/http-core/issues/571</a>&gt;)</li>
                   <li>In <a href="#status.203" id="rfc.xref.status.203.3" title="203 Non-Authoritative Information">Section 15.3.4</a>, remove an obsolete reference to the Warning response header field (&lt;<a href="https://github.com/httpwg/http-core/issues/573">https://github.com/httpwg/http-core/issues/573</a>&gt;)</li>
@@ -11444,6 +11498,7 @@ Content-Type: text/plain
                   <li>In <a href="#considerations.for.new.methods" title="Considerations for New Methods">Section 16.1.2</a>, mention request target forms in considerations for new methods (&lt;<a href="https://github.com/httpwg/http-core/issues/636">https://github.com/httpwg/http-core/issues/636</a>&gt;)</li>
                   <li>Changed to using "content" instead of "payload" or "payload data" to avoid confusion
                      with the payload of version-specific messaging frames (&lt;<a href="https://github.com/httpwg/http-core/issues/654">https://github.com/httpwg/http-core/issues/654</a>&gt;)</li>
+                  <li>In <a href="#field.if-modified-since" id="rfc.xref.field.if-modified-since.2" title="If-Modified-Since">Section 13.1.3</a>, <a href="#field.if-unmodified-since" id="rfc.xref.field.if-unmodified-since.7" title="If-Unmodified-Since">Section 13.1.4</a>, and <a href="#field.if-range" id="rfc.xref.field.if-range.4" title="If-Range">Section 13.1.5</a>, specify evaluation in a way similar to other conditional header fields (&lt;<a href="https://github.com/httpwg/http-core/issues/665">https://github.com/httpwg/http-core/issues/665</a>&gt;)</li>
                   <li>In <a href="#field.date" id="rfc.xref.field.date.4" title="Date">Section 10.2.2</a>, specify that recipients can replace an invalid Date header field value with the
                      time received (&lt;<a href="https://github.com/httpwg/http-core/issues/669">https://github.com/httpwg/http-core/issues/669</a>&gt;)</li>
                </ul>
@@ -11660,11 +11715,11 @@ Content-Type: text/plain
                            <li>Expect&nbsp;&nbsp;<a href="#rfc.xref.field.expect.1">7.8</a>, <a href="#rfc.section.10.1.1"><b>10.1.1</b></a>, <a href="#rfc.xref.field.expect.2">15.2.1</a>, <a href="#rfc.xref.field.expect.3">15.5.18</a>, <a href="#rfc.xref.field.expect.4">18.4</a>, <a href="#rfc.xref.field.expect.5">B.3</a>, <a href="#rfc.xref.field.expect.6">C.4</a>, <a href="#rfc.xref.field.expect.7">C.12</a>, <a href="#rfc.xref.field.expect.8">C.12</a>, <a href="#rfc.xref.field.expect.9">C.14</a></li>
                            <li>From&nbsp;&nbsp;<a href="#rfc.section.10.1.2"><b>10.1.2</b></a>, <a href="#rfc.xref.field.from.1">18.4</a></li>
                            <li>Host&nbsp;&nbsp;<a href="#rfc.xref.field.host.1">4.3.3</a>, <a href="#rfc.xref.field.host.2">7.1</a>, <a href="#rfc.section.7.2"><b>7.2</b></a>, <a href="#rfc.xref.field.host.3">18.4</a>, <a href="#rfc.xref.field.host.4">B.2</a>, <a href="#rfc.xref.field.host.5">C.8</a>, <a href="#rfc.xref.field.host.6">C.12</a>, <a href="#rfc.xref.field.host.7">C.14</a></li>
-                           <li>If-Match&nbsp;&nbsp;<a href="#rfc.section.13.1.1"><b>13.1.1</b></a>, <a href="#rfc.xref.field.if-match.1">13.3</a>, <a href="#rfc.xref.field.if-match.2">18.4</a>, <a href="#rfc.xref.field.if-match.3">B.4</a>, <a href="#rfc.xref.field.if-match.4">C.9</a>, <a href="#rfc.xref.field.if-match.5">C.10</a>, <a href="#rfc.xref.field.if-match.6">C.12</a>, <a href="#rfc.xref.field.if-match.7">C.12</a></li>
-                           <li>If-Modified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.3"><b>13.1.3</b></a>, <a href="#rfc.xref.field.if-modified-since.1">18.4</a></li>
+                           <li>If-Match&nbsp;&nbsp;<a href="#rfc.section.13.1.1"><b>13.1.1</b></a>, <a href="#rfc.xref.field.if-match.1">13.2.2</a>, <a href="#rfc.xref.field.if-match.2">18.4</a>, <a href="#rfc.xref.field.if-match.3">B.4</a>, <a href="#rfc.xref.field.if-match.4">C.9</a>, <a href="#rfc.xref.field.if-match.5">C.10</a>, <a href="#rfc.xref.field.if-match.6">C.12</a>, <a href="#rfc.xref.field.if-match.7">C.12</a></li>
+                           <li>If-Modified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.3"><b>13.1.3</b></a>, <a href="#rfc.xref.field.if-modified-since.1">18.4</a>, <a href="#rfc.xref.field.if-modified-since.2">C.15</a></li>
                            <li>If-None-Match&nbsp;&nbsp;<a href="#rfc.section.13.1.2"><b>13.1.2</b></a>, <a href="#rfc.xref.field.if-none-match.1">18.4</a>, <a href="#rfc.xref.field.if-none-match.2">C.9</a>, <a href="#rfc.xref.field.if-none-match.3">C.10</a>, <a href="#rfc.xref.field.if-none-match.4">C.12</a></li>
-                           <li>If-Range&nbsp;&nbsp;<a href="#rfc.section.13.1.5"><b>13.1.5</b></a>, <a href="#rfc.xref.field.if-range.1">14.2</a>, <a href="#rfc.xref.field.if-range.2">18.4</a>, <a href="#rfc.xref.field.if-range.3">C.14</a></li>
-                           <li>If-Unmodified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.4"><b>13.1.4</b></a>, <a href="#rfc.xref.field.if-unmodified-since.1">13.3</a>, <a href="#rfc.xref.field.if-unmodified-since.2">18.4</a>, <a href="#rfc.xref.field.if-unmodified-since.3">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.4">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.5">C.9</a>, <a href="#rfc.xref.field.if-unmodified-since.6">C.12</a></li>
+                           <li>If-Range&nbsp;&nbsp;<a href="#rfc.section.13.1.5"><b>13.1.5</b></a>, <a href="#rfc.xref.field.if-range.1">14.2</a>, <a href="#rfc.xref.field.if-range.2">18.4</a>, <a href="#rfc.xref.field.if-range.3">C.14</a>, <a href="#rfc.xref.field.if-range.4">C.15</a></li>
+                           <li>If-Unmodified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.4"><b>13.1.4</b></a>, <a href="#rfc.xref.field.if-unmodified-since.1">13.2.2</a>, <a href="#rfc.xref.field.if-unmodified-since.2">18.4</a>, <a href="#rfc.xref.field.if-unmodified-since.3">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.4">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.5">C.9</a>, <a href="#rfc.xref.field.if-unmodified-since.6">C.12</a>, <a href="#rfc.xref.field.if-unmodified-since.7">C.15</a></li>
                            <li>Last-Modified&nbsp;&nbsp;<a href="#rfc.xref.field.last-modified.1">8.9</a>, <a href="#rfc.section.8.9.2"><b>8.9.2</b></a>, <a href="#rfc.xref.field.last-modified.2">18.4</a></li>
                            <li>Location&nbsp;&nbsp;<a href="#rfc.xref.field.location.1">9.3.3</a>, <a href="#rfc.section.10.2.3"><b>10.2.3</b></a>, <a href="#rfc.xref.field.location.2">15.4</a>, <a href="#rfc.xref.field.location.3">17.10</a>, <a href="#rfc.xref.field.location.4">18.4</a></li>
                            <li>Max-Forwards&nbsp;&nbsp;<a href="#rfc.section.7.6.2"><b>7.6.2</b></a>, <a href="#rfc.xref.field.max-forwards.1">9.3.7</a>, <a href="#rfc.xref.field.max-forwards.2">9.3.8</a>, <a href="#rfc.xref.field.max-forwards.3">18.4</a></li>
@@ -11849,7 +11904,7 @@ Content-Type: text/plain
                   </ul>
                </li>
                <li><a id="rfc.index.H" href="#rfc.index.H"><b>H</b></a><ul>
-                     <li>HEAD method&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.19">9.2.1</a>, <a href="#rfc.iref.h.1"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a>, <a href="#rfc.extref.h.36">C.14</a></li>
+                     <li>HEAD method&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.19">9.2.1</a>, <a href="#rfc.iref.h.1"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a>, <a href="#rfc.extref.h.38">C.14</a></li>
                      <li>Header Fields&nbsp;&nbsp;
                         <ul>
                            <li>Accept&nbsp;&nbsp;<a href="#rfc.xref.field.accept.1">5.6.6</a>, <a href="#rfc.xref.field.accept.2">8.4.1</a>, <a href="#rfc.xref.field.accept.3">12.3</a>, <a href="#rfc.section.12.5.1"><b>12.5.1</b></a>, <a href="#rfc.xref.field.accept.4">15.5.16</a>, <a href="#rfc.xref.field.accept.5">18.4</a>, <a href="#rfc.xref.field.accept.6">B.3</a>, <a href="#rfc.xref.field.accept.7">C.10</a>, <a href="#rfc.xref.field.accept.8">C.10</a>, <a href="#rfc.xref.field.accept.9">C.15</a></li>
@@ -11873,11 +11928,11 @@ Content-Type: text/plain
                            <li>Expect&nbsp;&nbsp;<a href="#rfc.xref.field.expect.1">7.8</a>, <a href="#rfc.section.10.1.1"><b>10.1.1</b></a>, <a href="#rfc.xref.field.expect.2">15.2.1</a>, <a href="#rfc.xref.field.expect.3">15.5.18</a>, <a href="#rfc.xref.field.expect.4">18.4</a>, <a href="#rfc.xref.field.expect.5">B.3</a>, <a href="#rfc.xref.field.expect.6">C.4</a>, <a href="#rfc.xref.field.expect.7">C.12</a>, <a href="#rfc.xref.field.expect.8">C.12</a>, <a href="#rfc.xref.field.expect.9">C.14</a></li>
                            <li>From&nbsp;&nbsp;<a href="#rfc.section.10.1.2"><b>10.1.2</b></a>, <a href="#rfc.xref.field.from.1">18.4</a></li>
                            <li>Host&nbsp;&nbsp;<a href="#rfc.xref.field.host.1">4.3.3</a>, <a href="#rfc.xref.field.host.2">7.1</a>, <a href="#rfc.section.7.2"><b>7.2</b></a>, <a href="#rfc.xref.field.host.3">18.4</a>, <a href="#rfc.xref.field.host.4">B.2</a>, <a href="#rfc.xref.field.host.5">C.8</a>, <a href="#rfc.xref.field.host.6">C.12</a>, <a href="#rfc.xref.field.host.7">C.14</a></li>
-                           <li>If-Match&nbsp;&nbsp;<a href="#rfc.section.13.1.1"><b>13.1.1</b></a>, <a href="#rfc.xref.field.if-match.1">13.3</a>, <a href="#rfc.xref.field.if-match.2">18.4</a>, <a href="#rfc.xref.field.if-match.3">B.4</a>, <a href="#rfc.xref.field.if-match.4">C.9</a>, <a href="#rfc.xref.field.if-match.5">C.10</a>, <a href="#rfc.xref.field.if-match.6">C.12</a>, <a href="#rfc.xref.field.if-match.7">C.12</a></li>
-                           <li>If-Modified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.3"><b>13.1.3</b></a>, <a href="#rfc.xref.field.if-modified-since.1">18.4</a></li>
+                           <li>If-Match&nbsp;&nbsp;<a href="#rfc.section.13.1.1"><b>13.1.1</b></a>, <a href="#rfc.xref.field.if-match.1">13.2.2</a>, <a href="#rfc.xref.field.if-match.2">18.4</a>, <a href="#rfc.xref.field.if-match.3">B.4</a>, <a href="#rfc.xref.field.if-match.4">C.9</a>, <a href="#rfc.xref.field.if-match.5">C.10</a>, <a href="#rfc.xref.field.if-match.6">C.12</a>, <a href="#rfc.xref.field.if-match.7">C.12</a></li>
+                           <li>If-Modified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.3"><b>13.1.3</b></a>, <a href="#rfc.xref.field.if-modified-since.1">18.4</a>, <a href="#rfc.xref.field.if-modified-since.2">C.15</a></li>
                            <li>If-None-Match&nbsp;&nbsp;<a href="#rfc.section.13.1.2"><b>13.1.2</b></a>, <a href="#rfc.xref.field.if-none-match.1">18.4</a>, <a href="#rfc.xref.field.if-none-match.2">C.9</a>, <a href="#rfc.xref.field.if-none-match.3">C.10</a>, <a href="#rfc.xref.field.if-none-match.4">C.12</a></li>
-                           <li>If-Range&nbsp;&nbsp;<a href="#rfc.section.13.1.5"><b>13.1.5</b></a>, <a href="#rfc.xref.field.if-range.1">14.2</a>, <a href="#rfc.xref.field.if-range.2">18.4</a>, <a href="#rfc.xref.field.if-range.3">C.14</a></li>
-                           <li>If-Unmodified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.4"><b>13.1.4</b></a>, <a href="#rfc.xref.field.if-unmodified-since.1">13.3</a>, <a href="#rfc.xref.field.if-unmodified-since.2">18.4</a>, <a href="#rfc.xref.field.if-unmodified-since.3">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.4">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.5">C.9</a>, <a href="#rfc.xref.field.if-unmodified-since.6">C.12</a></li>
+                           <li>If-Range&nbsp;&nbsp;<a href="#rfc.section.13.1.5"><b>13.1.5</b></a>, <a href="#rfc.xref.field.if-range.1">14.2</a>, <a href="#rfc.xref.field.if-range.2">18.4</a>, <a href="#rfc.xref.field.if-range.3">C.14</a>, <a href="#rfc.xref.field.if-range.4">C.15</a></li>
+                           <li>If-Unmodified-Since&nbsp;&nbsp;<a href="#rfc.section.13.1.4"><b>13.1.4</b></a>, <a href="#rfc.xref.field.if-unmodified-since.1">13.2.2</a>, <a href="#rfc.xref.field.if-unmodified-since.2">18.4</a>, <a href="#rfc.xref.field.if-unmodified-since.3">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.4">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.5">C.9</a>, <a href="#rfc.xref.field.if-unmodified-since.6">C.12</a>, <a href="#rfc.xref.field.if-unmodified-since.7">C.15</a></li>
                            <li>Last-Modified&nbsp;&nbsp;<a href="#rfc.xref.field.last-modified.1">8.9</a>, <a href="#rfc.section.8.9.2"><b>8.9.2</b></a>, <a href="#rfc.xref.field.last-modified.2">18.4</a></li>
                            <li>Location&nbsp;&nbsp;<a href="#rfc.xref.field.location.1">9.3.3</a>, <a href="#rfc.section.10.2.3"><b>10.2.3</b></a>, <a href="#rfc.xref.field.location.2">15.4</a>, <a href="#rfc.xref.field.location.3">17.10</a>, <a href="#rfc.xref.field.location.4">18.4</a></li>
                            <li>Max-Forwards&nbsp;&nbsp;<a href="#rfc.section.7.6.2"><b>7.6.2</b></a>, <a href="#rfc.xref.field.max-forwards.1">9.3.7</a>, <a href="#rfc.xref.field.max-forwards.2">9.3.8</a>, <a href="#rfc.xref.field.max-forwards.3">18.4</a></li>
@@ -11906,11 +11961,11 @@ Content-Type: text/plain
                </li>
                <li><a id="rfc.index.I" href="#rfc.index.I"><b>I</b></a><ul>
                      <li>idempotent&nbsp;&nbsp;<a href="#rfc.section.9.2.2"><b>9.2.2</b></a></li>
-                     <li>If-Match header field&nbsp;&nbsp;<a href="#rfc.section.13.1.1"><b>13.1.1</b></a>, <a href="#rfc.xref.field.if-match.1">13.3</a>, <a href="#rfc.xref.field.if-match.2">18.4</a>, <a href="#rfc.xref.field.if-match.3">B.4</a>, <a href="#rfc.xref.field.if-match.4">C.9</a>, <a href="#rfc.xref.field.if-match.5">C.10</a>, <a href="#rfc.xref.field.if-match.6">C.12</a>, <a href="#rfc.xref.field.if-match.7">C.12</a></li>
-                     <li>If-Modified-Since header field&nbsp;&nbsp;<a href="#rfc.section.13.1.3"><b>13.1.3</b></a>, <a href="#rfc.xref.field.if-modified-since.1">18.4</a></li>
+                     <li>If-Match header field&nbsp;&nbsp;<a href="#rfc.section.13.1.1"><b>13.1.1</b></a>, <a href="#rfc.xref.field.if-match.1">13.2.2</a>, <a href="#rfc.xref.field.if-match.2">18.4</a>, <a href="#rfc.xref.field.if-match.3">B.4</a>, <a href="#rfc.xref.field.if-match.4">C.9</a>, <a href="#rfc.xref.field.if-match.5">C.10</a>, <a href="#rfc.xref.field.if-match.6">C.12</a>, <a href="#rfc.xref.field.if-match.7">C.12</a></li>
+                     <li>If-Modified-Since header field&nbsp;&nbsp;<a href="#rfc.section.13.1.3"><b>13.1.3</b></a>, <a href="#rfc.xref.field.if-modified-since.1">18.4</a>, <a href="#rfc.xref.field.if-modified-since.2">C.15</a></li>
                      <li>If-None-Match header field&nbsp;&nbsp;<a href="#rfc.section.13.1.2"><b>13.1.2</b></a>, <a href="#rfc.xref.field.if-none-match.1">18.4</a>, <a href="#rfc.xref.field.if-none-match.2">C.9</a>, <a href="#rfc.xref.field.if-none-match.3">C.10</a>, <a href="#rfc.xref.field.if-none-match.4">C.12</a></li>
-                     <li>If-Range header field&nbsp;&nbsp;<a href="#rfc.section.13.1.5"><b>13.1.5</b></a>, <a href="#rfc.xref.field.if-range.1">14.2</a>, <a href="#rfc.xref.field.if-range.2">18.4</a>, <a href="#rfc.xref.field.if-range.3">C.14</a></li>
-                     <li>If-Unmodified-Since header field&nbsp;&nbsp;<a href="#rfc.section.13.1.4"><b>13.1.4</b></a>, <a href="#rfc.xref.field.if-unmodified-since.1">13.3</a>, <a href="#rfc.xref.field.if-unmodified-since.2">18.4</a>, <a href="#rfc.xref.field.if-unmodified-since.3">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.4">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.5">C.9</a>, <a href="#rfc.xref.field.if-unmodified-since.6">C.12</a></li>
+                     <li>If-Range header field&nbsp;&nbsp;<a href="#rfc.section.13.1.5"><b>13.1.5</b></a>, <a href="#rfc.xref.field.if-range.1">14.2</a>, <a href="#rfc.xref.field.if-range.2">18.4</a>, <a href="#rfc.xref.field.if-range.3">C.14</a>, <a href="#rfc.xref.field.if-range.4">C.15</a></li>
+                     <li>If-Unmodified-Since header field&nbsp;&nbsp;<a href="#rfc.section.13.1.4"><b>13.1.4</b></a>, <a href="#rfc.xref.field.if-unmodified-since.1">13.2.2</a>, <a href="#rfc.xref.field.if-unmodified-since.2">18.4</a>, <a href="#rfc.xref.field.if-unmodified-since.3">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.4">B.4</a>, <a href="#rfc.xref.field.if-unmodified-since.5">C.9</a>, <a href="#rfc.xref.field.if-unmodified-since.6">C.12</a>, <a href="#rfc.xref.field.if-unmodified-since.7">C.15</a></li>
                      <li>inbound&nbsp;&nbsp;<a href="#rfc.iref.i.1"><b>3.6</b></a></li>
                      <li>incomplete&nbsp;&nbsp;<a href="#rfc.section.6.1"><b>6.1</b></a></li>
                      <li>interception proxy&nbsp;&nbsp;<a href="#rfc.iref.i.2"><b>3.6</b></a></li>
@@ -11962,7 +12017,7 @@ Content-Type: text/plain
                            <li>CONNECT&nbsp;&nbsp;<a href="#rfc.xref.CONNECT.1">6.4.1</a>, <a href="#rfc.xref.CONNECT.2">7.1</a>, <a href="#rfc.xref.CONNECT.3">8.7</a>, <a href="#rfc.xref.CONNECT.4">9.1</a>, <a href="#rfc.section.9.3.6"><b>9.3.6</b></a>, <a href="#rfc.xref.CONNECT.5">16</a>, <a href="#rfc.extref.c.102">16.1.2</a>, <a href="#rfc.xref.CONNECT.6">18.2</a>, <a href="#rfc.xref.CONNECT.7">C.9</a>, <a href="#rfc.xref.CONNECT.8">C.9</a></li>
                            <li>DELETE&nbsp;&nbsp;<a href="#rfc.xref.DELETE.1">9.1</a>, <a href="#rfc.extref.d.38">9.2.2</a>, <a href="#rfc.iref.m.4"><b>9.3.5</b></a>, <a href="#rfc.xref.DELETE.2">18.2</a>, <a href="#rfc.xref.DELETE.3">B.3</a>, <a href="#rfc.xref.DELETE.4">C.5</a>, <a href="#rfc.xref.DELETE.5">C.8</a></li>
                            <li>GET&nbsp;&nbsp;<a href="#rfc.xref.GET.1">3.8</a>, <a href="#rfc.xref.GET.2">6.4.1</a>, <a href="#rfc.xref.GET.3">6.4.1</a>, <a href="#rfc.xref.GET.4">8.1</a>, <a href="#rfc.xref.GET.5">8.8</a>, <a href="#rfc.xref.GET.6">9.1</a>, <a href="#rfc.extref.g.4">9.2.1</a>, <a href="#rfc.iref.m.1"><b>9.3.1</b></a>, <a href="#rfc.extref.g.5">14.2</a>, <a href="#rfc.xref.GET.7">18.2</a>, <a href="#rfc.xref.GET.8">B.3</a>, <a href="#rfc.xref.GET.9">C.7</a>, <a href="#rfc.xref.GET.10">C.12</a></li>
-                           <li>HEAD&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.19">9.2.1</a>, <a href="#rfc.iref.m.2"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a>, <a href="#rfc.extref.h.36">C.14</a></li>
+                           <li>HEAD&nbsp;&nbsp;<a href="#rfc.xref.HEAD.1">6.4.1</a>, <a href="#rfc.xref.HEAD.2">8.7</a>, <a href="#rfc.xref.HEAD.3">8.8</a>, <a href="#rfc.xref.HEAD.4">9.1</a>, <a href="#rfc.extref.h.19">9.2.1</a>, <a href="#rfc.iref.m.2"><b>9.3.2</b></a>, <a href="#rfc.xref.HEAD.5">18.2</a>, <a href="#rfc.extref.h.38">C.14</a></li>
                            <li>OPTIONS&nbsp;&nbsp;<a href="#rfc.xref.OPTIONS.1">7.1</a>, <a href="#rfc.xref.OPTIONS.2">7.6.2</a>, <a href="#rfc.xref.OPTIONS.3">9.1</a>, <a href="#rfc.extref.o.15">9.2.1</a>, <a href="#rfc.iref.m.5"><b>9.3.7</b></a>, <a href="#rfc.extref.o.26">16.1.2</a>, <a href="#rfc.xref.OPTIONS.4">18.2</a>, <a href="#rfc.xref.OPTIONS.5">B.3</a>, <a href="#rfc.xref.OPTIONS.6">C.6</a>, <a href="#rfc.xref.OPTIONS.7">C.7</a>, <a href="#rfc.xref.OPTIONS.8">C.9</a></li>
                            <li>POST&nbsp;&nbsp;<a href="#rfc.xref.POST.1">6.4.1</a>, <a href="#rfc.xref.POST.2">8.8</a>, <a href="#rfc.xref.POST.3">9.1</a>, <a href="#rfc.xref.POST.4">9.3.1</a>, <a href="#rfc.section.9.3.3"><b>9.3.3</b></a>, <a href="#rfc.xref.POST.5">18.2</a>, <a href="#rfc.xref.POST.6">C.4</a></li>
                            <li>PUT&nbsp;&nbsp;<a href="#rfc.xref.PUT.1">6.4.1</a>, <a href="#rfc.xref.PUT.2">8.8</a>, <a href="#rfc.xref.PUT.3">9.1</a>, <a href="#rfc.extref.p.28">9.2.2</a>, <a href="#rfc.iref.m.3"><b>9.3.4</b></a>, <a href="#rfc.extref.p.51">14.5</a>, <a href="#rfc.xref.PUT.4">16.3.2</a>, <a href="#rfc.xref.PUT.5">18.2</a>, <a href="#rfc.xref.PUT.6">B.3</a>, <a href="#rfc.xref.PUT.7">C.14</a></li>
@@ -12087,8 +12142,8 @@ Content-Type: text/plain
                         </ul>
                      </li>
                      <li><em>RFC4648</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC4648.1">11.2</a>, <a href="#RFC4648"><b>19.1</b></a></li>
-                     <li><em>RFC4918</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC4918.1">8.9</a>, <a href="#rfc.xref.RFC4918.2">13.2</a>, <a href="#RFC4918"><b>19.2</b></a>, <a href="#rfc.xref.RFC4918.3">B.3</a>, <a href="#rfc.xref.RFC4918.4">C.4</a><ul>
-                           <li><em>Section 10.4</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC4918.2">13.2</a></li>
+                     <li><em>RFC4918</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC4918.1">8.9</a>, <a href="#rfc.xref.RFC4918.2">13.2.1</a>, <a href="#RFC4918"><b>19.2</b></a>, <a href="#rfc.xref.RFC4918.3">B.3</a>, <a href="#rfc.xref.RFC4918.4">C.4</a><ul>
+                           <li><em>Section 10.4</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC4918.2">13.2.1</a></li>
                            <li><em>Section 11.2</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC4918.3">B.3</a>, <a href="#rfc.xref.RFC4918.4">C.4</a></li>
                         </ul>
                      </li>
@@ -12158,7 +12213,7 @@ Content-Type: text/plain
                      </li>
                      <li><em>RFC8174</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8174.1">2.2</a>, <a href="#RFC8174"><b>19.1</b></a></li>
                      <li><em>RFC8187</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8187.1">5.5</a>, <a href="#RFC8187"><b>19.2</b></a></li>
-                     <li><em>RFC8246</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8246.1">13.2</a>, <a href="#RFC8246"><b>19.2</b></a></li>
+                     <li><em>RFC8246</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8246.1">13.2.1</a>, <a href="#RFC8246"><b>19.2</b></a></li>
                      <li><em>RFC8288</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8288.1">15.4.1</a>, <a href="#RFC8288"><b>19.2</b></a></li>
                      <li><em>RFC8336</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8336.1">4.3.3</a>, <a href="#rfc.xref.RFC8336.2">17.1</a>, <a href="#RFC8336"><b>19.2</b></a></li>
                      <li><em>RFC8446</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8446.1">3.6</a>, <a href="#rfc.xref.RFC8446.2">4.2.2</a>, <a href="#rfc.xref.RFC8446.3">9.3.6</a>, <a href="#RFC8446"><b>19.1</b></a>, <a href="#rfc.xref.RFC8446.4">C.14</a></li>
