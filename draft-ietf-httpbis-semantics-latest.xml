@@ -6827,9 +6827,8 @@ Expect: 100-continue
    A conditional request is an HTTP request with one or more request header
    fields that indicate a precondition to be tested before
    applying the request method to the target resource.
-   <xref target="evaluation"/> defines when preconditions are applied.
-   <xref target="precedence"/> defines the order of evaluation when more than
-   one precondition is present.
+   <xref target="evaluation"/> defines when to evaluate preconditions and
+   their order of precedence when more than one precondition is present.
 </t>
 <t>
    Conditional GET requests are the most efficient mechanism for HTTP
@@ -7029,7 +7028,8 @@ Expect: 100-continue
    </li>
 </ol>
 <t>
-   An origin server &MUST-NOT; perform the requested method if the condition
+   An origin server &MUST-NOT; perform the requested method if a received
+   If-None-Match condition
    evaluates to false; instead, the origin server &MUST; respond with either
    a) the <x:ref>304 (Not Modified)</x:ref> status code if the request method
    is GET or HEAD or b) the <x:ref>412 (Precondition Failed)</x:ref> status
@@ -7051,7 +7051,8 @@ Expect: 100-continue
   <x:anchor-alias value="If-Modified-Since"/>
 <t>
    The "If-Modified-Since" header field makes a GET or HEAD request method
-   conditional on the <x:ref>selected representation</x:ref>'s modification date being more
+   conditional on the <x:ref>selected representation</x:ref>'s modification
+   date being more
    recent than the date provided in the field value. Transfer of the selected
    representation's data is avoided if that data has not changed.
 </t>
@@ -7106,18 +7107,32 @@ Expect: 100-continue
    its own local clock or a <x:ref>Date</x:ref> header field received from the
    server in a prior response. Origin servers that choose an exact timestamp
    match based on the selected representation's <x:ref>Last-Modified</x:ref>
-   header field will not be able to help the user agent limit its data transfers to
-   only those changed during the specified window.
+   header field will not be able to help the user agent limit its data
+   transfers to only those changed during the specified window.
 </t>
 <t>
    An origin server that receives an If-Modified-Since header field &SHOULD;
-   evaluate the condition as per <xref target="evaluation"/> prior to performing the method.
-   The origin server &SHOULD-NOT; perform the requested method if the selected
-   representation's last modification date is earlier than or equal to the
-   date provided in the field value; instead, the origin server &SHOULD;
-   generate a <x:ref>304 (Not Modified)</x:ref> response, including only those
-   metadata that are useful for identifying or updating a previously cached
-   response.
+   evaluate the condition as per <xref target="evaluation"/> prior to
+   performing the method.
+</t>
+<t>
+   To evaluate a received If-Modified-Since header field:
+</t>
+<ol>
+   <li>
+      If the selected representation's last modification date is earlier or
+      equal to the date provided in the field value, the condition is false.
+   </li>
+   <li>
+      Otherwise, the condition is true.
+   </li>
+</ol>
+<t>
+   An origin server &SHOULD-NOT; perform the requested method if a received
+   If-Modified-Since condition evaluates to false; instead,
+   the origin server &SHOULD; generate a <x:ref>304 (Not Modified)</x:ref>
+   response, including only those metadata that are useful for identifying or
+   updating a previously cached response.
 </t>
 <t>
    Requirements on cache handling of a received If-Modified-Since header field
@@ -7131,8 +7146,9 @@ Expect: 100-continue
   <x:anchor-alias value="If-Unmodified-Since"/>
 <t>
    The "If-Unmodified-Since" header field makes the request method conditional
-   on the <x:ref>selected representation</x:ref>'s last modification date being earlier than or
-   equal to the date provided in the field value. This field accomplishes the
+   on the <x:ref>selected representation</x:ref>'s last modification date being
+   earlier than or equal to the date provided in the field value.
+   This field accomplishes the
    same purpose as <x:ref>If-Match</x:ref> for cases where the user agent does
    not have an entity-tag for the representation.
 </t>
@@ -7172,14 +7188,25 @@ Expect: 100-continue
    that the client already stored (or partially stored) from a prior request.
 </t>
 <t>
-   An origin server that receives an If-Unmodified-Since header field &MUST;
-   evaluate the condition as per <xref target="evaluation"/> prior to performing
-   the method.
+   An origin server that receives an If-Unmodified-Since header field without
+   an If-Match header field &MUST; evaluate the condition as per
+   <xref target="evaluation"/> prior to performing the method.
 </t>
 <t>
-   If the selected representation has a last modification date,
-   the origin server &MUST-NOT; perform the requested method if that date is
-   more recent than the date provided in the field value.
+   To evaluate a received If-Unmodified-Since header field:
+</t>
+<ol>
+   <li>
+      If the selected representation's last modification date is earlier than or
+      equal to the date provided in the field value, the condition is true.
+   </li>
+   <li>
+      Otherwise, the condition is false.
+   </li>
+</ol>
+<t>
+   An origin server &MUST-NOT; perform the requested method if an
+   If-Unmodified-Since condition evaluates to false.
    Instead, the origin server &MAY; indicate that the conditional request
    failed by responding with a <x:ref>412 (Precondition Failed)</x:ref>
    status code. Alternatively, if the request is a state-changing operation
@@ -7235,6 +7262,11 @@ Expect: 100-continue
   <x:ref>If-Range</x:ref> = <x:ref>entity-tag</x:ref> / <x:ref>HTTP-date</x:ref>
 </sourcecode>
 <t>
+   A valid <x:ref>entity-tag</x:ref> can be distinguished from a valid
+   <x:ref>HTTP-date</x:ref> by examining the first three characters for a
+   DQUOTE.
+</t>
+<t>
    A client &MUST-NOT; generate an If-Range header field in a request that
    does not contain a <x:ref>Range</x:ref> header field.
    A server &MUST; ignore an If-Range header field received in a request that
@@ -7251,21 +7283,42 @@ Expect: 100-continue
    in the sense defined by <xref target="lastmod.comparison"/>.
 </t>
 <t>
-   A server that evaluates an If-Range precondition &MUST; use the strong
-   comparison function when comparing entity-tags (<xref target="entity.tag.comparison"/>)
-   and &MUST; evaluate the condition as false if an <x:ref>HTTP-date</x:ref>
-   validator is provided that is not a strong validator in the sense defined
-   by <xref target="lastmod.comparison"/>.
-   A valid <x:ref>entity-tag</x:ref> can be distinguished from a valid
-   <x:ref>HTTP-date</x:ref> by examining the first three characters for a
-   DQUOTE.
+   A server that receives an If-Range header field on a Range request &MUST;
+   evaluate the condition as per <xref target="evaluation"/> prior to
+   performing the method.
 </t>
 <t>
-   If the validator given in the If-Range header field matches the current
-   validator for the selected representation of the target resource, then
-   the server &SHOULD; process the <x:ref>Range</x:ref> header field as
-   requested. If the validator does not match, the server &MUST; ignore the
-   <x:ref>Range</x:ref> header field. Note that this comparison by exact
+   To evaluate a received If-Range header field containing an
+   <x:ref>HTTP-date</x:ref>:
+</t>
+<ol>
+   <li>If the <x:ref>HTTP-date</x:ref> validator provided is not a
+       strong validator in the sense defined by
+       <xref target="lastmod.comparison"/>, the condition is false.</li>
+   <li>If the <x:ref>HTTP-date</x:ref> validator provided exactly matches
+       the <x:ref>Last-Modified</x:ref> field value for the selected
+       representation, the condition is true.</li>
+   <li>Otherwise, the condition is false.</li>
+</ol>
+<t>
+   To evaluate a received If-Range header field containing an
+   <x:ref>entity-tag</x:ref>:
+</t>
+<ol>
+   <li>If the <x:ref>entity-tag</x:ref> validator provided exactly matches
+       the <x:ref>ETag</x:ref> field value for the selected representation
+       using the strong comparison function
+       (<xref target="entity.tag.comparison"/>), the condition is true.</li>
+   <li>Otherwise, the condition is false.</li>
+</ol>
+<t>
+   A recipient of an If-Range header field &MUST; ignore the
+   <x:ref>Range</x:ref> header field if the If-Range condition
+   evaluates to false. Otherwise, the recipient &SHOULD; process the
+   <x:ref>Range</x:ref> header field as requested.
+</t>
+<t>
+   Note that the If-Range comparison by exact
    match, including when the validator is an <x:ref>HTTP-date</x:ref>, differs
    from the "earlier than or equal to" comparison used when evaluating an
    <x:ref>If-Unmodified-Since</x:ref> conditional.
@@ -7274,6 +7327,8 @@ Expect: 100-continue
 </section>
 
 <section title="Evaluation of Preconditions" anchor="evaluation">
+
+<section title="When to Evaluate" anchor="when-to-evaluate">
 <t>
    Except when excluded below, a recipient cache or origin server &MUST;
    evaluate received request preconditions after it has successfully performed
@@ -7398,6 +7453,7 @@ Expect: 100-continue
    for evaluating such fields in relation to those defined in this document
    and other conditionals that might be found in practice.
 </t>
+</section>
 </section>
 </section>
 
@@ -13320,6 +13376,7 @@ Content-Type: text/plain
   <li>In <xref target="length-requirements"/>, rephrase the actual recipient parsing requirements (<eref target="https://github.com/httpwg/http-core/issues/634"/>)</li>
   <li>In <xref target="considerations.for.new.methods"/>, mention request target forms in considerations for new methods (<eref target="https://github.com/httpwg/http-core/issues/636"/>)</li>
   <li>Changed to using "content" instead of "payload" or "payload data" to avoid confusion with the payload of version-specific messaging frames (<eref target="https://github.com/httpwg/http-core/issues/654"/>)</li>
+  <li>In <xref target="field.if-modified-since"/>, <xref target="field.if-unmodified-since"/>, and <xref target="field.if-range"/>, specify evaluation in a way similar to other conditional header fields (<eref target="https://github.com/httpwg/http-core/issues/665"/>)</li>
   <li>In <xref target="field.date"/>, specify that recipients can replace an invalid Date header field value with the time received (<eref target="https://github.com/httpwg/http-core/issues/669"/>)</li>
 </ul>
 </section>
