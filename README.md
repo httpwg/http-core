@@ -16,7 +16,7 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 
 * [Editors' Draft](https://httpwg.org/http-core/draft-ietf-httpbis-semantics-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-semantics-latest.xml))
 * [draft-ietf-httpbis-semantics](https://datatracker.ietf.org/doc/draft-ietf-httpbis-semantics/)
-* [FrankenDiff of RFC723x to semantics-12](https://httpwg.org/http-core/diffs/diff_semantics_frfc_to_12.html)
+* [FrankenDiff of RFC723x to semantics-14](https://httpwg.org/http-core/diffs/diff_semantics_frfc_to_14.html)
 * [RFC7231](https://httpwg.org/specs/rfc7231.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7231.txt), [tracker](https://datatracker.ietf.org/doc/rfc7231/))
 * [Open Issues](https://github.com/httpwg/http-core/labels/semantics)
 
@@ -32,7 +32,7 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 
 * [Editors' Draft](https://httpwg.org/http-core/draft-ietf-httpbis-messaging-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-messaging-latest.xml))
 * [draft-ietf-httpbis-messaging](https://datatracker.ietf.org/doc/draft-ietf-httpbis-messaging/)
-* [FrankenDiff of RFC723x to messaging-12](https://httpwg.org/http-core/diffs/diff_messaging_frfc_to_12.html)
+* [FrankenDiff of RFC723x to messaging-14](https://httpwg.org/http-core/diffs/diff_messaging_frfc_to_14.html)
 * [RFC7230](https://httpwg.org/specs/rfc7230.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7230.txt), [tracker](https://datatracker.ietf.org/doc/rfc7230/))
 * [Open Issues](https://github.com/httpwg/http-core/labels/h1-messaging)
 
