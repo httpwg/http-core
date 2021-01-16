@@ -191,8 +191,6 @@ Table of Contents
    documents.  Appendix C shows the collected grammar with all list
    operators expanded to standard ABNF notation.
 
-Appendix B.  Imported ABNF
-
    The following core rules are included by reference, as defined in
    Appendix B.1 of [RFC5234]: ALPHA (letters), CR (carriage return),
    CRLF (CR LF), CTL (controls), DIGIT (decimal 0-9), DQUOTE (double
@@ -200,22 +198,21 @@ Appendix B.  Imported ABNF
    8-bit sequence of data), SP (space), and VCHAR (any visible US-ASCII
    character).
 
-   The rules below are defined in [RFC7230]:
-
-     OWS           = <OWS, see [RFC7230], Section 3.2.3>
-     field-name    = <field-name, see [RFC7230], Section 3.2>
-     quoted-string = <quoted-string, see [RFC7230], Section 3.2.6>
-     token         = <token, see [RFC7230], Section 3.2.6>
+   The rules below are defined in other parts:
 
      port          = <port, see [RFC7230], Section 2.7>
      pseudonym     = <pseudonym, see [RFC7230], Section 5.7.1>
      uri-host      = <uri-host, see [RFC7230], Section 2.7>
 
-   The rules below are defined in other parts:
+   The rules below are defined in [RFC7230]:
 
      HTTP-date     = <HTTP-date, see [RFC7231], Section 7.1.1.1>
+     OWS           = <OWS, see [RFC7230], Section 3.2.3>
+     field-name    = <field-name, see [RFC7230], Section 3.2>
+     quoted-string = <quoted-string, see [RFC7230], Section 3.2.6>
+     token         = <token, see [RFC7230], Section 3.2.6>
 
-1.2.1.  Delta Seconds
+1.3.  Delta Seconds
 
    The delta-seconds rule specifies a non-negative integer, representing
    time in seconds.
@@ -252,6 +249,16 @@ Appendix B.  Imported ABNF
    inappropriately, rather than mandating that caches always store and
    reuse particular responses.
 
+   The primary cache key consists of the request method and target URI.
+   However, since HTTP caches in common use today are typically limited
+   to caching responses to GET, many caches simply decline other methods
+   and use only the URI as the primary cache key.
+
+   If a request target is subject to content negotiation, its cache
+   entry might consist of multiple stored responses, each differentiated
+   by a secondary key for the values of the original request's selecting
+   header fields (Section 4.1).
+
    Each cache entry consists of a cache key and one or more HTTP
    responses corresponding to prior requests that used the same key.
    The most common form of cache entry is a successful result of a
@@ -263,16 +270,6 @@ Appendix B.  Imported ABNF
    methods other than GET if the method's definition allows such caching
    and defines something suitable for use as a cache key.
 
-   The primary cache key consists of the request method and target URI.
-   However, since HTTP caches in common use today are typically limited
-   to caching responses to GET, many caches simply decline other methods
-   and use only the URI as the primary cache key.
-
-   If a request target is subject to content negotiation, its cache
-   entry might consist of multiple stored responses, each differentiated
-   by a secondary key for the values of the original request's selecting
-   header fields (Section 4.1).
-
 3.  Storing Responses in Caches
 
    A cache MUST NOT store a response to any request, unless:
@@ -281,6 +278,8 @@ Appendix B.  Imported ABNF
       cacheable, and
 
    o  the response status code is understood by the cache, and
+
+   [new]
 
    o  the "no-store" cache directive (see Section 5.2) does not appear
       in request or response header fields, and
@@ -321,7 +320,45 @@ Appendix B.  Imported ABNF
    as such responses are not usually useful to store.  However, caches
    are not prohibited from storing such responses.
 
-3.1.  Storing Incomplete Responses
+3.1.  Storing Header and Trailer Fields
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+3.2.  Updating Stored Header Fields
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+   [new]
+
+3.3.  Storing Incomplete Responses
 
    A response message is considered complete when all of the octets
    indicated by the message framing ([RFC7230]) are received prior to
@@ -344,25 +381,7 @@ Appendix B.  Imported ABNF
    cache MUST NOT send a partial response to a client without explicitly
    marking it as such using the 206 (Partial Content) status code.
 
-3.2.  Storing Responses to Authenticated Requests
-
-   A shared cache MUST NOT use a cached response to a request with an
-   Authorization header field (Section 4.2 of [RFC7235]) to satisfy any
-   subsequent request unless a cache directive that allows such
-   responses to be stored is present in the response.
-
-   In this specification, the following Cache-Control response
-   directives (Section 5.2.2) have such an effect: must-revalidate,
-   public, and s-maxage.
-
-   Note that cached responses that contain the "must-revalidate" and/or
-   "s-maxage" response directives are not allowed to be served stale
-   (Section 4.2.4) by shared caches.  In particular, a response with
-   either "max-age=0, must-revalidate" or "s-maxage=0" cannot be used to
-   satisfy a subsequent request without revalidating it on the origin
-   server.
-
-3.3.  Combining Partial Content
+3.4.  Combining Partial Content
 
    A response might transfer only a partial representation if the
    connection closed prematurely or if the request used one or more
@@ -385,6 +404,24 @@ Appendix B.  Imported ABNF
    o  use other header fields provided in the new response, aside from
       Content-Range, to replace all instances of the corresponding
       header fields in the stored response.
+
+3.5.  Storing Responses to Authenticated Requests
+
+   A shared cache MUST NOT use a cached response to a request with an
+   Authorization header field (Section 4.2 of [RFC7235]) to satisfy any
+   subsequent request unless a cache directive that allows such
+   responses to be stored is present in the response.
+
+   In this specification, the following Cache-Control response
+   directives (Section 5.2.2) have such an effect: must-revalidate,
+   public, and s-maxage.
+
+   Note that cached responses that contain the "must-revalidate" and/or
+   "s-maxage" response directives are not allowed to be served stale
+   (Section 4.2.4) by shared caches.  In particular, a response with
+   either "max-age=0, must-revalidate" or "s-maxage=0" cannot be used to
+   satisfy a subsequent request without revalidating it on the origin
+   server.
 
 4.  Constructing Responses from Caches
 
@@ -632,35 +669,25 @@ Appendix B.  Imported ABNF
 
    The following data is used for the age calculation:
 
-   age_value
+   _age_value_  The term "age_value" denotes the value of the Age header
+      field (Section 5.1), in a form appropriate for arithmetic
+      operation; or 0, if not available.
 
-      The term "age_value" denotes the value of the Age header field
-      (Section 5.1), in a form appropriate for arithmetic operation; or
-      0, if not available.
+   _date_value_  The term "date_value" denotes the value of the Date
+      header field, in a form appropriate for arithmetic operations.
+      See Section 7.1.1.2 of [RFC7231] for the definition of the Date
+      header field, and for requirements regarding responses without it.
 
-   date_value
+   _now_  The term "now" means "the current value of the clock at the
+      host performing the calculation". A host ought to use NTP
+      ([RFC5905]) or some similar protocol to synchronize its clocks to
+      Coordinated Universal Time.
 
-      The term "date_value" denotes the value of the Date header field,
-      in a form appropriate for arithmetic operations.  See Section
-      7.1.1.2 of [RFC7231] for the definition of the Date header field,
-      and for requirements regarding responses without it.
+   _request_time_  The current value of the clock at the host at the
+      time the request resulting in the stored response was made.
 
-   now
-
-      The term "now" means "the current value of the clock at the host
-      performing the calculation".  A host ought to use NTP ([RFC5905])
-      or some similar protocol to synchronize its clocks to Coordinated
-      Universal Time.
-
-   request_time
-
-      The current value of the clock at the host at the time the request
-      resulting in the stored response was made.
-
-   response_time
-
-      The current value of the clock at the host at the time the
-      response was received.
+   _response_time_  The current value of the clock at the host at the
+      time the response was received.
 
    A response's age can be calculated in two entirely independent ways:
 
@@ -810,12 +837,14 @@ Appendix B.  Imported ABNF
    If an If-None-Match header field is not present, a request containing
    an If-Modified-Since header field (Section 3.3 of [RFC7232])
    indicates that the client wants to validate one or more of its own
-   stored responses by modification date.  A cache recipient SHOULD
+   stored responses by modification date.
+
+   A cache recipient SHOULD
    generate a 304 (Not Modified) response (using the metadata of the
    selected stored response) if one of the following cases is true: 1)
    the selected stored response has a Last-Modified field-value that is
-   earlier than or equal to the conditional timestamp; 2) no
-   Last-Modified field is present in the selected stored response, but
+   earlier than or equal to the conditional timestamp; 2) no Last-
+   Modified field is present in the selected stored response, but
    it has a Date field-value that is earlier than or equal to the
    conditional timestamp; or, 3) neither Last-Modified nor Date is
    present in the selected stored response, but the cache recorded it as
@@ -946,12 +975,13 @@ Appendix B.  Imported ABNF
    [RFC7230]) when it receives a non-error response to a request with a
    method whose safety is unknown.
 
+   "Invalidate" means that the cache will either remove all stored
+   responses related to the effective request URI or will mark these
+   as "invalid" and in need of a mandatory validation before they can be
+   sent in response to a subsequent request.
+
    Here, a "non-error response" is one with a 2xx (Successful) or 3xx
-   (Redirection) status code.  "Invalidate" means that the cache will
-   either remove all stored responses related to the effective request
-   URI or will mark these as "invalid" and in need of a mandatory
-   validation before they can be sent in response to a subsequent
-   request.
+   (Redirection) status code.
 
    Note that this does not guarantee that all appropriate responses are
    invalidated.  For example, a state-changing request might invalidate
@@ -962,16 +992,6 @@ Appendix B.  Imported ABNF
 
    This section defines the syntax and semantics of HTTP/1.1 header
    fields related to caching.
-
-   +-------------------+----------+----------+-------------+
-   | Header Field Name | Protocol | Status   | Reference   |
-   +-------------------+----------+----------+-------------+
-   | Age               | http     | standard | Section 5.1 |
-   | Cache-Control     | http     | standard | Section 5.2 |
-   | Expires           | http     | standard | Section 5.3 |
-   | Pragma            | http     | standard | Section 5.4 |
-   | Warning           | http     | standard | Section 5.5 |
-   +-------------------+----------+----------+-------------+
 
 5.1.  Age
 
@@ -1023,25 +1043,6 @@ Appendix B.  Imported ABNF
 
    For the cache directives defined below, no argument is defined (nor
    allowed) unless stated otherwise.
-
-   +------------------------+----------------------------------+
-   | Cache Directive        | Reference                        |
-   +------------------------+----------------------------------+
-   | max-age                | Section 5.2.1.1, Section 5.2.2.8 |
-   | max-stale              | Section 5.2.1.2                  |
-   | min-fresh              | Section 5.2.1.3                  |
-   | must-revalidate        | Section 5.2.2.1                  |
-   | no-cache               | Section 5.2.1.4, Section 5.2.2.2 |
-   | no-store               | Section 5.2.1.5, Section 5.2.2.3 |
-   | no-transform           | Section 5.2.1.6, Section 5.2.2.4 |
-   | only-if-cached         | Section 5.2.1.7                  |
-   | private                | Section 5.2.2.6                  |
-   | proxy-revalidate       | Section 5.2.2.7                  |
-   | public                 | Section 5.2.2.5                  |
-   | s-maxage               | Section 5.2.2.9                  |
-   | stale-if-error         | [RFC5861], Section 4             |
-   | stale-while-revalidate | [RFC5861], Section 3             |
-   +------------------------+----------------------------------+
 
 5.2.1.  Request Cache-Control Directives
 
@@ -1155,6 +1156,10 @@ Appendix B.  Imported ABNF
    in incorrect operation, such as a silently unexecuted financial
    transaction.
 
+5.2.2.2.  must-understand
+
+   [new]
+
 5.2.2.3.  no-cache
 
    Argument syntax:
@@ -1163,9 +1168,11 @@ Appendix B.  Imported ABNF
 
    The "no-cache" response directive indicates that the response MUST
    NOT be used to satisfy a subsequent request without successful
-   validation on the origin server.  This allows an origin server to
-   prevent a cache from using it to satisfy a request without contacting
-   it, even by caches that have been configured to send stale responses.
+   validation on the origin server.
+
+   This allows an origin server to prevent a cache from using it
+   to satisfy a request without contacting it, even by caches
+   that have been configured to send stale responses.
 
    If the no-cache response directive specifies one or more field-names,
    then a cache MAY use the response to satisfy a subsequent request,
@@ -1322,8 +1329,6 @@ Appendix B.  Imported ABNF
    does not recognize the community cache-extension would ignore it and
    adhere to the private directive.
 
-7.1.2.  Considerations for New Cache Control Directives
-
    New extension directives ought to consider defining:
 
    o  What it means for a directive to be specified multiple times,
@@ -1339,14 +1344,12 @@ Appendix B.  Imported ABNF
 
    See also Section 5.2.3.
 
-7.1.  Cache Directive Registry
+5.2.4.  Cache Directive Registry
 
    The "Hypertext Transfer Protocol (HTTP) Cache Directive Registry"
    defines the namespace for the cache directives.  It has been created
    and is now maintained at
    <http://www.iana.org/assignments/http-cache-directives>.
-
-7.1.1.  Procedure
 
    A registration MUST include the following fields:
 
@@ -1454,6 +1457,8 @@ Appendix B.  Imported ABNF
    history lists, that can be used to redisplay a representation
    retrieved earlier in a session.
 
+   [new]
+
    The freshness model (Section 4.2) does not necessarily apply to
    history mechanisms.  That is, a history mechanism can display a
    previous representation even if it has expired.
@@ -1477,25 +1482,33 @@ Appendix B.  Imported ABNF
    network.  Therefore, cache contents need to be protected as sensitive
    information.
 
+7.1.  Cache Poisoning
+
    In particular, various attacks might be amplified by being stored in
    a shared cache; such "cache poisoning" attacks use the cache to
    distribute a malicious payload to many clients, and are especially
    effective when an attacker can use implementation flaws, elevated
    privileges, or other techniques to insert such a response into a
-   cache.  One common attack vector for cache poisoning is to exploit
+   cache.
+
+   One common attack vector for cache poisoning is to exploit
    differences in message parsing on proxies and in user agents; see
    Section 3.3.3 of [RFC7230] for the relevant requirements.
 
-   Likewise, implementation flaws (as well as misunderstanding of cache
-   operation) might lead to caching of sensitive information (e.g.,
-   authentication credentials) that is thought to be private, exposing
-   it to unauthorized parties.
+7.2.  Timing Attacks
 
    Furthermore, the very use of a cache can bring about privacy
    concerns.  For example, if two users share a cache, and the first one
    browses to a site, the second may be able to detect that the other
    has been to that site, because the resources from it load more
    quickly, thanks to the cache.
+
+7.3.  Caching of Sensitive Information
+
+   Likewise, implementation flaws (as well as misunderstanding of cache
+   operation) might lead to caching of sensitive information (e.g.,
+   authentication credentials) that is thought to be private, exposing
+   it to unauthorized parties.
 
    Note that the Set-Cookie response header field [RFC6265] does not
    inhibit caching; a cacheable response with a Set-Cookie header field
@@ -1508,7 +1521,7 @@ Appendix B.  Imported ABNF
    The change controller is: "IETF (iesg@ietf.org) - Internet
    Engineering Task Force".
 
-8.1.  Header Field Registration
+8.1.  Field Name Registration
 
    HTTP header fields are registered within the "Message Headers"
    registry maintained at
@@ -1518,9 +1531,38 @@ Appendix B.  Imported ABNF
    "Permanent Message Header Field Names" registry has been updated
    accordingly (see [BCP90]).
 
-8.2.  [Cache Directive] Registrations
+   +-------------------+----------+----------+-------------+
+   | Header Field Name | Protocol | Status   | Reference   |
+   +-------------------+----------+----------+-------------+
+   | Age               | http     | standard | Section 5.1 |
+   | Cache-Control     | http     | standard | Section 5.2 |
+   | Expires           | http     | standard | Section 5.3 |
+   | Pragma            | http     | standard | Section 5.4 |
+   | Warning           | http     | standard | Section 5.5 |
+   +-------------------+----------+----------+-------------+
+
+8.2.  Cache Directive Registration
 
    The registry has been populated with the registrations below:
+
+   +------------------------+----------------------------------+
+   | Cache Directive        | Reference                        |
+   +------------------------+----------------------------------+
+   | max-age                | Section 5.2.1.1, Section 5.2.2.8 |
+   | max-stale              | Section 5.2.1.2                  |
+   | min-fresh              | Section 5.2.1.3                  |
+   | must-revalidate        | Section 5.2.2.1                  |
+   | no-cache               | Section 5.2.1.4, Section 5.2.2.2 |
+   | no-store               | Section 5.2.1.5, Section 5.2.2.3 |
+   | no-transform           | Section 5.2.1.6, Section 5.2.2.4 |
+   | only-if-cached         | Section 5.2.1.7                  |
+   | private                | Section 5.2.2.6                  |
+   | proxy-revalidate       | Section 5.2.2.7                  |
+   | public                 | Section 5.2.2.5                  |
+   | s-maxage               | Section 5.2.2.9                  |
+   | stale-if-error         | [RFC5861], Section 4             |
+   | stale-while-revalidate | [RFC5861], Section 3             |
+   +------------------------+----------------------------------+
 
 8.3.  [Warn Code] Registrations
 
@@ -1631,7 +1673,9 @@ Appendix B.  Changes from RFC 2616
 
    [elided]
 
-[*** Old Section 5.5 content deleted to preserve the diff ***]
+Appendix C.  Change Log
+
+[*** Old deleted Section 5.5 content moved here to preserve the diff ***]
 
 5.5.  Warning
 
