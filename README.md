@@ -24,7 +24,7 @@ The [building instructions](BUILDING.txt) explain how to build the drafts from s
 
 * [Editors' Draft](https://httpwg.org/http-core/draft-ietf-httpbis-cache-latest.html) ([xml](https://httpwg.github.io/http-core/draft-ietf-httpbis-cache-latest.xml))
 * [draft-ietf-httpbis-cache](https://datatracker.ietf.org/doc/draft-ietf-httpbis-cache/)
-* [FrankenDiff of RFC7234 to cache-12](https://httpwg.org/http-core/diffs/diff_cache_frfc_to_12.html)
+* [FrankenDiff of RFC7234 to cache-14](https://httpwg.org/http-core/diffs/diff_cache_frfc_to_14.html)
 * [RFC7234](https://httpwg.org/specs/rfc7234.html) ([plain text](https://www.rfc-editor.org/rfc/rfc7234.txt), [tracker](https://datatracker.ietf.org/doc/rfc7234/))
 * [Open Issues](https://github.com/httpwg/http-core/labels/caching)
 
