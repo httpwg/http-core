@@ -1077,9 +1077,9 @@ Content-Type: text/plain
    (<xref target="RFC8446"/>) connection that has been secured for HTTP
    communication. In this context, <x:dfn>secured</x:dfn> specifically
    means that the server has been authenticated as acting on behalf of the
-   identified authority and all HTTP communication with that server has been
-   protected for confidentiality and integrity through the use of strong
-   encryption.
+   identified authority and all HTTP communication with that server has
+   confidentiality and integrity protection that is acceptable to both client
+   and server.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="https-URI"><!--terminal production--></iref>
   <x:ref>https-URI</x:ref> = "https" "://" <x:ref>authority</x:ref> <x:ref>path-abempty</x:ref> [ "?" <x:ref>query</x:ref> ]
@@ -1105,7 +1105,9 @@ Content-Type: text/plain
 <t>
    A client &MUST; ensure that its HTTP requests for an "https" resource are
    secured, prior to being communicated, and that it only accepts secured
-   responses to those requests.
+   responses to those requests. Note that the definition of what cryptographic
+   mechanisms are acceptable to client and server are usually negotiated and
+   can change over time.
 </t>
 <t>
    Resources made available via the "https" scheme have no shared identity
@@ -1386,9 +1388,19 @@ Content-Type: text/plain
 <t>
    In general, a client &MUST; verify the service identity using the
    verification process defined in
-   <xref target="RFC6125" x:fmt="of" x:sec="6"/> (for a reference identifier of
-   type URI-ID) unless the client has been specifically configured to accept
-   some other form of verification. For example, a client might be connecting
+   <xref target="RFC6125" x:fmt="of" x:sec="6"/>. The client &MUST; construct
+   a reference identity from the service's host: if the host is a literal IP address
+   (<xref target="https.ip-id"/>), the reference identity is an IP-ID, otherwise
+   the host is a name and the reference identity is a DNS-ID.
+</t>
+<t>
+   A reference identity of type CN-ID &MUST-NOT; be used by clients.  As noted
+   in <xref target="RFC6125" x:fmt="of" x:sec="6.2.1"/> a reference
+   identity of type CN-ID might be used by older clients.
+</t>
+<t>
+   A client might be specially configured to accept an alternative form of
+   server identity verification. For example, a client might be connecting
    to a server whose address and hostname are dynamic, with an expectation that
    the service will present a specific certificate (or a certificate matching
    some externally defined reference identity) rather than one matching the
@@ -1408,6 +1420,28 @@ Content-Type: text/plain
    and &SHOULD; terminate the connection (with a bad certificate error).
    Automated clients &MAY; provide a configuration setting that disables
    this check, but &MUST; provide a setting which enables it.
+</t>
+</section>
+<section title="IP-ID reference identity" anchor="https.ip-id">
+<t>
+   A server that is identified using an IP address literal in the "host" field
+   of an "https" URI has a reference identity of type IP-ID.  An IP version 4
+   address uses the "IPv4address" ABNF rule and an IP version 6 address uses
+   the "IP-literal" production with the "IPv6address" option; see 
+   <xref target="RFC3986" x:fmt="of" x:sec="3.2.2"/>.  A reference identity of
+   IP-ID contains the decoded bytes of the IP address.
+</t>
+<t>
+   An IP version 4 address is 4 octets and an IP version 6 address is 16 octets.
+   Use of IP-ID is not defined for any other IP version. The iPAddress
+   choice in the certificate subjectAltName extension does not explicitly
+   include the IP version and so relies on the length of the address to
+   distinguish versions; see
+   <xref target="RFC5280" x:fmt="of" x:sec="4.2.1.6"/>.
+</t>
+<t>
+   A reference identity of type IP-ID matches if the address is identical to
+   an iPAddress value of the subjectAltName extension of the certificate.
 </t>
 </section>
 </section>
@@ -1601,7 +1635,8 @@ Content-Type: text/plain
    through use of <xref target="RFC2047"/> encoding.
    In practice, most HTTP field values use only a subset of the
    US-ASCII charset <xref target="USASCII"/>. Newly defined
-   fields &SHOULD; limit their values to US-ASCII octets.
+   fields &SHOULD; limit their values to visible US-ASCII octets
+   (VCHAR), SP, and HTAB.
    A recipient &SHOULD; treat other octets in field content (obs-text) as
    opaque data.
 </t>
@@ -1765,13 +1800,6 @@ Content-Type: text/plain
 </section>
 
 <section title="Tokens" anchor="tokens">
-<t anchor="delimiters">
-   <iref item="Delimiters"/>
-   Many HTTP field values are defined using common syntax
-   components, separated by whitespace or specific delimiting characters.
-   Delimiters are chosen from the set of US-ASCII visual characters not
-   allowed in a <x:ref>token</x:ref> (DQUOTE and "(),/:;&lt;=>?@[\]{}").
-</t>
 <t anchor="rule.token.separators">
   <x:anchor-alias value="tchar"/>
   <x:anchor-alias value="token"/>
@@ -1788,6 +1816,13 @@ Content-Type: text/plain
                  / <x:ref>DIGIT</x:ref> / <x:ref>ALPHA</x:ref>
                  ; any <x:ref>VCHAR</x:ref>, except delimiters
 </sourcecode>
+<t anchor="delimiters">
+   <iref item="Delimiters"/>
+   Many HTTP field values are defined using common syntax
+   components, separated by whitespace or specific delimiting characters.
+   Delimiters are chosen from the set of US-ASCII visual characters not
+   allowed in a <x:ref>token</x:ref> (DQUOTE and "(),/:;&lt;=>?@[\]{}").
+</t>
 </section>
 
 <section title="Whitespace" anchor="whitespace">
@@ -1804,7 +1839,7 @@ Content-Type: text/plain
    appear. For protocol elements where optional whitespace is preferred to
    improve readability, a sender &SHOULD; generate the optional whitespace
    as a single SP; otherwise, a sender &SHOULD-NOT; generate optional
-   whitespace except as needed to white out invalid or unwanted protocol
+   whitespace except as needed to overwrite invalid or unwanted protocol
    elements during in-place message filtering.
 </t>
 <t>
@@ -3110,7 +3145,7 @@ Upgrade: websocket
    These define a two-layer, ordered encoding model:
 </t>
 <artwork type="example">
-  representation-data := Content-Encoding( Content-Type( bits ) )
+  representation-data := Content-Encoding( Content-Type( data ) )
 </artwork>
 </section>
 
@@ -6623,9 +6658,14 @@ Expect: 100-continue
        listed in the Accept-Encoding field value, then it is acceptable unless
        it is accompanied by a qvalue of 0. (As defined in <xref target="quality.values"/>, a
        qvalue of 0 means "not acceptable".)</li>
-   <li>If multiple content-codings are acceptable, then the acceptable
-       content-coding with the highest non-zero qvalue is preferred.</li>
 </ol>
+<t>
+   A representation could be encoded with multiple content codings. However, most
+   content codings are alternative ways to accomplish the same purpose
+   (e.g., data compression). When selecting between multiple content codings that
+   have the same purpose, the acceptable content coding with the highest
+   non-zero qvalue is preferred.
+</t>
 <t>
    An Accept-Encoding header field with a field value that is empty
    implies that the user agent does not want any content-coding in response.
@@ -9256,10 +9296,11 @@ Content-Range: bytes 7000-7999/8000
 <t>
    The <x:dfn>412 (Precondition Failed)</x:dfn> status code indicates that one
    or more conditions given in the request header fields evaluated to false
-   when tested on the server. This response status code allows the client to place
-   preconditions on the current resource state (its current representations
-   and metadata) and, thus, prevent the request method from being applied if the
-   target resource is in an unexpected state.
+   when tested on the server (<xref target="conditional.requests"/>). This
+   response status code allows the client to place preconditions on the
+   current resource state (its current representations and metadata) and,
+   thus, prevent the request method from being applied if the target resource
+   is in an unexpected state.
 </t>
 </section>
 
@@ -11996,6 +12037,21 @@ Content-Type: text/plain
   <seriesInfo name="DOI" value="10.1109/MC.1984.1659158"/>
 </reference>
 
+<reference anchor="RFC5280">
+  <front>
+    <title>Internet X.509 Public Key Infrastructure Certificate and
+           Certificate Revocation List (CRL) Profile</title>
+    <author initials="D." surname="Cooper" fullname="D. Cooper"/>
+    <author initials="S." surname="Santesson" fullname="S. Santesson"/>
+    <author initials="S." surname="Farrell" fullname="S. Farrell"/>
+    <author initials="S." surname="Boeyen" fullname="S. Boeyen"/>
+    <author initials="R." surname="Housley" fullname="R. Housley"/>
+    <author initials="W." surname="Polk" fullname="W. Polk"/>
+    <date year="2008" month="May" />
+  </front>
+  <seriesInfo name="RFC" value="5280"/>
+</reference>
+
 </references>
 
 <references title="Informative References">
@@ -13392,6 +13448,8 @@ Content-Type: text/plain
 <ul x:when-empty="None yet.">
   <li>In <xref target="status.codes"/>, clarify that status code values outside the range 100..599 are invalid (<eref target="https://github.com/httpwg/http-core/issues/684"/>)</li>
   <li>Avoid the term "whitelist" (<eref target="https://github.com/httpwg/http-core/issues/688"/>)</li>
+  <li>In <xref target="field-values"/>, tighten the recommendation for characters in newly defined fields, making it consistent with obs-text (<eref target="https://github.com/httpwg/http-core/issues/696"/>)</li>
+  <li>In <xref target="field.accept-encoding"/>, clarify that selection <em>between</em> multiple acceptable codings is only relevant when they have the same purpose (<eref target="https://github.com/httpwg/http-core/issues/714"/>)</li>
 </ul>
 </section>
 </section>
