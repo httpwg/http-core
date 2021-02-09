@@ -2027,7 +2027,8 @@ Host: www.example.org
                value given by Content-Length. A response that has neither chunked transfer coding
                nor Content-Length is terminated by closure of the connection and, thus, is considered
                complete regardless of the number of message body octets received, provided that the
-               header section was received intact.<a class="self" href="#rfc.section.8.p.4">¶</a></p>
+               header section was received intact. When using TLS, an incomplete close cannot be
+               used to terminate a response this way; such a response is incomplete (see <a href="#tls.connection.closure" title="TLS Connection Closure">Section 9.8</a>).<a class="self" href="#rfc.section.8.p.4">¶</a></p>
          </div>
       </section>
       <section id="connection.management">
@@ -2299,33 +2300,34 @@ Host: www.example.org
                <p>TLS provides a facility for secure connection closure. When a valid closure alert
                   is received, an implementation can be assured that no further data will be received
                   on that connection. TLS implementations <em class="bcp14">MUST</em> initiate an exchange of closure alerts before closing a connection. A TLS implementation <em class="bcp14">MAY</em>, after sending a closure alert, close the connection without waiting for the peer
-                  to send its closure alert, generating an "incomplete close". Note that an implementation
-                  which does this <em class="bcp14">MAY</em> choose to reuse the session. This <em class="bcp14">SHOULD</em> only be done when the application knows (typically through detecting HTTP message
-                  boundaries) that it has received all the message data that it cares about.<a class="self" href="#rfc.section.9.8.p.1">¶</a></p>
+                  to send its closure alert, generating an "incomplete close". This <em class="bcp14">SHOULD</em> only be done when the application knows (typically through detecting HTTP message
+                  boundaries) that it has sent or received all the message data that it cares about.<a class="self" href="#rfc.section.9.8.p.1">¶</a></p>
             </div>
             <div id="rfc.section.9.8.p.2">
-               <p>As specified in <a href="#RFC8446" id="rfc.xref.RFC8446.2"><cite title="The Transport Layer Security (TLS) Protocol Version 1.3">[RFC8446]</cite></a>, any implementation which receives a connection close without first receiving a valid
-                  closure alert (a "premature close") <em class="bcp14">MUST NOT</em> reuse that session. Note that a premature close does not call into question the security
-                  of the data already received, but simply indicates that subsequent data might have
-                  been truncated. Because TLS is oblivious to HTTP request/response boundaries, it is
-                  necessary to examine the HTTP data itself (specifically the Content-Length header)
-                  to determine whether the truncation occurred inside a message or between messages.<a class="self" href="#rfc.section.9.8.p.2">¶</a></p>
+               <p>An incomplete close does not call into question the security of the data already received,
+                  but it could indicate that subsequent data might have been truncated. As TLS is not
+                  directly aware of HTTP message framing, it is necessary to examine the HTTP data itself
+                  to determine whether messages were complete. Handing of incomplete messages is defined
+                  in <a href="#incomplete.messages" title="Handling Incomplete Messages">Section 8</a>.<a class="self" href="#rfc.section.9.8.p.2">¶</a></p>
             </div>
             <div id="rfc.section.9.8.p.3">
-               <p>When encountering a premature close, a client <em class="bcp14">SHOULD</em> treat as completed all requests for which it has received as much data as specified
-                  in the Content-Length header.<a class="self" href="#rfc.section.9.8.p.3">¶</a></p>
+               <p>When encountering an incomplete close, a client <em class="bcp14">SHOULD</em> treat as completed all requests for which it has received as much data as specified
+                  in the <a href="#body.content-length" class="smpl">Content-Length</a> header or, when a <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> of chunked is used, for which the terminal zero-length chunk has been received. A
+                  response that has neither chunked transfer coding nor Content-Length is complete only
+                  if a valid closure alert has been received. Treating an incomplete message as complete
+                  could expose implementations to attack.<a class="self" href="#rfc.section.9.8.p.3">¶</a></p>
             </div>
             <div id="rfc.section.9.8.p.4">
-               <p>A client detecting an incomplete close <em class="bcp14">SHOULD</em> recover gracefully. It <em class="bcp14">MAY</em> resume a TLS session closed in this fashion.<a class="self" href="#rfc.section.9.8.p.4">¶</a></p>
+               <p>A client detecting an incomplete close <em class="bcp14">SHOULD</em> recover gracefully.<a class="self" href="#rfc.section.9.8.p.4">¶</a></p>
             </div>
             <div id="rfc.section.9.8.p.5">
-               <p>Clients <em class="bcp14">MUST</em> send a closure alert before closing the connection. Clients which are unprepared to
+               <p>Clients <em class="bcp14">MUST</em> send a closure alert before closing the connection. Clients that do not expect to
                   receive any more data <em class="bcp14">MAY</em> choose not to wait for the server's closure alert and simply close the connection,
                   thus generating an incomplete close on the server side.<a class="self" href="#rfc.section.9.8.p.5">¶</a></p>
             </div>
             <div id="rfc.section.9.8.p.6">
                <p>Servers <em class="bcp14">SHOULD</em> be prepared to receive an incomplete close from the client, since the client can often
-                  determine when the end of server data is. Servers <em class="bcp14">SHOULD</em> be willing to resume TLS sessions closed in this fashion.<a class="self" href="#rfc.section.9.8.p.6">¶</a></p>
+                  determine when the end of server data is.<a class="self" href="#rfc.section.9.8.p.6">¶</a></p>
             </div>
             <div id="rfc.section.9.8.p.7">
                <p>Servers <em class="bcp14">MUST</em> attempt to initiate an exchange of closure alerts with the client before closing the
@@ -3433,7 +3435,7 @@ Host: www.example.org
                         </ul>
                      </li>
                      <li><em>RFC8174</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8174.1">1.1</a>, <a href="#RFC8174"><b>13.1</b></a></li>
-                     <li><em>RFC8446</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8446.1">9.7</a>, <a href="#rfc.xref.RFC8446.2">9.8</a>, <a href="#RFC8446"><b>13.1</b></a></li>
+                     <li><em>RFC8446</em>&nbsp;&nbsp;<a href="#rfc.xref.RFC8446.1">9.7</a>, <a href="#RFC8446"><b>13.1</b></a></li>
                   </ul>
                </li>
                <li><a id="rfc.index.S" href="#rfc.index.S"><b>S</b></a><ul>
