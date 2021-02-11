@@ -553,9 +553,11 @@
    request semantics, which is made possible by vesting the request
    semantics in the request method (<xref target="methods"/>) and a few
    request-modifying header fields.
-   If there is a conflict between the method semantics and any semantic
-   implied by the URI itself, as described in <xref target="safe.methods"/>,
-   the method semantics take precedence.
+   A resource cannot treat a request in a manner inconsistent with the
+   semantics of the method of the request. For example, though the URI of a
+   resource might imply semantics that are not safe, a client can expect the
+   resource to avoid actions that are unsafe when processing a request with a
+   safe method (see <xref target="safe.methods"/>).
 </t>
 <t>
    HTTP relies upon the Uniform Resource Identifier (URI)
@@ -2688,11 +2690,19 @@ Host: www.example.org
    messages, while others use an explicit identifier.
 </t>
 <t>
-   Responses (both <x:ref>final</x:ref> and <x:ref>interim</x:ref>) can be sent
-   at any time after a
-   request is received, even if it is not yet complete. However, clients
+   All responses, regardless of the status code (including <x:ref>interim</x:ref>
+   responses) can be sent at any time after a request is received, even if the
+   request is not yet complete. A response can complete before its
+   corresponding request is complete. Likewise, clients are not expected
+   to wait any specific amount of time for a response. Clients
    (including intermediaries) might abandon a request if the response is not
    forthcoming within a reasonable period of time.
+</t>
+<t>
+   A client that receives a response while the associated request is
+   still being sent &SHOULD; continue sending that request, unless it receives
+   an explicit indication to the contrary (see, e.g., <xref
+   target="persistent.failures"/> and <xref target="RFC7540" section="6.4"/>).
 </t>
 </section>
 
@@ -3293,40 +3303,6 @@ Upgrade: websocket
     (see <xref target="Err5433"/>).
   </t>
 </aside>
-</section>
-
-<section title="Canonicalization and Text Defaults" anchor="canonicalization.and.text.defaults">
-<t>
-   Media types are registered with a canonical form in order to be
-   interoperable among systems with varying native encoding formats.
-   Representations selected or transferred via HTTP ought to be in canonical
-   form, for many of the same reasons described by the Multipurpose Internet
-   Mail Extensions (MIME) <xref target="RFC2045"/>.
-   However, the performance characteristics of email deployments (i.e., store
-   and forward messages to peers) are significantly different from those
-   common to HTTP and the Web (server-based information services).
-   Furthermore, MIME's constraints for the sake of compatibility with older
-   mail transfer protocols do not apply to HTTP
-   (see <xref target="differences.between.http.and.mime"/>).
-</t>
-<t>
-   MIME's canonical form requires that media subtypes of the "text"
-   type use CRLF as the text line break. HTTP allows the
-   transfer of text media with plain CR or LF alone representing a line
-   break, when such line breaks are consistent for an entire representation.
-   An HTTP sender &MAY; generate, and a recipient &MUST; be able to parse,
-   line breaks in text media that consist of CRLF, bare CR, or bare LF.
-   In addition, text media in HTTP is not limited to charsets that
-   use octets 13 and 10 for CR and LF, respectively.
-   This flexibility regarding line breaks applies only to text within a
-   representation that has been assigned a "text" media type; it does not
-   apply to "multipart" types or HTTP elements outside the content
-   (e.g., header fields).
-</t>
-<t>
-   If a representation is encoded with a content-coding, the underlying
-   data ought to be in a form defined above prior to being encoded.
-</t>
 </section>
 
 <section title="Multipart Types" anchor="multipart.types">
@@ -5276,8 +5252,7 @@ Expect: 100-continue
 </t>
 <t>
    A server &SHOULD-NOT; use the From header field for access control or
-   authentication, since most recipients will assume that the field value is
-   public information.
+   authentication.
 </t>
 </section>
 
@@ -11830,7 +11805,6 @@ Content-Type: text/plain
     <x:has anchor="body.content-length"/>
     <x:has anchor="compatibility.with.http.1.0.persistent.connections"/>
     <x:has anchor="chunked.trailer.section"/>
-    <x:has anchor="differences.between.http.and.mime"/>
     <x:has anchor="field.parsing"/>
     <x:has anchor="h1.effective.request.uri"/>
     <x:has anchor="field.transfer-encoding"/>
@@ -11838,6 +11812,7 @@ Content-Type: text/plain
     <x:has anchor="line.folding"/>
     <x:has anchor="message.body"/>
     <x:has anchor="persistent.tear-down"/>
+    <x:has anchor="persistent.failures"/>
     <x:has anchor="request.smuggling"/>
     <x:has anchor="transfer.codings"/>
     <x:has anchor="Messaging-security.considerations" target="security.considerations"/>
@@ -11860,16 +11835,6 @@ Content-Type: text/plain
     <x:has anchor="validation.received"/>
     <x:has anchor="Caching-security.considerations" target="security.considerations"/>
   </x:source>
-</reference>
-
-<reference anchor="RFC2045">
-  <front>
-    <title abbrev="Internet Message Bodies">Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies</title>
-    <author initials="N." surname="Freed" fullname="Ned Freed"/>
-    <author initials="N.S." surname="Borenstein" fullname="Nathaniel S. Borenstein"/>
-    <date month="November" year="1996"/>
-  </front>
-  <seriesInfo name="RFC" value="2045"/>
 </reference>
 
 <reference anchor="RFC2046">
@@ -13022,6 +12987,12 @@ Content-Type: text/plain
    versions into the future of HTTP. (<xref target="message.abstraction"/>)
 </t>
 <t>
+   The terms "payload" and "payload body" have been replaced with "content", to better
+   align with its usage elsewhere (e.g., in field names) and to avoid confusion
+   with frame payloads in HTTP/2 and HTTP/3.
+   (<xref target="content"/>)
+</t>
+<t>
    The term "effective request URI" has been replaced with "target URI".
    (<xref target="target.resource"/>)
 </t>
@@ -13469,8 +13440,10 @@ Content-Type: text/plain
   <li>In <xref target="status.codes"/>, clarify that status code values outside the range 100..599 are invalid, and recommend error handling (<eref target="https://github.com/httpwg/http-core/issues/684"/>)</li>
   <li>Avoid the term "whitelist" (<eref target="https://github.com/httpwg/http-core/issues/688"/>)</li>
   <li>In <xref target="field-values"/>, tighten the recommendation for characters in newly defined fields, making it consistent with obs-text (<eref target="https://github.com/httpwg/http-core/issues/696"/>)</li>
+  <li>Remove "Canonicalization and Text Defaults" (<eref target="https://github.com/httpwg/http-core/issues/703"/>)</li>
   <li>In <xref target="charset"/>, remove the "charset" ABNF production, and clarify where charsets appear (<eref target="https://github.com/httpwg/http-core/issues/713"/>)</li>
   <li>In <xref target="field.accept-encoding"/>, clarify that selection <em>between</em> multiple acceptable codings is only relevant when they have the same purpose (<eref target="https://github.com/httpwg/http-core/issues/714"/>)</li>
+  <li>In <xref target="connections"/>, clarify duplexing semantics (<eref target="https://github.com/httpwg/http-core/issues/741"/>)</li>
   <li>In <xref target="connections"/>, explain the implications of statelessness more clearly (<eref target="https://github.com/httpwg/http-core/issues/743"/>)</li>
   <li>In <xref target="field.content-length"/>, be more explicit about invalid and incorrect values (<eref target="https://github.com/httpwg/http-core/issues/748"/>)</li>
   <li>Move discussion of statelessness from <xref target="intermediaries"/> to <xref target="connections"/> (<eref target="https://github.com/httpwg/http-core/issues/753"/>)</li>
