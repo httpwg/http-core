@@ -633,10 +633,17 @@
    might act as a client on some connections and a server on others.
 </t>
 <t>
-   HTTP is defined as a stateless protocol, meaning that each request message
-   can be understood in isolation.  Many implementations depend on HTTP's
-   stateless design in order to reuse proxied connections or dynamically
-   load balance requests across multiple servers.  Hence, a server &MUST-NOT;
+   HTTP is defined as a stateless protocol, meaning that each request message's semantics
+   can be understood in isolation, and that the relationship between connections
+   and messages on them has no impact on the interpretation of those messages.
+   For example, a CONNECT request (<xref target="CONNECT"/>) or a request with
+   the Upgrade header field (<xref target="field.upgrade"/>) can occur at any time,
+   not just in the first message on a connection. Many implementations depend on
+   HTTP's stateless design in order to reuse proxied connections or dynamically
+   load balance requests across multiple servers.
+</t>
+<t>
+   As a result, a server &MUST-NOT;
    assume that two requests on the same connection are from the same user
    agent unless the connection is secured and specific to that agent.
    Some non-standard HTTP extensions (e.g., <xref target="RFC4559"/>) have
@@ -2683,11 +2690,19 @@ Host: www.example.org
    messages, while others use an explicit identifier.
 </t>
 <t>
-   Responses (both <x:ref>final</x:ref> and <x:ref>interim</x:ref>) can be sent
-   at any time after a
-   request is received, even if it is not yet complete. However, clients
+   All responses, regardless of the status code (including <x:ref>interim</x:ref>
+   responses) can be sent at any time after a request is received, even if the
+   request is not yet complete. A response can complete before its
+   corresponding request is complete. Likewise, clients are not expected
+   to wait any specific amount of time for a response. Clients
    (including intermediaries) might abandon a request if the response is not
    forthcoming within a reasonable period of time.
+</t>
+<t>
+   A client that receives a response while the associated request is
+   still being sent &SHOULD; continue sending that request, unless it receives
+   an explicit indication to the contrary (see, e.g., <xref
+   target="persistent.failures"/> and <xref target="RFC7540" section="6.4"/>).
 </t>
 </section>
 
@@ -11798,6 +11813,7 @@ Content-Type: text/plain
     <x:has anchor="line.folding"/>
     <x:has anchor="message.body"/>
     <x:has anchor="persistent.tear-down"/>
+    <x:has anchor="persistent.failures"/>
     <x:has anchor="request.smuggling"/>
     <x:has anchor="transfer.codings"/>
     <x:has anchor="Messaging-security.considerations" target="security.considerations"/>
@@ -12972,6 +12988,12 @@ Content-Type: text/plain
    versions into the future of HTTP. (<xref target="message.abstraction"/>)
 </t>
 <t>
+   The terms "payload" and "payload body" have been replaced with "content", to better
+   align with its usage elsewhere (e.g., in field names) and to avoid confusion
+   with frame payloads in HTTP/2 and HTTP/3.
+   (<xref target="content"/>)
+</t>
+<t>
    The term "effective request URI" has been replaced with "target URI".
    (<xref target="target.resource"/>)
 </t>
@@ -13422,6 +13444,8 @@ Content-Type: text/plain
   <li>Remove "Canonicalization and Text Defaults" (<eref target="https://github.com/httpwg/http-core/issues/703"/>)</li>
   <li>In <xref target="charset"/>, remove the "charset" ABNF production, and clarify where charsets appear (<eref target="https://github.com/httpwg/http-core/issues/713"/>)</li>
   <li>In <xref target="field.accept-encoding"/>, clarify that selection <em>between</em> multiple acceptable codings is only relevant when they have the same purpose (<eref target="https://github.com/httpwg/http-core/issues/714"/>)</li>
+  <li>In <xref target="connections"/>, clarify duplexing semantics (<eref target="https://github.com/httpwg/http-core/issues/741"/>)</li>
+  <li>In <xref target="connections"/>, explain the implications of statelessness more clearly (<eref target="https://github.com/httpwg/http-core/issues/743"/>)</li>
   <li>In <xref target="field.content-length"/>, be more explicit about invalid and incorrect values (<eref target="https://github.com/httpwg/http-core/issues/748"/> and <eref target="https://github.com/httpwg/http-core/issues/749"/>)</li>
   <li>Move discussion of statelessness from <xref target="intermediaries"/> to <xref target="connections"/> (<eref target="https://github.com/httpwg/http-core/issues/753"/>)</li>
 </ul>
