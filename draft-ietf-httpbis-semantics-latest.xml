@@ -2717,6 +2717,11 @@ Host: www.example.org
    can enhance (or interfere) with either direction of the stream.
 </t>
 <t>
+   Intermediaries are expected to forward messages even when protocol elements
+   are not recognized (e.g., new methods, status codes, or field names), since that
+   preserves extensibility for downstream recipients.
+</t>
+<t>
    An intermediary not acting as a tunnel &MUST; implement the
    <x:ref>Connection</x:ref> header field, as specified in
    <xref target="field.connection"/>, and exclude fields from being forwarded
@@ -3614,6 +3619,7 @@ Upgrade: websocket
    Since there is no predefined limit to the length of content, a
    recipient &MUST; anticipate potentially large decimal numerals and
    prevent parsing errors due to integer conversion overflows
+   or precision loss due to integer conversion
    (<xref target="attack.protocol.element.length"/>).
 </t>
 <t>
@@ -4890,38 +4896,42 @@ Content-Encoding: gzip
    (Transport Layer Security, <xref target="RFC8446"/>).
 </t>
 <t>
+   CONNECT uses a special form of request target, unique to this method,
+   consisting of only the host and port number of the tunnel destination,
+   separated by a colon. There is no default port; a client &MUST; send the
+   port number even if the CONNECT request is based on a URI reference that
+   contains an authority component with an elided port
+   (<xref target="uri.references"/>). For example,
+</t>
+<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
+CONNECT server.example.com:80 HTTP/1.1
+Host: server.example.com
+
+</artwork>
+<t>
+   A server &MUST; reject a CONNECT request that targets an empty or invalid
+   port number, typically by responding with a 400 (Bad Request) status code.
+</t>
+<t>
    Because CONNECT changes the request/response nature of an HTTP connection,
    specific HTTP versions might have different ways of mapping its semantics
    into the protocol's wire format.
 </t>
 <t>
-   CONNECT is intended only for use in requests to a proxy.
-   An origin server that receives a CONNECT request for itself &MAY;
-   respond with a <x:ref>2xx (Successful)</x:ref> status code to indicate that a connection
-   is established.  However, most origin servers do not implement CONNECT.
+   CONNECT is intended for use in requests to a proxy.
+   The recipient can establish a tunnel either by directly connecting to
+   the server identified by the request target or, if configured to use
+   another proxy, by forwarding the CONNECT request to the next inbound proxy.
+   An origin server &MAY; accept a CONNECT request, but most origin servers
+   do not implement CONNECT.
 </t>
 <t>
-   A client sending a CONNECT request &MUST; send the authority component
-   (described in Section 3.2 of <xref target="RFC3986"/>) as the request target;
-   i.e., the request target consists of only the host name and port number of the
-   tunnel destination, separated by a colon. For example,
-</t>
-<artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-CONNECT server.example.com:80 HTTP/1.1
-Host: server.example.com:80
-
-</artwork>
-<t>
-   The recipient proxy can establish a tunnel either by directly connecting to
-   the request target or, if configured to use another proxy, by forwarding
-   the CONNECT request to the next inbound proxy.
    Any <x:ref>2xx (Successful)</x:ref> response indicates
    that the sender (and all inbound proxies) will switch to tunnel mode
-   immediately after the blank line that concludes the successful response's
-   header section; data received after that blank line is from the server
-   identified by the request target.
+   immediately after the response header section; data received after that
+   header section is from the server identified by the request target.
    Any response other than a successful response indicates that the tunnel
-   has not yet been formed and that the connection remains governed by HTTP.
+   has not yet been formed.
 </t>
 <t>
    A tunnel is closed when a tunnel intermediary detects that either side
@@ -4934,8 +4944,8 @@ Host: server.example.com:80
    authority to create a tunnel.  For example,
 </t>
 <artwork type="message/http; msgtype=&#34;request&#34;" x:indent-with="  ">
-CONNECT server.example.com:80 HTTP/1.1
-Host: server.example.com:80
+CONNECT server.example.com:443 HTTP/1.1
+Host: server.example.com:443
 Proxy-Authorization: basic aGVsbG86d29ybGQ=
 
 </artwork>
@@ -8247,8 +8257,7 @@ Content-Range: exampleunit 11.2-14.3/25
    via the <x:ref>Upgrade</x:ref> header field (<xref target="field.upgrade"/>), for
    a change in the application protocol being used on this connection.
    The server &MUST; generate an Upgrade header field in the response that
-   indicates which protocol(s) will be switched to immediately after the empty
-   line that terminates the 101 response.
+   indicates which protocol(s) will be in effect after this response.
 </t>
 <t>
    It is assumed that the server will only agree to switch protocols when
@@ -13439,14 +13448,17 @@ Content-Type: text/plain
 <ul x:when-empty="None yet.">
   <li>In <xref target="status.codes"/>, clarify that status code values outside the range 100..599 are invalid, and recommend error handling (<eref target="https://github.com/httpwg/http-core/issues/684"/>)</li>
   <li>Avoid the term "whitelist" (<eref target="https://github.com/httpwg/http-core/issues/688"/>)</li>
+  <li>In <xref target="message.forwarding"/>, discuss extensibility (<eref target="https://github.com/httpwg/http-core/issues/692"/>)</li>
   <li>In <xref target="field-values"/>, tighten the recommendation for characters in newly defined fields, making it consistent with obs-text (<eref target="https://github.com/httpwg/http-core/issues/696"/>)</li>
   <li>Remove "Canonicalization and Text Defaults" (<eref target="https://github.com/httpwg/http-core/issues/703"/>)</li>
   <li>In <xref target="charset"/>, remove the "charset" ABNF production, and clarify where charsets appear (<eref target="https://github.com/httpwg/http-core/issues/713"/>)</li>
   <li>In <xref target="field.accept-encoding"/>, clarify that selection <em>between</em> multiple acceptable codings is only relevant when they have the same purpose (<eref target="https://github.com/httpwg/http-core/issues/714"/>)</li>
+  <li>In <xref target="CONNECT"/>, clarify that the port is mandatory in a CONNECT request target (<eref target="https://github.com/httpwg/http-core/issues/736"/>) and that the tunnel begins after the header section (<eref target="https://github.com/httpwg/http-core/issues/737"/>)</li>
   <li>In <xref target="connections"/>, clarify duplexing semantics (<eref target="https://github.com/httpwg/http-core/issues/741"/>)</li>
   <li>In <xref target="connections"/>, explain the implications of statelessness more clearly (<eref target="https://github.com/httpwg/http-core/issues/743"/>)</li>
-  <li>In <xref target="field.content-length"/>, be more explicit about invalid and incorrect values (<eref target="https://github.com/httpwg/http-core/issues/748"/>)</li>
+  <li>In <xref target="field.content-length"/>, be more explicit about invalid and incorrect values (<eref target="https://github.com/httpwg/http-core/issues/748"/> and <eref target="https://github.com/httpwg/http-core/issues/749"/>)</li>
   <li>Move discussion of statelessness from <xref target="intermediaries"/> to <xref target="connections"/> (<eref target="https://github.com/httpwg/http-core/issues/753"/>)</li>
+  <li>In <xref target="status.101"/>, clarify that the upgraded protocol is in effect after the 101 response (<eref target="https://github.com/httpwg/http-core/issues/776"/>)</li>
 </ul>
 </section>
 </section>
