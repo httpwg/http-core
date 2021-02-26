@@ -1,7 +1,7 @@
 <!--
     Strip rfc2629.xslt extensions, generating XML input for "official" xml2rfc
 
-    Copyright (c) 2006-2020, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2021, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -126,11 +126,13 @@
       <xsl:text>&#10;</xsl:text>
       <xsl:copy/>
     </xsl:when>
-    <xsl:when test="substring($include, string-length($include) - 3) != '.xml'">
-      <xsl:apply-templates select="document(concat($include,'.xml'))" mode="cleanup"/>
-    </xsl:when>
     <xsl:otherwise>
-      <xsl:apply-templates select="document($include)" mode="cleanup"/>
+      <xsl:variable name="content">
+        <xsl:call-template name="obtain-reference-for-include-PI">
+          <xsl:with-param name="uri" select="$include"/>
+        </xsl:call-template>
+      </xsl:variable>  
+      <xsl:apply-templates select="exslt:node-set($content)//reference" mode="cleanup"/>
     </xsl:otherwise>
   </xsl:choose>
 </xsl:template>
@@ -1783,6 +1785,10 @@
         </references>
       </xsl:if>
     </xsl:when>
+    <xsl:when test="references and $xml2rfc-ext-xml2rfc-voc &lt; 3">
+      <!-- V2 does not allow nested references -->
+      <xsl:apply-templates select="references" mode="cleanup"/>
+    </xsl:when>
     <xsl:otherwise>
       <references>
         <xsl:variable name="title">
@@ -1965,7 +1971,7 @@
       <xsl:attribute name="target"><xsl:value-of select="$p/@anchor"/></xsl:attribute>
     </xsl:when>
     <xsl:otherwise>
-      <xsl:attribute name="target"><xsl:value-of select="@target"/></xsl:attribute>
+      <xsl:attribute name="target"><xsl:value-of select="."/></xsl:attribute>
     </xsl:otherwise>
   </xsl:choose>
 </xsl:template>
@@ -2125,6 +2131,21 @@
       <t>
         <xsl:value-of select="@x:when-empty"/>
       </t>
+    </xsl:when>
+    <xsl:when test="parent::dd">
+      <!-- ul nested in dd -->
+      <xsl:choose>
+        <xsl:when test="@empty='true'">
+          <list style="empty">
+            <xsl:apply-templates mode="cleanup"/>
+          </list>
+        </xsl:when>
+        <xsl:otherwise>
+          <list style="symbols">
+            <xsl:apply-templates mode="cleanup"/>
+          </list>
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:when>
     <xsl:otherwise>
       <t>
