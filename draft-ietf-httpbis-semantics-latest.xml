@@ -2151,9 +2151,8 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    Framing and control data is sent first, followed by a header section
    containing fields for the headers table. When a message includes content,
-   the content is sent after the header section and potentially
-   interleaved with zero or more trailer sections containing fields for the
-   trailers table.
+   the content is sent after the header section, potentially followed by a
+   trailer section that might contain fields for the trailers table.
 </t>
 <t>
    Messages are expected to be processed as a stream, wherein the purpose of
@@ -2162,7 +2161,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    header fields describe what needs to be known before receiving content,
    the content (when present) presumably contains what the recipient wants or
    needs to fulfill the message semantics, and trailer fields provide
-   additional metadata that can be dropped (safely ignored) when not desired.
+   optional metadata that was unknown prior to sending the content.
 </t>
 <t>
    Messages are intended to be <x:dfn>self-descriptive</x:dfn>:
@@ -2176,10 +2175,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    Note that this message abstraction is a generalization across many versions
    of HTTP, including features that might not be found in some versions. For
    example, trailers were introduced within the HTTP/1.1 chunked transfer
-   coding as a single trailer section after the content. An
-   equivalent feature is present in HTTP/2 and HTTP/3 within the header block
-   that terminates each stream. However, multiple trailer sections interleaved
-   with content have only been deployed as frame extensions.
+   coding as a trailer section after the content. An equivalent feature is
+   present in HTTP/2 and HTTP/3 within the header block that terminates each
+   stream.
 </t>
 
 <section title="Framing and Completeness" anchor="message.framing">
@@ -2219,7 +2217,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    protocol version.
 </t>
 <t>
-   In HTTP/1.1 <xref target="Messaging"/> and earlier, control data is sent
+   In HTTP/1.1 (<xref target="Messaging"/>) and earlier, control data is sent
    as the first line of a message. In HTTP/2 (<xref target="RFC7540"/>) and
    HTTP/3 (<xref target="HTTP3"/>), control data is sent as pseudo-header
    fields with a reserved name prefix (e.g., ":authority").
@@ -2426,10 +2424,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <iref primary="true" item="trailer fields"/>
 <iref primary="true" item="trailers"/>
 <t>
-   Fields (<xref target="fields"/>) that are sent/received after the header
-   section has ended (usually after the content begins to stream) are
-   referred to as "trailer fields" (or just "trailers", colloquially) and
-   located within a <x:dfn>trailer section</x:dfn>.
+   Fields (<xref target="fields"/>) that are located within a
+   <x:dfn>trailer section</x:dfn> are are referred to as "trailer fields"
+   (or just "trailers", colloquially).
    Trailer fields can be useful for supplying message integrity checks, digital
    signatures, delivery metrics, or post-processing status information.
 </t>
@@ -2444,7 +2441,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <section title="Limitations on use of Trailers" anchor="trailers.limitations">
 <t>
-   Trailer sections are only possible when supported by the version
+   A trailer section is only possible when supported by the version
    of HTTP in use and enabled by an explicit framing mechanism.
    For example, the chunked coding in HTTP/1.1 allows a trailer section to be
    sent after the content (<xref target="chunked.trailer.section"/>).
@@ -2488,39 +2485,27 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <section title="Processing Trailer Fields" anchor="trailers.processing">
 <t>
+   The "Trailer" header field (<xref target="field.trailer"/>) can be sent
+   to indicate fields likely to be sent in the trailer section, which allows
+   recipients to prepare for their receipt before processing the content.
+   For example, this could be useful if a field name indicates that a dynamic
+   checksum should be calculated as the content is received and then
+   immediately checked upon receipt of the trailer field value.
+</t>
+<t>
    Like header fields, trailer fields with the same name are processed in the
    order received; multiple trailer field lines with the same name have the
-   equivalent semantics as appending the multiple values as a list of members,
-   even when the field lines are received in separate trailer sections.
+   equivalent semantics as appending the multiple values as a list of members.
    Trailer fields that might be generated more than once during a message
    &MUST; be defined as a list-based field even if each member value is only
    processed once per field line received.
 </t>
 <t>
-   Trailer fields are expected (but not required) to be processed one trailer
-   section at a time. That is, for each trailer section received, a recipient
-   that is looking for trailer fields will parse the received section into
-   fields, invoke any associated processing for those fields at that point
-   in the message processing, and then append those fields to the set of
-   trailer fields received for the overall message.
-</t>
-<t>
-   This behavior allows for iterative processing of trailer fields that contain
-   incremental signatures or mid-stream status information, and fields that
-   might refer to each other's values within the same section. However,
-   there is no guarantee that trailer sections won't shift in relation to the
-   content stream, or won't be recombined (or dropped) in transit.
-   Trailer fields that refer to data outside the present trailer section need
-   to use self-descriptive references (i.e., refer to the data by name,
-   ordinal position, or an octet range) rather than assume it is the data
-   most recently received.
-</t>
-<t>
-   Likewise, at the end of a message, a recipient &MAY; treat the entire set
-   of received trailer fields as one data structure to be considered as the
-   message concludes. Additional processing expectations, if any, can be
-   defined within the field specification for a field intended for use in
-   trailers.
+   At the end of a message, a recipient &MAY; treat the set of received
+   trailer fields as a data structure of key/value pairs, similar to (but
+   separate from) the header fields. Additional processing expectations, if
+   any, can be defined within the field specification for a field intended
+   for use in trailers.
 </t>
 </section>
 </section>
@@ -10227,7 +10212,9 @@ Content-Type: text/plain
 </ul>
 <t>
    Names of content codings &MUST-NOT; overlap with names of transfer codings
-   (as per the HTTP Transfer Coding registry), unless the encoding transformation is
+   (as per the "HTTP Transfer Coding registry", located at
+   <eref target="https://www.iana.org/assignments/http-parameters/"/>), unless
+   the encoding transformation is
    identical (as is the case for the compression codings defined in
    <xref target="content.codings"/>).
 </t>
@@ -12984,12 +12971,6 @@ Content-Type: text/plain
    (<xref target="trailers.limitations"/>)
 </t>
 <t>
-   Trailer fields can now potentially appear as multiple trailer sections,
-   if allowed by the HTTP version and framing in use, with processing
-   described as being iterative as each section is received.
-   (<xref target="trailers.processing"/>)
-</t>
-<t>
    Made the priority of the absolute form of the request URI over the Host
    header by origin servers explicit, to align with proxy handling.
    (<xref target="field.host"/>)
@@ -13486,6 +13467,7 @@ Content-Type: text/plain
   <li>In <xref target="status.codes"/>, clarify that status code values outside the range 100..599 are invalid, and recommend error handling (<eref target="https://github.com/httpwg/http-core/issues/684"/>)</li>
   <li>In <xref target="requirements.notation"/>, replaced requirement on semantic conformance with permission to ignore/workaround implementation-specific failures (<eref target="https://github.com/httpwg/http-core/issues/687"/>)</li>
   <li>Avoid the term "whitelist" (<eref target="https://github.com/httpwg/http-core/issues/688"/>)</li>
+  <li>Remove remaining normative references to HTTP/1.1 (<eref target="https://github.com/httpwg/http-core/issues/690"/>)</li>
   <li>In <xref target="message.forwarding"/>, discuss extensibility (<eref target="https://github.com/httpwg/http-core/issues/692"/>)</li>
   <li>In <xref target="field-values"/>, tighten the recommendation for characters in newly defined fields, making it consistent with obs-text (<eref target="https://github.com/httpwg/http-core/issues/696"/>)</li>
   <li>Remove "Canonicalization and Text Defaults" (<eref target="https://github.com/httpwg/http-core/issues/703"/>)</li>
@@ -13495,12 +13477,13 @@ Content-Type: text/plain
   <li>In <xref target="field.accept-encoding"/>, clarify that selection <em>between</em> multiple acceptable codings is only relevant when they have the same purpose (<eref target="https://github.com/httpwg/http-core/issues/714"/>)</li>
   <li>Throughout, be consistent about 'content coding' vs 'content-coding' (<eref target="https://github.com/httpwg/http-core/issues/719"/>)</li>
   <li>In <xref target="CONNECT"/>, clarify that the port is mandatory in a CONNECT request target (<eref target="https://github.com/httpwg/http-core/issues/736"/>) and that the tunnel begins after the header section (<eref target="https://github.com/httpwg/http-core/issues/737"/>)</li>
+  <li>In <xref target="trailer.fields"/>, remove mid-stream trailers (<eref target="https://github.com/httpwg/http-core/issues/740"/>)</li>
   <li>In <xref target="connections"/>, clarify duplexing semantics (<eref target="https://github.com/httpwg/http-core/issues/741"/>)</li>
   <li>In <xref target="connections"/>, explain the implications of statelessness more clearly (<eref target="https://github.com/httpwg/http-core/issues/743"/>)</li>
   <li>In <xref target="field.content-length"/>, be more explicit about invalid and incorrect values (<eref target="https://github.com/httpwg/http-core/issues/748"/> and <eref target="https://github.com/httpwg/http-core/issues/749"/>)</li>
   <li>Move discussion of statelessness from <xref target="intermediaries"/> to <xref target="connections"/> (<eref target="https://github.com/httpwg/http-core/issues/753"/>)</li>
-  <li>In <xref target="status.101"/>, clarify that the upgraded protocol is in effect after the 101 response (<eref target="https://github.com/httpwg/http-core/issues/776"/>)</li>
-  <li>Remove remaining normative references to HTTP/1.1 (<eref target="https://github.com/httpwg/http-core/issues/690"/>)</li>
+  <li>In <xref target="status.101"/>, clarify that the upgraded protocol is in effect after the 101 response (<eref target="https://github.com/httpwg/http-core/issues/776"/>)</li
+  <li>Throughout, remove unneeded normative references to <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/795"/>)</li>
 </ul>
 </section>
 </section>
