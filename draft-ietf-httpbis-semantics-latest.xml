@@ -1645,11 +1645,9 @@ Content-Type: text/plain
   <x:anchor-alias value="singleton.field"/>
   <x:anchor-alias value="list.field"/>
 <t>
-   HTTP field values typically have their syntax defined using ABNF
-   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
-   as necessary, and are usually constrained to the range of US-ASCII characters.
-   Fields needing a greater range of characters can use an encoding
-   such as the one defined in <xref target="RFC8187"/>.
+   HTTP field values consist of a sequence of characters in a format defined
+   by the field's grammar. Each field's grammar is usually defined using
+   ABNF (<xref target="RFC5234"/>).
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
   <x:ref>field-value</x:ref>    = *<x:ref>field-content</x:ref>
@@ -1658,44 +1656,52 @@ Content-Type: text/plain
   <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
 </sourcecode>
 <t>
+   A field value does not include leading or trailing whitespace. When a
+   specific version of HTTP allows such whitespace to appear in a message,
+   a field parsing implementation &MUST; exclude such whitespace prior to
+   evaluating the field value.
+</t>
+<t>
+   Field values are usually constrained to the range of US-ASCII characters
+   <xref target="USASCII"/>.
+   Fields needing a greater range of characters can use an encoding,
+   such as the one defined in <xref target="RFC8187"/>.
    Historically, HTTP allowed field content with text in the ISO-8859-1
    charset <xref target="ISO-8859-1"/>, supporting other charsets only
    through use of <xref target="RFC2047"/> encoding.
-   In practice, most HTTP field values use only a subset of the
-   US-ASCII charset <xref target="USASCII"/>. Newly defined
-   fields &SHOULD; limit their values to visible US-ASCII octets
-   (VCHAR), SP, and HTAB.
+   Specifications for newly defined fields &SHOULD; limit their values to
+   visible US-ASCII octets (VCHAR), SP, and HTAB.
    A recipient &SHOULD; treat other octets in field content (obs-text) as
    opaque data.
 </t>
 <t>
-   Field values containing CR or NUL characters are invalid and dangerous, due
-   to the varying ways that implementations might parse and interpret those characters;
-   a recipient of CR or NUL within a field value &MUST; either reject the message or
-   replace each of those characters with SP before further processing or forwarding
-   of that message. Field values containing other CTL characters are also invalid;
-   however, recipients &MAY; retain such characters for the sake of robustness if
-   they only appear within safe field value contexts (e.g., data not required by HTTP).
+   Field values containing CR or NUL characters are invalid and dangerous,
+   due to the varying ways that implementations might parse and interpret
+   those characters; a recipient of CR or NUL within a field value &MUST;
+   either reject the message or replace each of those characters with SP
+   before further processing or forwarding of that message. Field values
+   containing other CTL characters are also invalid; however,
+   recipients &MAY; retain such characters for the sake of robustness if they
+   only appear within safe field value contexts (e.g., opaque data).
+</t>
+<t><iref item="singleton field"/>
+   Fields that only anticipate a single member as the field value are
+   referred to as <x:dfn>singleton fields</x:dfn>.
+</t>
+<t><iref item="list-based field"/>
+   Fields that allow multiple members as the field value are referred to as
+   <x:dfn>list-based fields</x:dfn>. The list operator extension of
+   <xref target="abnf.extension"/> is used as a common notation for defining
+   field values that can contain multiple members.
 </t>
 <t>
-   Leading and trailing whitespace in field values &MUST; be removed before the
-   field value is consumed. Field definitions where such
-   whitespace in values is significant will have to use a container syntax such
-   as quoted-string (<xref target="quoted.strings"/>).
-</t>
-<t><iref item="list-based field"/><iref item="singleton field"/>
-   Commas (",") often are used to separate members in field values.
-   Fields that allow multiple members are referred to as
-   <x:dfn>list-based fields</x:dfn>. Fields that only anticipate a single
-   member are referred to as <x:dfn>singleton fields</x:dfn>.
-</t>
-<t>
-   Because commas are used as a generic delimiter between members, they need
+   Because commas (",") are used as the delimiter between members, they need
    to be treated with care if they are allowed as data within a member. This
    is true for both list-based and singleton fields, since a singleton field
    might be sent with multiple members erroneously; being able to detect
    this condition improves interoperability. Fields that expect to contain a
-   comma within a member, such as an <x:ref>HTTP-date</x:ref> or <x:ref>URI-reference</x:ref>
+   comma within a member, such as within an <x:ref>HTTP-date</x:ref> or
+   <x:ref>URI-reference</x:ref>
    element, ought to be defined with delimiters around that element to
    distinguish any comma within that data from potential list separators.
 </t>
@@ -1704,12 +1710,12 @@ Content-Type: text/plain
    could be safely carried in list-based field values like these:
 </t>
 <artwork type="example">
-  Example-URI-Field: "http://example.com/a.html,foo",
-                     "http://without-a-comma.example.com/"
-  Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+  Example-URIs: "http://example.com/a.html,foo",
+                "http://without-a-comma.example.com/"
+  Example-Dates: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
 </artwork>
 <t>
-   Note that double-quote delimiters almost always are used with the
+   Note that double-quote delimiters are almost always used with the
    quoted-string production; using a different syntax inside double-quotes
    will likely cause unnecessary confusion.
 </t>
@@ -1723,28 +1729,24 @@ Content-Type: text/plain
    was received as a token or a quoted string.
 </t>
 <t>
-   Historically, HTTP field values could be extended over multiple
-   lines by preceding each extra line with at least one space or horizontal
-   tab (<x:ref>obs-fold</x:ref>).
-   This document assumes that any such obsolete line folding has been replaced with one or more
-   <x:ref>SP</x:ref> octets prior to interpreting the field value,
-   as described in <xref target="line.folding"/>.
+   Historically, HTTP field values could be extended over multiple lines by
+   preceding each extra line with at least one space or horizontal tab
+   (<x:ref>obs-fold</x:ref>). This document assumes that any such obsolete
+   line folding has been removed prior to interpreting the field value
+   (e.g., as described in <xref target="line.folding"/>).
 </t>
 <aside>
    <t>
-      &Note; This specification does not use ABNF rules to define each "Field
-      Name: Field Value" pair, as was done in earlier editions (published
-      before <xref target="RFC7230"/>). Instead, ABNF rules are named according
-      to each registered field name, wherein the rule defines the valid grammar
-      for that field's corresponding field values (i.e., after the field value
-      has been extracted by a generic field parser).
+      &Note; For defining field value syntax, this specification uses an ABNF
+      rule named after the field name to define the allowed grammar for that
+      field's value (after said value has been extracted from the underlying
+      messaging syntax and multiple instances combined into a list).
    </t>
 </aside>
 </section>
 
 <section title="Common Rules for Defining Field Values" anchor="field-components">
   <x:anchor-alias value="header.components"/>
-
 
 <section title="Lists (#rule ABNF Extension)" anchor="abnf.extension">
 <t>
