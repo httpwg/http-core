@@ -686,49 +686,44 @@ Host: www.example.org:8001
 <section title="Reconstructing the Target URI" anchor="reconstructing.target.uri">
   <x:anchor-alias value="h1.effective.request.uri"/>
 <t>
-   Since the request-target often contains only part of the user agent's
-   target URI, a server constructs its value to properly service the request
-   (<xref target="target.resource"/>).
-</t>
-<t>
    If the <x:ref>request-target</x:ref> is in <x:ref>absolute-form</x:ref>,
    the target URI is the same as the request-target. Otherwise, the
-   target URI is constructed as follows:
+   server reconstructs the target URI from the connection context and various
+   parts of the request message in order to identify the target resource
+   (<xref target="target.resource"/>):
 </t>
 <ul>
-<li>
+<li><t>
    If the server's configuration (or outbound gateway) provides a fixed URI
    scheme, that scheme is used for the target URI.
    Otherwise, if the request is received over a secured connection,
    the target URI's scheme is "https"; if not, the scheme is "http".
-</li>
-<li>
-   If the server's configuration (or outbound gateway) provides a fixed URI
-   <x:ref>authority</x:ref> component, that authority is used for the
-   target URI. If not, then if the request-target is in
-   <x:ref>authority-form</x:ref>, the target URI's authority
-   component is the same as the request-target.
-   If not, then if a <x:ref>Host</x:ref> header field is supplied with a
-   non-empty field value, the authority component is the same as the
-   Host field value. Otherwise, the authority component is assigned
-   the default name configured for the server and, if the connection's
-   incoming TCP port number differs from the default port for the target
-   URI's scheme, then a colon (":") and the incoming port number (in
-   decimal form) are appended to the authority component.
+</t></li>
+<li><t>
+   If the request-target is in <x:ref>authority-form</x:ref>,
+   the target URI's authority component is the same as the request-target.
+   Otherwise, the request-target is in <x:ref>origin-form</x:ref> and:
+</t>
+   <ul>
+   <li><t>if a valid <x:ref>Host</x:ref> header field is supplied with a
+       non-empty field value, the target URI's authority component is the
+       same as that Host field value; else,</t></li>
+   <li><t>the target URI's authority component is empty.</t></li>
+   </ul>
 </li>
 <li>
    If the request-target is in <x:ref>authority-form</x:ref> or
    <x:ref>asterisk-form</x:ref>, the target URI's combined
-   <x:ref>path</x:ref> and <x:ref>query</x:ref> component is empty. Otherwise,
-   the combined <x:ref>path</x:ref> and <x:ref>query</x:ref> component is the
-   same as the request-target.
+   <x:ref>path</x:ref> and <x:ref>query</x:ref> component is empty.
+   Otherwise, the target URI's combined <x:ref>path</x:ref> and
+   <x:ref>query</x:ref> component is provided by the request-target.
 </li>
-<li>
+</ul>
+<t>
    The components of the target URI, once determined as above, can
    be combined into <x:ref>absolute-URI</x:ref> form by concatenating the
    scheme, "://", authority, and combined path and query component.
-</li>
-</ul>
+</t>
 <t>
    Example 1: the following message received over an insecure TCP connection
 </t>
@@ -756,10 +751,30 @@ Host: www.example.org
 https://www.example.org
 </artwork>
 <t>
-   Recipients of an HTTP/1.0 request that lacks a <x:ref>Host</x:ref> header
-   field might need to use heuristics (e.g., examination of the URI path for
-   something unique to a particular host) in order to guess the
-   target URI's authority component.
+   If the received authority is empty and the indicated URI scheme
+   requires a non-empty authority (as is the case for "http" and "https"),
+   the server can reject the request or determine whether a configured
+   default applies that is consistent with the incoming connection's context
+   (scheme, address, port, and locally-defined fields specific to that
+   server's configuration). In the latter case, an empty authority would be
+   replaced with the configured default before further processing of the
+   request.
+</t>
+<t>
+   However, supplying a default name for authority within the context of a
+   secured connection is inherently unsafe if there is any chance that the
+   user agent's intended authority (used to verify the secured connection)
+   might differ from the selected default. A server that can uniquely
+   identify an authority from the request context &MAY; use that identity as
+   a default without this risk. Alternatively, it might be better to redirect
+   the request to a safe resource that explains how to obtain a new client.
+</t>
+<t>
+   Note that reconstructing the client's target URI is only half of the
+   process for identifying a target resource. The other half is determining
+   whether that target URI identifies a resource for which the server is
+   willing and able to send a response, as defined in
+   <xref target="routing.reject"/>.
 </t>
 </section>
 </section>
@@ -2344,6 +2359,7 @@ https://www.example.org
     <x:has anchor="OPTIONS"/>
     <x:has anchor="abnf.extension"/>
     <x:has anchor="routing.inbound"/>
+    <x:has anchor="routing.reject"/>
     <x:has anchor="content.codings"/>
     <x:has anchor="field-names"/>
     <x:has anchor="field-values"/>
