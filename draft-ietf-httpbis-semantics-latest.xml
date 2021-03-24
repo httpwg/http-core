@@ -1645,11 +1645,9 @@ Example-Field: Baz
   <x:anchor-alias value="singleton.field"/>
   <x:anchor-alias value="list.field"/>
 <t>
-   HTTP field values typically have their syntax defined using ABNF
-   (<xref target="RFC5234"/>), using the extension defined in <xref target="abnf.extension"/>
-   as necessary, and are usually constrained to the range of US-ASCII characters.
-   Fields needing a greater range of characters can use an encoding
-   such as the one defined in <xref target="RFC8187"/>.
+   HTTP field values consist of a sequence of characters in a format defined
+   by the field's grammar. Each field's grammar is usually defined using
+   ABNF (<xref target="RFC5234"/>).
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="field-value"/><iref primary="true" item="Grammar" subitem="field-vchar"/><iref primary="true" item="Grammar" subitem="field-content"/>
   <x:ref>field-value</x:ref>    = *<x:ref>field-content</x:ref>
@@ -1658,44 +1656,52 @@ Example-Field: Baz
   <x:ref>field-vchar</x:ref>    = <x:ref>VCHAR</x:ref> / <x:ref>obs-text</x:ref>
 </sourcecode>
 <t>
+   A field value does not include leading or trailing whitespace. When a
+   specific version of HTTP allows such whitespace to appear in a message,
+   a field parsing implementation &MUST; exclude such whitespace prior to
+   evaluating the field value.
+</t>
+<t>
+   Field values are usually constrained to the range of US-ASCII characters
+   <xref target="USASCII"/>.
+   Fields needing a greater range of characters can use an encoding,
+   such as the one defined in <xref target="RFC8187"/>.
    Historically, HTTP allowed field content with text in the ISO-8859-1
    charset <xref target="ISO-8859-1"/>, supporting other charsets only
    through use of <xref target="RFC2047"/> encoding.
-   In practice, most HTTP field values use only a subset of the
-   US-ASCII charset <xref target="USASCII"/>. Newly defined
-   fields &SHOULD; limit their values to visible US-ASCII octets
-   (VCHAR), SP, and HTAB.
+   Specifications for newly defined fields &SHOULD; limit their values to
+   visible US-ASCII octets (VCHAR), SP, and HTAB.
    A recipient &SHOULD; treat other octets in field content (obs-text) as
    opaque data.
 </t>
 <t>
-   Field values containing CR or NUL characters are invalid and dangerous, due
-   to the varying ways that implementations might parse and interpret those characters;
-   a recipient of CR or NUL within a field value &MUST; either reject the message or
-   replace each of those characters with SP before further processing or forwarding
-   of that message. Field values containing other CTL characters are also invalid;
-   however, recipients &MAY; retain such characters for the sake of robustness if
-   they only appear within safe field value contexts (e.g., data not required by HTTP).
+   Field values containing CR or NUL characters are invalid and dangerous,
+   due to the varying ways that implementations might parse and interpret
+   those characters; a recipient of CR or NUL within a field value &MUST;
+   either reject the message or replace each of those characters with SP
+   before further processing or forwarding of that message. Field values
+   containing other CTL characters are also invalid; however,
+   recipients &MAY; retain such characters for the sake of robustness if they
+   only appear within safe field value contexts (e.g., opaque data).
+</t>
+<t><iref item="singleton field"/>
+   Fields that only anticipate a single member as the field value are
+   referred to as <x:dfn>singleton fields</x:dfn>.
+</t>
+<t><iref item="list-based field"/>
+   Fields that allow multiple members as the field value are referred to as
+   <x:dfn>list-based fields</x:dfn>. The list operator extension of
+   <xref target="abnf.extension"/> is used as a common notation for defining
+   field values that can contain multiple members.
 </t>
 <t>
-   Leading and trailing whitespace in raw field values is removed upon field
-   parsing (e.g., <xref target="field.parsing"/>). Field definitions where leading or trailing
-   whitespace in values is significant will have to use a container syntax such
-   as quoted-string (<xref target="quoted.strings"/>).
-</t>
-<t><iref item="list-based field"/><iref item="singleton field"/>
-   Commas (",") often are used to separate members in field values.
-   Fields that allow multiple members are referred to as
-   <x:dfn>list-based fields</x:dfn>. Fields that only anticipate a single
-   member are referred to as <x:dfn>singleton fields</x:dfn>.
-</t>
-<t>
-   Because commas are used as a generic delimiter between members, they need
+   Because commas (",") are used as the delimiter between members, they need
    to be treated with care if they are allowed as data within a member. This
    is true for both list-based and singleton fields, since a singleton field
    might be sent with multiple members erroneously; being able to detect
    this condition improves interoperability. Fields that expect to contain a
-   comma within a member, such as an <x:ref>HTTP-date</x:ref> or <x:ref>URI-reference</x:ref>
+   comma within a member, such as within an <x:ref>HTTP-date</x:ref> or
+   <x:ref>URI-reference</x:ref>
    element, ought to be defined with delimiters around that element to
    distinguish any comma within that data from potential list separators.
 </t>
@@ -1704,12 +1710,12 @@ Example-Field: Baz
    could be safely carried in list-based field values like these:
 </t>
 <sourcecode type="http-message">
-Example-URI-Field: "http://example.com/a.html,foo",
-                  "http://without-a-comma.example.com/"
-Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
+  Example-URIs: "http://example.com/a.html,foo",
+                "http://without-a-comma.example.com/"
+  Example-Dates: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
 </sourcecode>
 <t>
-   Note that double-quote delimiters almost always are used with the
+   Note that double-quote delimiters are almost always used with the
    quoted-string production; using a different syntax inside double-quotes
    will likely cause unnecessary confusion.
 </t>
@@ -1723,28 +1729,24 @@ Example-Date-Field: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
    was received as a token or a quoted string.
 </t>
 <t>
-   Historically, HTTP field values could be extended over multiple
-   lines by preceding each extra line with at least one space or horizontal
-   tab (<x:ref>obs-fold</x:ref>).
-   This document assumes that any such obsolete line folding has been replaced with one or more
-   <x:ref>SP</x:ref> octets prior to interpreting the field value,
-   as described in <xref target="line.folding"/>.
+   Historically, HTTP field values could be extended over multiple lines by
+   preceding each extra line with at least one space or horizontal tab
+   (<x:ref>obs-fold</x:ref>). This document assumes that any such obsolete
+   line folding has been removed prior to interpreting the field value
+   (e.g., as described in <xref target="line.folding"/>).
 </t>
 <aside>
    <t>
-      &Note; This specification does not use ABNF rules to define each "Field
-      Name: Field Value" pair, as was done in earlier editions (published
-      before <xref target="RFC7230"/>). Instead, ABNF rules are named according
-      to each registered field name, wherein the rule defines the valid grammar
-      for that field's corresponding field values (i.e., after the field value
-      has been extracted by a generic field parser).
+      &Note; For defining field value syntax, this specification uses an ABNF
+      rule named after the field name to define the allowed grammar for that
+      field's value (after said value has been extracted from the underlying
+      messaging syntax and multiple instances combined into a list).
    </t>
 </aside>
 </section>
 
 <section title="Common Rules for Defining Field Values" anchor="field-components">
   <x:anchor-alias value="header.components"/>
-
 
 <section title="Lists (#rule ABNF Extension)" anchor="abnf.extension">
 <t>
@@ -2151,9 +2153,8 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <t>
    Framing and control data is sent first, followed by a header section
    containing fields for the headers table. When a message includes content,
-   the content is sent after the header section and potentially
-   interleaved with zero or more trailer sections containing fields for the
-   trailers table.
+   the content is sent after the header section, potentially followed by a
+   trailer section that might contain fields for the trailers table.
 </t>
 <t>
    Messages are expected to be processed as a stream, wherein the purpose of
@@ -2162,7 +2163,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    header fields describe what needs to be known before receiving content,
    the content (when present) presumably contains what the recipient wants or
    needs to fulfill the message semantics, and trailer fields provide
-   additional metadata that can be dropped (safely ignored) when not desired.
+   optional metadata that was unknown prior to sending the content.
 </t>
 <t>
    Messages are intended to be <x:dfn>self-descriptive</x:dfn>:
@@ -2170,16 +2171,18 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    looking at the message itself, after decoding or reconstituting parts that
    have been compressed or elided in transit, without requiring an
    understanding of the sender's current application state (established via
-   prior messages).
+   prior messages). However, a client &MUST; retain knowledge of the request when
+   parsing, interpreting, or caching a corresponding response. For example,
+   responses to the <x:ref>HEAD</x:ref> method look just like the beginning of a
+   response to <x:ref>GET</x:ref>, but cannot be parsed in the same manner.
 </t>
 <t>
    Note that this message abstraction is a generalization across many versions
    of HTTP, including features that might not be found in some versions. For
    example, trailers were introduced within the HTTP/1.1 chunked transfer
-   coding as a single trailer section after the content. An
-   equivalent feature is present in HTTP/2 and HTTP/3 within the header block
-   that terminates each stream. However, multiple trailer sections interleaved
-   with content have only been deployed as frame extensions.
+   coding as a trailer section after the content. An equivalent feature is
+   present in HTTP/2 and HTTP/3 within the header block that terminates each
+   stream.
 </t>
 
 <section title="Framing and Completeness" anchor="message.framing">
@@ -2219,7 +2222,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    protocol version.
 </t>
 <t>
-   In HTTP/1.1 <xref target="Messaging"/> and earlier, control data is sent
+   In HTTP/1.1 (<xref target="Messaging"/>) and earlier, control data is sent
    as the first line of a message. In HTTP/2 (<xref target="RFC7540"/>) and
    HTTP/3 (<xref target="HTTP3"/>), control data is sent as pseudo-header
    fields with a reserved name prefix (e.g., ":authority").
@@ -2426,10 +2429,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 <iref primary="true" item="trailer fields"/>
 <iref primary="true" item="trailers"/>
 <t>
-   Fields (<xref target="fields"/>) that are sent/received after the header
-   section has ended (usually after the content begins to stream) are
-   referred to as "trailer fields" (or just "trailers", colloquially) and
-   located within a <x:dfn>trailer section</x:dfn>.
+   Fields (<xref target="fields"/>) that are located within a
+   <x:dfn>trailer section</x:dfn> are are referred to as "trailer fields"
+   (or just "trailers", colloquially).
    Trailer fields can be useful for supplying message integrity checks, digital
    signatures, delivery metrics, or post-processing status information.
 </t>
@@ -2444,7 +2446,7 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <section title="Limitations on use of Trailers" anchor="trailers.limitations">
 <t>
-   Trailer sections are only possible when supported by the version
+   A trailer section is only possible when supported by the version
    of HTTP in use and enabled by an explicit framing mechanism.
    For example, the chunked coding in HTTP/1.1 allows a trailer section to be
    sent after the content (<xref target="chunked.trailer.section"/>).
@@ -2488,39 +2490,27 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 
 <section title="Processing Trailer Fields" anchor="trailers.processing">
 <t>
+   The "Trailer" header field (<xref target="field.trailer"/>) can be sent
+   to indicate fields likely to be sent in the trailer section, which allows
+   recipients to prepare for their receipt before processing the content.
+   For example, this could be useful if a field name indicates that a dynamic
+   checksum should be calculated as the content is received and then
+   immediately checked upon receipt of the trailer field value.
+</t>
+<t>
    Like header fields, trailer fields with the same name are processed in the
    order received; multiple trailer field lines with the same name have the
-   equivalent semantics as appending the multiple values as a list of members,
-   even when the field lines are received in separate trailer sections.
+   equivalent semantics as appending the multiple values as a list of members.
    Trailer fields that might be generated more than once during a message
    &MUST; be defined as a list-based field even if each member value is only
    processed once per field line received.
 </t>
 <t>
-   Trailer fields are expected (but not required) to be processed one trailer
-   section at a time. That is, for each trailer section received, a recipient
-   that is looking for trailer fields will parse the received section into
-   fields, invoke any associated processing for those fields at that point
-   in the message processing, and then append those fields to the set of
-   trailer fields received for the overall message.
-</t>
-<t>
-   This behavior allows for iterative processing of trailer fields that contain
-   incremental signatures or mid-stream status information, and fields that
-   might refer to each other's values within the same section. However,
-   there is no guarantee that trailer sections won't shift in relation to the
-   content stream, or won't be recombined (or dropped) in transit.
-   Trailer fields that refer to data outside the present trailer section need
-   to use self-descriptive references (i.e., refer to the data by name,
-   ordinal position, or an octet range) rather than assume it is the data
-   most recently received.
-</t>
-<t>
-   Likewise, at the end of a message, a recipient &MAY; treat the entire set
-   of received trailer fields as one data structure to be considered as the
-   message concludes. Additional processing expectations, if any, can be
-   defined within the field specification for a field intended for use in
-   trailers.
+   At the end of a message, a recipient &MAY; treat the set of received
+   trailer fields as a data structure of key/value pairs, similar to (but
+   separate from) the header fields. Additional processing expectations, if
+   any, can be defined within the field specification for a field intended
+   for use in trailers.
 </t>
 </section>
 </section>
@@ -5061,9 +5051,8 @@ Proxy-Authorization: basic aGVsbG86d29ybGQ=
    The TRACE method requests a remote, application-level loop-back of the
    request message. The final recipient of the request &SHOULD; reflect the
    message received, excluding some fields described below, back to the client
-   as the content of a <x:ref>200 (OK)</x:ref> response with a
-   <x:ref>Content-Type</x:ref> of "message/http"
-   (<xref target="media.type.message.http"/>).
+   as the content of a <x:ref>200 (OK)</x:ref> response. The "message/http"
+   (<xref target="media.type.message.http"/>) format is one way to do so.
    The final recipient is either the origin server or the first server to
    receive a <x:ref>Max-Forwards</x:ref> value of zero (0) in the request
    (<xref target="field.max-forwards"/>).
@@ -6303,28 +6292,18 @@ WWW-Authenticate: Basic realm="simple", Newauth realm="apps",
   <x:anchor-alias value="agent-driven negotiation"/>
 <t>
    With <x:dfn>reactive negotiation</x:dfn>
-   (a.k.a., <x:dfn>agent-driven negotiation</x:dfn>), selection of the best
-   response representation (regardless of the status code) is performed by the
-   user agent after receiving an initial response from the origin server that
-   contains a list of resources for alternative representations.
+   (a.k.a., <x:dfn>agent-driven negotiation</x:dfn>), selection of 
+   content (regardless of the status code) is performed by
+   the user agent after receiving an initial response. The mechanism for
+   reactive negotiation might be as simple as a list of references to
+   alternative representations.
 </t>
 <t>
-   If the user agent is not satisfied by the initial response representation,
-   it can perform a GET request on one or more of the alternative resources,
-   selected based on metadata included in the list, to obtain a different form
-   of representation for that response. Selection of alternatives might be
-   performed automatically by the user agent or manually by the user selecting
-   from a generated (possibly hypertext) menu.
-</t>
-<t>
-   Note that the above refers to representations of the response, in general,
-   not representations of the resource. The alternative representations are
-   only considered representations of the target resource if the response in
-   which those alternatives are provided has the semantics of being a
-   representation of the target resource (e.g., a <x:ref>200 (OK)</x:ref>
-   response to a GET request) or has the semantics of providing links to
-   alternative representations for the target resource
-   (e.g., a <x:ref>300 (Multiple Choices)</x:ref> response to a GET request).
+   If the user agent is not satisfied by the initial response content,
+   it can perform a GET request on one or more of the alternative resources
+   to obtain a different representation. Selection of such alternatives might
+   be performed automatically (by the user agent) or manually (e.g., by the
+   user selecting from a hypertext menu).
 </t>
 <t>
    A server might choose not to send an initial representation, other than
@@ -6332,7 +6311,7 @@ WWW-Authenticate: Basic realm="simple", Newauth realm="apps",
    negotiation by the user agent is preferred. For example, the alternatives
    listed in responses with the <x:ref>300 (Multiple Choices)</x:ref> and
    <x:ref>406 (Not Acceptable)</x:ref> status codes include information about
-   the available representations so that the user or user agent can react by
+   available representations so that the user or user agent can react by
    making a selection.
 </t>
 <t>
@@ -9712,7 +9691,7 @@ Content-Type: text/plain
    data format, since orthogonal technologies deserve orthogonal specification.
 </t>
 <t>
-   Since message parsing (<xref target="message.body"/>) needs to be
+   Since message parsing (<xref target="message.abstraction"/>) needs to be
    independent of method
    semantics (aside from responses to HEAD), definitions of new methods
    cannot change the parsing algorithm or prohibit the presence of content
@@ -10228,7 +10207,9 @@ Content-Type: text/plain
 </ul>
 <t>
    Names of content codings &MUST-NOT; overlap with names of transfer codings
-   (<xref target="transfer.codings"/>), unless the encoding transformation is
+   (as per the "HTTP Transfer Coding registry", located at
+   <eref target="https://www.iana.org/assignments/http-parameters/"/>), unless
+   the encoding transformation is
    identical (as is the case for the compression codings defined in
    <xref target="content.codings"/>).
 </t>
@@ -11841,25 +11822,6 @@ Content-Type: text/plain
 
 <references title="Normative References">
 
-<reference anchor="Messaging">
-  <x:source href="draft-ietf-httpbis-messaging-latest.xml" basename="draft-ietf-httpbis-messaging-latest">
-    <x:has anchor="body.content-length"/>
-    <x:has anchor="compatibility.with.http.1.0.persistent.connections"/>
-    <x:has anchor="chunked.trailer.section"/>
-    <x:has anchor="field.parsing"/>
-    <x:has anchor="h1.effective.request.uri"/>
-    <x:has anchor="field.transfer-encoding"/>
-    <x:has anchor="media.type.message.http"/>
-    <x:has anchor="line.folding"/>
-    <x:has anchor="message.body"/>
-    <x:has anchor="persistent.tear-down"/>
-    <x:has anchor="persistent.failures"/>
-    <x:has anchor="request.smuggling"/>
-    <x:has anchor="transfer.codings"/>
-    <x:has anchor="Messaging-security.considerations" target="security.considerations"/>
-  </x:source>
-</reference>
-
 <reference anchor="Caching">
   <x:source href="draft-ietf-httpbis-cache-latest.xml" basename="draft-ietf-httpbis-cache-latest">
     <x:has anchor="constructing.responses.from.caches"/>
@@ -12082,6 +12044,24 @@ Content-Type: text/plain
 </references>
 
 <references title="Informative References">
+
+<reference anchor="Messaging">
+  <x:source href="draft-ietf-httpbis-messaging-latest.xml" basename="draft-ietf-httpbis-messaging-latest">
+    <x:has anchor="body.content-length"/>
+    <x:has anchor="compatibility.with.http.1.0.persistent.connections"/>
+    <x:has anchor="chunked.trailer.section"/>
+    <x:has anchor="h1.effective.request.uri"/>
+    <x:has anchor="field.transfer-encoding"/>
+    <x:has anchor="media.type.message.http"/>
+    <x:has anchor="line.folding"/>
+    <x:has anchor="message.body"/>
+    <x:has anchor="persistent.tear-down"/>
+    <x:has anchor="persistent.failures"/>
+    <x:has anchor="request.smuggling"/>
+    <x:has anchor="transfer.codings"/>
+    <x:has anchor="Messaging-security.considerations" target="security.considerations"/>
+  </x:source>
+</reference>
 
 <reference anchor="Err1912" target="https://www.rfc-editor.org/errata/eid1912" quoteTitle="false">
   <front>
@@ -12985,12 +12965,6 @@ Content-Type: text/plain
    (<xref target="trailers.limitations"/>)
 </t>
 <t>
-   Trailer fields can now potentially appear as multiple trailer sections,
-   if allowed by the HTTP version and framing in use, with processing
-   described as being iterative as each section is received.
-   (<xref target="trailers.processing"/>)
-</t>
-<t>
    Made the priority of the absolute form of the request URI over the Host
    header by origin servers explicit, to align with proxy handling.
    (<xref target="field.host"/>)
@@ -13013,8 +12987,9 @@ Content-Type: text/plain
    (<xref target="resources"/>)
 </t>
 <t>
-   Clarify that CR and NUL in field values are to be rejected or
-   mapped to SP.
+   Clarified that CR and NUL in field values are to be rejected or
+   mapped to SP and that leading and trailing whitespace need to be
+   stripped from field values before they are consumed.
    (<xref target="field-values"/>)
 </t>
 <t>
@@ -13060,6 +13035,11 @@ Content-Type: text/plain
    Removed a superfluous requirement about setting <x:ref>Content-Length</x:ref>
    from the description of the OPTIONS method.
    (<xref target="OPTIONS"/>)
+</t>
+<t>
+   Removed normative requirement to use the "message/http" media type in
+   TRACE responses.
+   (<xref target="TRACE"/>)
 </t>
 <t>
    Restore list-based grammar for <x:ref>Expect</x:ref> for compatibility with
@@ -13487,20 +13467,26 @@ Content-Type: text/plain
   <li>In <xref target="status.codes"/>, clarify that status code values outside the range 100..599 are invalid, and recommend error handling (<eref target="https://github.com/httpwg/http-core/issues/684"/>)</li>
   <li>In <xref target="requirements.notation"/>, replaced requirement on semantic conformance with permission to ignore/workaround implementation-specific failures (<eref target="https://github.com/httpwg/http-core/issues/687"/>)</li>
   <li>Avoid the term "whitelist" (<eref target="https://github.com/httpwg/http-core/issues/688"/>)</li>
+  <li>In <xref target="TRACE"/>, remove the normative requirement to use the message/http media type (<eref target="https://github.com/httpwg/http-core/issues/690"/>)</li>
   <li>In <xref target="message.forwarding"/>, discuss extensibility (<eref target="https://github.com/httpwg/http-core/issues/692"/>)</li>
   <li>In <xref target="field-values"/>, tighten the recommendation for characters in newly defined fields, making it consistent with obs-text (<eref target="https://github.com/httpwg/http-core/issues/696"/>)</li>
+  <li>In <xref target="field-values"/>, leading/trailing whitespace removal is at time of use, not parsing (<eref target="https://github.com/httpwg/http-core/issues/697"/>)</li>
+  <li>In <xref target="message.abstraction"/>, clarify that HTTP self-descriptive messages have an exception in that the request must be understood in order to parse and interpret the response (<eref target="https://github.com/httpwg/http-core/issues/700"/>)</li>
   <li>Remove "Canonicalization and Text Defaults" (<eref target="https://github.com/httpwg/http-core/issues/703"/>)</li>
   <li>In <xref target="field.referer"/>, refine what can be sent in Referer, and when (<eref target="https://github.com/httpwg/http-core/issues/709"/>)</li>
   <li>In <xref target="protection.space"/>, explain that the protection space is not defined without additional information (<eref target="https://github.com/httpwg/http-core/issues/710"/>)</li>
+  <li>Simplify description of reactive content negotiation in <xref target="reactive.negotiation"/> (<eref target="https://github.com/httpwg/http-core/issues/712"/>)</li>
   <li>In <xref target="charset"/>, remove the "charset" ABNF production, and clarify where charsets appear (<eref target="https://github.com/httpwg/http-core/issues/713"/>)</li>
   <li>In <xref target="field.accept-encoding"/>, clarify that selection <em>between</em> multiple acceptable codings is only relevant when they have the same purpose (<eref target="https://github.com/httpwg/http-core/issues/714"/>)</li>
   <li>Throughout, be consistent about 'content coding' vs 'content-coding' (<eref target="https://github.com/httpwg/http-core/issues/719"/>)</li>
   <li>In <xref target="CONNECT"/>, clarify that the port is mandatory in a CONNECT request target (<eref target="https://github.com/httpwg/http-core/issues/736"/>) and that the tunnel begins after the header section (<eref target="https://github.com/httpwg/http-core/issues/737"/>)</li>
+  <li>In <xref target="trailer.fields"/>, remove mid-stream trailers (<eref target="https://github.com/httpwg/http-core/issues/740"/>)</li>
   <li>In <xref target="connections"/>, clarify duplexing semantics (<eref target="https://github.com/httpwg/http-core/issues/741"/>)</li>
   <li>In <xref target="connections"/>, explain the implications of statelessness more clearly (<eref target="https://github.com/httpwg/http-core/issues/743"/>)</li>
   <li>In <xref target="field.content-length"/>, be more explicit about invalid and incorrect values (<eref target="https://github.com/httpwg/http-core/issues/748"/> and <eref target="https://github.com/httpwg/http-core/issues/749"/>)</li>
   <li>Move discussion of statelessness from <xref target="intermediaries"/> to <xref target="connections"/> (<eref target="https://github.com/httpwg/http-core/issues/753"/>)</li>
   <li>In <xref target="status.101"/>, clarify that the upgraded protocol is in effect after the 101 response (<eref target="https://github.com/httpwg/http-core/issues/776"/>)</li>
+  <li>Throughout, remove unneeded normative references to <xref target="Messaging"/> (<eref target="https://github.com/httpwg/http-core/issues/795"/>)</li>
 </ul>
 </section>
 </section>
@@ -13579,6 +13565,7 @@ Content-Type: text/plain
    <contact fullname="Kannan Goundan"/>,
    <contact fullname="&#x5965; &#x4e00;&#x7a42;" asciiFullname="Kazuho Oku"/>,
    <contact fullname="Ken Murchison"/>,
+   <contact fullname="Krzysztof Maczy&#x144;ski"/>,
    <contact fullname="Lucas Pardue"/>,
    <contact fullname="Martin D&#xfc;rst"/>,
    <contact fullname="Martin Thomson"/>,
@@ -13588,6 +13575,7 @@ Content-Type: text/plain
    <contact fullname="Michael Osipov"/>,
    <contact fullname="Mike Bishop"/>,
    <contact fullname="Mike Pennisi"/>,
+   <contact fullname="Mike Taylor"/>,
    <contact fullname="Mike West"/>,
    <contact fullname="Nathaniel J. Smith"/>,
    <contact fullname="Nicholas Hurley"/>,
