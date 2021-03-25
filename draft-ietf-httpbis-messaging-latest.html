@@ -1385,62 +1385,80 @@ Host: www.example.org:8001
          <section id="reconstructing.target.uri">
             <h3 id="rfc.section.3.3"><a href="#rfc.section.3.3">3.3.</a>&nbsp;<a href="#reconstructing.target.uri">Reconstructing the Target URI</a></h3>
             <div id="rfc.section.3.3.p.1">
-               <p>Since the request-target often contains only part of the user agent's target URI,
-                  a server constructs its value to properly service the request (<a href="draft-ietf-httpbis-semantics-latest.html#target.resource" title="Determining the Target Resource">Section 7.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.25"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.3.3.p.1">¶</a></p>
+               <p>The target URI is the <a href="#request.target" class="smpl">request-target</a> when the request-target is in <a href="#absolute-form" class="smpl">absolute-form</a>. In that case, a server will parse the URI into its generic components for further
+                  evaluation.<a class="self" href="#rfc.section.3.3.p.1">¶</a></p>
             </div>
             <div id="rfc.section.3.3.p.2" class="avoidbreakafter">
-               <p>If the <a href="#request.target" class="smpl">request-target</a> is in <a href="#absolute-form" class="smpl">absolute-form</a>, the target URI is the same as the request-target. Otherwise, the target URI is constructed
-                  as follows:<a class="self" href="#rfc.section.3.3.p.2">¶</a></p>
+               <p>Otherwise, the server reconstructs the target URI from the connection context and
+                  various parts of the request message in order to identify the target resource (<a href="draft-ietf-httpbis-semantics-latest.html#target.resource" title="Determining the Target Resource">Section 7.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.25"><cite title="HTTP Semantics">[Semantics]</cite></a>):<a class="self" href="#rfc.section.3.3.p.2">¶</a></p>
             </div>
             <div id="rfc.section.3.3.p.3">
                <ul>
-                  <li>If the server's configuration (or outbound gateway) provides a fixed URI scheme, that
-                     scheme is used for the target URI. Otherwise, if the request is received over a secured
-                     connection, the target URI's scheme is "https"; if not, the scheme is "http".</li>
-                  <li>If the server's configuration (or outbound gateway) provides a fixed URI <a href="#imported.uri.rules" class="smpl">authority</a> component, that authority is used for the target URI. If not, then if the request-target
-                     is in <a href="#authority-form" class="smpl">authority-form</a>, the target URI's authority component is the same as the request-target. If not,
-                     then if a <a href="draft-ietf-httpbis-semantics-latest.html#field.host" class="smpl">Host</a> header field is supplied with a non-empty field value, the authority component is
-                     the same as the Host field value. Otherwise, the authority component is assigned the
-                     default name configured for the server and, if the connection's incoming TCP port
-                     number differs from the default port for the target URI's scheme, then a colon (":")
-                     and the incoming port number (in decimal form) are appended to the authority component.</li>
-                  <li>If the request-target is in <a href="#authority-form" class="smpl">authority-form</a> or <a href="#asterisk-form" class="smpl">asterisk-form</a>, the target URI's combined <a href="draft-ietf-httpbis-semantics-latest.html#uri.references" class="smpl">path</a> and <a href="#imported.uri.rules" class="smpl">query</a> component is empty. Otherwise, the combined <a href="draft-ietf-httpbis-semantics-latest.html#uri.references" class="smpl">path</a> and <a href="#imported.uri.rules" class="smpl">query</a> component is the same as the request-target.</li>
-                  <li>The components of the target URI, once determined as above, can be combined into <a href="#imported.uri.rules" class="smpl">absolute-URI</a> form by concatenating the scheme, "://", authority, and combined path and query component.</li>
+                  <li>If the server's configuration provides for a fixed URI scheme, or a scheme is provided
+                     by a trusted outbound gateway, that scheme is used for the target URI. This is common
+                     in large-scale deployments because a gateway server will receive the client's connection
+                     context and replace that with their own connection to the inbound server. Otherwise,
+                     if the request is received over a secured connection, the target URI's scheme is "https";
+                     if not, the scheme is "http".</li>
+                  <li>If the request-target is in <a href="#authority-form" class="smpl">authority-form</a>, the target URI's authority component is the request-target. Otherwise, the target
+                     URI's authority component is the field value of the <a href="draft-ietf-httpbis-semantics-latest.html#field.host" class="smpl">Host</a> header field. If there is no <a href="draft-ietf-httpbis-semantics-latest.html#field.host" class="smpl">Host</a> header field or if its field value is empty or invalid, the target URI's authority
+                     component is empty.</li>
+                  <li>If the request-target is in <a href="#authority-form" class="smpl">authority-form</a> or <a href="#asterisk-form" class="smpl">asterisk-form</a>, the target URI's combined <a href="draft-ietf-httpbis-semantics-latest.html#uri.references" class="smpl">path</a> and <a href="#imported.uri.rules" class="smpl">query</a> component is empty. Otherwise, the target URI's combined <a href="draft-ietf-httpbis-semantics-latest.html#uri.references" class="smpl">path</a> and <a href="#imported.uri.rules" class="smpl">query</a> component is the request-target.</li>
+                  <li>The components of a reconstructed target URI, once determined as above, can be recombined
+                     into <a href="#imported.uri.rules" class="smpl">absolute-URI</a> form by concatenating the scheme, "://", authority, and combined path and query component.</li>
                </ul>
             </div>
             <div id="rfc.section.3.3.p.4">
-               <p>Example 1: the following message received over an insecure TCP connection<a class="self" href="#rfc.section.3.3.p.4">¶</a></p>
+               <p>Example 1: the following message received over a secure connection<a class="self" href="#rfc.section.3.3.p.4">¶</a></p>
             </div>
             <div id="rfc.section.3.3.p.5">
                <pre class="text">GET /pub/WWW/TheProject.html HTTP/1.1
-Host: www.example.org:8080
+Host: www.example.org
 </pre>
             </div>
             <div id="rfc.section.3.3.p.6">
                <p>has a target URI of<a class="self" href="#rfc.section.3.3.p.6">¶</a></p>
             </div>
             <div id="rfc.section.3.3.p.7">
-               <pre class="text">http://www.example.org:8080/pub/WWW/TheProject.html
+               <pre class="text">https://www.example.org/pub/WWW/TheProject.html
 </pre>
             </div>
             <div id="rfc.section.3.3.p.8">
-               <p>Example 2: the following message received over a secured connection<a class="self" href="#rfc.section.3.3.p.8">¶</a></p>
+               <p>Example 2: the following message received over an insecure connection<a class="self" href="#rfc.section.3.3.p.8">¶</a></p>
             </div>
             <div id="rfc.section.3.3.p.9">
                <pre class="text">OPTIONS * HTTP/1.1
-Host: www.example.org
+Host: www.example.org:8080
 </pre>
             </div>
             <div id="rfc.section.3.3.p.10">
                <p>has a target URI of<a class="self" href="#rfc.section.3.3.p.10">¶</a></p>
             </div>
             <div id="rfc.section.3.3.p.11">
-               <pre class="text">https://www.example.org
+               <pre class="text">http://www.example.org:8080
 </pre>
             </div>
             <div id="rfc.section.3.3.p.12">
-               <p>Recipients of an HTTP/1.0 request that lacks a <a href="draft-ietf-httpbis-semantics-latest.html#field.host" class="smpl">Host</a> header field might need to use heuristics (e.g., examination of the URI path for something
-                  unique to a particular host) in order to guess the target URI's authority component.<a class="self" href="#rfc.section.3.3.p.12">¶</a></p>
+               <p>If the target URI's authority component is empty and its URI scheme requires a non-empty
+                  authority (as is the case for "http" and "https"), the server can reject the request
+                  or determine whether a configured default applies that is consistent with the incoming
+                  connection's context. Context might include connection details like address and port,
+                  what security has been applied, and locally-defined information specific to that server's
+                  configuration. An empty authority is replaced with the configured default before further
+                  processing of the request.<a class="self" href="#rfc.section.3.3.p.12">¶</a></p>
+            </div>
+            <div id="rfc.section.3.3.p.13">
+               <p>Supplying a default name for authority within the context of a secured connection
+                  is inherently unsafe if there is any chance that the user agent's intended authority
+                  might differ from the selected default. A server that can uniquely identify an authority
+                  from the request context <em class="bcp14">MAY</em> use that identity as a default without this risk. Alternatively, it might be better
+                  to redirect the request to a safe resource that explains how to obtain a new client.<a class="self" href="#rfc.section.3.3.p.13">¶</a></p>
+            </div>
+            <div id="rfc.section.3.3.p.14">
+               <p>Note that reconstructing the client's target URI is only half of the process for identifying
+                  a target resource. The other half is determining whether that target URI identifies
+                  a resource for which the server is willing and able to send a response, as defined
+                  in <a href="draft-ietf-httpbis-semantics-latest.html#routing.reject" title="Rejecting Misdirected Requests">Section 7.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.26"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.3.3.p.14">¶</a></p>
             </div>
          </section>
       </section>
@@ -1467,7 +1485,7 @@ Host: www.example.org
             <p>The status-code element is a 3-digit integer code describing the result of the server's
                attempt to understand and satisfy the client's corresponding request. The rest of
                the response message is to be interpreted in light of the semantics defined for that
-               status code. See <a href="draft-ietf-httpbis-semantics-latest.html#status.codes" title="Status Codes">Section 15</a> of <a href="#Semantics" id="rfc.xref.Semantics.26"><cite title="HTTP Semantics">[Semantics]</cite></a> for information about the semantics of status codes, including the classes of status
+               status code. See <a href="draft-ietf-httpbis-semantics-latest.html#status.codes" title="Status Codes">Section 15</a> of <a href="#Semantics" id="rfc.xref.Semantics.27"><cite title="HTTP Semantics">[Semantics]</cite></a> for information about the semantics of status codes, including the classes of status
                code (indicated by the first digit), the status codes defined by this specification,
                considerations for the definition of new status codes, and the IANA registry.<a class="self" href="#rfc.section.4.p.4">¶</a></p>
          </div>
@@ -1502,7 +1520,7 @@ Host: www.example.org
 </pre>
          </div>
          <div id="rfc.section.5.p.3">
-            <p>Most HTTP field names and the rules for parsing within field values are defined in <a href="draft-ietf-httpbis-semantics-latest.html#header.fields" title="Header Fields">Section 6.3</a> of <a href="#Semantics" id="rfc.xref.Semantics.27"><cite title="HTTP Semantics">[Semantics]</cite></a>. This section covers the generic syntax for header field inclusion within, and extraction
+            <p>Most HTTP field names and the rules for parsing within field values are defined in <a href="draft-ietf-httpbis-semantics-latest.html#header.fields" title="Header Fields">Section 6.3</a> of <a href="#Semantics" id="rfc.xref.Semantics.28"><cite title="HTTP Semantics">[Semantics]</cite></a>. This section covers the generic syntax for header field inclusion within, and extraction
                from, HTTP/1.1 messages.<a class="self" href="#rfc.section.5.p.3">¶</a></p>
          </div>
          <section id="field.parsing">
@@ -1560,7 +1578,7 @@ Host: www.example.org
       <section id="message.body">
          <h2 id="rfc.section.6"><a href="#rfc.section.6">6.</a>&nbsp;<a href="#message.body">Message Body</a></h2>
          <div id="rfc.section.6.p.1">
-            <p>The message body (if any) of an HTTP/1.1 message is used to carry content (<a href="draft-ietf-httpbis-semantics-latest.html#content" title="Content">Section 6.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.28"><cite title="HTTP Semantics">[Semantics]</cite></a>) for the request or response. The message body is identical to the content unless
+            <p>The message body (if any) of an HTTP/1.1 message is used to carry content (<a href="draft-ietf-httpbis-semantics-latest.html#content" title="Content">Section 6.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.29"><cite title="HTTP Semantics">[Semantics]</cite></a>) for the request or response. The message body is identical to the content unless
                a transfer coding has been applied, as described in <a href="#field.transfer-encoding" id="rfc.xref.field.transfer-encoding.1" title="Transfer-Encoding">Section 6.1</a>.<a class="self" href="#rfc.section.6.p.1">¶</a></p>
          </div>
          <div id="rfc.section.6.p.2">
@@ -1576,7 +1594,7 @@ Host: www.example.org
          </div>
          <div id="rfc.section.6.p.5">
             <p>The presence of a message body in a response depends on both the request method to
-               which it is responding and the response status code (<a href="#status.line" title="Status Line">Section 4</a>), and corresponds to when content is allowed; see <a href="draft-ietf-httpbis-semantics-latest.html#content" title="Content">Section 6.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.29"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.6.p.5">¶</a></p>
+               which it is responding and the response status code (<a href="#status.line" title="Status Line">Section 4</a>), and corresponds to when content is allowed; see <a href="draft-ietf-httpbis-semantics-latest.html#content" title="Content">Section 6.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.30"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.6.p.5">¶</a></p>
          </div>
          <section id="field.transfer-encoding">
             <h3 id="rfc.section.6.1"><a href="#rfc.section.6.1">6.1.</a>&nbsp;<a href="#field.transfer-encoding">Transfer-Encoding</a></h3>
@@ -1587,7 +1605,7 @@ Host: www.example.org
             </div>
             <div id="rfc.section.6.1.p.2">
                <pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.24"></span>  <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> = #<a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">transfer-coding</a>
-                       ; defined in <a href="#Semantics" id="rfc.xref.Semantics.30"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a>
+                       ; defined in <a href="#Semantics" id="rfc.xref.Semantics.31"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a>
 </pre>
             </div>
             <div id="rfc.section.6.1.p.3">
@@ -1619,21 +1637,21 @@ Host: www.example.org
                   using the chunked coding while forming the message body.<a class="self" href="#rfc.section.6.1.p.7">¶</a></p>
             </div>
             <div id="rfc.section.6.1.p.8">
-               <p>Unlike <a href="draft-ietf-httpbis-semantics-latest.html#field.content-encoding" class="smpl">Content-Encoding</a> (<a href="draft-ietf-httpbis-semantics-latest.html#content.codings" title="Content Codings">Section 8.4.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.31"><cite title="HTTP Semantics">[Semantics]</cite></a>), Transfer-Encoding is a property of the message, not of the representation, and
+               <p>Unlike <a href="draft-ietf-httpbis-semantics-latest.html#field.content-encoding" class="smpl">Content-Encoding</a> (<a href="draft-ietf-httpbis-semantics-latest.html#content.codings" title="Content Codings">Section 8.4.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.32"><cite title="HTTP Semantics">[Semantics]</cite></a>), Transfer-Encoding is a property of the message, not of the representation, and
                   any recipient along the request/response chain <em class="bcp14">MAY</em> decode the received transfer coding(s) or apply additional transfer coding(s) to the
                   message body, assuming that corresponding changes are made to the Transfer-Encoding
                   field value. Additional information about the encoding parameters can be provided
                   by other header fields not defined by this specification.<a class="self" href="#rfc.section.6.1.p.8">¶</a></p>
             </div>
             <div id="rfc.section.6.1.p.9">
-               <p>Transfer-Encoding <em class="bcp14">MAY</em> be sent in a response to a HEAD request or in a <a href="draft-ietf-httpbis-semantics-latest.html#status.304" class="smpl">304 (Not Modified)</a> response (<a href="draft-ietf-httpbis-semantics-latest.html#status.304" title="304 Not Modified">Section 15.4.5</a> of <a href="#Semantics" id="rfc.xref.Semantics.32"><cite title="HTTP Semantics">[Semantics]</cite></a>) to a GET request, neither of which includes a message body, to indicate that the
+               <p>Transfer-Encoding <em class="bcp14">MAY</em> be sent in a response to a HEAD request or in a <a href="draft-ietf-httpbis-semantics-latest.html#status.304" class="smpl">304 (Not Modified)</a> response (<a href="draft-ietf-httpbis-semantics-latest.html#status.304" title="304 Not Modified">Section 15.4.5</a> of <a href="#Semantics" id="rfc.xref.Semantics.33"><cite title="HTTP Semantics">[Semantics]</cite></a>) to a GET request, neither of which includes a message body, to indicate that the
                   origin server would have applied a transfer coding to the message body if the request
                   had been an unconditional GET. This indication is not required, however, because any
                   recipient on the response chain (including the origin server) can remove transfer
                   codings when they are not needed.<a class="self" href="#rfc.section.6.1.p.9">¶</a></p>
             </div>
             <div id="rfc.section.6.1.p.10">
-               <p>A server <em class="bcp14">MUST NOT</em> send a Transfer-Encoding header field in any response with a status code of <a href="draft-ietf-httpbis-semantics-latest.html#status.1xx" class="smpl">1xx (Informational)</a> or <a href="draft-ietf-httpbis-semantics-latest.html#status.204" class="smpl">204 (No Content)</a>. A server <em class="bcp14">MUST NOT</em> send a Transfer-Encoding header field in any <a href="draft-ietf-httpbis-semantics-latest.html#status.2xx" class="smpl">2xx (Successful)</a> response to a CONNECT request (<a href="draft-ietf-httpbis-semantics-latest.html#CONNECT" title="CONNECT">Section 9.3.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.33"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.6.1.p.10">¶</a></p>
+               <p>A server <em class="bcp14">MUST NOT</em> send a Transfer-Encoding header field in any response with a status code of <a href="draft-ietf-httpbis-semantics-latest.html#status.1xx" class="smpl">1xx (Informational)</a> or <a href="draft-ietf-httpbis-semantics-latest.html#status.204" class="smpl">204 (No Content)</a>. A server <em class="bcp14">MUST NOT</em> send a Transfer-Encoding header field in any <a href="draft-ietf-httpbis-semantics-latest.html#status.2xx" class="smpl">2xx (Successful)</a> response to a CONNECT request (<a href="draft-ietf-httpbis-semantics-latest.html#CONNECT" title="CONNECT">Section 9.3.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.34"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.6.1.p.10">¶</a></p>
             </div>
             <div id="rfc.section.6.1.p.11">
                <p>Transfer-Encoding was added in HTTP/1.1. It is generally assumed that implementations
@@ -1651,11 +1669,11 @@ Host: www.example.org
          <section id="body.content-length">
             <h3 id="rfc.section.6.2"><a href="#rfc.section.6.2">6.2.</a>&nbsp;<a href="#body.content-length">Content-Length</a></h3>
             <div id="rfc.section.6.2.p.1">
-               <p>When a message does not have a <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> header field, a Content-Length header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.content-length" title="Content-Length">Section 8.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.34"><cite title="HTTP Semantics">[Semantics]</cite></a>) can provide the anticipated size, as a decimal number of octets, for potential content.
+               <p>When a message does not have a <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> header field, a Content-Length header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.content-length" title="Content-Length">Section 8.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.35"><cite title="HTTP Semantics">[Semantics]</cite></a>) can provide the anticipated size, as a decimal number of octets, for potential content.
                   For messages that do include content, the Content-Length field value provides the
                   framing information necessary for determining where the data (and message) ends. For
                   messages that do not include content, the Content-Length indicates the size of the
-                  selected representation (<a href="draft-ietf-httpbis-semantics-latest.html#field.content-length" title="Content-Length">Section 8.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.35"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.6.2.p.1">¶</a></p>
+                  selected representation (<a href="draft-ietf-httpbis-semantics-latest.html#field.content-length" title="Content-Length">Section 8.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.36"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.6.2.p.1">¶</a></p>
             </div>
             <div id="rfc.section.6.2.p.2">
                <p>A sender <em class="bcp14">MUST NOT</em> send a Content-Length header field in any message that contains a <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> header field.<a class="self" href="#rfc.section.6.2.p.2">¶</a></p>
@@ -1716,7 +1734,7 @@ Host: www.example.org
                   <li>
                      <div>
                         <p>If a message is received without <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> and with an invalid <a href="#body.content-length" class="smpl">Content-Length</a> header field, then the message framing is invalid and the recipient <em class="bcp14">MUST</em> treat it as an unrecoverable error, unless the field value can be successfully parsed
-                           as a comma-separated list (<a href="draft-ietf-httpbis-semantics-latest.html#abnf.extension" title="Lists (#rule ABNF Extension)">Section 5.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.36"><cite title="HTTP Semantics">[Semantics]</cite></a>), all values in the list are valid, and all values in the list are the same. If this
+                           as a comma-separated list (<a href="draft-ietf-httpbis-semantics-latest.html#abnf.extension" title="Lists (#rule ABNF Extension)">Section 5.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.37"><cite title="HTTP Semantics">[Semantics]</cite></a>), all values in the list are valid, and all values in the list are the same. If this
                            is a request message, the server <em class="bcp14">MUST</em> respond with a <a href="draft-ietf-httpbis-semantics-latest.html#status.400" class="smpl">400 (Bad Request)</a> status code and then close the connection. If this is a response message received
                            by a proxy, the proxy <em class="bcp14">MUST</em> close the connection to the server, discard the received response, and send a <a href="draft-ietf-httpbis-semantics-latest.html#status.502" class="smpl">502 (Bad Gateway)</a> response to the client. If this is a response message received by a user agent, the
                            user agent <em class="bcp14">MUST</em> close the connection to the server and discard the received response.</p>
@@ -1794,7 +1812,7 @@ Host: www.example.org
          </div>
          <div id="rfc.section.7.p.2">
             <p>All transfer-coding names are case-insensitive and ought to be registered within the
-               HTTP Transfer Coding registry, as defined in <a href="#transfer.coding.registry" title="Transfer Coding Registry">Section 7.3</a>. They are used in the <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> (<a href="#field.transfer-encoding" id="rfc.xref.field.transfer-encoding.2" title="Transfer-Encoding">Section 6.1</a>) and <a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">TE</a> (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.37"><cite title="HTTP Semantics">[Semantics]</cite></a>) header fields (the latter also defining the "transfer-coding" grammar).<a class="self" href="#rfc.section.7.p.2">¶</a></p>
+               HTTP Transfer Coding registry, as defined in <a href="#transfer.coding.registry" title="Transfer Coding Registry">Section 7.3</a>. They are used in the <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> (<a href="#field.transfer-encoding" id="rfc.xref.field.transfer-encoding.2" title="Transfer-Encoding">Section 6.1</a>) and <a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">TE</a> (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.38"><cite title="HTTP Semantics">[Semantics]</cite></a>) header fields (the latter also defining the "transfer-coding" grammar).<a class="self" href="#rfc.section.7.p.2">¶</a></p>
          </div>
          <section id="chunked.encoding">
             <h3 id="rfc.section.7.1"><a href="#rfc.section.7.1">7.1.</a>&nbsp;<a href="#chunked.encoding">Chunked Transfer Coding</a></h3>
@@ -1874,7 +1892,7 @@ Host: www.example.org
                   <p>A trailer section allows the sender to include additional fields at the end of a chunked
                      message in order to supply metadata that might be dynamically generated while the
                      content is sent, such as a message integrity check, digital signature, or post-processing
-                     status. The proper use and limitations of trailer fields are defined in <a href="draft-ietf-httpbis-semantics-latest.html#trailer.fields" title="Trailer Fields">Section 6.5</a> of <a href="#Semantics" id="rfc.xref.Semantics.38"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.7.1.2.p.1">¶</a></p>
+                     status. The proper use and limitations of trailer fields are defined in <a href="draft-ietf-httpbis-semantics-latest.html#trailer.fields" title="Trailer Fields">Section 6.5</a> of <a href="#Semantics" id="rfc.xref.Semantics.39"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.7.1.2.p.1">¶</a></p>
                </div>
                <div id="rfc.section.7.1.2.p.2">
                   <pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.35"></span><span id="rfc.iref.g.36"></span>  <a href="#chunked.trailer.section" class="smpl">trailer-section</a>   = *( <a href="#header.field.syntax" class="smpl">field-line</a> <a href="#core.rules" class="smpl">CRLF</a> )
@@ -1932,11 +1950,11 @@ Host: www.example.org
             <div id="rfc.section.7.2.p.2">
                <dl class="nohang">
                   <dt>compress (and x-compress)</dt>
-                  <dd>See <a href="draft-ietf-httpbis-semantics-latest.html#compress.coding" title="Compress Coding">Section 8.4.1.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.39"><cite title="HTTP Semantics">[Semantics]</cite></a>.</dd>
+                  <dd>See <a href="draft-ietf-httpbis-semantics-latest.html#compress.coding" title="Compress Coding">Section 8.4.1.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.40"><cite title="HTTP Semantics">[Semantics]</cite></a>.</dd>
                   <dt>deflate</dt>
-                  <dd>See <a href="draft-ietf-httpbis-semantics-latest.html#deflate.coding" title="Deflate Coding">Section 8.4.1.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.40"><cite title="HTTP Semantics">[Semantics]</cite></a>.</dd>
+                  <dd>See <a href="draft-ietf-httpbis-semantics-latest.html#deflate.coding" title="Deflate Coding">Section 8.4.1.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.41"><cite title="HTTP Semantics">[Semantics]</cite></a>.</dd>
                   <dt>gzip (and x-gzip)</dt>
-                  <dd>See <a href="draft-ietf-httpbis-semantics-latest.html#gzip.coding" title="Gzip Coding">Section 8.4.1.3</a> of <a href="#Semantics" id="rfc.xref.Semantics.41"><cite title="HTTP Semantics">[Semantics]</cite></a>.</dd>
+                  <dd>See <a href="draft-ietf-httpbis-semantics-latest.html#gzip.coding" title="Gzip Coding">Section 8.4.1.3</a> of <a href="#Semantics" id="rfc.xref.Semantics.42"><cite title="HTTP Semantics">[Semantics]</cite></a>.</dd>
                </dl>
             </div>
             <div id="rfc.section.7.2.p.3">
@@ -1960,11 +1978,11 @@ Host: www.example.org
                </ul>
             </div>
             <div id="rfc.section.7.3.p.4">
-               <p>Names of transfer codings <em class="bcp14">MUST NOT</em> overlap with names of content codings (<a href="draft-ietf-httpbis-semantics-latest.html#content.codings" title="Content Codings">Section 8.4.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.42"><cite title="HTTP Semantics">[Semantics]</cite></a>) unless the encoding transformation is identical, as is the case for the compression
+               <p>Names of transfer codings <em class="bcp14">MUST NOT</em> overlap with names of content codings (<a href="draft-ietf-httpbis-semantics-latest.html#content.codings" title="Content Codings">Section 8.4.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.43"><cite title="HTTP Semantics">[Semantics]</cite></a>) unless the encoding transformation is identical, as is the case for the compression
                   codings defined in <a href="#compression.codings" title="Transfer Codings for Compression">Section 7.2</a>.<a class="self" href="#rfc.section.7.3.p.4">¶</a></p>
             </div>
             <div id="rfc.section.7.3.p.5">
-               <p>The <a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">TE</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.43"><cite title="HTTP Semantics">[Semantics]</cite></a>) uses a pseudo parameter named "q" as rank value when multiple transfer codings are
+               <p>The <a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">TE</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.44"><cite title="HTTP Semantics">[Semantics]</cite></a>) uses a pseudo parameter named "q" as rank value when multiple transfer codings are
                   acceptable. Future registrations of transfer codings <em class="bcp14">SHOULD NOT</em> define parameters called "q" (case-insensitively) in order to avoid ambiguities.<a class="self" href="#rfc.section.7.3.p.5">¶</a></p>
             </div>
             <div id="rfc.section.7.3.p.6">
@@ -1978,7 +1996,7 @@ Host: www.example.org
          <section id="transfer.coding.negotiation">
             <h3 id="rfc.section.7.4"><a href="#rfc.section.7.4">7.4.</a>&nbsp;<a href="#transfer.coding.negotiation">Negotiating Transfer Codings</a></h3>
             <div id="rfc.section.7.4.p.1">
-               <p>The TE field (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.44"><cite title="HTTP Semantics">[Semantics]</cite></a>) is used in HTTP/1.1 to indicate what transfer-codings, besides chunked, the client
+               <p>The TE field (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.45"><cite title="HTTP Semantics">[Semantics]</cite></a>) is used in HTTP/1.1 to indicate what transfer-codings, besides chunked, the client
                   is willing to accept in the response, and whether or not the client is willing to
                   preserve trailer fields in a chunked transfer coding.<a class="self" href="#rfc.section.7.4.p.1">¶</a></p>
             </div>
@@ -1997,7 +2015,7 @@ Host: www.example.org
             </div>
             <div id="rfc.section.7.4.p.5">
                <p>When multiple transfer codings are acceptable, the client <em class="bcp14">MAY</em> rank the codings by preference using a case-insensitive "q" parameter (similar to
-                  the qvalues used in content negotiation fields, <a href="draft-ietf-httpbis-semantics-latest.html#quality.values" title="Quality Values">Section 12.4.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.45"><cite title="HTTP Semantics">[Semantics]</cite></a>). The rank value is a real number in the range 0 through 1, where 0.001 is the least
+                  the qvalues used in content negotiation fields, <a href="draft-ietf-httpbis-semantics-latest.html#quality.values" title="Quality Values">Section 12.4.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.46"><cite title="HTTP Semantics">[Semantics]</cite></a>). The rank value is a real number in the range 0 through 1, where 0.001 is the least
                   preferred and 1 is the most preferred; a value of 0 means "not acceptable".<a class="self" href="#rfc.section.7.4.p.5">¶</a></p>
             </div>
             <div id="rfc.section.7.4.p.6">
@@ -2006,10 +2024,10 @@ Host: www.example.org
             </div>
             <div id="rfc.section.7.4.p.7">
                <p>The keyword "trailers" indicates that the sender will not discard trailer fields,
-                  as described in <a href="draft-ietf-httpbis-semantics-latest.html#trailer.fields" title="Trailer Fields">Section 6.5</a> of <a href="#Semantics" id="rfc.xref.Semantics.46"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.7.4.p.7">¶</a></p>
+                  as described in <a href="draft-ietf-httpbis-semantics-latest.html#trailer.fields" title="Trailer Fields">Section 6.5</a> of <a href="#Semantics" id="rfc.xref.Semantics.47"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.7.4.p.7">¶</a></p>
             </div>
             <div id="rfc.section.7.4.p.8">
-               <p>Since the TE header field only applies to the immediate connection, a sender of TE <em class="bcp14">MUST</em> also send a "TE" connection option within the <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">Connection</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.47"><cite title="HTTP Semantics">[Semantics]</cite></a>) in order to prevent the TE header field from being forwarded by intermediaries that
+               <p>Since the TE header field only applies to the immediate connection, a sender of TE <em class="bcp14">MUST</em> also send a "TE" connection option within the <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">Connection</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.48"><cite title="HTTP Semantics">[Semantics]</cite></a>) in order to prevent the TE header field from being forwarded by intermediaries that
                   do not support its semantics.<a class="self" href="#rfc.section.7.4.p.8">¶</a></p>
             </div>
          </section>
@@ -2052,8 +2070,8 @@ Host: www.example.org
                outside the scope of this specification.<a class="self" href="#rfc.section.9.p.1">¶</a></p>
          </div>
          <div id="rfc.section.9.p.2">
-            <p>As described in <a href="draft-ietf-httpbis-semantics-latest.html#routing.inbound" title="Routing Inbound Requests">Section 7.3</a> of <a href="#Semantics" id="rfc.xref.Semantics.48"><cite title="HTTP Semantics">[Semantics]</cite></a>, the specific connection protocols to be used for an HTTP interaction are determined
-               by client configuration and the <a href="draft-ietf-httpbis-semantics-latest.html#target.resource" class="smpl">target URI</a>. For example, the "http" URI scheme (<a href="draft-ietf-httpbis-semantics-latest.html#http.uri" title="http URI Scheme">Section 4.2.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.49"><cite title="HTTP Semantics">[Semantics]</cite></a>) indicates a default connection of TCP over IP, with a default TCP port of 80, but
+            <p>As described in <a href="draft-ietf-httpbis-semantics-latest.html#routing.inbound" title="Routing Inbound Requests">Section 7.3</a> of <a href="#Semantics" id="rfc.xref.Semantics.49"><cite title="HTTP Semantics">[Semantics]</cite></a>, the specific connection protocols to be used for an HTTP interaction are determined
+               by client configuration and the <a href="draft-ietf-httpbis-semantics-latest.html#target.resource" class="smpl">target URI</a>. For example, the "http" URI scheme (<a href="draft-ietf-httpbis-semantics-latest.html#http.uri" title="http URI Scheme">Section 4.2.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.50"><cite title="HTTP Semantics">[Semantics]</cite></a>) indicates a default connection of TCP over IP, with a default TCP port of 80, but
                the client might be configured to use a proxy via some other connection, port, or
                protocol.<a class="self" href="#rfc.section.9.p.2">¶</a></p>
          </div>
@@ -2081,7 +2099,7 @@ Host: www.example.org
                   with its corresponding one or more response messages. Hence, it relies on the order
                   of response arrival to correspond exactly to the order in which requests are made
                   on the same connection. More than one response message per request only occurs when
-                  one or more informational responses (<a href="draft-ietf-httpbis-semantics-latest.html#status.1xx" class="smpl">1xx</a>, see <a href="draft-ietf-httpbis-semantics-latest.html#status.1xx" title="Informational 1xx">Section 15.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.50"><cite title="HTTP Semantics">[Semantics]</cite></a>) precede a final response to the same request.<a class="self" href="#rfc.section.9.2.p.1">¶</a></p>
+                  one or more informational responses (<a href="draft-ietf-httpbis-semantics-latest.html#status.1xx" class="smpl">1xx</a>, see <a href="draft-ietf-httpbis-semantics-latest.html#status.1xx" title="Informational 1xx">Section 15.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.51"><cite title="HTTP Semantics">[Semantics]</cite></a>) precede a final response to the same request.<a class="self" href="#rfc.section.9.2.p.1">¶</a></p>
             </div>
             <div id="rfc.section.9.2.p.2">
                <p>A client that has more than one outstanding request on a connection <em class="bcp14">MUST</em> maintain a list of outstanding requests in the order sent and <em class="bcp14">MUST</em> associate each received response message on that connection to the highest ordered
@@ -2102,7 +2120,7 @@ Host: www.example.org
             </div>
             <div id="rfc.section.9.3.p.2" class="avoidbreakafter">
                <p>A recipient determines whether a connection is persistent or not based on the most
-                  recently received message's protocol version and <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">Connection</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.51"><cite title="HTTP Semantics">[Semantics]</cite></a>), if any:<a class="self" href="#rfc.section.9.3.p.2">¶</a></p>
+                  recently received message's protocol version and <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">Connection</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.52"><cite title="HTTP Semantics">[Semantics]</cite></a>), if any:<a class="self" href="#rfc.section.9.3.p.2">¶</a></p>
             </div>
             <div id="rfc.section.9.3.p.3">
                <ul>
@@ -2152,14 +2170,14 @@ Host: www.example.org
                   <p>Connections can be closed at any time, with or without intention. Implementations
                      ought to anticipate the need to recover from asynchronous close events. The conditions
                      under which a client can automatically retry a sequence of outstanding requests are
-                     defined in <a href="draft-ietf-httpbis-semantics-latest.html#idempotent.methods" title="Idempotent Methods">Section 9.2.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.52"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.9.3.1.p.1">¶</a></p>
+                     defined in <a href="draft-ietf-httpbis-semantics-latest.html#idempotent.methods" title="Idempotent Methods">Section 9.2.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.53"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.9.3.1.p.1">¶</a></p>
                </div>
             </section>
             <section id="pipelining">
                <h4 id="rfc.section.9.3.2"><a href="#rfc.section.9.3.2">9.3.2.</a>&nbsp;<a href="#pipelining">Pipelining</a></h4>
                <div id="rfc.section.9.3.2.p.1">
                   <p>A client that supports persistent connections <em class="bcp14">MAY</em> <dfn>pipeline</dfn> its requests (i.e., send multiple requests without waiting for each response). A server <em class="bcp14">MAY</em> process a sequence of pipelined requests in parallel if they all have safe methods
-                     (<a href="draft-ietf-httpbis-semantics-latest.html#safe.methods" title="Safe Methods">Section 9.2.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.53"><cite title="HTTP Semantics">[Semantics]</cite></a>), but it <em class="bcp14">MUST</em> send the corresponding responses in the same order that the requests were received.<a class="self" href="#rfc.section.9.3.2.p.1">¶</a></p>
+                     (<a href="draft-ietf-httpbis-semantics-latest.html#safe.methods" title="Safe Methods">Section 9.2.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.54"><cite title="HTTP Semantics">[Semantics]</cite></a>), but it <em class="bcp14">MUST</em> send the corresponding responses in the same order that the requests were received.<a class="self" href="#rfc.section.9.3.2.p.1">¶</a></p>
                </div>
                <div id="rfc.section.9.3.2.p.2">
                   <p>A client that pipelines requests <em class="bcp14">SHOULD</em> retry unanswered requests if the connection closes before it receives all of the corresponding
@@ -2170,7 +2188,7 @@ Host: www.example.org
                      described in <a href="#persistent.tear-down" id="rfc.xref.persistent.tear-down.1" title="Tear-down">Section 9.6</a>).<a class="self" href="#rfc.section.9.3.2.p.2">¶</a></p>
                </div>
                <div id="rfc.section.9.3.2.p.3">
-                  <p>Idempotent methods (<a href="draft-ietf-httpbis-semantics-latest.html#idempotent.methods" title="Idempotent Methods">Section 9.2.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.54"><cite title="HTTP Semantics">[Semantics]</cite></a>) are significant to pipelining because they can be automatically retried after a
+                  <p>Idempotent methods (<a href="draft-ietf-httpbis-semantics-latest.html#idempotent.methods" title="Idempotent Methods">Section 9.2.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.55"><cite title="HTTP Semantics">[Semantics]</cite></a>) are significant to pipelining because they can be automatically retried after a
                      connection failure. A user agent <em class="bcp14">SHOULD NOT</em> pipeline requests after a non-idempotent method, until the final response status code
                      for that method has been received, unless the user agent has a means to detect and
                      recover from partial failure conditions involving the pipelined sequence.<a class="self" href="#rfc.section.9.3.2.p.3">¶</a></p>
@@ -2244,7 +2262,7 @@ Host: www.example.org
          <section id="persistent.tear-down">
             <h3 id="rfc.section.9.6"><a href="#rfc.section.9.6">9.6.</a>&nbsp;<a href="#persistent.tear-down">Tear-down</a></h3>
             <div id="rfc.section.9.6.p.1">
-               <p>The <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">Connection</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.55"><cite title="HTTP Semantics">[Semantics]</cite></a>) provides a "<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">close</a>" connection option that a sender <em class="bcp14">SHOULD</em> send when it wishes to close the connection after the current request/response pair.<a class="self" href="#rfc.section.9.6.p.1">¶</a></p>
+               <p>The <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">Connection</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.56"><cite title="HTTP Semantics">[Semantics]</cite></a>) provides a "<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">close</a>" connection option that a sender <em class="bcp14">SHOULD</em> send when it wishes to close the connection after the current request/response pair.<a class="self" href="#rfc.section.9.6.p.1">¶</a></p>
             </div>
             <div id="rfc.section.9.6.p.2">
                <p>A client that sends a "<a href="draft-ietf-httpbis-semantics-latest.html#field.connection" class="smpl">close</a>" connection option <em class="bcp14">MUST NOT</em> send further requests on that connection (after the one containing "close") and <em class="bcp14">MUST</em> close the connection after reading the final response message corresponding to this
@@ -2493,7 +2511,7 @@ Host: www.example.org
          <div id="rfc.section.11.p.1">
             <p>This section is meant to inform developers, information providers, and users of known
                security considerations relevant to HTTP message syntax and parsing. Security considerations
-               about HTTP semantics, content, and routing are addressed in <a href="#Semantics" id="rfc.xref.Semantics.56"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.11.p.1">¶</a></p>
+               about HTTP semantics, content, and routing are addressed in <a href="#Semantics" id="rfc.xref.Semantics.57"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.11.p.1">¶</a></p>
          </div>
          <section id="response.splitting">
             <h3 id="rfc.section.11.1"><a href="#rfc.section.11.1">11.1.</a>&nbsp;<a href="#response.splitting">Response Splitting</a></h3>
@@ -2589,7 +2607,7 @@ Host: www.example.org
             </div>
             <div id="rfc.section.11.4.p.2">
                <p>The "https" scheme can be used to identify resources that require a confidential connection,
-                  as described in <a href="draft-ietf-httpbis-semantics-latest.html#https.uri" title="https URI Scheme">Section 4.2.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.57"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.11.4.p.2">¶</a></p>
+                  as described in <a href="draft-ietf-httpbis-semantics-latest.html#https.uri" title="https URI Scheme">Section 4.2.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.58"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.11.4.p.2">¶</a></p>
             </div>
          </section>
       </section>
@@ -2603,7 +2621,7 @@ Host: www.example.org
             <h3 id="rfc.section.12.1"><a href="#rfc.section.12.1">12.1.</a>&nbsp;<a href="#field.name.registration">Field Name Registration</a></h3>
             <div id="rfc.section.12.1.p.1">
                <p>First, introduce the new "Hypertext Transfer Protocol (HTTP) Field Name Registry"
-                  at &lt;<a href="https://www.iana.org/assignments/http-fields">https://www.iana.org/assignments/http-fields</a>&gt; as described in <a href="draft-ietf-httpbis-semantics-latest.html#field.name.registration" title="Field Name Registration">Section 18.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.58"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.12.1.p.1">¶</a></p>
+                  at &lt;<a href="https://www.iana.org/assignments/http-fields">https://www.iana.org/assignments/http-fields</a>&gt; as described in <a href="draft-ietf-httpbis-semantics-latest.html#field.name.registration" title="Field Name Registration">Section 18.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.59"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.12.1.p.1">¶</a></p>
             </div>
             <div id="rfc.section.12.1.p.2" class="avoidbreakafter">
                <p>Then, please update the registry with the field names listed in the table below:<a class="self" href="#rfc.section.12.1.p.2">¶</a></p>
@@ -2706,7 +2724,7 @@ Host: www.example.org
                <aside>
                   <div id="rfc.section.12.3.p.2.1">
                      <p><b>Note:</b> the coding name "trailers" is reserved because its use would conflict with the keyword
-                        "trailers" in the <a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">TE</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.59"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.12.3.p.2.1">¶</a></p>
+                        "trailers" in the <a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">TE</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.60"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.12.3.p.2.1">¶</a></p>
                   </div>
                </aside>
             </div>
@@ -2812,26 +2830,26 @@ Host: www.example.org
       <section id="collected.abnf">
          <h2 id="rfc.section.A" class="np"><a href="#rfc.section.A">Appendix A.</a>&nbsp;<a href="#collected.abnf">Collected ABNF</a></h2>
          <div id="rfc.section.A.p.1">
-            <p>In the collected ABNF below, list rules are expanded as per <a href="draft-ietf-httpbis-semantics-latest.html#abnf.extension.sender" title="Sender Requirements">Section 5.6.1.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.60"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.A.p.1">¶</a></p>
+            <p>In the collected ABNF below, list rules are expanded as per <a href="draft-ietf-httpbis-semantics-latest.html#abnf.extension.sender" title="Sender Requirements">Section 5.6.1.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.61"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.A.p.1">¶</a></p>
          </div>
          <div id="rfc.section.A.p.2">
-            <pre class="inline prettyprint lang-ietf_abnf"><a href="draft-ietf-httpbis-semantics-latest.html#whitespace" class="smpl">BWS</a> = &lt;BWS, see <a href="#Semantics" id="rfc.xref.Semantics.61"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.3">Section 5.6.3</a>&gt;
+            <pre class="inline prettyprint lang-ietf_abnf"><a href="draft-ietf-httpbis-semantics-latest.html#whitespace" class="smpl">BWS</a> = &lt;BWS, see <a href="#Semantics" id="rfc.xref.Semantics.62"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.3">Section 5.6.3</a>&gt;
 
 <a href="#message.format" class="smpl">HTTP-message</a> = start-line CRLF *( field-line CRLF ) CRLF [
  message-body ]
 <a href="#http.version" class="smpl">HTTP-name</a> = %x48.54.54.50 ; HTTP
 <a href="#http.version" class="smpl">HTTP-version</a> = HTTP-name "/" DIGIT "." DIGIT
 
-<a href="draft-ietf-httpbis-semantics-latest.html#whitespace" class="smpl">OWS</a> = &lt;OWS, see <a href="#Semantics" id="rfc.xref.Semantics.62"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.3">Section 5.6.3</a>&gt;
+<a href="draft-ietf-httpbis-semantics-latest.html#whitespace" class="smpl">OWS</a> = &lt;OWS, see <a href="#Semantics" id="rfc.xref.Semantics.63"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.3">Section 5.6.3</a>&gt;
 
-<a href="draft-ietf-httpbis-semantics-latest.html#whitespace" class="smpl">RWS</a> = &lt;RWS, see <a href="#Semantics" id="rfc.xref.Semantics.63"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.3">Section 5.6.3</a>&gt;
+<a href="draft-ietf-httpbis-semantics-latest.html#whitespace" class="smpl">RWS</a> = &lt;RWS, see <a href="#Semantics" id="rfc.xref.Semantics.64"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.3">Section 5.6.3</a>&gt;
 
 <a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a> = [ transfer-coding *( OWS "," OWS transfer-coding
  ) ]
 
 <a href="#imported.uri.rules" class="smpl">absolute-URI</a> = &lt;absolute-URI, see <a href="#RFC3986" id="rfc.xref.RFC3986.7"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc3986.html#section-4.3">Section 4.3</a>&gt;
 <a href="#absolute-form" class="smpl">absolute-form</a> = absolute-URI
-<a href="#imported.rules" class="smpl">absolute-path</a> = &lt;absolute-path, see <a href="#Semantics" id="rfc.xref.Semantics.64"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.4">Section 4</a>&gt;
+<a href="#imported.rules" class="smpl">absolute-path</a> = &lt;absolute-path, see <a href="#Semantics" id="rfc.xref.Semantics.65"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.4">Section 4</a>&gt;
 <a href="#asterisk-form" class="smpl">asterisk-form</a> = "*"
 <a href="#imported.uri.rules" class="smpl">authority</a> = &lt;authority, see <a href="#RFC3986" id="rfc.xref.RFC3986.8"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2">Section 3.2</a>&gt;
 <a href="#authority-form" class="smpl">authority-form</a> = uri-host ":" port
@@ -2846,8 +2864,8 @@ Host: www.example.org
 <a href="#chunked.encoding" class="smpl">chunked-body</a> = *chunk last-chunk trailer-section CRLF
 
 <a href="#header.field.syntax" class="smpl">field-line</a> = field-name ":" OWS field-value OWS
-<a href="#imported.rules" class="smpl">field-name</a> = &lt;field-name, see <a href="#Semantics" id="rfc.xref.Semantics.65"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.1">Section 5.1</a>&gt;
-<a href="#imported.rules" class="smpl">field-value</a> = &lt;field-value, see <a href="#Semantics" id="rfc.xref.Semantics.66"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.5">Section 5.5</a>&gt;
+<a href="#imported.rules" class="smpl">field-name</a> = &lt;field-name, see <a href="#Semantics" id="rfc.xref.Semantics.66"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.1">Section 5.1</a>&gt;
+<a href="#imported.rules" class="smpl">field-value</a> = &lt;field-value, see <a href="#Semantics" id="rfc.xref.Semantics.67"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.5">Section 5.5</a>&gt;
 
 <a href="#chunked.encoding" class="smpl">last-chunk</a> = 1*"0" [ chunk-ext ] CRLF
 
@@ -2855,13 +2873,13 @@ Host: www.example.org
 <a href="#request.method" class="smpl">method</a> = token
 
 <a href="#line.folding" class="smpl">obs-fold</a> = OWS CRLF RWS
-<a href="#imported.rules" class="smpl">obs-text</a> = &lt;obs-text, see <a href="#Semantics" id="rfc.xref.Semantics.67"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.4">Section 5.6.4</a>&gt;
+<a href="#imported.rules" class="smpl">obs-text</a> = &lt;obs-text, see <a href="#Semantics" id="rfc.xref.Semantics.68"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.4">Section 5.6.4</a>&gt;
 <a href="#origin-form" class="smpl">origin-form</a> = absolute-path [ "?" query ]
 
 <a href="draft-ietf-httpbis-semantics-latest.html#uri.references" class="smpl">port</a> = &lt;port, see <a href="#RFC3986" id="rfc.xref.RFC3986.9"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3">Section 3.2.3</a>&gt;
 
 <a href="#imported.uri.rules" class="smpl">query</a> = &lt;query, see <a href="#RFC3986" id="rfc.xref.RFC3986.10"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc3986.html#section-3.4">Section 3.4</a>&gt;
-<a href="#imported.rules" class="smpl">quoted-string</a> = &lt;quoted-string, see <a href="#Semantics" id="rfc.xref.Semantics.68"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.4">Section 5.6.4</a>&gt;
+<a href="#imported.rules" class="smpl">quoted-string</a> = &lt;quoted-string, see <a href="#Semantics" id="rfc.xref.Semantics.69"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.4">Section 5.6.4</a>&gt;
 
 <a href="#status.line" class="smpl">reason-phrase</a> = 1*( HTAB / SP / VCHAR / obs-text )
 <a href="#request.line" class="smpl">request-line</a> = method SP request-target SP HTTP-version
@@ -2872,9 +2890,9 @@ Host: www.example.org
 <a href="#status.line" class="smpl">status-code</a> = 3DIGIT
 <a href="#status.line" class="smpl">status-line</a> = HTTP-version SP status-code SP [ reason-phrase ]
 
-<a href="#imported.rules" class="smpl">token</a> = &lt;token, see <a href="#Semantics" id="rfc.xref.Semantics.69"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.2">Section 5.6.2</a>&gt;
+<a href="#imported.rules" class="smpl">token</a> = &lt;token, see <a href="#Semantics" id="rfc.xref.Semantics.70"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.5.6.2">Section 5.6.2</a>&gt;
 <a href="#chunked.trailer.section" class="smpl">trailer-section</a> = *( field-line CRLF )
-<a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">transfer-coding</a> = &lt;transfer-coding, see <a href="#Semantics" id="rfc.xref.Semantics.70"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.10.1.4">Section 10.1.4</a>&gt;
+<a href="draft-ietf-httpbis-semantics-latest.html#field.te" class="smpl">transfer-coding</a> = &lt;transfer-coding, see <a href="#Semantics" id="rfc.xref.Semantics.71"><cite title="HTTP Semantics">[Semantics]</cite></a>, <a href="draft-ietf-httpbis-semantics-latest.html#rfc.section.10.1.4">Section 10.1.4</a>&gt;
 
 <a href="draft-ietf-httpbis-semantics-latest.html#uri.references" class="smpl">uri-host</a> = &lt;host, see <a href="#RFC3986" id="rfc.xref.RFC3986.11"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2">Section 3.2.2</a>&gt;
 </pre>
@@ -2929,7 +2947,7 @@ Host: www.example.org
          <section id="conversion.of.date.formats">
             <h3 id="rfc.section.B.3"><a href="#rfc.section.B.3">B.3.</a>&nbsp;<a href="#conversion.of.date.formats">Conversion of Date Formats</a></h3>
             <div id="rfc.section.B.3.p.1">
-               <p>HTTP/1.1 uses a restricted set of date formats (<a href="draft-ietf-httpbis-semantics-latest.html#http.date" title="Date/Time Formats">Section 5.6.7</a> of <a href="#Semantics" id="rfc.xref.Semantics.71"><cite title="HTTP Semantics">[Semantics]</cite></a>) to simplify the process of date comparison. Proxies and gateways from other protocols
+               <p>HTTP/1.1 uses a restricted set of date formats (<a href="draft-ietf-httpbis-semantics-latest.html#http.date" title="Date/Time Formats">Section 5.6.7</a> of <a href="#Semantics" id="rfc.xref.Semantics.72"><cite title="HTTP Semantics">[Semantics]</cite></a>) to simplify the process of date comparison. Proxies and gateways from other protocols
                   ought to ensure that any <a href="draft-ietf-httpbis-semantics-latest.html#field.date" class="smpl">Date</a> header field present in a message conforms to one of the HTTP/1.1 formats and rewrite
                   the date if necessary.<a class="self" href="#rfc.section.B.3.p.1">¶</a></p>
             </div>
@@ -2967,7 +2985,7 @@ Host: www.example.org
                   not have this limitation, HTTP does not fold long lines. MHTML messages being transported
                   by HTTP follow all conventions of MHTML, including line length limitations and folding,
                   canonicalization, etc., since HTTP transfers message-bodies without modification and,
-                  aside from the "multipart/byteranges" type (<a href="draft-ietf-httpbis-semantics-latest.html#multipart.byteranges" title="Media Type multipart/byteranges">Section 14.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.72"><cite title="HTTP Semantics">[Semantics]</cite></a>), does not interpret the content or any MIME header lines that might be contained
+                  aside from the "multipart/byteranges" type (<a href="draft-ietf-httpbis-semantics-latest.html#multipart.byteranges" title="Media Type multipart/byteranges">Section 14.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.73"><cite title="HTTP Semantics">[Semantics]</cite></a>), does not interpret the content or any MIME header lines that might be contained
                   therein.<a class="self" href="#rfc.section.B.6.p.1">¶</a></p>
             </div>
          </section>
@@ -2988,7 +3006,7 @@ Host: www.example.org
             <section id="changes.to.simplify.multihomed.web.servers.and.conserve.ip.addresses">
                <h4 id="rfc.section.C.2.1"><a href="#rfc.section.C.2.1">C.2.1.</a>&nbsp;<a href="#changes.to.simplify.multihomed.web.servers.and.conserve.ip.addresses">Multihomed Web Servers</a></h4>
                <div id="rfc.section.C.2.1.p.1">
-                  <p>The requirements that clients and servers support the <a href="draft-ietf-httpbis-semantics-latest.html#field.host" class="smpl">Host</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.host" title="Host and :authority">Section 7.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.73"><cite title="HTTP Semantics">[Semantics]</cite></a>), report an error if it is missing from an HTTP/1.1 request, and accept absolute
+                  <p>The requirements that clients and servers support the <a href="draft-ietf-httpbis-semantics-latest.html#field.host" class="smpl">Host</a> header field (<a href="draft-ietf-httpbis-semantics-latest.html#field.host" title="Host and :authority">Section 7.2</a> of <a href="#Semantics" id="rfc.xref.Semantics.74"><cite title="HTTP Semantics">[Semantics]</cite></a>), report an error if it is missing from an HTTP/1.1 request, and accept absolute
                      URIs (<a href="#request.target" title="Request Target">Section 3.2</a>) are among the most important changes defined by HTTP/1.1.<a class="self" href="#rfc.section.C.2.1.p.1">¶</a></p>
                </div>
                <div id="rfc.section.C.2.1.p.2">
@@ -3047,7 +3065,7 @@ Host: www.example.org
             <div id="rfc.section.C.3.p.1">
                <p>Most of the sections introducing HTTP's design goals, history, architecture, conformance
                   criteria, protocol versioning, URIs, message routing, and header fields have been
-                  moved to <a href="#Semantics" id="rfc.xref.Semantics.74"><cite title="HTTP Semantics">[Semantics]</cite></a>. This document has been reduced to just the messaging syntax and connection management
+                  moved to <a href="#Semantics" id="rfc.xref.Semantics.75"><cite title="HTTP Semantics">[Semantics]</cite></a>. This document has been reduced to just the messaging syntax and connection management
                   requirements specific to HTTP/1.1.<a class="self" href="#rfc.section.C.3.p.1">¶</a></p>
             </div>
             <div id="rfc.section.C.3.p.2">
@@ -3103,11 +3121,11 @@ Host: www.example.org
             <h3 id="rfc.section.D.2"><a href="#rfc.section.D.2">D.2.</a>&nbsp;<a href="#changes.since.00">Since draft-ietf-httpbis-messaging-00</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-messaging-00" title="plain text">📄</a> <a class="self" href="https://tools.ietf.org/rfcdiff?url2=draft-ietf-httpbis-messaging-01" title="diffs">🔍</a></h3>
             <div id="rfc.section.D.2.p.1" class="avoidbreakafter">
                <p>The changes in this draft are editorial, with respect to HTTP as a whole, to move
-                  all core HTTP semantics into <a href="#Semantics" id="rfc.xref.Semantics.75"><cite title="HTTP Semantics">[Semantics]</cite></a>:<a class="self" href="#rfc.section.D.2.p.1">¶</a></p>
+                  all core HTTP semantics into <a href="#Semantics" id="rfc.xref.Semantics.76"><cite title="HTTP Semantics">[Semantics]</cite></a>:<a class="self" href="#rfc.section.D.2.p.1">¶</a></p>
             </div>
             <div id="rfc.section.D.2.p.2">
                <ul>
-                  <li>Moved introduction, architecture, conformance, and ABNF extensions from <a href="#RFC7230" id="rfc.xref.RFC7230.4">RFC 7230 (Messaging)</a> to semantics <a href="#Semantics" id="rfc.xref.Semantics.76"><cite title="HTTP Semantics">[Semantics]</cite></a>.</li>
+                  <li>Moved introduction, architecture, conformance, and ABNF extensions from <a href="#RFC7230" id="rfc.xref.RFC7230.4">RFC 7230 (Messaging)</a> to semantics <a href="#Semantics" id="rfc.xref.Semantics.77"><cite title="HTTP Semantics">[Semantics]</cite></a>.</li>
                   <li>Moved discussion of MIME differences from <a href="#RFC7231" id="rfc.xref.RFC7231.1">RFC 7231 (Semantics)</a> to <a href="#differences.between.http.and.mime" title="Differences between HTTP and MIME">Appendix B</a> since they mostly cover transforming 1.1 messages.</li>
                   <li>Moved all extensibility tips, registration procedures, and registry tables from the
                      IANA considerations to normative sections, reducing the IANA considerations to just
@@ -3155,10 +3173,10 @@ Host: www.example.org
             <h3 id="rfc.section.D.6"><a href="#rfc.section.D.6">D.6.</a>&nbsp;<a href="#changes.since.04">Since draft-ietf-httpbis-messaging-04</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-messaging-04" title="plain text">📄</a> <a class="self" href="https://tools.ietf.org/rfcdiff?url2=draft-ietf-httpbis-messaging-05" title="diffs">🔍</a></h3>
             <div id="rfc.section.D.6.p.1">
                <ul>
-                  <li>In <a href="draft-ietf-httpbis-semantics-latest.html#field.upgrade" title="Upgrade">Section 7.8</a> of <a href="#Semantics" id="rfc.xref.Semantics.77"><cite title="HTTP Semantics">[Semantics]</cite></a>, clarify that protocol-name is to be matched case-insensitively (&lt;<a href="https://github.com/httpwg/http-core/issues/8">https://github.com/httpwg/http-core/issues/8</a>&gt;)</li>
+                  <li>In <a href="draft-ietf-httpbis-semantics-latest.html#field.upgrade" title="Upgrade">Section 7.8</a> of <a href="#Semantics" id="rfc.xref.Semantics.78"><cite title="HTTP Semantics">[Semantics]</cite></a>, clarify that protocol-name is to be matched case-insensitively (&lt;<a href="https://github.com/httpwg/http-core/issues/8">https://github.com/httpwg/http-core/issues/8</a>&gt;)</li>
                   <li>In <a href="#line.folding" title="Obsolete Line Folding">Section 5.2</a>, add leading optional whitespace to obs-fold ABNF (&lt;<a href="https://github.com/httpwg/http-core/issues/19">https://github.com/httpwg/http-core/issues/19</a>&gt;, &lt;<a href="https://www.rfc-editor.org/errata/eid4189">https://www.rfc-editor.org/errata/eid4189</a>&gt;)</li>
                   <li>In <a href="#status.line" title="Status Line">Section 4</a>, add clarifications about empty reason phrases (&lt;<a href="https://github.com/httpwg/http-core/issues/197">https://github.com/httpwg/http-core/issues/197</a>&gt;)</li>
-                  <li>Move discussion of retries from <a href="#persistent.retrying.requests" title="Retrying Requests">Section 9.3.1</a> into <a href="#Semantics" id="rfc.xref.Semantics.78"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/230">https://github.com/httpwg/http-core/issues/230</a>&gt;)</li>
+                  <li>Move discussion of retries from <a href="#persistent.retrying.requests" title="Retrying Requests">Section 9.3.1</a> into <a href="#Semantics" id="rfc.xref.Semantics.79"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/230">https://github.com/httpwg/http-core/issues/230</a>&gt;)</li>
                </ul>
             </div>
          </section>
@@ -3173,7 +3191,7 @@ Host: www.example.org
                   <li>In <a href="#message.format" title="Message Format">Section 2.1</a> and related Sections, move the trailing CRLF from the line grammars into the message
                      format (&lt;<a href="https://github.com/httpwg/http-core/issues/62">https://github.com/httpwg/http-core/issues/62</a>&gt;)</li>
                   <li>Moved <a href="#http.version" title="HTTP Version">Section 2.3</a> down (&lt;<a href="https://github.com/httpwg/http-core/issues/68">https://github.com/httpwg/http-core/issues/68</a>&gt;)</li>
-                  <li>In <a href="draft-ietf-httpbis-semantics-latest.html#field.upgrade" title="Upgrade">Section 7.8</a> of <a href="#Semantics" id="rfc.xref.Semantics.79"><cite title="HTTP Semantics">[Semantics]</cite></a>, use 'websocket' instead of 'HTTP/2.0' in examples (&lt;<a href="https://github.com/httpwg/http-core/issues/112">https://github.com/httpwg/http-core/issues/112</a>&gt;)</li>
+                  <li>In <a href="draft-ietf-httpbis-semantics-latest.html#field.upgrade" title="Upgrade">Section 7.8</a> of <a href="#Semantics" id="rfc.xref.Semantics.80"><cite title="HTTP Semantics">[Semantics]</cite></a>, use 'websocket' instead of 'HTTP/2.0' in examples (&lt;<a href="https://github.com/httpwg/http-core/issues/112">https://github.com/httpwg/http-core/issues/112</a>&gt;)</li>
                   <li>Move version non-specific text from <a href="#message.body" title="Message Body">Section 6</a> into semantics as "payload" (&lt;<a href="https://github.com/httpwg/http-core/issues/159">https://github.com/httpwg/http-core/issues/159</a>&gt;)</li>
                   <li>In <a href="#tls.connection.closure" title="TLS Connection Closure">Section 9.8</a>, add text from RFC 2818 (&lt;<a href="https://github.com/httpwg/http-core/issues/236">https://github.com/httpwg/http-core/issues/236</a>&gt;)</li>
                </ul>
@@ -3185,7 +3203,7 @@ Host: www.example.org
                <ul>
                   <li>In <a href="#alpn.registration" title="ALPN Protocol ID Registration">Section 12.4</a>, update the APLN protocol id for HTTP/1.1 (&lt;<a href="https://github.com/httpwg/http-core/issues/49">https://github.com/httpwg/http-core/issues/49</a>&gt;)</li>
                   <li>In <a href="#header.field.syntax" title="Field Syntax">Section 5</a>, align with updates to field terminology in semantics (&lt;<a href="https://github.com/httpwg/http-core/issues/111">https://github.com/httpwg/http-core/issues/111</a>&gt;)</li>
-                  <li>In <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.80"><cite title="HTTP Semantics">[Semantics]</cite></a>, clarify that new connection options indeed need to be registered (&lt;<a href="https://github.com/httpwg/http-core/issues/285">https://github.com/httpwg/http-core/issues/285</a>&gt;)</li>
+                  <li>In <a href="draft-ietf-httpbis-semantics-latest.html#field.connection" title="Connection">Section 7.6.1</a> of <a href="#Semantics" id="rfc.xref.Semantics.81"><cite title="HTTP Semantics">[Semantics]</cite></a>, clarify that new connection options indeed need to be registered (&lt;<a href="https://github.com/httpwg/http-core/issues/285">https://github.com/httpwg/http-core/issues/285</a>&gt;)</li>
                   <li>In <a href="#requirements.notation" title="Requirements Notation">Section 1.1</a>, reference RFC 8174 as well (&lt;<a href="https://github.com/httpwg/http-core/issues/303">https://github.com/httpwg/http-core/issues/303</a>&gt;)</li>
                </ul>
             </div>
@@ -3194,7 +3212,7 @@ Host: www.example.org
             <h3 id="rfc.section.D.9"><a href="#rfc.section.D.9">D.9.</a>&nbsp;<a href="#changes.since.07">Since draft-ietf-httpbis-messaging-07</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-messaging-07" title="plain text">📄</a> <a class="self" href="https://tools.ietf.org/rfcdiff?url2=draft-ietf-httpbis-messaging-08" title="diffs">🔍</a></h3>
             <div id="rfc.section.D.9.p.1">
                <ul>
-                  <li>Move TE: trailers into <a href="#Semantics" id="rfc.xref.Semantics.81"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/18">https://github.com/httpwg/http-core/issues/18</a>&gt;)</li>
+                  <li>Move TE: trailers into <a href="#Semantics" id="rfc.xref.Semantics.82"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/18">https://github.com/httpwg/http-core/issues/18</a>&gt;)</li>
                   <li>In <a href="#message.body.length" title="Message Body Length">Section 6.3</a>, adjust requirements for handling multiple content-length values (&lt;<a href="https://github.com/httpwg/http-core/issues/59">https://github.com/httpwg/http-core/issues/59</a>&gt;)</li>
                   <li>Throughout, replace "effective request URI" with "target URI" (&lt;<a href="https://github.com/httpwg/http-core/issues/259">https://github.com/httpwg/http-core/issues/259</a>&gt;)</li>
                   <li>In <a href="#field.transfer-encoding" id="rfc.xref.field.transfer-encoding.5" title="Transfer-Encoding">Section 6.1</a>, don't claim Transfer-Encoding is supported by HTTP/2 or later (&lt;<a href="https://github.com/httpwg/http-core/issues/297">https://github.com/httpwg/http-core/issues/297</a>&gt;)</li>
@@ -3225,11 +3243,11 @@ Host: www.example.org
                <ul>
                   <li>In <a href="#message.body.length" title="Message Body Length">Section 6.3</a>, note that TCP half-close does not delimit a request; talk about corresponding server-side
                      behaviour in <a href="#persistent.tear-down" id="rfc.xref.persistent.tear-down.2" title="Tear-down">Section 9.6</a> (&lt;<a href="https://github.com/httpwg/http-core/issues/22">https://github.com/httpwg/http-core/issues/22</a>&gt;)</li>
-                  <li>Moved requirements specific to HTTP/1.1 from <a href="#Semantics" id="rfc.xref.Semantics.82"><cite title="HTTP Semantics">[Semantics]</cite></a> into <a href="#request.target" title="Request Target">Section 3.2</a> (&lt;<a href="https://github.com/httpwg/http-core/issues/182">https://github.com/httpwg/http-core/issues/182</a>&gt;)</li>
+                  <li>Moved requirements specific to HTTP/1.1 from <a href="#Semantics" id="rfc.xref.Semantics.83"><cite title="HTTP Semantics">[Semantics]</cite></a> into <a href="#request.target" title="Request Target">Section 3.2</a> (&lt;<a href="https://github.com/httpwg/http-core/issues/182">https://github.com/httpwg/http-core/issues/182</a>&gt;)</li>
                   <li>In <a href="#field.transfer-encoding" id="rfc.xref.field.transfer-encoding.6" title="Transfer-Encoding">Section 6.1</a> (<a href="#field.transfer-encoding" class="smpl">Transfer-Encoding</a>), adjust ABNF to allow empty lists (&lt;<a href="https://github.com/httpwg/http-core/issues/210">https://github.com/httpwg/http-core/issues/210</a>&gt;)</li>
                   <li>In <a href="#tls.connection.initiation" title="TLS Connection Initiation">Section 9.7</a>, add text from RFC 2818 (&lt;<a href="https://github.com/httpwg/http-core/issues/236">https://github.com/httpwg/http-core/issues/236</a>&gt;)</li>
-                  <li>Moved definitions of "TE" and "Upgrade" into <a href="#Semantics" id="rfc.xref.Semantics.83"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/392">https://github.com/httpwg/http-core/issues/392</a>&gt;)</li>
-                  <li>Moved definition of "Connection" into <a href="#Semantics" id="rfc.xref.Semantics.84"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/407">https://github.com/httpwg/http-core/issues/407</a>&gt;)</li>
+                  <li>Moved definitions of "TE" and "Upgrade" into <a href="#Semantics" id="rfc.xref.Semantics.84"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/392">https://github.com/httpwg/http-core/issues/392</a>&gt;)</li>
+                  <li>Moved definition of "Connection" into <a href="#Semantics" id="rfc.xref.Semantics.85"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/407">https://github.com/httpwg/http-core/issues/407</a>&gt;)</li>
                </ul>
             </div>
          </section>
@@ -3237,7 +3255,7 @@ Host: www.example.org
             <h3 id="rfc.section.D.13"><a href="#rfc.section.D.13">D.13.</a>&nbsp;<a href="#changes.since.11">Since draft-ietf-httpbis-messaging-11</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-messaging-11" title="plain text">📄</a> <a class="self" href="https://tools.ietf.org/rfcdiff?url2=draft-ietf-httpbis-messaging-12" title="diffs">🔍</a></h3>
             <div id="rfc.section.D.13.p.1">
                <ul>
-                  <li>Move IANA Upgrade Token Registry instructions to <a href="#Semantics" id="rfc.xref.Semantics.85"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/450">https://github.com/httpwg/http-core/issues/450</a>&gt;)</li>
+                  <li>Move IANA Upgrade Token Registry instructions to <a href="#Semantics" id="rfc.xref.Semantics.86"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/450">https://github.com/httpwg/http-core/issues/450</a>&gt;)</li>
                </ul>
             </div>
          </section>
@@ -3250,7 +3268,7 @@ Host: www.example.org
                   <li>Moved table of transfer codings into <a href="#transfer.coding.registration" title="Transfer Coding Registration">Section 12.3</a> (&lt;<a href="https://github.com/httpwg/http-core/issues/506">https://github.com/httpwg/http-core/issues/506</a>&gt;)</li>
                   <li>In <a href="#informative.references" title="Informative References">Section 13.2</a>, updated the URI for the <a href="#Linhart" id="rfc.xref.Linhart.2"><cite title="HTTP Request Smuggling">[Linhart]</cite></a> paper (&lt;<a href="https://github.com/httpwg/http-core/issues/517">https://github.com/httpwg/http-core/issues/517</a>&gt;)</li>
                   <li>Changed document title to just "HTTP/1.1" (&lt;<a href="https://github.com/httpwg/http-core/issues/524">https://github.com/httpwg/http-core/issues/524</a>&gt;)</li>
-                  <li>In <a href="#transfer.codings" title="Transfer Codings">Section 7</a>, moved transfer-coding ABNF to <a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.86"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/531">https://github.com/httpwg/http-core/issues/531</a>&gt;)</li>
+                  <li>In <a href="#transfer.codings" title="Transfer Codings">Section 7</a>, moved transfer-coding ABNF to <a href="draft-ietf-httpbis-semantics-latest.html#field.te" title="TE">Section 10.1.4</a> of <a href="#Semantics" id="rfc.xref.Semantics.87"><cite title="HTTP Semantics">[Semantics]</cite></a> (&lt;<a href="https://github.com/httpwg/http-core/issues/531">https://github.com/httpwg/http-core/issues/531</a>&gt;)</li>
                   <li>Changed to using "payload data" when defining requirements about the data being conveyed
                      within a message, instead of the terms "payload body" or "response body" or "representation
                      body", since they often get confused with the HTTP/1.1 message body (which includes
@@ -3275,6 +3293,8 @@ Host: www.example.org
             <h3 id="rfc.section.D.16"><a href="#rfc.section.D.16">D.16.</a>&nbsp;<a href="#changes.since.14">Since draft-ietf-httpbis-messaging-14</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-messaging-14" title="plain text">📄</a></h3>
             <div id="rfc.section.D.16.p.1">
                <ul>
+                  <li>In <a href="#reconstructing.target.uri" title="Reconstructing the Target URI">Section 3.3</a>, clarify how the target URI is reconstructed when the request-target is not in absolute-form
+                     and highlight risk in selecting a default host (&lt;<a href="https://github.com/httpwg/http-core/issues/722">https://github.com/httpwg/http-core/issues/722</a>&gt;)</li>
                   <li>In <a href="#chunked.encoding" title="Chunked Transfer Coding">Section 7.1</a>, clarify large chunk handling issues (&lt;<a href="https://github.com/httpwg/http-core/issues/749">https://github.com/httpwg/http-core/issues/749</a>&gt;)</li>
                   <li>In <a href="#message.parsing" title="Message Parsing">Section 2.2</a>, explicitly close the connection after sending a 400 (&lt;<a href="https://github.com/httpwg/http-core/issues/750">https://github.com/httpwg/http-core/issues/750</a>&gt;)</li>
                   <li>In <a href="#http.version" title="HTTP Version">Section 2.3</a>, refine version requirements for intermediaries (&lt;<a href="https://github.com/httpwg/http-core/issues/751">https://github.com/httpwg/http-core/issues/751</a>&gt;)</li>
@@ -3288,7 +3308,7 @@ Host: www.example.org
       <section id="acks">
          <h2 id="rfc.section.unnumbered-1"><a href="#acks">Acknowledgments</a></h2>
          <div id="rfc.section.unnumbered-1.p.1">
-            <p>See <a href="draft-ietf-httpbis-semantics-latest.html#acks" title="Acknowledgments">Appendix "Acknowledgments"</a> of <a href="#Semantics" id="rfc.xref.Semantics.87"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.unnumbered-1.p.1">¶</a></p>
+            <p>See <a href="draft-ietf-httpbis-semantics-latest.html#acks" title="Acknowledgments">Appendix "Acknowledgments"</a> of <a href="#Semantics" id="rfc.xref.Semantics.88"><cite title="HTTP Semantics">[Semantics]</cite></a>.<a class="self" href="#rfc.section.unnumbered-1.p.1">¶</a></p>
          </div>
       </section>
       <section id="rfc.index">
@@ -3466,57 +3486,58 @@ Host: www.example.org
                   </ul>
                </li>
                <li><a id="rfc.index.S" href="#rfc.index.S"><b>S</b></a><ul>
-                     <li><em>Semantics</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.1">1</a>, <a href="#rfc.xref.Semantics.2">1</a>, <a href="#rfc.xref.Semantics.3">1.1</a>, <a href="#rfc.xref.Semantics.4">1.2</a>, <a href="#rfc.xref.Semantics.5">1.2</a>, <a href="#rfc.xref.Semantics.6">1.2</a>, <a href="#rfc.xref.Semantics.7">1.2</a>, <a href="#rfc.xref.Semantics.8">1.2</a>, <a href="#rfc.xref.Semantics.9">1.2</a>, <a href="#rfc.xref.Semantics.10">1.2</a>, <a href="#rfc.xref.Semantics.11">1.2</a>, <a href="#rfc.xref.Semantics.12">1.2</a>, <a href="#rfc.xref.Semantics.13">1.2</a>, <a href="#rfc.xref.Semantics.14">1.2</a>, <a href="#rfc.xref.Semantics.15">1.2</a>, <a href="#rfc.xref.Semantics.16">2.3</a>, <a href="#rfc.xref.Semantics.17">3</a>, <a href="#rfc.xref.Semantics.18">3</a>, <a href="#rfc.xref.Semantics.19">3.1</a>, <a href="#rfc.xref.Semantics.20">3.2</a>, <a href="#rfc.xref.Semantics.21">3.2.1</a>, <a href="#rfc.xref.Semantics.22">3.2.2</a>, <a href="#rfc.xref.Semantics.23">3.2.3</a>, <a href="#rfc.xref.Semantics.24">3.2.4</a>, <a href="#rfc.xref.Semantics.25">3.3</a>, <a href="#rfc.xref.Semantics.26">4</a>, <a href="#rfc.xref.Semantics.27">5</a>, <a href="#rfc.xref.Semantics.28">6</a>, <a href="#rfc.xref.Semantics.29">6</a>, <a href="#rfc.xref.Semantics.30">6.1</a>, <a href="#rfc.xref.Semantics.31">6.1</a>, <a href="#rfc.xref.Semantics.32">6.1</a>, <a href="#rfc.xref.Semantics.33">6.1</a>, <a href="#rfc.xref.Semantics.34">6.2</a>, <a href="#rfc.xref.Semantics.35">6.2</a>, <a href="#rfc.xref.Semantics.36">6.3</a>, <a href="#rfc.xref.Semantics.37">7</a>, <a href="#rfc.xref.Semantics.38">7.1.2</a>, <a href="#rfc.xref.Semantics.39">7.2</a>, <a href="#rfc.xref.Semantics.40">7.2</a>, <a href="#rfc.xref.Semantics.41">7.2</a>, <a href="#rfc.xref.Semantics.42">7.3</a>, <a href="#rfc.xref.Semantics.43">7.3</a>, <a href="#rfc.xref.Semantics.44">7.4</a>, <a href="#rfc.xref.Semantics.45">7.4</a>, <a href="#rfc.xref.Semantics.46">7.4</a>, <a href="#rfc.xref.Semantics.47">7.4</a>, <a href="#rfc.xref.Semantics.48">9</a>, <a href="#rfc.xref.Semantics.49">9</a>, <a href="#rfc.xref.Semantics.50">9.2</a>, <a href="#rfc.xref.Semantics.51">9.3</a>, <a href="#rfc.xref.Semantics.52">9.3.1</a>, <a href="#rfc.xref.Semantics.53">9.3.2</a>, <a href="#rfc.xref.Semantics.54">9.3.2</a>, <a href="#rfc.xref.Semantics.55">9.6</a>, <a href="#rfc.xref.Semantics.56">11</a>, <a href="#rfc.xref.Semantics.57">11.4</a>, <a href="#rfc.xref.Semantics.58">12.1</a>, <a href="#rfc.xref.Semantics.59">12.3</a>, <a href="#Semantics"><b>13.1</b></a>, <a href="#rfc.xref.Semantics.60">A</a>, <a href="#rfc.xref.Semantics.61">A</a>, <a href="#rfc.xref.Semantics.62">A</a>, <a href="#rfc.xref.Semantics.63">A</a>, <a href="#rfc.xref.Semantics.64">A</a>, <a href="#rfc.xref.Semantics.65">A</a>, <a href="#rfc.xref.Semantics.66">A</a>, <a href="#rfc.xref.Semantics.67">A</a>, <a href="#rfc.xref.Semantics.68">A</a>, <a href="#rfc.xref.Semantics.69">A</a>, <a href="#rfc.xref.Semantics.70">A</a>, <a href="#rfc.xref.Semantics.71">B.3</a>, <a href="#rfc.xref.Semantics.72">B.6</a>, <a href="#rfc.xref.Semantics.73">C.2.1</a>, <a href="#rfc.xref.Semantics.74">C.3</a>, <a href="#rfc.xref.Semantics.75">D.2</a>, <a href="#rfc.xref.Semantics.76">D.2</a>, <a href="#rfc.xref.Semantics.77">D.6</a>, <a href="#rfc.xref.Semantics.78">D.6</a>, <a href="#rfc.xref.Semantics.79">D.7</a>, <a href="#rfc.xref.Semantics.80">D.8</a>, <a href="#rfc.xref.Semantics.81">D.9</a>, <a href="#rfc.xref.Semantics.82">D.12</a>, <a href="#rfc.xref.Semantics.83">D.12</a>, <a href="#rfc.xref.Semantics.84">D.12</a>, <a href="#rfc.xref.Semantics.85">D.13</a>, <a href="#rfc.xref.Semantics.86">D.14</a>, <a href="#rfc.xref.Semantics.87">"Acknowledgments"</a><ul>
-                           <li><em>Section 4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.64">A</a></li>
-                           <li><em>Section 5.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.65">A</a></li>
-                           <li><em>Section 5.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.66">A</a></li>
-                           <li><em>Section 5.6.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.69">A</a></li>
-                           <li><em>Section 5.6.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.61">A</a>, <a href="#rfc.xref.Semantics.62">A</a>, <a href="#rfc.xref.Semantics.63">A</a></li>
-                           <li><em>Section 5.6.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.67">A</a>, <a href="#rfc.xref.Semantics.68">A</a></li>
-                           <li><em>Section 10.1.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.70">A</a></li>
+                     <li><em>Semantics</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.1">1</a>, <a href="#rfc.xref.Semantics.2">1</a>, <a href="#rfc.xref.Semantics.3">1.1</a>, <a href="#rfc.xref.Semantics.4">1.2</a>, <a href="#rfc.xref.Semantics.5">1.2</a>, <a href="#rfc.xref.Semantics.6">1.2</a>, <a href="#rfc.xref.Semantics.7">1.2</a>, <a href="#rfc.xref.Semantics.8">1.2</a>, <a href="#rfc.xref.Semantics.9">1.2</a>, <a href="#rfc.xref.Semantics.10">1.2</a>, <a href="#rfc.xref.Semantics.11">1.2</a>, <a href="#rfc.xref.Semantics.12">1.2</a>, <a href="#rfc.xref.Semantics.13">1.2</a>, <a href="#rfc.xref.Semantics.14">1.2</a>, <a href="#rfc.xref.Semantics.15">1.2</a>, <a href="#rfc.xref.Semantics.16">2.3</a>, <a href="#rfc.xref.Semantics.17">3</a>, <a href="#rfc.xref.Semantics.18">3</a>, <a href="#rfc.xref.Semantics.19">3.1</a>, <a href="#rfc.xref.Semantics.20">3.2</a>, <a href="#rfc.xref.Semantics.21">3.2.1</a>, <a href="#rfc.xref.Semantics.22">3.2.2</a>, <a href="#rfc.xref.Semantics.23">3.2.3</a>, <a href="#rfc.xref.Semantics.24">3.2.4</a>, <a href="#rfc.xref.Semantics.25">3.3</a>, <a href="#rfc.xref.Semantics.26">3.3</a>, <a href="#rfc.xref.Semantics.27">4</a>, <a href="#rfc.xref.Semantics.28">5</a>, <a href="#rfc.xref.Semantics.29">6</a>, <a href="#rfc.xref.Semantics.30">6</a>, <a href="#rfc.xref.Semantics.31">6.1</a>, <a href="#rfc.xref.Semantics.32">6.1</a>, <a href="#rfc.xref.Semantics.33">6.1</a>, <a href="#rfc.xref.Semantics.34">6.1</a>, <a href="#rfc.xref.Semantics.35">6.2</a>, <a href="#rfc.xref.Semantics.36">6.2</a>, <a href="#rfc.xref.Semantics.37">6.3</a>, <a href="#rfc.xref.Semantics.38">7</a>, <a href="#rfc.xref.Semantics.39">7.1.2</a>, <a href="#rfc.xref.Semantics.40">7.2</a>, <a href="#rfc.xref.Semantics.41">7.2</a>, <a href="#rfc.xref.Semantics.42">7.2</a>, <a href="#rfc.xref.Semantics.43">7.3</a>, <a href="#rfc.xref.Semantics.44">7.3</a>, <a href="#rfc.xref.Semantics.45">7.4</a>, <a href="#rfc.xref.Semantics.46">7.4</a>, <a href="#rfc.xref.Semantics.47">7.4</a>, <a href="#rfc.xref.Semantics.48">7.4</a>, <a href="#rfc.xref.Semantics.49">9</a>, <a href="#rfc.xref.Semantics.50">9</a>, <a href="#rfc.xref.Semantics.51">9.2</a>, <a href="#rfc.xref.Semantics.52">9.3</a>, <a href="#rfc.xref.Semantics.53">9.3.1</a>, <a href="#rfc.xref.Semantics.54">9.3.2</a>, <a href="#rfc.xref.Semantics.55">9.3.2</a>, <a href="#rfc.xref.Semantics.56">9.6</a>, <a href="#rfc.xref.Semantics.57">11</a>, <a href="#rfc.xref.Semantics.58">11.4</a>, <a href="#rfc.xref.Semantics.59">12.1</a>, <a href="#rfc.xref.Semantics.60">12.3</a>, <a href="#Semantics"><b>13.1</b></a>, <a href="#rfc.xref.Semantics.61">A</a>, <a href="#rfc.xref.Semantics.62">A</a>, <a href="#rfc.xref.Semantics.63">A</a>, <a href="#rfc.xref.Semantics.64">A</a>, <a href="#rfc.xref.Semantics.65">A</a>, <a href="#rfc.xref.Semantics.66">A</a>, <a href="#rfc.xref.Semantics.67">A</a>, <a href="#rfc.xref.Semantics.68">A</a>, <a href="#rfc.xref.Semantics.69">A</a>, <a href="#rfc.xref.Semantics.70">A</a>, <a href="#rfc.xref.Semantics.71">A</a>, <a href="#rfc.xref.Semantics.72">B.3</a>, <a href="#rfc.xref.Semantics.73">B.6</a>, <a href="#rfc.xref.Semantics.74">C.2.1</a>, <a href="#rfc.xref.Semantics.75">C.3</a>, <a href="#rfc.xref.Semantics.76">D.2</a>, <a href="#rfc.xref.Semantics.77">D.2</a>, <a href="#rfc.xref.Semantics.78">D.6</a>, <a href="#rfc.xref.Semantics.79">D.6</a>, <a href="#rfc.xref.Semantics.80">D.7</a>, <a href="#rfc.xref.Semantics.81">D.8</a>, <a href="#rfc.xref.Semantics.82">D.9</a>, <a href="#rfc.xref.Semantics.83">D.12</a>, <a href="#rfc.xref.Semantics.84">D.12</a>, <a href="#rfc.xref.Semantics.85">D.12</a>, <a href="#rfc.xref.Semantics.86">D.13</a>, <a href="#rfc.xref.Semantics.87">D.14</a>, <a href="#rfc.xref.Semantics.88">"Acknowledgments"</a><ul>
+                           <li><em>Section 4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.65">A</a></li>
+                           <li><em>Section 5.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.66">A</a></li>
+                           <li><em>Section 5.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.67">A</a></li>
+                           <li><em>Section 5.6.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.70">A</a></li>
+                           <li><em>Section 5.6.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.62">A</a>, <a href="#rfc.xref.Semantics.63">A</a>, <a href="#rfc.xref.Semantics.64">A</a></li>
+                           <li><em>Section 5.6.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.68">A</a>, <a href="#rfc.xref.Semantics.69">A</a></li>
+                           <li><em>Section 10.1.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.71">A</a></li>
                         </ul>
                         <ul>
                            <li><em>Section 2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.3">1.1</a>, <a href="#rfc.xref.Semantics.17">3</a></li>
                            <li><em>Section 2.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.16">2.3</a></li>
                            <li><em>Section 4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.9">1.2</a></li>
-                           <li><em>Section 4.2.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.20">3.2</a>, <a href="#rfc.xref.Semantics.49">9</a></li>
-                           <li><em>Section 4.2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.57">11.4</a></li>
+                           <li><em>Section 4.2.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.20">3.2</a>, <a href="#rfc.xref.Semantics.50">9</a></li>
+                           <li><em>Section 4.2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.58">11.4</a></li>
                            <li><em>Section 5.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.10">1.2</a></li>
                            <li><em>Section 5.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.11">1.2</a></li>
-                           <li><em>Section 5.6.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.4">1.2</a>, <a href="#rfc.xref.Semantics.36">6.3</a></li>
-                           <li><em>Section 5.6.1.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.60">A</a></li>
+                           <li><em>Section 5.6.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.4">1.2</a>, <a href="#rfc.xref.Semantics.37">6.3</a></li>
+                           <li><em>Section 5.6.1.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.61">A</a></li>
                            <li><em>Section 5.6.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.14">1.2</a></li>
                            <li><em>Section 5.6.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.6">1.2</a>, <a href="#rfc.xref.Semantics.7">1.2</a>, <a href="#rfc.xref.Semantics.8">1.2</a></li>
                            <li><em>Section 5.6.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.12">1.2</a>, <a href="#rfc.xref.Semantics.13">1.2</a></li>
-                           <li><em>Section 5.6.7</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.71">B.3</a></li>
-                           <li><em>Section 6.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.27">5</a></li>
-                           <li><em>Section 6.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.28">6</a>, <a href="#rfc.xref.Semantics.29">6</a></li>
-                           <li><em>Section 6.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.38">7.1.2</a>, <a href="#rfc.xref.Semantics.46">7.4</a></li>
+                           <li><em>Section 5.6.7</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.72">B.3</a></li>
+                           <li><em>Section 6.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.28">5</a></li>
+                           <li><em>Section 6.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.29">6</a>, <a href="#rfc.xref.Semantics.30">6</a></li>
+                           <li><em>Section 6.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.39">7.1.2</a>, <a href="#rfc.xref.Semantics.47">7.4</a></li>
                            <li><em>Section 7.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.25">3.3</a></li>
-                           <li><em>Section 7.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.21">3.2.1</a>, <a href="#rfc.xref.Semantics.73">C.2.1</a></li>
-                           <li><em>Section 7.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.48">9</a></li>
+                           <li><em>Section 7.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.21">3.2.1</a>, <a href="#rfc.xref.Semantics.74">C.2.1</a></li>
+                           <li><em>Section 7.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.49">9</a></li>
+                           <li><em>Section 7.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.26">3.3</a></li>
                            <li><em>Section 7.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.22">3.2.2</a></li>
-                           <li><em>Section 7.6.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.47">7.4</a>, <a href="#rfc.xref.Semantics.51">9.3</a>, <a href="#rfc.xref.Semantics.55">9.6</a>, <a href="#rfc.xref.Semantics.80">D.8</a></li>
-                           <li><em>Section 7.8</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.77">D.6</a>, <a href="#rfc.xref.Semantics.79">D.7</a></li>
-                           <li><em>Section 8.4.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.31">6.1</a>, <a href="#rfc.xref.Semantics.42">7.3</a></li>
-                           <li><em>Section 8.4.1.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.39">7.2</a></li>
-                           <li><em>Section 8.4.1.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.40">7.2</a></li>
-                           <li><em>Section 8.4.1.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.41">7.2</a></li>
-                           <li><em>Section 8.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.34">6.2</a>, <a href="#rfc.xref.Semantics.35">6.2</a></li>
+                           <li><em>Section 7.6.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.48">7.4</a>, <a href="#rfc.xref.Semantics.52">9.3</a>, <a href="#rfc.xref.Semantics.56">9.6</a>, <a href="#rfc.xref.Semantics.81">D.8</a></li>
+                           <li><em>Section 7.8</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.78">D.6</a>, <a href="#rfc.xref.Semantics.80">D.7</a></li>
+                           <li><em>Section 8.4.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.32">6.1</a>, <a href="#rfc.xref.Semantics.43">7.3</a></li>
+                           <li><em>Section 8.4.1.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.40">7.2</a></li>
+                           <li><em>Section 8.4.1.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.41">7.2</a></li>
+                           <li><em>Section 8.4.1.3</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.42">7.2</a></li>
+                           <li><em>Section 8.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.35">6.2</a>, <a href="#rfc.xref.Semantics.36">6.2</a></li>
                            <li><em>Section 9</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.19">3.1</a></li>
-                           <li><em>Section 9.2.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.53">9.3.2</a></li>
-                           <li><em>Section 9.2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.52">9.3.1</a>, <a href="#rfc.xref.Semantics.54">9.3.2</a></li>
-                           <li><em>Section 9.3.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.23">3.2.3</a>, <a href="#rfc.xref.Semantics.33">6.1</a></li>
+                           <li><em>Section 9.2.1</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.54">9.3.2</a></li>
+                           <li><em>Section 9.2.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.53">9.3.1</a>, <a href="#rfc.xref.Semantics.55">9.3.2</a></li>
+                           <li><em>Section 9.3.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.23">3.2.3</a>, <a href="#rfc.xref.Semantics.34">6.1</a></li>
                            <li><em>Section 9.3.7</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.24">3.2.4</a></li>
-                           <li><em>Section 10.1.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.15">1.2</a>, <a href="#rfc.xref.Semantics.30">6.1</a>, <a href="#rfc.xref.Semantics.37">7</a>, <a href="#rfc.xref.Semantics.43">7.3</a>, <a href="#rfc.xref.Semantics.44">7.4</a>, <a href="#rfc.xref.Semantics.59">12.3</a>, <a href="#rfc.xref.Semantics.86">D.14</a></li>
-                           <li><em>Section 12.4.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.45">7.4</a></li>
-                           <li><em>Section 14.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.72">B.6</a></li>
-                           <li><em>Section 15</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.26">4</a></li>
-                           <li><em>Section 15.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.50">9.2</a></li>
-                           <li><em>Section 15.4.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.32">6.1</a></li>
+                           <li><em>Section 10.1.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.15">1.2</a>, <a href="#rfc.xref.Semantics.31">6.1</a>, <a href="#rfc.xref.Semantics.38">7</a>, <a href="#rfc.xref.Semantics.44">7.3</a>, <a href="#rfc.xref.Semantics.45">7.4</a>, <a href="#rfc.xref.Semantics.60">12.3</a>, <a href="#rfc.xref.Semantics.87">D.14</a></li>
+                           <li><em>Section 12.4.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.46">7.4</a></li>
+                           <li><em>Section 14.6</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.73">B.6</a></li>
+                           <li><em>Section 15</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.27">4</a></li>
+                           <li><em>Section 15.2</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.51">9.2</a></li>
+                           <li><em>Section 15.4.5</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.33">6.1</a></li>
                            <li><em>Section 15.5.15</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.18">3</a></li>
-                           <li><em>Section 18.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.58">12.1</a></li>
-                           <li><em>Acknowledgments</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.87">"Acknowledgments"</a></li>
+                           <li><em>Section 18.4</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.59">12.1</a></li>
+                           <li><em>Acknowledgments</em>&nbsp;&nbsp;<a href="#rfc.xref.Semantics.88">"Acknowledgments"</a></li>
                         </ul>
                      </li>
                   </ul>
