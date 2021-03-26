@@ -1593,20 +1593,21 @@ http://www.example.org:8080
 
 <section title="Persistence" anchor="persistent.connections">
    <x:anchor-alias value="persistent connections"/>
+   <iref primary="false" item="close" x:for-anchor=""/>
 <t>
    HTTP/1.1 defaults to the use of <x:dfn>persistent connections</x:dfn>,
    allowing multiple requests and responses to be carried over a single
-   connection. The "<x:ref>close</x:ref>" connection option is used to signal
-   that a connection will not persist after the current request/response.
-   HTTP implementations &SHOULD; support persistent connections.
+   connection. HTTP implementations &SHOULD; support persistent connections.
 </t>
 <t>
    A recipient determines whether a connection is persistent or not based on
    the most recently received message's protocol version and
-   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>), if any:
+   <x:ref>Connection</x:ref> header field
+   (<xref target="field.connection"/>), if any:
 </t>
 <ul>
-   <li>If the "<x:ref>close</x:ref>" connection option is present, the
+   <li>If the <x:ref>close</x:ref> connection option is present
+       (<xref target="persistent.tear-down"/>), the
        connection will not persist after the current response; else,</li>
    <li>If the received protocol is HTTP/1.1 (or later), the connection will
        persist after the current response; else,</li>
@@ -1619,16 +1620,16 @@ http://www.example.org:8080
 </ul>
 <t>
    A client that does not support <x:ref>persistent connections</x:ref> &MUST;
-   send the "close" connection option in every request message.
+   send the <x:ref>close</x:ref> connection option in every request message.
 </t>
 <t>
    A server that does not support <x:ref>persistent connections</x:ref> &MUST;
-   send the "close" connection option in every response message that
-   does not have a <x:ref>1xx (Informational)</x:ref> status code.
+   send the <x:ref>close</x:ref> connection option in every response message
+   that does not have a <x:ref>1xx (Informational)</x:ref> status code.
 </t>
 <t>
    A client &MAY; send additional requests on a persistent connection until it
-   sends or receives a "<x:ref>close</x:ref>" connection option or receives an
+   sends or receives a <x:ref>close</x:ref> connection option or receives an
    HTTP/1.0 response without a "keep-alive" connection option.
 </t>
 <t>
@@ -1647,15 +1648,6 @@ http://www.example.org:8080
    HTTP/1.0 client (see <xref x:sec="19.7.1" x:fmt="of" target="RFC2068"/> for
    information and discussion of the problems with the Keep-Alive header field
    implemented by many HTTP/1.0 clients).
-</t>
-<t anchor="field.close">
-   <iref primary="true" item="Fields" subitem="Close" x:for-anchor=""/>
-   <rdf:Description>
-     <comments xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">(reserved)</comments>
-   </rdf:Description>
-   Note that the field name "Close" is reserved, since using that name as
-   an HTTP header field might conflict with the "close" connection defined
-   above.
 </t>
 <t>
    See <xref target="compatibility.with.http.1.0.persistent.connections"/>
@@ -1785,39 +1777,58 @@ http://www.example.org:8080
 
 <section title="Tear-down" anchor="persistent.tear-down">
   <iref primary="false" item="Connection header field" x:for-anchor=""/>
-  <iref primary="false" item="close" x:for-anchor=""/>
+  <iref primary="true" item="close" x:for-anchor=""/>
+  <x:anchor-alias value="close"/>
 <t>
-   The <x:ref>Connection</x:ref> header field
-   (<xref target="field.connection"/>) provides a "<x:ref>close</x:ref>"
-   connection option that a sender &SHOULD; send when it wishes to close
-   the connection after the current request/response pair.
+   The "close" connection option is defined as a signal that the sender
+   will close this connection after completion of the response.
+   A sender &SHOULD; send a <x:ref>Connection</x:ref> header field
+   (<xref target="field.connection"/>) containing the close connection option
+   when it intends to close a connection. For example,
+</t>
+<artwork type="example">
+     Connection: close
+</artwork>
+<t>
+   as a request header field indicates that this is the last request that
+   the client will send on this connection, while in a response the same
+   field indicates that the server is going to close this connection after
+   the response message is complete.
+</t>
+<t anchor="field.close">
+   <iref primary="true" item="Fields" subitem="Close" x:for-anchor=""/>
+   <rdf:Description>
+     <comments xmlns="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">(reserved)</comments>
+   </rdf:Description>
+   Note that the field name "Close" is reserved, since using that name as a
+   header field might conflict with the close connection option.
 </t>
 <t>
-   A client that sends a "<x:ref>close</x:ref>" connection option &MUST-NOT;
-   send further requests on that connection (after the one containing
-   "close") and &MUST; close the connection after reading the
+   A client that sends a close connection option &MUST-NOT;
+   send further requests on that connection (after the one containing the
+   close) and &MUST; close the connection after reading the
    final response message corresponding to this request.
 </t>
 <t>
-   A server that receives a "<x:ref>close</x:ref>" connection option &MUST;
-   initiate a close of the connection (see below) after it sends the
-   final response to the request that contained "close".
-   The server &SHOULD; send a "close" connection option
-   in its final response on that connection. The server &MUST-NOT; process
+   A server that receives a close connection option &MUST;
+   initiate closure of the connection (see below) after it sends the
+   final response to the request that contained the close.
+   The server &SHOULD; send a close connection option in its final response
+   on that connection. The server &MUST-NOT; process any further requests
+   received on that connection.
+</t>
+<t>
+   A server that sends a close connection option &MUST;
+   initiate closure of the connection (see below) after it sends the
+   response containing the close. The server &MUST-NOT; process
    any further requests received on that connection.
 </t>
 <t>
-   A server that sends a "<x:ref>close</x:ref>" connection option &MUST;
-   initiate a close of the connection (see below) after it sends the
-   response containing "close". The server &MUST-NOT; process
-   any further requests received on that connection.
-</t>
-<t>
-   A client that receives a "<x:ref>close</x:ref>" connection option &MUST;
+   A client that receives a close connection option &MUST;
    cease sending requests on that connection and close the connection
-   after reading the response message containing the "close"; if additional
-   pipelined requests had been sent on the connection, the client &SHOULD-NOT;
-   assume that they will be processed by the server.
+   after reading the response message containing the close; if additional
+   pipelined requests had been sent on the connection,
+   the client &SHOULD-NOT; assume that they will be processed by the server.
 </t>
 <t>
    If a server performs an immediate close of a TCP connection, there is a
@@ -2225,7 +2236,7 @@ http://www.example.org:8080
          <td>Close</td>
          <td>standard</td>
          <td>
-            <xref target="persistent.connections" format="counter"/>
+            <xref target="persistent.tear-down" format="counter"/>
          </td>
          <td>(reserved)</td>
       </tr>
@@ -3134,6 +3145,7 @@ http://www.example.org:8080
 
 <section title="Since draft-ietf-httpbis-messaging-14" anchor="changes.since.14">
 <ul x:when-empty="None yet.">
+   <li>In <xref target="persistent.tear-down"/>, define the close connection option, since its definition was removed from the Connection header field for being specific to 1.1 (<eref target="https://github.com/httpwg/http-core/issues/678"/>)</li>
    <li>In <xref target="reconstructing.target.uri"/>, clarify how the target URI is reconstructed when the request-target is not in absolute-form and highlight risk in selecting a default host (<eref target="https://github.com/httpwg/http-core/issues/722"/>)</li>
    <li>In <xref target="chunked.encoding"/>, clarify large chunk handling issues (<eref target="https://github.com/httpwg/http-core/issues/749"/>)</li>
    <li>In <xref target="message.parsing"/>, explicitly close the connection after sending a 400 (<eref target="https://github.com/httpwg/http-core/issues/750"/>)</li>
