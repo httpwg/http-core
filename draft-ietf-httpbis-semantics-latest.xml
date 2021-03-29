@@ -1625,10 +1625,10 @@ Example-Field: Baz
    possible.
 </t>
 <t>
-   A server &MUST-NOT; apply a request to the target resource until the entire
-   request header section is received, since later header field lines might
-   include conditionals, authentication credentials, or deliberately misleading
-   duplicate header fields that would impact request processing.
+   A server &MUST-NOT; apply a request to the target resource until it
+   receives the entire request header section, since later header field lines
+   might include conditionals, authentication credentials, or deliberately
+   misleading duplicate header fields that could impact request processing.
 </t>
 </section>
 
@@ -2283,9 +2283,9 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    major protocol version.
 </t>
 <t>
-   When an HTTP message is received with a major version number that the
-   recipient implements, but a higher minor version number than what the
-   recipient implements, the recipient &SHOULD; process the message as if it
+   A recipient that receives a message with a major version number that it
+   implements and a minor version number higher than what it implements
+   &SHOULD; process the message as if it
    were in the highest minor version within that major version to which the
    recipient is conformant. A recipient can assume that a message with a
    higher minor version, when sent to a recipient that has not yet indicated
@@ -2731,8 +2731,8 @@ Host: www.example.org
    forthcoming within a reasonable period of time.
 </t>
 <t>
-   A client that receives a response while the associated request is
-   still being sent &SHOULD; continue sending that request, unless it receives
+   A client that receives a response while it is still sending the associated
+   request &SHOULD; continue sending that request, unless it receives
    an explicit indication to the contrary (see, e.g., <xref
    target="persistent.failures"/> and <xref target="RFC7540" section="6.4"/>).
 </t>
@@ -2838,8 +2838,8 @@ Host: www.example.org
    Connection options do not always correspond to a field
    present in the message, since a connection-specific field
    might not be needed if there are no parameters associated with a
-   connection option. In contrast, a connection-specific field that
-   is received without a corresponding connection option usually indicates
+   connection option. In contrast, a connection-specific field
+   received without a corresponding connection option usually indicates
    that the field has been improperly forwarded by an intermediary and
    ought to be ignored by the recipient.
 </t>
@@ -3148,12 +3148,11 @@ Upgrade: websocket
 (as defined by new protocol) to the "GET /hello" request ...]
 </sourcecode>
 <t>
-   When Upgrade is sent, the sender &MUST; also send a
+   A sender of Upgrade &MUST; also send an "Upgrade" connection option in the
    <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
-   that contains an "upgrade" connection option, in order to prevent Upgrade
-   from being accidentally forwarded by intermediaries that might not implement
-   the listed protocols.  A server &MUST; ignore an Upgrade header field that
-   is received in an HTTP/1.0 request.
+   to inform intermediaries not to forward this field.
+   A server that receives an Upgrade header field in an HTTP/1.0 request
+   &MUST; ignore that Upgrade field.
 </t>
 <t>
    A client cannot begin using an upgraded protocol on the connection until
@@ -3275,8 +3274,7 @@ Content-Type: text/html; charset=ISO-8859-4
    and <x:ref>Accept</x:ref> (<xref target="field.accept"/>) header fields in
    order to provide open and extensible data typing and type negotiation.
    Media types define both a data format and various processing models:
-   how to process that data in accordance with each context in which it
-   is received.
+   how to process that data in accordance with the message context.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="media-type"/><iref primary="true" item="Grammar" subitem="type"/><iref primary="true" item="Grammar" subitem="subtype"/>
   <x:ref>media-type</x:ref> = <x:ref>type</x:ref> "/" <x:ref>subtype</x:ref> <x:ref>parameters</x:ref>
@@ -3602,11 +3600,12 @@ Content-Language: mi, en
 Content-Length: 3495
 </sourcecode>
 <t>
-   A user agent &SHOULD; send a Content-Length in a request message when no
-   <x:ref>Transfer-Encoding</x:ref> is sent and the request method defines
-   a meaning for enclosed content. For example, a Content-Length
-   header field is normally sent in a POST request even when the value is
-   0 (indicating empty content).  A user agent &SHOULD-NOT; send a
+   A user agent &SHOULD; send Content-Length in a request when the method
+   defines a meaning for enclosed content and it is not sending
+   <x:ref>Transfer-Encoding</x:ref>.
+   For example, a user agent normally sends Content-Length in a POST request
+   even when the value is 0 (indicating empty content).
+   A user agent &SHOULD-NOT; send a
    Content-Length header field when the request message does not contain
    content and the method semantics do not anticipate such data.
 </t>
@@ -3663,14 +3662,12 @@ Content-Length: 3495
 <t>
    Likewise, a sender &MUST-NOT; forward a message with a Content-Length
    header field value that does not match the ABNF above, with one exception:
-   If a message is received that has a Content-Length header field value
-   consisting of the same decimal value as a comma-separated list (<xref
-   target="abnf.extension"/>) &mdash; for example, "Content-Length: 42, 42" &mdash;
-   indicating that duplicate Content-Length header fields have been generated
-   or combined by an upstream message processor, then the recipient &MUST;
-   either reject the message as invalid or replace the duplicated field
-   values with a single valid Content-Length field containing that decimal
-   value.
+   A recipient of a Content-Length header field value consisting of the same
+   decimal value repeated as a comma-separated list (e.g,
+   "Content-Length: 42, 42"), &MAY; either reject the message as invalid or
+   replace that invalid field value with a single instance of the decimal
+   value, since this likely indicates that a duplicate was generated or
+   combined by an upstream message processor.
 </t>
 </section>
 
@@ -3850,7 +3847,8 @@ Content-Length: 3495
    There are a variety of strong validators used in practice.  The best are
    based on strict revision control, wherein each change to a representation
    always results in a unique node name and revision identifier being assigned
-   before the representation is made accessible to GET.  A collision-resistant hash
+   before the representation is made accessible to GET.
+   A collision-resistant hash
    function applied to the representation data is also sufficient if the data
    is available prior to the response header fields being sent and the digest
    does not need to be recalculated every time a validation request is
@@ -4385,11 +4383,11 @@ Content-Encoding: gzip
    The set of methods allowed by a target resource can be listed in an
    <x:ref>Allow</x:ref> header field (<xref target="field.allow"/>).
    However, the set of allowed methods can change dynamically.
-   When a request method is received that is unrecognized or not implemented
-   by an origin server, the origin server &SHOULD; respond with the
+   An origin server that receives a request method that is unrecognized or
+   not implemented &SHOULD; respond with the
    <x:ref>501 (Not Implemented)</x:ref> status code.
-   When a request method is received that is known by an origin server but
-   not allowed for the target resource, the origin server &SHOULD; respond
+   An origin server that receives a request method that is recognized and
+   implemented, but not allowed for the target resource, &SHOULD; respond
    with the <x:ref>405 (Method Not Allowed)</x:ref> status code.
 </t>
 <t>
@@ -4494,9 +4492,9 @@ Content-Encoding: gzip
    the original request was never applied.
 </t>
 <t>
-   For example, a user agent that knows (through design or configuration)
-   that a POST request to a given resource is safe can repeat that request
-   automatically. Likewise, a user agent designed specifically to operate on
+   For example, a user agent can repeat a POST request automatically if it
+   knows (through design or configuration) that the request is safe for that
+   resource. Likewise, a user agent designed specifically to operate on
    a version control repository might be able to recover from partial failure
    conditions by checking the target resource revision(s) after a failed
    connection, reverting or fixing any changes that were partially applied,
@@ -5212,8 +5210,8 @@ Expect: 100-continue
    </li>
    <li>
     A server that sends a <x:ref>100 (Continue)</x:ref> response &MUST;
-    ultimately send a final status code, once the request content is received
-    and processed, unless the connection is closed prematurely.
+    ultimately send a final status code, once it receives and processes the
+    request content, unless the connection is closed prematurely.
    </li>
    <li>
     A server that responds with a final status code before reading the
@@ -5391,10 +5389,9 @@ Referer: http://www.example.org/hypertext/Overview.html
   <x:ref>transfer-parameter</x:ref> = <x:ref>token</x:ref> <x:ref>BWS</x:ref> "=" <x:ref>BWS</x:ref> ( <x:ref>token</x:ref> / <x:ref>quoted-string</x:ref> )
 </sourcecode>
 <t>
-   When TE is sent, the sender &MUST; also send a <x:ref>Connection</x:ref>
-   header field (<xref target="field.connection"/>) that contains a "te"
-   connection option, in order to prevent TE from being forwarded by
-   intermediaries.
+   A sender of TE &MUST; also send a "TE" connection option within the
+   <x:ref>Connection</x:ref> header field (<xref target="field.connection"/>)
+   to inform intermediaries not to forward this field.
 </t>
 </section>
 
@@ -5415,7 +5412,7 @@ Referer: http://www.example.org/hypertext/Overview.html
    For example, a sender might indicate that a message integrity check will
    be computed as the content is being streamed and provide the final
    signature as a trailer field. This allows a recipient to perform the same
-   check on the fly as the content is received.
+   check on the fly as it receives the content.
 </t>
 <t>
    Because the <x:ref>Trailer</x:ref> field is not removed by intermediaries,
@@ -5570,11 +5567,11 @@ Allow: GET, HEAD, PUT
 Date: Tue, 15 Nov 1994 08:12:31 GMT
 </sourcecode>
 <t>
-   When a Date header field is generated, the sender &SHOULD; generate its
+   A sender that generates a Date header field &SHOULD; generate its
    field value as the best available approximation of the date and time of
    message generation. In theory, the date ought to represent the moment just
-   before the content is generated. In practice, the date can be generated at
-   any time during message origination.
+   before generating the message content. In practice, a sender can generate
+   the date value at any time during message origination.
 </t>
 <t>
    An origin server &MUST-NOT; send a Date header field if it does not have a
@@ -5706,7 +5703,7 @@ Location: http://www.example.net/index.html
 </t>
 <t>
    The Retry-After field value can be either an HTTP-date or a number
-   of seconds to delay after the response is received.
+   of seconds to delay after receiving the response.
 </t>
 <sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Retry-After"/>
   <x:ref>Retry-After</x:ref> = <x:ref>HTTP-date</x:ref> / <x:ref>delay-seconds</x:ref>
@@ -8017,8 +8014,8 @@ Content-Range: bytes 734-1233/1234
   <iref primary="false" item="Fields" subitem="Content-Range"/><iref primary="false" item="Header Fields" subitem="Content-Range"/><iref primary="false" item="Content-Range header field"/>
 <t>
    Some origin servers support <x:ref>PUT</x:ref> of a partial representation
-   when a <x:ref>Content-Range</x:ref> header field
-   (<xref target="field.content-range"/>) is sent in the request, though
+   when the user agent sends a <x:ref>Content-Range</x:ref> header field
+   (<xref target="field.content-range"/>) in the request, though
    such support is inconsistent and depends on private agreements with
    user agents. In general, it requests that the state of the
    <x:ref>target resource</x:ref> be partly replaced with the enclosed content
@@ -8150,24 +8147,10 @@ Content-Range: exampleunit 11.2-14.3/25
 <section title="Status Codes" anchor="status.codes">
   <iref item="Status Code"/>
 <t>
-   The status code of a response is a three-digit integer code that describes the
-   result of the request and the semantics of the response, including whether or
-   not the request was successful and what content is enclosed (if any).
-   All valid status codes for HTTP are within the range of 100 to 599, inclusive.
-</t>
-<t>
-   HTTP status codes are extensible. HTTP clients are not required
-   to understand the meaning of all registered status codes, though such
-   understanding is obviously desirable. However, a client &MUST;
-   understand the class of any status code, as indicated by the first
-   digit, and treat an unrecognized status code as being equivalent to the
-   x00 status code of that class.
-</t>
-<t>
-   For example, if an unrecognized status code of 471 is received by a client,
-   the client can assume that there was something wrong with its request and
-   treat the response as if it had received a <x:ref>400 (Bad Request)</x:ref> status code. The response
-   message will usually contain a representation that explains the status.
+   The status code of a response is a three-digit integer code that describes
+   the result of the request and the semantics of the response, including
+   whether the request was successful and what content is enclosed (if any).
+   All valid status codes are within the range of 100 to 599, inclusive.
 </t>
 <t>
    The first digit of the status code defines the class of response. The
@@ -8197,11 +8180,25 @@ Content-Range: exampleunit 11.2-14.3/25
    </li>
 </ul>
 <t>
-   Values outside the range 100..599 are invalid. Implementations often use three-digit
-   integer values outside of that range (i.e., 600..999) for internal communication of
-   non-HTTP status (e.g., library errors). A client that receives a response with
-   an invalid status code &SHOULD; process the response as if it had a <x:ref>5xx (Server Error)</x:ref>
-   status code.
+   HTTP status codes are extensible. A client is not required to understand
+   the meaning of all registered status codes, though such understanding is
+   obviously desirable. However, a client &MUST; understand the class of any
+   status code, as indicated by the first digit, and treat an unrecognized
+   status code as being equivalent to the x00 status code of that class.
+</t>
+<t>
+   For example, if a client receives an unrecognized status code of 471,
+   it can see from the first digit that there was something wrong with its
+   request and treat the response as if it had received a
+   <x:ref>400 (Bad Request)</x:ref> status code. The response
+   message will usually contain a representation that explains the status.
+</t>
+<t>
+   Values outside the range 100..599 are invalid. Implementations often use
+   three-digit integer values outside of that range (i.e., 600..999) for
+   internal communication of non-HTTP status (e.g., library errors). A client
+   that receives a response with an invalid status code &SHOULD; process the
+   response as if it had a <x:ref>5xx (Server Error)</x:ref> status code.
 </t>
 <t anchor="final.interim">
   <x:anchor-alias value="final"/>
@@ -8210,9 +8207,9 @@ Content-Range: exampleunit 11.2-14.3/25
   <iref item="Status Codes" subitem="Interim"/>
   <iref item="Status Codes" subitem="Informational"/>
   A single request can have multiple associated responses: zero or more
-  <x:dfn>interim</x:dfn> (non-final) responses with status codes in the "informational"
-  (<x:ref>1xx</x:ref>) range, followed by exactly one <x:dfn>final</x:dfn>
-  response with a status code in one of the other ranges.
+  <x:dfn>interim</x:dfn> (non-final) responses with status codes in the
+  "informational" (<x:ref>1xx</x:ref>) range, followed by exactly one
+  <x:dfn>final</x:dfn> response with a status code in one of the other ranges.
 </t>
 
 <section title="Overview of Status Codes" anchor="overview.of.status.codes">
@@ -8529,7 +8526,7 @@ Content-Range: exampleunit 11.2-14.3/25
    and whether additional requests are needed.
 </t>
 <t>
-   When a 206 response is generated, the server &MUST; generate the following
+   A server that generates a 206 response &MUST; generate the following
    header fields, in addition to those required in the subsections below,
    if the field would
    have been sent in a <x:ref>200 (OK)</x:ref> response to the same request:
@@ -8545,11 +8542,11 @@ Content-Range: exampleunit 11.2-14.3/25
    selected representation's complete length.
 </t>
 <t>
-   If a 206 is generated in response to a request with an <x:ref>If-Range</x:ref>
-   header field, the sender &SHOULD-NOT; generate other representation header
-   fields beyond those required, because the client is understood to
-   already have a prior response containing those header fields.
-   Otherwise, the sender &MUST; generate all of the representation header
+   A sender that generates a 206 response with an <x:ref>If-Range</x:ref>
+   header field &SHOULD-NOT; generate other representation header
+   fields beyond those required, because the client
+   already has a prior response containing those header fields.
+   Otherwise, a sender &MUST; generate all of the representation header
    fields that would have been sent in a <x:ref>200 (OK)</x:ref> response
    to the same request.
 </t>
@@ -8638,7 +8635,7 @@ Content-Range: bytes 7000-7999/8000
    generate a request that asks for multiple ranges.
 </t>
 <t>
-   When a multipart response is generated, the server &SHOULD; send
+   A server that generates a multipart response &SHOULD; send
    the parts in the same order that the corresponding range-spec appeared
    in the received <x:ref>Range</x:ref> header field, excluding those ranges
    that were deemed unsatisfiable or that were coalesced into other ranges.
@@ -9434,8 +9431,8 @@ Content-Range: bytes 7000-7999/8000
    a bytes range set satisfiable.
 </t>
 <t>
-   When this status code is generated in response to a byte-range request, the
-   sender &SHOULD; generate a <x:ref>Content-Range</x:ref> header field
+   A server that generates a 416 response to a byte-range request &SHOULD;
+   generate a <x:ref>Content-Range</x:ref> header field
    specifying the current length of the selected representation
    (<xref target="field.content-range"/>).
 </t>
@@ -9496,12 +9493,13 @@ Content-Range: bytes */47022
   <x:anchor-alias value="421 (Misdirected Request)"/>
 <t>
    The 421 (Misdirected Request) status code indicates that the request was
-   directed at a server that is unable or unwilling to produce an authoritative
-   response for the target URI. A 421 is sent when an origin server (or gateway
-   acting on behalf of the origin server) rejects a target URI that does not
-   match an <x:ref>origin</x:ref> for which the server has been configured
-   (<xref target="origin"/>) or does not match the connection context over
-   which the request was received (<xref target="routing.reject"/>).
+   directed at a server that is unable or unwilling to produce an
+   authoritative response for the target URI. An origin server (or gateway
+   acting on behalf of the origin server) sends 421 to reject a target URI
+   that does not match an <x:ref>origin</x:ref> for which the server has been
+   configured (<xref target="origin"/>) or does not match the connection
+   context over which the request was received
+   (<xref target="routing.reject"/>).
 </t>
 <t>
    A client that receives a 421 (Misdirected Request) response &MAY; retry the
