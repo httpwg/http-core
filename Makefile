@@ -150,3 +150,9 @@ consistency.txt: $(TARGETS_XML)
 	echo >> $@
 	saxon $(AUTH).xml lib/consistency-check.xslt >> $@
 	echo >> $@
+
+removetrailingwhitespace:
+	sed -i 's/[[:space:]]*$$//' $(CACHE).xml
+	sed -i 's/[[:space:]]*$$//' $(MESSAGING).xml
+	sed -i 's/[[:space:]]*$$//' $(SEMANTICS).xml
+
