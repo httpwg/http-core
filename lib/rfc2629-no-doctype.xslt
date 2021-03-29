@@ -6108,7 +6108,7 @@
       </xsl:call-template>
 
       <xsl:if test="not(@format='none' or $xml2rfc-ext-xref-with-text-generate='nothing')">
-        <xsl:for-each select="$src/rfc/back/references//reference[@anchor=$target]">
+        <xsl:for-each select="$src/rfc/back/references//reference[@anchor=$target]|$src/rfc/back/references//referencegroup[@anchor=$target]">
           <xsl:text> </xsl:text>
           <xsl:call-template name="emit-link">
             <xsl:with-param name="citation-title" select="normalize-space(front/title)"/>
@@ -12239,11 +12239,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1373 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1373 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1374 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1374 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2021/03/21 09:42:14 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/03/21 09:42:14 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2021/03/28 18:00:16 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/03/28 18:00:16 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
