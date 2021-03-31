@@ -530,6 +530,16 @@ Table of Contents
    programs perform for a particular connection.  The same program might
    act as a client on some connections and a server on others.
 
+   HTTP is defined as a stateless protocol, meaning that each request
+   message can be understood in isolation.  Many implementations depend
+   on HTTP's stateless design in order to reuse proxied connections or
+   dynamically load balance requests across multiple servers.  Hence, a
+   server MUST NOT assume that two requests on the same connection are
+   from the same user agent unless the connection is secured and
+   specific to that agent.  Some non-standard HTTP extensions (e.g.,
+   [RFC4559]) have been known to violate this requirement, resulting in
+   security and interoperability problems.
+
    A connection might be used for multiple request/response exchanges,
    as defined in Section 6.3.
 
@@ -708,16 +718,6 @@ Table of Contents
    enforcing account subscription prior to allowing use of non-local
    Internet services, and within corporate firewalls to enforce network
    usage policies.
-
-   HTTP is defined as a stateless protocol, meaning that each request
-   message can be understood in isolation.  Many implementations depend
-   on HTTP's stateless design in order to reuse proxied connections or
-   dynamically load balance requests across multiple servers.  Hence, a
-   server MUST NOT assume that two requests on the same connection are
-   from the same user agent unless the connection is secured and
-   specific to that agent.  Some non-standard HTTP extensions (e.g.,
-   [RFC4559]) have been known to violate this requirement, resulting in
-   security and interoperability problems.
 
 3.8.  Caches
 
@@ -1192,15 +1192,22 @@ Table of Contents
 5.5.  Field Values
 
    New header field values typically have their syntax defined using
-   ABNF ([RFC5234]), using the extension defined in Section 7 of
-   [RFC7230] as necessary, and are usually constrained to the range of
-   US-ASCII characters.  Header fields needing a greater range of
-   characters can use an encoding such as the one defined in [RFC5987].
+   ABNF ([RFC5234]), using the extension defined in Section 7 of [RFC7230]
+   as necessary, and
 
      field-value    = *( field-content / obs-fold )
      field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
      field-vchar    = VCHAR / obs-text
 
+   Leading and trailing whitespace in raw field values is removed upon
+   field parsing (Section 3.2.4 of [RFC7230]).  Field definitions where
+   leading or trailing whitespace in values is significant will have to
+   use a container syntax such as quoted-string (Section 3.2.6 of
+   [RFC7230]).
+
+   are usually constrained to the range of
+   US-ASCII characters.  Header fields needing a greater range of
+   characters can use an encoding such as the one defined in [RFC5987].
    Historically, HTTP has allowed field content with text in the
    ISO-8859-1 charset [ISO-8859-1], supporting other charsets only
    through use of [RFC2047] encoding.  In practice, most HTTP header
@@ -1209,11 +1216,9 @@ Table of Contents
    US-ASCII octets.  A recipient SHOULD treat other octets in field
    content (obs-text) as opaque data.
 
-   Leading and trailing whitespace in raw field values is removed upon
-   field parsing (Section 3.2.4 of [RFC7230]).  Field definitions where
-   leading or trailing whitespace in values is significant will have to
-   use a container syntax such as quoted-string (Section 3.2.6 of
-   [RFC7230]).
+   [new]
+
+   [new]
 
    [new]
 
@@ -1322,11 +1327,7 @@ Table of Contents
 
 5.6.2.  Tokens
 
-   Most HTTP header field values are defined using common syntax
-   components (token, quoted-string, and comment) separated by
-   whitespace or specific delimiting characters.  Delimiters are chosen
-   from the set of US-ASCII visual characters not allowed in a token
-   (DQUOTE and "(),/:;<=>?@[\]{}").
+   [new]
 
      token          = 1*tchar
 
@@ -1334,6 +1335,12 @@ Table of Contents
                     / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
                     / DIGIT / ALPHA
                     ; any VCHAR, except delimiters
+
+   Most HTTP header field values are defined using common syntax
+   components (token, quoted-string, and comment) separated by
+   whitespace or specific delimiting characters.  Delimiters are chosen
+   from the set of US-ASCII visual characters not allowed in a token
+   (DQUOTE and "(),/:;<=>?@[\]{}").
 
 5.6.3.  Whitespace
 
@@ -1610,6 +1617,8 @@ Table of Contents
    status code in a response to POST might represent either the
    processing result or the new state of the target resource after
    applying the processing.
+
+   [new]
 
    Response messages with an error status code usually contain a payload
    that represents the error condition, such that it describes
@@ -1939,12 +1948,13 @@ Table of Contents
    (Section 5.2 of [RFC7234]).
 
    The connection options do not always correspond to a header field
-   present in the message, since a connection-specific header field
-   might not be needed if there are no parameters associated with a
-   connection option.  In contrast, a connection-specific header field
-   that is received without a corresponding connection option usually
-   indicates that the field has been improperly forwarded by an
-   intermediary and ought to be ignored by the recipient.
+   present in the 
+   message, since a connection-specific header field might not be needed if
+   there are no parameters associated with a connection option. In
+   contrast, a connection-specific header field that is received without a
+   corresponding connection option usually indicates that the field has
+   been improperly forwarded by an intermediary and ought to be ignored
+   by the recipient.
 
    When defining new connection options, specification authors ought to
    survey existing header field names and ensure that the new connection
@@ -2629,6 +2639,8 @@ Table of Contents
 
      Content-Location = absolute-URI / partial-URI
 
+   [new]
+
    The Content-Location value is not a replacement for the effective
    Request URI (Section 5.5 of [RFC7230]).  It is representation
    metadata.  It has the same syntax and semantics as the header field
@@ -3111,14 +3123,14 @@ Table of Contents
    (Section 5.2) to make the requested action conditional on the current
    state of the target resource ([RFC7232]).
 
-     method = token
-
    HTTP was originally designed to be usable as an interface to
    distributed object systems.  The request method was envisioned as
    applying semantics to a target resource in much the same way as
    invoking a defined method on an identified object would apply
    semantics.
    
+     method = token
+
    The method token is case-sensitive because it might be used as a
    gateway to object-based systems with case-sensitive method names.
    By convention, standardized methods are defined in all-uppercase
@@ -5075,6 +5087,8 @@ Table of Contents
    update" problem: one client accidentally overwriting the work of
    another client that has been acting in parallel.
 
+13.1.  Preconditions
+
    Conditional request preconditions are based on the state of the
    target resource as a whole (its current value set) or the state as
    observed in a previously obtained representation (one value in that
@@ -5086,8 +5100,6 @@ Table of Contents
    mapping is inconsistent and the server is unable to select the
    appropriate representation, then no harm will result when the
    precondition evaluates to false.
-
-13.1.  Preconditions
 
    The HTTP conditional request header fields [RFC7232] allow a client
    to place a precondition on the state of the target resource, so that
@@ -5979,20 +5991,6 @@ Table of Contents
    The status-code element is a three-digit integer code giving the
    result of the attempt to understand and satisfy the request.
 
-   HTTP status codes are extensible.  HTTP clients are not required to
-   understand the meaning of all registered status codes, though such
-   understanding is obviously desirable.  However, a client MUST
-   understand the class of any status code, as indicated by the first
-   digit, and treat an unrecognized status code as being equivalent to
-   the x00 status code of that class, with the exception that a
-   recipient MUST NOT cache a response with an unrecognized status code.
-
-   For example, if an unrecognized status code of 471 is received by a
-   client, the client can assume that there was something wrong with its
-   request and treat the response as if it had received a 400 (Bad
-   Request) status code.  The response message will usually contain a
-   representation that explains the status.
-
    The first digit of the status-code defines the class of response.
    The last two digits do not have any categorization role.  There are
    five values for the first digit:
@@ -6010,6 +6008,20 @@ Table of Contents
 
    o  5xx (Server Error): The server failed to fulfill an apparently
       valid request
+
+   HTTP status codes are extensible.  HTTP clients are not required to
+   understand the meaning of all registered status codes, though such
+   understanding is obviously desirable.  However, a client MUST
+   understand the class of any status code, as indicated by the first
+   digit, and treat an unrecognized status code as being equivalent to
+   the x00 status code of that class, with the exception that a
+   recipient MUST NOT cache a response with an unrecognized status code.
+
+   For example, if an unrecognized status code of 471 is received by a
+   client, the client can assume that there was something wrong with its
+   request and treat the response as if it had received a 400 (Bad
+   Request) status code.  The response message will usually contain a
+   representation that explains the status.
 
    [new]
 
@@ -8112,10 +8124,14 @@ Table of Contents
 
    [new]
 
-   [new]
-
    [RFC0793]  Postel, J., "Transmission Control Protocol", STD 7,
               RFC 793, September 1981.
+
+   [new]
+
+   [new]
+
+   [new]
 
    [RFC2045]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
               Extensions (MIME) Part One: Format of Internet Message
@@ -8511,6 +8527,9 @@ C.14.  Since draft-ietf-httpbis-semantics-12
 
 
 C.15.  Since draft-ietf-httpbis-semantics-13
+
+
+C.16.  Since draft-ietf-httpbis-semantics-14
 
 
 Acknowledgments
