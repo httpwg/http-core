@@ -601,11 +601,10 @@
             <xsl:copy-of select="$doc"/>
           </myns:include>
         </xsl:if>
-        <xsl:for-each select="exslt:node-set($doc)//xi:include">
-          <xsl:call-template name="error">
-            <xsl:with-param name="msg" select="'Nested x:include elements are not supported'"/>
-          </xsl:call-template>
-        </xsl:for-each>
+        <xsl:call-template name="error">
+          <xsl:with-param name="msg" select="'Nested x:include elements are not supported'"/>
+          <xsl:with-param name="node" select="exslt:node-set($doc)//xi:include"/>
+        </xsl:call-template>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:for-each>
@@ -5932,13 +5931,6 @@
 <xsl:template name="get-section-xref-format">
   <xsl:param name="default"/>
   <xsl:choose>
-    <xsl:when test="self::relref and (*|text())">
-      <xsl:if test="@displayFormat">
-        <xsl:call-template name="warning">
-          <xsl:with-param name="msg">@displayFormat is ignored on &lt;relref> with content</xsl:with-param>
-        </xsl:call-template>
-      </xsl:if>
-    </xsl:when>
     <xsl:when test="self::relref">
       <xsl:choose>
         <xsl:when test="not(@displayFormat)">of</xsl:when>
@@ -6003,126 +5995,6 @@
     </xsl:when>
     <xsl:otherwise/>
   </xsl:choose>
-</xsl:template>
-
-<xsl:template match="xref[not(@target=//abstract/@anchor or @target=//appendix/@anchor or @target=//artset/@anchor or @target=//artwork/@anchor or @target=//aside/@anchor or @target=//blockquote/@anchor or @target=//cref/@anchor or @target=//dd/@anchor or @target=//dl/@anchor or @target=//dt/@anchor or @target=//figure/@anchor or @target=//li/@anchor or @target=//note/@anchor or @target=//ol/@anchor or @target=//reference/@anchor or @target=//referencegroup/@anchor or @target=//references/@anchor or @target=//section/@anchor or @target=//sourcecode/@anchor or @target=//t/@anchor or @target=//table/@anchor or @target=//texttable/@anchor or @target=//ul/@anchor or @target=//x:blockquote/@anchor or @target=//x:note/@anchor)][*|text()]|relref[*|text()]">
-
-  <xsl:variable name="xref" select="."/>
- 
-  <xsl:variable name="target">
-    <xsl:call-template name="get-target-anchor"/>
-  </xsl:variable>
-  <xsl:variable name="node" select="key('anchor-item',$target)" />
-  <xsl:variable name="anchor"><xsl:value-of select="$anchor-pref"/>xref.<xsl:value-of select="$target"/>.<xsl:number level="any" count="xref[@target=$target]|relref[@target=$target]"/></xsl:variable>
-
-  <xsl:if test="@target!=$target">
-    <xsl:call-template name="info">
-      <xsl:with-param name="msg">Target '<xsl:value-of select="@target"/>' rewritten to '<xsl:value-of select="$target"/>'.</xsl:with-param>
-    </xsl:call-template>
-  </xsl:if>
-
-  <xsl:if test="self::relref and not(@section)">
-    <xsl:call-template name="error">
-      <xsl:with-param name="msg">&lt;relref&gt; requires @section attribute</xsl:with-param>
-    </xsl:call-template>
-  </xsl:if>
-
-  <xsl:variable name="sfmt">
-    <xsl:call-template name="get-section-xref-format"/>
-  </xsl:variable>
-
-  <xsl:variable name="ssec">
-    <xsl:call-template name="get-section-xref-section"/>
-  </xsl:variable>
-
-  <xsl:variable name="href">
-    <xsl:call-template name="computed-target">
-      <xsl:with-param name="bib" select="$node"/>
-      <xsl:with-param name="ref" select="."/>
-    </xsl:call-template>
-  </xsl:variable>
-
-  <xsl:choose>
-    <xsl:when test="self::relref and not($node/self::reference)">
-      <xsl:call-template name="error">
-        <xsl:with-param name="msg">relref/@target must be a reference</xsl:with-param>
-      </xsl:call-template>
-    </xsl:when>
-    <xsl:when test="self::relref and $href=''">
-      <xsl:apply-templates/>
-    </xsl:when>
-    <xsl:when test="self::relref">
-      <xsl:call-template name="emit-link">
-        <xsl:with-param name="target" select="$href"/>
-        <xsl:with-param name="id" select="$anchor"/>
-        <xsl:with-param name="child-nodes" select="*|text()"/>
-        <xsl:with-param name="index-item" select="$target"/>
-        <xsl:with-param name="index-subitem" select="$ssec"/>
-      </xsl:call-template>
-    </xsl:when>
-  
-    <!-- $sfmt='none': do not generate any links -->
-    <xsl:when test="$sfmt='none'">
-      <xsl:choose>
-        <xsl:when test="$node/self::reference">
-          <xsl:call-template name="emit-link">
-            <xsl:with-param name="id" select="$anchor"/>
-            <xsl:with-param name="citation-title" select="normalize-space($node/front/title)"/>
-            <xsl:with-param name="child-nodes" select="*|text()"/>
-            <xsl:with-param name="index-item" select="$target"/>
-            <xsl:with-param name="index-subitem" select="$ssec"/>
-          </xsl:call-template>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:apply-templates/>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:when>
-
-    <!-- Other $sfmt values than "none": unsupported -->
-    <xsl:when test="$sfmt!='' and $sfmt!='none'">
-      <xsl:call-template name="warning">
-        <xsl:with-param name="msg">ignoring unsupported section format extension '<xsl:value-of select="$sfmt"/>' on '<xsl:value-of select="local-name($xref)"/>' element with text content.</xsl:with-param>
-      </xsl:call-template>
-    </xsl:when>
-
-    <xsl:otherwise>
-      <!-- check normative/informative -->
-      <xsl:variable name="t-is-normative" select="ancestor-or-self::*[@x:nrm][1]"/>
-      <xsl:variable name="is-normative" select="$t-is-normative/@x:nrm='true'"/>
-      <xsl:if test="count($node)=1 and $is-normative">
-        <xsl:variable name="t-r-is-normative" select="$node/ancestor-or-self::*[@x:nrm][1]"/>
-        <xsl:variable name="r-is-normative" select="$t-r-is-normative/@x:nrm='true'"/>
-        <xsl:if test="not($r-is-normative)">
-          <xsl:call-template name="warning">
-            <xsl:with-param name="msg" select="concat('Potentially normative reference to ',$target,' not referenced normatively')"/>
-          </xsl:call-template>
-        </xsl:if>
-      </xsl:if>
-
-      <xsl:call-template name="emit-link">
-        <xsl:with-param name="target" select="concat('#',$target)"/>
-        <xsl:with-param name="id">
-          <xsl:if test="@format='none'"><xsl:value-of select="$anchor"/></xsl:if>
-        </xsl:with-param>
-        <xsl:with-param name="child-nodes" select="*|text()"/>
-      </xsl:call-template>
-
-      <xsl:if test="not(@format='none' or $xml2rfc-ext-xref-with-text-generate='nothing')">
-        <xsl:for-each select="$src/rfc/back/references//reference[@anchor=$target]">
-          <xsl:text> </xsl:text>
-          <xsl:call-template name="emit-link">
-            <xsl:with-param name="citation-title" select="normalize-space(front/title)"/>
-            <xsl:with-param name="id" select="$anchor"/>
-            <xsl:with-param name="text">
-              <xsl:call-template name="reference-name"/>
-            </xsl:with-param>
-          </xsl:call-template>
-        </xsl:for-each>
-      </xsl:if>
-    </xsl:otherwise>
-  </xsl:choose>
-
 </xsl:template>
 
 <xsl:key name="iref-xanch" match="iref[@x:for-anchor]" use="@x:for-anchor"/>
@@ -6844,7 +6716,7 @@
   <xsl:variable name="textContent">
     <xsl:apply-templates select="node()"/>
   </xsl:variable>
-  <xsl:variable name="useTextContent" select="normalize-space($textContent)!='' and not(@x:rel or @x:sec or @section) and not(self::relref)"/>
+  <xsl:variable name="useTextContent" select="normalize-space($textContent)!=''"/>
   <xsl:variable name="childNodes" select="node()[$useTextContent]"/>
 
   <xsl:variable name="target">
@@ -6854,12 +6726,6 @@
   <xsl:if test="@target!=$target">
     <xsl:call-template name="info">
       <xsl:with-param name="msg">Target '<xsl:value-of select="@target"/>' rewritten to '<xsl:value-of select="$target"/>'.</xsl:with-param>
-    </xsl:call-template>
-  </xsl:if>
-
-  <xsl:if test="self::relref and not(@section)">
-    <xsl:call-template name="error">
-      <xsl:with-param name="msg">&lt;relref&gt; requires @section attribute</xsl:with-param>
     </xsl:call-template>
   </xsl:if>
 
@@ -6893,6 +6759,20 @@
     </xsl:if>
 
     <xsl:choose>
+
+      <!-- handle misuse of relref -->
+      <xsl:when test="$xref/self::relref and not($xref/@section)">
+        <xsl:call-template name="error">
+          <xsl:with-param name="msg">&lt;relref&gt; requires @section attribute</xsl:with-param>
+          <xsl:with-param name="node" select="$xref"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="$xref/self::relref and not($node/self::reference)">
+        <xsl:call-template name="error">
+          <xsl:with-param name="msg">&lt;relref&gt; @target must be a reference</xsl:with-param>
+          <xsl:with-param name="node" select="$xref"/>
+        </xsl:call-template>
+      </xsl:when>
 
       <!-- Section links -->
       <xsl:when test="$node/self::section or $node/self::appendix or $node/self::references or $node/self::abstract or $node/self::note">
@@ -6940,11 +6820,10 @@
       <xsl:when test="$node/self::cref">
         <xsl:choose>
           <xsl:when test="$node/@display='false'">
-            <xsl:for-each select="$xref">
-              <xsl:call-template name="error">
-                <xsl:with-param name="msg" select="concat('Comment ',$node/@anchor,' is hidden and thus can not be referenced')"/>
-              </xsl:call-template>
-            </xsl:for-each>
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg" select="concat('Comment ',$node/@anchor,' is hidden and thus can not be referenced')"/>
+              <xsl:with-param name="node" select="$xref"/>
+            </xsl:call-template>
           </xsl:when>
           <xsl:when test="$xml2rfc-comments!='no'">
             <xsl:call-template name="xref-to-comment">
@@ -6954,11 +6833,10 @@
             </xsl:call-template>
           </xsl:when>
           <xsl:otherwise>
-            <xsl:for-each select="$xref">
-              <xsl:call-template name="error">
-                <xsl:with-param name="msg">xref to cref, but comments aren't included in the output</xsl:with-param>
-              </xsl:call-template>
-            </xsl:for-each>
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">xref to cref, but comments aren't included in the output</xsl:with-param>
+              <xsl:with-param name="node" select="$xref"/>
+            </xsl:call-template>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:when>
@@ -6973,14 +6851,21 @@
         </xsl:call-template>
       </xsl:when>
 
+      <!-- Other elements we can link to if we have text content -->
+      <xsl:when test="$childNodes and ($node/self::spanx or $node/self::strong)">
+        <xsl:call-template name="emit-link">
+          <xsl:with-param name="target" select="concat('#',$target)"/>
+          <xsl:with-param name="id" select="$anchor"/>
+          <xsl:with-param name="child-nodes" select="$childNodes"/>
+        </xsl:call-template>
+      </xsl:when>
+      
       <xsl:otherwise>
         <xsl:if test="$node">
-          <!-- make it the correct context -->
-          <xsl:for-each select="$xref">
-            <xsl:call-template name="error">
-              <xsl:with-param name="msg" select="concat('xref to unknown element: ',name($node))"/>
-            </xsl:call-template>
-          </xsl:for-each>
+          <xsl:call-template name="error">
+            <xsl:with-param name="msg" select="concat('xref to unknown element: ',name($node))"/>
+            <xsl:with-param name="node" select="$xref"/>
+          </xsl:call-template>
         </xsl:if>
       </xsl:otherwise>
     </xsl:choose>
@@ -10549,8 +10434,8 @@ dd, li, p {
     </xsl:when>
     <xsl:otherwise>
       <xsl:value-of select="$name"/>
-      <xsl:call-template name="warning">
-        <xsl:with-param name="msg" select="concat('In metadata obsoletes/updates, RFC number of draft name is expected - found: ',$name)"/>
+      <xsl:call-template name="error">
+        <xsl:with-param name="msg">In metadata obsoletes/updates, RFC number of draft name is expected - found: '<xsl:value-of select="$name"/>'</xsl:with-param>
       </xsl:call-template>
     </xsl:otherwise>
   </xsl:choose>
@@ -11712,12 +11597,14 @@ dd, li, p {
   <xsl:param name="msg2"/>
   <xsl:param name="inline" select="'no'"/>
   <xsl:param name="lineno" select="true()"/>
+  <xsl:param name="node" select="."/>
   <xsl:call-template name="emit-message">
     <xsl:with-param name="level">TRACE</xsl:with-param>
     <xsl:with-param name="msg" select="$msg"/>
     <xsl:with-param name="msg2" select="$msg2"/>
     <xsl:with-param name="inline" select="$inline"/>
     <xsl:with-param name="lineno" select="$lineno"/>
+    <xsl:with-param name="node" select="$node"/>
   </xsl:call-template>
 </xsl:template>
 
@@ -11725,6 +11612,7 @@ dd, li, p {
   <xsl:param name="msg"/>
   <xsl:param name="msg2"/>
   <xsl:param name="lineno" select="true()"/>
+  <xsl:param name="node" select="."/>
   <xsl:call-template name="emit-message">
     <xsl:with-param name="level">WARNING</xsl:with-param>
     <xsl:with-param name="dlevel">3</xsl:with-param>
@@ -11732,6 +11620,7 @@ dd, li, p {
     <xsl:with-param name="msg2" select="$msg2"/>
     <xsl:with-param name="inline" select="'yes'"/>
     <xsl:with-param name="lineno" select="$lineno"/>
+    <xsl:with-param name="node" select="$node"/>
   </xsl:call-template>
 </xsl:template>
 
@@ -11739,6 +11628,7 @@ dd, li, p {
   <xsl:param name="msg"/>
   <xsl:param name="msg2"/>
   <xsl:param name="lineno" select="true()"/>
+  <xsl:param name="node" select="."/>
   <xsl:call-template name="emit-message">
     <xsl:with-param name="level">WARNING</xsl:with-param>
     <xsl:with-param name="dlevel">3</xsl:with-param>
@@ -11746,6 +11636,7 @@ dd, li, p {
     <xsl:with-param name="msg2" select="$msg2"/>
     <xsl:with-param name="inline" select="'no'"/>
     <xsl:with-param name="lineno" select="$lineno"/>
+    <xsl:with-param name="node" select="$node"/>
   </xsl:call-template>
 </xsl:template>
 
@@ -11753,6 +11644,7 @@ dd, li, p {
   <xsl:param name="msg"/>
   <xsl:param name="msg2"/>
   <xsl:param name="lineno" select="true()"/>
+  <xsl:param name="node" select="."/>
   <xsl:call-template name="emit-message">
     <xsl:with-param name="level">INFO</xsl:with-param>
     <xsl:with-param name="dlevel">2</xsl:with-param>
@@ -11760,6 +11652,7 @@ dd, li, p {
     <xsl:with-param name="msg2" select="$msg2"/>
     <xsl:with-param name="inline" select="'no'"/>
     <xsl:with-param name="lineno" select="$lineno"/>
+    <xsl:with-param name="node" select="$node"/>
   </xsl:call-template>
 </xsl:template>
 
@@ -11768,6 +11661,7 @@ dd, li, p {
   <xsl:param name="msg2"/>
   <xsl:param name="inline"/>
   <xsl:param name="lineno" select="true()"/>
+  <xsl:param name="node" select="."/>
   <xsl:call-template name="emit-message">
     <xsl:with-param name="level">ERROR</xsl:with-param>
     <xsl:with-param name="dlevel">4</xsl:with-param>
@@ -11775,13 +11669,15 @@ dd, li, p {
     <xsl:with-param name="msg2" select="$msg2"/>
     <xsl:with-param name="inline" select="$inline"/>
     <xsl:with-param name="lineno" select="$lineno"/>
+    <xsl:with-param name="node" select="$node"/>
   </xsl:call-template>
 </xsl:template>
 
 <xsl:template name="emit-message-inline">
   <xsl:param name="message"/>
+  <xsl:param name="node" select="."/>
   <xsl:choose>
-    <xsl:when test="ancestor::t or ancestor-or-self::seriesInfo">
+    <xsl:when test="$node/ancestor::t or $node/ancestor-or-self::seriesInfo">
       <span class="{$css-error}"><xsl:value-of select="$message"/></span>
     </xsl:when>
     <xsl:otherwise>
@@ -11797,12 +11693,14 @@ dd, li, p {
   <xsl:param name="msg2"/>
   <xsl:param name="inline"/>
   <xsl:param name="lineno" select="true()"/>
+  <xsl:param name="node" select="."/>
   <xsl:if test="$dlevel >= $log-level">
-    <xsl:variable name="message"><xsl:value-of select="$level"/>: <xsl:value-of select="$msg"/><xsl:if test="$msg2!=''"> - <xsl:value-of select="$msg2"/></xsl:if><xsl:if test="$lineno"><xsl:call-template name="lineno"/></xsl:if></xsl:variable>
+    <xsl:variable name="message"><xsl:value-of select="$level"/>: <xsl:value-of select="$msg"/><xsl:if test="$msg2!=''"> - <xsl:value-of select="$msg2"/></xsl:if><xsl:if test="$lineno"><xsl:call-template name="lineno"><xsl:with-param name="node" select="$node"/></xsl:call-template></xsl:if></xsl:variable>
     <xsl:choose>
       <xsl:when test="$inline!='no'">
         <xsl:call-template name="emit-message-inline">
           <xsl:with-param name="message" select="$message"/>
+          <xsl:with-param name="node" select="$node"/>
         </xsl:call-template>
       </xsl:when>
       <xsl:otherwise>
@@ -12262,11 +12160,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1377 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1377 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1386 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1386 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2021/03/31 15:23:07 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/03/31 15:23:07 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2021/04/03 13:39:49 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/04/03 13:39:49 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
@@ -13060,43 +12958,49 @@ prev: <xsl:value-of select="$prev"/>
 </xsl:template>
 
 <!-- diag support -->
-<xsl:template name="lineno">
+<xsl:template name="get-line-number">
   <xsl:if test="function-available('saxon-old:line-number')" use-when="function-available('saxon-old:line-number')">
-    <xsl:if test="saxon-old:line-number() > 0">
-      <xsl:text> (at line </xsl:text>
-      <xsl:value-of select="saxon-old:line-number()"/>
-      <xsl:if test="function-available('saxon-old:systemId')">
-        <xsl:variable name="rootsys">
-          <xsl:for-each select="/*">
-            <xsl:value-of select="saxon-old:systemId()"/>
-          </xsl:for-each>
-        </xsl:variable>
-        <xsl:if test="$rootsys != saxon-old:systemId()">
-          <xsl:text> of </xsl:text>
-          <xsl:value-of select="saxon-old:systemId()"/>
-        </xsl:if>
-      </xsl:if>
-      <xsl:text>)</xsl:text>
-    </xsl:if>
+    <xsl:value-of select="saxon-old:line-number()"/>
   </xsl:if>
   <xsl:if test="function-available('saxon:line-number')" use-when="function-available('saxon:line-number')">
-    <xsl:if test="saxon:line-number() > 0">
+    <xsl:value-of select="saxon:line-number()"/>
+  </xsl:if>
+</xsl:template>
+
+<xsl:template name="get-system-id">
+  <xsl:if test="function-available('saxon-old:systemId')" use-when="function-available('saxon-old:systemId')">
+    <xsl:value-of select="saxon-old:systemId()"/>
+  </xsl:if>
+  <xsl:if test="function-available('saxon:systemId')" use-when="function-available('saxon:systemId')">
+    <xsl:value-of select="saxon:systemId()"/>
+  </xsl:if>
+</xsl:template>
+
+<xsl:template name="lineno">
+  <xsl:param name="node" select="."/>
+  <xsl:for-each select="$node">
+    <xsl:variable name="l">
+      <xsl:call-template name="get-line-number"/>
+    </xsl:variable>
+    <xsl:variable name="s">
+      <xsl:call-template name="get-system-id"/>
+    </xsl:variable>
+    
+    <xsl:if test="$l!='' and number($l) > 0">
       <xsl:text> (at line </xsl:text>
-      <xsl:value-of select="saxon:line-number()"/>
-      <xsl:if test="function-available('saxon:systemId')">
-        <xsl:variable name="rootsys">
-          <xsl:for-each select="/*">
-            <xsl:value-of select="saxon:systemId()"/>
-          </xsl:for-each>
-        </xsl:variable>
-        <xsl:if test="$rootsys != saxon:systemId()">
-          <xsl:text> of </xsl:text>
-          <xsl:value-of select="saxon:systemId()"/>
-        </xsl:if>
+      <xsl:value-of select="$l"/>
+      <xsl:variable name="rootsys">
+        <xsl:for-each select="/*">
+          <xsl:call-template name="get-system-id"/>
+        </xsl:for-each>
+      </xsl:variable>
+      <xsl:if test="$rootsys != $s">
+        <xsl:text> of </xsl:text>
+        <xsl:value-of select="$s"/>
       </xsl:if>
       <xsl:text>)</xsl:text>
     </xsl:if>
-  </xsl:if>
+  </xsl:for-each>
 </xsl:template>
 
 <!-- define exslt:node-set for msxml -->
