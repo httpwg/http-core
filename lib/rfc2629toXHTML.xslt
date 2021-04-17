@@ -6515,7 +6515,7 @@
       <xsl:with-param name="child-nodes" select="$child-nodes"/>
     </xsl:call-template>
 
-    <xsl:if test="$child-nodes and not($from/@format='none' or $xml2rfc-ext-xref-with-text-generate='nothing')">
+    <xsl:if test="$child-nodes and not($from/@format='none' or $from/@x:fmt='none' or $xml2rfc-ext-xref-with-text-generate='nothing')">
       <xsl:text> </xsl:text>
       <xsl:call-template name="emit-link">
         <xsl:with-param name="citation-title" select="normalize-space($front[1]/title)"/>
@@ -6590,6 +6590,12 @@
   <xsl:if test="@target!=$target">
     <xsl:call-template name="info">
       <xsl:with-param name="msg">Target '<xsl:value-of select="@target"/>' rewritten to '<xsl:value-of select="$target"/>'.</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
+
+  <xsl:if test="self::relref">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">&lt;relref&gt; is deprecated; use &lt;xref&gt; extensions instead.</xsl:with-param>
     </xsl:call-template>
   </xsl:if>
 
@@ -10649,6 +10655,8 @@ dd, li, p {
   </div>
 </xsl:template>
 
+<xsl:variable name="has-bcp14-reference" select="$all-refs//seriesInfo[@name='RFC' and @value='2119'] or $all-refs//seriesInfo[@name='BCP' and @value='14']"/>
+
 <xsl:template match="x:bcp14|bcp14">
   <!-- check valid BCP14 keywords, then emphasize them -->
   <xsl:variable name="c" select="normalize-space(translate(.,' ',' '))"/>
@@ -10659,10 +10667,15 @@ dd, li, p {
     <xsl:otherwise>
       <xsl:value-of select="."/>
       <xsl:call-template name="error">
-        <xsl:with-param name="msg" select="concat('Unknown BCP14 keyword: ',$c)"/>
+        <xsl:with-param name="msg">Unknown BCP14 keyword: '<xsl:value-of select="$c"/>'</xsl:with-param>
       </xsl:call-template>
     </xsl:otherwise>
   </xsl:choose>
+  <xsl:if test="not($has-bcp14-reference)">
+    <xsl:call-template name="warning">
+      <xsl:with-param name="msg">BCP14 markup used without referencing RFC 2119 or BCP 14</xsl:with-param>
+    </xsl:call-template>
+  </xsl:if>
 </xsl:template>
 
 <xsl:template match="x:blockquote|blockquote">
@@ -11156,6 +11169,8 @@ dd, li, p {
 
 </xsl:template>
 
+<xsl:variable name="all-refs" select="/rfc/back/references/reference|exslt:node-set($includeDirectives)//reference|exslt:node-set($sourcedReferences)//reference"/>
+
 <xsl:template name="insert-diagnostics">
 
   <!-- check anchor names -->
@@ -11193,8 +11208,6 @@ dd, li, p {
       <xsl:with-param name="lineno" select="false()"/>
     </xsl:call-template>
   </xsl:if>
-
-  <xsl:variable name="all-refs" select="/rfc/back/references/reference|exslt:node-set($includeDirectives)//reference|exslt:node-set($sourcedReferences)//reference"/>
 
   <!-- check ABNF syntax references -->
   <xsl:if test="//artwork[@type='abnf2616' or @type='abnf7230']|//sourcecode[@type='abnf2616' or type='abnf7320']">
@@ -12012,11 +12025,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1386 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1386 $', 'Revision: '),'$','')),', ')"/>
+    <xsl:if test="contains('$Revision: 1.1389 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1389 $', 'Revision: '),'$','')),', ')"/>
     </xsl:if>
-    <xsl:if test="contains('$Date: 2021/04/03 13:39:49 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/04/03 13:39:49 $', 'Date: '),'$','')),', ')"/>
+    <xsl:if test="contains('$Date: 2021/04/16 09:45:37 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/04/16 09:45:37 $', 'Date: '),'$','')),', ')"/>
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
