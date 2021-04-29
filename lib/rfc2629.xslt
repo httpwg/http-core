@@ -69,10 +69,16 @@
 <!-- rfc comments PI -->
 
 <xsl:param name="xml2rfc-comments">
+  <xsl:variable name="default">
+    <xsl:choose>
+      <xsl:when test="/rfc/@version >= 3">yes</xsl:when>
+      <xsl:otherwise>no</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
   <xsl:call-template name="parse-pis">
     <xsl:with-param name="nodes" select="$global-std-pis"/>
     <xsl:with-param name="attr" select="'comments'"/>
-    <xsl:with-param name="default" select="'no'"/>
+    <xsl:with-param name="default" select="$default"/>
   </xsl:call-template>
 </xsl:param>
 
@@ -107,10 +113,16 @@
 <!-- rfc inline PI -->
 
 <xsl:param name="xml2rfc-inline">
+  <xsl:variable name="default">
+    <xsl:choose>
+      <xsl:when test="/rfc/@version >= 3">yes</xsl:when>
+      <xsl:otherwise>no</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
   <xsl:call-template name="parse-pis">
     <xsl:with-param name="nodes" select="$global-std-pis"/>
     <xsl:with-param name="attr" select="'inline'"/>
-    <xsl:with-param name="default" select="'no'"/>
+    <xsl:with-param name="default" select="$default"/>
   </xsl:call-template>
 </xsl:param>
 
@@ -596,15 +608,17 @@
         <xsl:variable name="doc">
           <xsl:copy-of select="document($uri)"/>
         </xsl:variable>
-        <xsl:if test="count(exslt:node-set($doc)) = 1">
+        <xsl:if test="count($doc) = 1">
           <myns:include from="{@href}" in="{generate-id(..)}">
             <xsl:copy-of select="$doc"/>
           </myns:include>
         </xsl:if>
-        <xsl:call-template name="error">
-          <xsl:with-param name="msg" select="'Nested x:include elements are not supported'"/>
-          <xsl:with-param name="node" select="exslt:node-set($doc)//xi:include"/>
-        </xsl:call-template>
+        <xsl:if test="$doc//xi:include">
+          <xsl:call-template name="error">
+            <xsl:with-param name="msg" select="'Nested x:include elements are not supported'"/>
+            <xsl:with-param name="node" select="exslt:node-set($doc)//xi:include"/>
+          </xsl:call-template>
+        </xsl:if>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:for-each>
@@ -11317,7 +11331,7 @@ dd, li, p {
 
 </xsl:template>
 
-<xsl:variable name="all-refs" select="/rfc/back/references/reference|exslt:node-set($includeDirectives)//reference|exslt:node-set($sourcedReferences)//reference"/>
+<xsl:variable name="all-refs" select="/rfc/back//references/reference|exslt:node-set($includeDirectives)//reference|exslt:node-set($sourcedReferences)//reference"/>
 
 <xsl:template name="insert-diagnostics">
 
@@ -12173,11 +12187,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1389 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1389 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1392 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1392 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2021/04/16 09:45:37 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/04/16 09:45:37 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2021/04/24 08:56:56 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/04/24 08:56:56 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
