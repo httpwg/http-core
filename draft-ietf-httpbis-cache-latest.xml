@@ -941,7 +941,9 @@
 <t>
    It then updates that request with one or more precondition header fields.
    These contain validator metadata sourced from stored response(s) that have
-   the same cache key.
+   the same URI. Typically, this will include only those stored responses(s) that
+   have the same cache key, although a cache is allowed to validate
+   a response that it cannot select with the request header fields it is sending.
 </t>
 <t>
    The precondition header fields are then compared by recipients to
@@ -976,11 +978,14 @@
    complete the transfer of a partially retrieved representation.
 </t>
 <t>
-   If a cache receives a request that can be satisfied by reusing one of
-   its stored <x:ref>200 (OK)</x:ref> or <x:ref>206 (Partial Content)</x:ref>
-   responses, the cache &SHOULD; evaluate any applicable conditional header
+   If a cache receives a request that can be satisfied by reusing a stored
+   <x:ref>200 (OK)</x:ref> or <x:ref>206 (Partial Content)</x:ref>
+   response, as per <xref target="constructing.responses.from.caches"/>,
+   the cache &SHOULD; evaluate any applicable conditional header
    field preconditions received in that request with respect to the
    corresponding validators contained within the selected response.
+</t>
+<t>
    A cache &MUST-NOT; evaluate conditional header fields that only
    apply to an origin server, occur in a request with semantics that
    cannot be satisfied with a cached response, or occur in a request with a target resource
@@ -996,27 +1001,11 @@
    a complete specification of precondition precedence.
 </t>
 <t>
-   A request containing an <x:ref>If-None-Match</x:ref> header field
-   (<xref target="field.if-none-match"/>) indicates that the client wants to validate one
-   or more of its own stored responses in comparison to whichever stored
-   response is selected by the cache.
-</t>
-<t>
-   When a cache decides to revalidate its own stored responses for a
-   request that contains an <x:ref>If-None-Match</x:ref> list of entity-tags,
-   the cache &MAY; combine the received list with a list of entity-tags
-   from its own stored set of responses (fresh or stale) and send the union of
-   the two lists as a replacement <x:ref>If-None-Match</x:ref> header
-   field value in the forwarded request.
-   If a stored response contains only partial content, the
-   cache &MUST-NOT; include its entity-tag in the union unless the request is
-   for a range that would be fully satisfied by that partial stored response.
-   If the response to the forwarded request is
-   <x:ref>304 (Not Modified)</x:ref> and has an ETag field value with
-   an entity-tag that is not in the client's list, the cache &MUST;
-   generate a <x:ref>200 (OK)</x:ref> response for the client by reusing its
-   corresponding stored response, as updated by the 304 response metadata
-   (<xref target="freshening.responses"/>).
+   A request containing an <x:ref>If-None-Match</x:ref> header field (<xref
+   target="field.if-none-match"/>) indicates that the client wants to
+   validate one or more of its own stored responses in comparison to the
+   stored response selected by the cache (as per <xref
+   target="constructing.responses.from.caches"/>).
 </t>
 <t>
    If an <x:ref>If-None-Match</x:ref> header field is not present, a request
@@ -1035,6 +1024,23 @@
    A cache that implements partial responses to range requests, as defined in
    <xref target="field.range"/>, also needs to evaluate a received <x:ref>If-Range</x:ref> header
    field (<xref target="field.if-range"/>) regarding its selected stored response.
+</t>
+<t>
+   When a cache decides to forward a request to revalidate its own stored responses for a
+   request that contains an <x:ref>If-None-Match</x:ref> list of entity-tags,
+   the cache &MAY; combine the received list with a list of entity-tags
+   from its own stored set of responses (fresh or stale) and send the union of
+   the two lists as a replacement <x:ref>If-None-Match</x:ref> header
+   field value in the forwarded request.
+   If a stored response contains only partial content, the
+   cache &MUST-NOT; include its entity-tag in the union unless the request is
+   for a range that would be fully satisfied by that partial stored response.
+   If the response to the forwarded request is
+   <x:ref>304 (Not Modified)</x:ref> and has an ETag field value with
+   an entity-tag that is not in the client's list, the cache &MUST;
+   generate a <x:ref>200 (OK)</x:ref> response for the client by reusing its
+   corresponding stored response, as updated by the 304 response metadata
+   (<xref target="freshening.responses"/>).
 </t>
 </section>
 
@@ -1071,7 +1077,7 @@
 <t>
    When a cache receives a <x:ref>304 (Not Modified)</x:ref> response and
    already has one or more stored <x:ref>200 (OK)</x:ref> responses for the
-   applicable cache key, the cache needs to identify which (if any) are to
+   applicable request URI, the cache needs to identify which (if any) are to
    be updated by the new information provided, and then do so.
 </t>
 <iref item="strong validator" />
@@ -2531,6 +2537,7 @@ Expires: Thu, 01 Dec 1994 16:00:00 GMT
 
 <section title="Since draft-ietf-httpbis-cache-15" anchor="changes.since.15">
 <ul x:when-empty="None yet.">
+  <li>In <xref target="validation.sent"/>, tune description of relation between cache keys and validators (<eref target="https://github.com/httpwg/http-core/issues/832"/>)</li>
 </ul>
 </section>
 </section>
