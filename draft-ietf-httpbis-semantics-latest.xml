@@ -10603,31 +10603,47 @@ Content-Type: text/plain
 
 <section title="Application Handling of Field Names" anchor="underscore.in.fields">
 <t>
-   When an implementation makes HTTP fields available to an application, it
-   is often necessary to map field names into an application-specific name
-   space. Most commonly, this is done by changing all instances of "-" to
-   "_", and prepending "HTTP_", in order to make the field names suitable for use in environment variables.  For example, "Content-Length" might become
-   "HTTP_CONTENT_LENGTH".
+   Servers often use non-HTTP gateway interfaces and frameworks to process a received
+   request and produce content for the response. For historical reasons, such interfaces
+   often pass received field names as external variable names, using a name mapping
+   suitable for environment variables.
 </t>
 <t>
-   This practice can lead to security vulnerabilities. For example, if an
-   attacker were to send a field named "Content_Length", a naive
-   application might use that value instead of the intended one. Most often,
-   the resulting vulnerability takes the form of request smuggling (<xref
-   target="request.smuggling"/>).
+   For example, the Common Gateway Interface (CGI) mapping of protocol-specific
+   meta-variables, defined by <xref target="RFC3875"  x:fmt="of" x:sec="4.1.18"/>,
+   is applied to received header fields that do not correspond to one of CGI's
+   standard variables; the mapping consists of prepending "HTTP_" to each name
+   and changing all instances of hyphen ("-") to underscore ("_"). This same mapping
+   has been inherited by many other application frameworks in order to simplify
+   moving applications from one platform to the next.
 </t>
 <t>
-   For this reason, <xref target="considerations.for.new.field.names"/>
-   discourages new fields from using names containing the "_" character.
+   In CGI, a received <x:ref>Content-Length</x:ref> field would be passed
+   as the meta-variable "CONTENT_LENGTH" with a string value matching the
+   received field's value. In contrast, a received "Content_Length" header field would
+   be passed as the protocol-specific meta-variable "HTTP_CONTENT_LENGTH",
+   which might lead to some confusion if an application mistakenly reads the
+   protocol-specific meta-variable instead of the default one. (This historical practice
+   is why <xref target="considerations.for.new.field.names"/> discourages the creation
+   of new field names that contain an underscore.)
+</t>
+<t>
+   Unfortunately, mapping field names to different interface names can lead to
+   security vulnerabilities if the mapping is incomplete or ambiguous. For example,
+   if an attacker were to send a field named "Transfer_Encoding", a naive interface
+   might map that to the same variable name as the "Transfer-Encoding" field, resulting
+   in a potential request smuggling vulnerability (<xref target="request.smuggling"/>).
 </t>
 <t>
    To mitigate the associated risks, implementations that perform such
-   mapping are advised to handle an incoming field whose name contains "_"
-   carefully. For example, the field might be completely removed, or it might
-   be made available with a different prefix, to distinguish it from fields
-   containing "-".
+   mappings are advised to make the mapping unambiguous and complete
+   for the full range of potential octets received as a name (including those
+   that are discouraged or forbidden by the HTTP grammar).
+   For example, a field with an unusual name character might
+   result in the request being blocked, the specific field being removed,
+   or the name being passed with a different prefix to distinguish it from
+   other fields.
 </t>
-
 </section>
 
 <section title="Disclosure of Fragment after Redirects" anchor="fragment.disclosure">
