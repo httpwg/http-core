@@ -10016,7 +10016,9 @@ Content-Type: text/plain
    practice some implementations place limits on the characters they accept
    in field-names. To be interoperable, new field names &SHOULD; constrain
    themselves to alphanumeric characters, "-", and ".", and &SHOULD;
-   begin with an alphanumeric character.
+   begin with an alphanumeric character. For example, the underscore
+   ("_") character can be problematic when passed through non-HTTP
+   gateway interfaces (see <xref target="underscore.in.fields"/>).
 </t>
 <t>
    Field names ought not be prefixed with "X-"; see
@@ -10596,6 +10598,51 @@ Content-Type: text/plain
    information that might be found in the referring resource's URI.
    Limitations on the Referer header field are described in <xref target="field.referer"/> to
    address some of its security considerations.
+</t>
+</section>
+
+<section title="Application Handling of Field Names" anchor="underscore.in.fields">
+<t>
+   Servers often use non-HTTP gateway interfaces and frameworks to process a received
+   request and produce content for the response. For historical reasons, such interfaces
+   often pass received field names as external variable names, using a name mapping
+   suitable for environment variables.
+</t>
+<t>
+   For example, the Common Gateway Interface (CGI) mapping of protocol-specific
+   meta-variables, defined by <xref target="RFC3875"  x:fmt="of" x:sec="4.1.18"/>,
+   is applied to received header fields that do not correspond to one of CGI's
+   standard variables; the mapping consists of prepending "HTTP_" to each name
+   and changing all instances of hyphen ("-") to underscore ("_"). This same mapping
+   has been inherited by many other application frameworks in order to simplify
+   moving applications from one platform to the next.
+</t>
+<t>
+   In CGI, a received <x:ref>Content-Length</x:ref> field would be passed
+   as the meta-variable "CONTENT_LENGTH" with a string value matching the
+   received field's value. In contrast, a received "Content_Length" header field would
+   be passed as the protocol-specific meta-variable "HTTP_CONTENT_LENGTH",
+   which might lead to some confusion if an application mistakenly reads the
+   protocol-specific meta-variable instead of the default one. (This historical practice
+   is why <xref target="considerations.for.new.field.names"/> discourages the creation
+   of new field names that contain an underscore.)
+</t>
+<t>
+   Unfortunately, mapping field names to different interface names can lead to
+   security vulnerabilities if the mapping is incomplete or ambiguous. For example,
+   if an attacker were to send a field named "Transfer_Encoding", a naive interface
+   might map that to the same variable name as the "Transfer-Encoding" field, resulting
+   in a potential request smuggling vulnerability (<xref target="request.smuggling"/>).
+</t>
+<t>
+   To mitigate the associated risks, implementations that perform such
+   mappings are advised to make the mapping unambiguous and complete
+   for the full range of potential octets received as a name (including those
+   that are discouraged or forbidden by the HTTP grammar).
+   For example, a field with an unusual name character might
+   result in the request being blocked, the specific field being removed,
+   or the name being passed with a different prefix to distinguish it from
+   other fields.
 </t>
 </section>
 
@@ -12594,6 +12641,16 @@ Content-Type: text/plain
   <seriesInfo name="RFC" value="3864"/>
 </reference>
 
+<reference anchor="RFC3875">
+  <front>
+    <title>The Common Gateway Interface (CGI) Version 1.1</title>
+    <author initials="D." surname="Robinson" fullname="David Robinson"/>
+    <author initials="K." surname="Coar" fullname="Ken A. L. Coar"/>
+    <date year="2004" month="October"/>
+  </front>
+  <seriesInfo name="RFC" value="3875"/>
+</reference>
+
 <reference anchor="RFC5322">
   <front>
     <title>Internet Message Format</title>
@@ -13545,6 +13602,7 @@ Content-Type: text/plain
   <li>In <xref target="HEAD"/>, align prose about content in HEAD requests with description of GET (<eref target="https://github.com/httpwg/http-core/issues/826"/>)</li>
   <li>In <xref target="fields.order"/>, remove the restriction to non-empty field line values (<eref target="https://github.com/httpwg/http-core/issues/836"/>)</li>
   <li>Add forward references to definition of OWS (<eref target="https://github.com/httpwg/http-core/issues/841"/>)</li>
+  <li>In <xref target="underscore.in.fields"/>, add a security consideration regarding application handling of field names (<eref target="https://github.com/httpwg/http-core/issues/843"/>)</li>
 </ul>
 </section>
 </section>
