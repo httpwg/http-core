@@ -1012,7 +1012,8 @@ Content-Type: text/plain
    Each protocol element in HTTP that allows a URI reference will indicate
    in its ABNF production whether the element allows any form of reference
    (URI-reference), only a URI in absolute form (absolute-URI), only the
-   path and optional query components, or some combination of the above.
+   path and optional query components (partial-URI),
+   or some combination of the above.
    Unless otherwise indicated, URI references are parsed
    relative to the target URI (<xref target="target.resource"/>).
 </t>
@@ -1076,7 +1077,8 @@ Content-Type: text/plain
 <t>
    The origin server for an "http" URI is identified by the
    <x:ref>authority</x:ref> component, which includes a host identifier
-   and optional port number (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
+   (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>)
+   and optional port number (<xref target="RFC3986" x:fmt="," x:sec="3.2.3"/>).
    If the port subcomponent is empty or not given, TCP port 80 (the
    reserved port for WWW services) is the default.
    The origin determines who has the right to respond authoritatively to
@@ -1116,6 +1118,7 @@ Content-Type: text/plain
 <t>
    The origin server for an "https" URI is identified by the
    <x:ref>authority</x:ref> component, which includes a host identifier
+   (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>)
    and optional port number (<xref target="RFC3986" x:fmt="," x:sec="3.2.2"/>).
    If the port subcomponent is empty or not given, TCP port 443
    (the reserved port for HTTP over TLS) is the default.
@@ -1257,8 +1260,8 @@ Content-Type: text/plain
 </t>
 <t>
    <xref target="origin"/> defines the concept of an origin as an aid to
-   such uses, and the subsequent subsections explain how to establish a
-   peer's association with an authority to represent an origin.
+   such uses, and the subsequent subsections explain how to establish that a
+   peer has the authority to represent an origin.
 </t>
 <t>
    See <xref target="establishing.authority"/> for security considerations
@@ -1574,8 +1577,8 @@ Example-Field: Baz
 <t>
    contains two field lines, both with the field name "Example-Field". The
    first field line has a field line value of "Foo, Bar", while the second
-   field line value is "Baz". The field value for "Example-Field" is a list
-   with three members: "Foo", "Bar", and "Baz".
+   field line value is "Baz". The field value for "Example-Field" is the list
+   "Foo, Bar, Baz".
 </t>
 </section>
 
@@ -1745,7 +1748,8 @@ Example-Dates: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
    that allows both unquoted (token) and quoted (quoted-string) syntax for
    a parameter value (<xref target="parameter"/>). Use of common syntax
    allows recipients to reuse existing parser components. When allowing both
-   forms, the meaning of a parameter value ought to be the same whether it
+   forms, the meaning of a parameter value (with no internal commas)
+   ought to be the same whether it
    was received as a token or a quoted string.
 </t>
 <t>
@@ -4755,12 +4759,11 @@ Content-Encoding: gzip
    indicate successful completion of the request.
 </t>
 <t>
-   An origin server &SHOULD; verify that the PUT representation is
-   consistent with any constraints the server has for the target
-   resource that cannot or will not be changed by the PUT.  This is
-   particularly important when the origin server uses internal
-   configuration information related to the URI in order to set the
-   values for representation metadata on GET responses.  When a PUT
+   An origin server &SHOULD; verify that the PUT representation is consistent
+   with its configured constraints for the target resource. For example, if
+   an origin server determines a resource's representation metadata based on
+   the URI, then the origin server needs to ensure that the content received
+   in a successful PUT request is consistent with that metadata. When a PUT
    representation is inconsistent with the target resource, the origin
    server &SHOULD; either make them consistent, by transforming the
    representation or changing the resource configuration, or respond
@@ -4802,7 +4805,7 @@ Content-Encoding: gzip
    and returned upon subsequent GET requests, header and trailer field
    handling is specific to the resource that received the request. As a result,
    an origin server &SHOULD; ignore unrecognized header and trailer fields
-   received in a PUT request (i.e., do not save them as part of the resource
+   received in a PUT request (i.e., not save them as part of the resource
    state).
 </t>
 <t>
@@ -5599,7 +5602,7 @@ Date: Tue, 15 Nov 1994 08:12:31 GMT
 <t>
    An origin server &MUST-NOT; send a Date header field if it does not have a
    clock capable of providing a reasonable approximation of the current
-   instance in Coordinated Universal Time.
+   instant in Coordinated Universal Time.
    An origin server &MAY; send a Date header field if the response is in the
    <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
    class of status codes.
@@ -6454,8 +6457,9 @@ WWW-Authenticate: Basic realm="simple", Newauth realm="apps",
 <t>
    Most of these header fields, where indicated, define a wildcard value ("*")
    to select unspecified values. If no wildcard is present, values that are
-   not explicitly mentioned in the field are considered unacceptable, except
-   for within <x:ref>Vary</x:ref> where it means the variance is unlimited.
+   not explicitly mentioned in the field are considered unacceptable.
+   Within <x:ref>Vary</x:ref>, the wildcard value means that the variance
+   is unlimited.
 </t>
 <aside><t>
    &Note; In practice, using wildcards in content negotiation has limited
@@ -7610,7 +7614,7 @@ If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT
 <t>
    All range unit names are case-insensitive and ought to be registered
    within the "HTTP Range Unit Registry", as defined in
-   <xref target="range.unit.registry"/>
+   <xref target="range.unit.registry"/>.
 </t>
 <t>
    Range units are intended to be extensible, as described in
@@ -8386,11 +8390,12 @@ Content-Range: exampleunit 11.2-14.3/25
   </tbody>
 </table>
 <t>
-   Aside from responses to CONNECT, a 200 response always has content,
-   though an origin server &MAY; generate content of zero length.
-   If no content is desired, an origin server ought to send
-   <x:dfn>204 (No Content)</x:dfn> instead.
-   For CONNECT, no content is allowed because the successful result is a
+   Aside from responses to CONNECT, a 200 response is expected to contain
+   message content unless the message framing explicitly indicates that the
+   content has zero length. If some aspect of the request indicates a
+   preference for no content upon success, the origin server ought to send a
+   <x:dfn>204 (No Content)</x:dfn> response instead.
+   For CONNECT, there is no content because the successful result is a
    tunnel, which begins immediately after the 200 response header section.
 </t>
 <t>
@@ -9902,7 +9907,7 @@ Content-Type: text/plain
    The "Hypertext Transfer Protocol (HTTP) Field Name Registry" is located at
    <eref target="https://www.iana.org/assignments/http-fields/"/>.
    Registration requests can be made by following the instructions located
-   there or by sending an email to the "ietf-http-wg@ietf.org" mailing list.
+   there or by sending an email to the "ietf-http-wg@w3.org" mailing list.
 </t>
 <t>
    Field names are registered on the advice of a Designated Expert
@@ -9992,7 +9997,7 @@ Content-Type: text/plain
      delete, or modify the field's value.</li>
    <li>If the field is allowable in trailers; by
      default, it will not be (see <xref target="trailers.limitations"/>).</li>
-   <li>Whether it is appropriate to list the field name in the
+   <li>Whether it is appropriate or even required to list the field name in the
      <x:ref>Connection</x:ref> header field (i.e., if the field is to
      be hop-by-hop; see <xref target="field.connection"/>).</li>
    <li>Whether the field introduces any additional security considerations, such
@@ -10131,7 +10136,7 @@ Content-Type: text/plain
     outside the scope of this specification and inherently flawed unless
     steps are taken to ensure that the connection cannot be used by any
     party other than the authenticated user
-    (see <xref target="intermediaries"/>).
+    (see <xref target="connections"/>).
   </t>
   </li>
   <li>
