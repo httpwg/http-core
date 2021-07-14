@@ -7543,34 +7543,52 @@ bytes=500-700,601-999
          <section id="field.accept-ranges">
             <h3 id="rfc.section.14.3"><a href="#rfc.section.14.3">14.3.</a>&nbsp;<a href="#field.accept-ranges">Accept-Ranges</a></h3>
             <div id="rfc.section.14.3.p.1">
-               <p>The "Accept-Ranges" header field allows a server to indicate that it supports range
-                  requests for the target resource.<a class="self" href="#rfc.section.14.3.p.1">¶</a></p>
+               <p>The "Accept-Ranges" field in a response indicates whether an upstream server supports
+                  range requests for the target resource.<a class="self" href="#rfc.section.14.3.p.1">¶</a></p>
             </div>
             <div id="rfc.section.14.3.p.2">
                <pre class="inline prettyprint lang-ietf_abnf"><span id="rfc.iref.g.132"></span><span id="rfc.iref.g.133"></span>  <a href="#field.accept-ranges" class="smpl">Accept-Ranges</a>     = <a href="#field.accept-ranges" class="smpl">acceptable-ranges</a>
-  <a href="#field.accept-ranges" class="smpl">acceptable-ranges</a> = 1#<a href="#range.units" class="smpl">range-unit</a> / "none"
+  <a href="#field.accept-ranges" class="smpl">acceptable-ranges</a> = 1#<a href="#range.units" class="smpl">range-unit</a>
 </pre>
             </div>
             <div id="rfc.section.14.3.p.3">
-               <p>An origin server that supports byte-range requests for a given target resource <em class="bcp14">MAY</em> send<a class="self" href="#rfc.section.14.3.p.3">¶</a></p>
+               <p>For example, a server that supports byte-range requests (<a href="#byte.ranges" title="Byte Ranges">Section 14.1.2</a>) can send the field<a class="self" href="#rfc.section.14.3.p.3">¶</a></p>
             </div>
             <div id="rfc.section.14.3.p.4">
                <pre class="text">Accept-Ranges: bytes
 </pre>
             </div>
             <div id="rfc.section.14.3.p.5">
-               <p>to indicate what range units are supported. A client <em class="bcp14">MAY</em> generate range requests without having received this header field for the resource
-                  involved. Range units are defined in <a href="#range.units" title="Range Units">Section 14.1</a>.<a class="self" href="#rfc.section.14.3.p.5">¶</a></p>
+               <p>to indicate that it supports byte range requests for that target resource, thereby
+                  encouraging its use by the client for future partial requests on the same request
+                  path. Range units are defined in <a href="#range.units" title="Range Units">Section 14.1</a>.<a class="self" href="#rfc.section.14.3.p.5">¶</a></p>
             </div>
             <div id="rfc.section.14.3.p.6">
-               <p>A server that does not support any kind of range request for the target resource <em class="bcp14">MAY</em> send<a class="self" href="#rfc.section.14.3.p.6">¶</a></p>
+               <p>A client <em class="bcp14">MAY</em> generate range requests regardless of having received an Accept-Ranges field. The
+                  information only provides advice for the sake of improving performance and reducing
+                  unnecessary network transfers.<a class="self" href="#rfc.section.14.3.p.6">¶</a></p>
             </div>
             <div id="rfc.section.14.3.p.7">
+               <p>Conversely, a client <em class="bcp14">MUST NOT</em> assume that receiving an Accept-Ranges field means that future range requests will
+                  return partial responses. The content might change, the server might only support
+                  range requests at certain times or under certain conditions, or a different intermediary
+                  might process the next request.<a class="self" href="#rfc.section.14.3.p.7">¶</a></p>
+            </div>
+            <div id="rfc.section.14.3.p.8">
+               <p>A server that does not support any kind of range request for the target resource <em class="bcp14">MAY</em> send<a class="self" href="#rfc.section.14.3.p.8">¶</a></p>
+            </div>
+            <div id="rfc.section.14.3.p.9">
                <pre class="text">Accept-Ranges: none
 </pre>
             </div>
-            <div id="rfc.section.14.3.p.8">
-               <p>to advise the client not to attempt a range request.<a class="self" href="#rfc.section.14.3.p.8">¶</a></p>
+            <div id="rfc.section.14.3.p.10">
+               <p>to advise the client not to attempt a range request on the same request path. The
+                  range unit "none" is reserved for this purpose.<a class="self" href="#rfc.section.14.3.p.10">¶</a></p>
+            </div>
+            <div id="rfc.section.14.3.p.11">
+               <p>The Accept-Ranges field <em class="bcp14">MAY</em> be sent in a trailer section, but is preferred to be sent as a header field because
+                  the information is particularly useful for restarting large information transfers
+                  that have failed in mid-content (before the trailer section is received).<a class="self" href="#rfc.section.14.3.p.11">¶</a></p>
             </div>
          </section>
          <section id="field.content-range">
@@ -10965,8 +10983,7 @@ Content-Type: text/plain
 
 <a href="#uri.references" class="smpl">absolute-URI</a> = &lt;absolute-URI, see <a href="#RFC3986" id="rfc.xref.RFC3986.35"><cite title="Uniform Resource Identifier (URI): Generic Syntax">[RFC3986]</cite></a>, <a href="https://www.rfc-editor.org/rfc/rfc3986.html#section-4.3">Section 4.3</a>&gt;
 <a href="#uri.references" class="smpl">absolute-path</a> = 1*( "/" segment )
-<a href="#field.accept-ranges" class="smpl">acceptable-ranges</a> = ( range-unit *( OWS "," OWS range-unit ) ) /
- "none"
+<a href="#field.accept-ranges" class="smpl">acceptable-ranges</a> = range-unit *( OWS "," OWS range-unit )
 <a href="#obsolete.date.formats" class="smpl">asctime-date</a> = day-name SP date3 SP time-of-day SP year
 <a href="#auth.params" class="smpl">auth-param</a> = token BWS "=" BWS ( token / quoted-string )
 <a href="#auth.scheme" class="smpl">auth-scheme</a> = token
@@ -11726,6 +11743,9 @@ Content-Type: text/plain
                <ul>
                   <li>In <a href="#status.206" id="rfc.xref.status.206.8" title="206 Partial Content">Section 15.3.7</a>, reinstate 'to a request' (&lt;<a href="https://github.com/httpwg/http-core/issues/857">https://github.com/httpwg/http-core/issues/857</a>&gt;)</li>
                   <li>Align <a href="#fields.registry" title="Field Name Registry">Section 16.3.1</a> with <a href="#considerations.for.new.field.names" title="Considerations for New Field Names">Section 16.3.2.1</a> (&lt;<a href="https://github.com/httpwg/http-core/issues/857">https://github.com/httpwg/http-core/issues/857</a>&gt;)</li>
+                  <li>In <a href="#field.accept-ranges" id="rfc.xref.field.accept-ranges.4" title="Accept-Ranges">Section 14.3</a>, clarify that Accept-Ranges can be sent by any server, remove "none" from the ABNF
+                     because it is now a reserved range unit, and allow the field to be sent in a trailer
+                     section while noting why that is much less useful than as a header field (&lt;<a href="https://github.com/httpwg/http-core/issues/857">https://github.com/httpwg/http-core/issues/857</a>&gt;)</li>
                   <li>In <a href="#field.via" id="rfc.xref.field.via.8" title="Via">Section 7.6.3</a>, don't specify TCP (&lt;<a href="https://github.com/httpwg/http-core/issues/865">https://github.com/httpwg/http-core/issues/865</a>&gt;)</li>
                   <li>In <a href="#content" title="Content">Section 6.4</a>, explain the "Content-" prefix (&lt;<a href="https://github.com/httpwg/http-core/issues/878">https://github.com/httpwg/http-core/issues/878</a>&gt;)</li>
                   <li>In <a href="#routing.reject" title="Rejecting Misdirected Requests">Section 7.4</a>, check all target URIs for scheme semantic mismatches (&lt;<a href="https://github.com/httpwg/http-core/issues/896">https://github.com/httpwg/http-core/issues/896</a>&gt;)</li>
@@ -11832,7 +11852,7 @@ Content-Type: text/plain
                      <li>Accept-Charset header field&nbsp;&nbsp;<a href="#rfc.iref.a.2"><b>12.5.2</b></a>, <a href="#rfc.xref.field.accept-charset.1">18.4</a>, <a href="#rfc.xref.field.accept-charset.2">B.3</a>, <a href="#rfc.xref.field.accept-charset.3">C.12</a></li>
                      <li>Accept-Encoding header field&nbsp;&nbsp;<a href="#rfc.xref.field.accept-encoding.1">8.4.1</a>, <a href="#rfc.xref.field.accept-encoding.2">8.8.3.3</a>, <a href="#rfc.xref.field.accept-encoding.3">12.3</a>, <a href="#rfc.section.12.5.3"><b>12.5.3</b></a>, <a href="#rfc.xref.field.accept-encoding.4">15.5.16</a>, <a href="#rfc.xref.field.accept-encoding.5">18.4</a>, <a href="#rfc.xref.field.accept-encoding.6">18.6</a>, <a href="#rfc.xref.field.accept-encoding.7">C.16</a></li>
                      <li>Accept-Language header field&nbsp;&nbsp;<a href="#rfc.xref.field.accept-language.1">8.5.1</a>, <a href="#rfc.section.12.5.4"><b>12.5.4</b></a>, <a href="#rfc.xref.field.accept-language.2">18.4</a>, <a href="#rfc.xref.field.accept-language.3">C.12</a></li>
-                     <li>Accept-Ranges header field&nbsp;&nbsp;<a href="#rfc.xref.field.accept-ranges.1">14.1</a>, <a href="#rfc.section.14.3"><b>14.3</b></a>, <a href="#rfc.xref.field.accept-ranges.2">18.4</a>, <a href="#rfc.xref.field.accept-ranges.3">18.7</a></li>
+                     <li>Accept-Ranges header field&nbsp;&nbsp;<a href="#rfc.xref.field.accept-ranges.1">14.1</a>, <a href="#rfc.section.14.3"><b>14.3</b></a>, <a href="#rfc.xref.field.accept-ranges.2">18.4</a>, <a href="#rfc.xref.field.accept-ranges.3">18.7</a>, <a href="#rfc.xref.field.accept-ranges.4">C.18</a></li>
                      <li>Allow header field&nbsp;&nbsp;<a href="#rfc.xref.field.allow.1">9.1</a>, <a href="#rfc.section.10.2.1"><b>10.2.1</b></a>, <a href="#rfc.xref.field.allow.2">18.4</a></li>
                      <li>Authentication-Info header field&nbsp;&nbsp;<a href="#rfc.section.11.6.3"><b>11.6.3</b></a>, <a href="#rfc.xref.field.authentication-info.1">18.4</a></li>
                      <li>authoritative response&nbsp;&nbsp;<a href="#rfc.section.17.1"><b>17.1</b></a></li>
@@ -11919,7 +11939,7 @@ Content-Type: text/plain
                            <li>Accept-Charset&nbsp;&nbsp;<a href="#rfc.iref.f.5"><b>12.5.2</b></a>, <a href="#rfc.xref.field.accept-charset.1">18.4</a>, <a href="#rfc.xref.field.accept-charset.2">B.3</a>, <a href="#rfc.xref.field.accept-charset.3">C.12</a></li>
                            <li>Accept-Encoding&nbsp;&nbsp;<a href="#rfc.xref.field.accept-encoding.1">8.4.1</a>, <a href="#rfc.xref.field.accept-encoding.2">8.8.3.3</a>, <a href="#rfc.xref.field.accept-encoding.3">12.3</a>, <a href="#rfc.section.12.5.3"><b>12.5.3</b></a>, <a href="#rfc.xref.field.accept-encoding.4">15.5.16</a>, <a href="#rfc.xref.field.accept-encoding.5">18.4</a>, <a href="#rfc.xref.field.accept-encoding.6">18.6</a>, <a href="#rfc.xref.field.accept-encoding.7">C.16</a></li>
                            <li>Accept-Language&nbsp;&nbsp;<a href="#rfc.xref.field.accept-language.1">8.5.1</a>, <a href="#rfc.section.12.5.4"><b>12.5.4</b></a>, <a href="#rfc.xref.field.accept-language.2">18.4</a>, <a href="#rfc.xref.field.accept-language.3">C.12</a></li>
-                           <li>Accept-Ranges&nbsp;&nbsp;<a href="#rfc.xref.field.accept-ranges.1">14.1</a>, <a href="#rfc.section.14.3"><b>14.3</b></a>, <a href="#rfc.xref.field.accept-ranges.2">18.4</a>, <a href="#rfc.xref.field.accept-ranges.3">18.7</a></li>
+                           <li>Accept-Ranges&nbsp;&nbsp;<a href="#rfc.xref.field.accept-ranges.1">14.1</a>, <a href="#rfc.section.14.3"><b>14.3</b></a>, <a href="#rfc.xref.field.accept-ranges.2">18.4</a>, <a href="#rfc.xref.field.accept-ranges.3">18.7</a>, <a href="#rfc.xref.field.accept-ranges.4">C.18</a></li>
                            <li>Allow&nbsp;&nbsp;<a href="#rfc.xref.field.allow.1">9.1</a>, <a href="#rfc.section.10.2.1"><b>10.2.1</b></a>, <a href="#rfc.xref.field.allow.2">18.4</a></li>
                            <li>Authentication-Info&nbsp;&nbsp;<a href="#rfc.section.11.6.3"><b>11.6.3</b></a>, <a href="#rfc.xref.field.authentication-info.1">18.4</a></li>
                            <li>Authorization&nbsp;&nbsp;<a href="#rfc.section.11.6.2"><b>11.6.2</b></a>, <a href="#rfc.xref.field.authorization.1">11.6.3</a>, <a href="#rfc.xref.field.authorization.2">12.5.5</a>, <a href="#rfc.xref.field.authorization.3">15.5.2</a>, <a href="#rfc.xref.field.authorization.4">18.4</a></li>
@@ -12131,7 +12151,7 @@ Content-Type: text/plain
                            <li>Accept-Charset&nbsp;&nbsp;<a href="#rfc.iref.h.2"><b>12.5.2</b></a>, <a href="#rfc.xref.field.accept-charset.1">18.4</a>, <a href="#rfc.xref.field.accept-charset.2">B.3</a>, <a href="#rfc.xref.field.accept-charset.3">C.12</a></li>
                            <li>Accept-Encoding&nbsp;&nbsp;<a href="#rfc.xref.field.accept-encoding.1">8.4.1</a>, <a href="#rfc.xref.field.accept-encoding.2">8.8.3.3</a>, <a href="#rfc.xref.field.accept-encoding.3">12.3</a>, <a href="#rfc.section.12.5.3"><b>12.5.3</b></a>, <a href="#rfc.xref.field.accept-encoding.4">15.5.16</a>, <a href="#rfc.xref.field.accept-encoding.5">18.4</a>, <a href="#rfc.xref.field.accept-encoding.6">18.6</a>, <a href="#rfc.xref.field.accept-encoding.7">C.16</a></li>
                            <li>Accept-Language&nbsp;&nbsp;<a href="#rfc.xref.field.accept-language.1">8.5.1</a>, <a href="#rfc.section.12.5.4"><b>12.5.4</b></a>, <a href="#rfc.xref.field.accept-language.2">18.4</a>, <a href="#rfc.xref.field.accept-language.3">C.12</a></li>
-                           <li>Accept-Ranges&nbsp;&nbsp;<a href="#rfc.xref.field.accept-ranges.1">14.1</a>, <a href="#rfc.section.14.3"><b>14.3</b></a>, <a href="#rfc.xref.field.accept-ranges.2">18.4</a>, <a href="#rfc.xref.field.accept-ranges.3">18.7</a></li>
+                           <li>Accept-Ranges&nbsp;&nbsp;<a href="#rfc.xref.field.accept-ranges.1">14.1</a>, <a href="#rfc.section.14.3"><b>14.3</b></a>, <a href="#rfc.xref.field.accept-ranges.2">18.4</a>, <a href="#rfc.xref.field.accept-ranges.3">18.7</a>, <a href="#rfc.xref.field.accept-ranges.4">C.18</a></li>
                            <li>Allow&nbsp;&nbsp;<a href="#rfc.xref.field.allow.1">9.1</a>, <a href="#rfc.section.10.2.1"><b>10.2.1</b></a>, <a href="#rfc.xref.field.allow.2">18.4</a></li>
                            <li>Authentication-Info&nbsp;&nbsp;<a href="#rfc.section.11.6.3"><b>11.6.3</b></a>, <a href="#rfc.xref.field.authentication-info.1">18.4</a></li>
                            <li>Authorization&nbsp;&nbsp;<a href="#rfc.section.11.6.2"><b>11.6.2</b></a>, <a href="#rfc.xref.field.authorization.1">11.6.3</a>, <a href="#rfc.xref.field.authorization.2">12.5.5</a>, <a href="#rfc.xref.field.authorization.3">15.5.2</a>, <a href="#rfc.xref.field.authorization.4">18.4</a></li>
