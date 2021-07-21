@@ -1049,19 +1049,50 @@ Transfer-Encoding: gzip, chunked
    <x:ref>2xx (Successful)</x:ref> response to a CONNECT request (<xref target="CONNECT"/>).
 </t>
 <t>
-   Transfer-Encoding was added in HTTP/1.1.  It is generally assumed that
+   A server that receives a request message with a transfer coding it does
+   not understand &SHOULD; respond with <x:ref>501 (Not Implemented)</x:ref>.
+</t>
+<t>
+   Transfer-Encoding was added in HTTP/1.1. It is generally assumed that
    implementations advertising only HTTP/1.0 support will not understand
-   how to process transfer-encoded content.
+   how to process transfer-encoded content, and that an HTTP/1.0 message
+   received with a Transfer-Encoding is likely to have been forwarded
+   without proper handling of the chunked encoding in transit.
+</t>
+<t>
    A client &MUST-NOT; send a request containing Transfer-Encoding unless it
-   knows the server will handle HTTP/1.1 requests (or later minor revisions); such knowledge
-   might be in the form of specific user configuration or by remembering the
-   version of a prior received response.
+   knows the server will handle HTTP/1.1 requests (or later minor revisions);
+   such knowledge might be in the form of specific user configuration or by
+   remembering the version of a prior received response.
    A server &MUST-NOT; send a response containing Transfer-Encoding unless
    the corresponding request indicates HTTP/1.1 (or later minor revisions).
 </t>
 <t>
-   A server that receives a request message with a transfer coding it does
-   not understand &SHOULD; respond with <x:ref>501 (Not Implemented)</x:ref>.
+   Early implementations of Transfer-Encoding would occasionally send both
+   a chunked encoding for message framing and an estimated Content-Length
+   header field for use by progress bars. This is why Transfer-Encoding is
+   defined as overriding Content-Length, as opposed to them being mutually
+   incompatible. Unfortunately, forwarding such a message can lead to
+   vulnerabilities regarding
+   request smuggling (<xref target="request.smuggling"/>) or
+   response splitting (<xref target="response.splitting"/>) attacks
+   if any downstream recipient fails to parse the message according to this
+   specification, particularly when a downstream recipient only implements
+   HTTP/1.0.
+</t>
+<t>
+   A server &MAY; reject a request that contains both Content-Length and
+   Transfer-Encoding or process such a request in accordance with the
+   Transfer-Encoding alone. Regardless, the server &MUST; close the connection
+   after responding to such a request to avoid the potential attacks.
+</t>
+<t>
+   A server or client that receives an HTTP/1.0 message containing a
+   Transfer-Encoding header field &MUST; treat the message as if the framing
+   is faulty, even if a Content-Length is present, and close the connection
+   after processing the message. The message sender might have retained a
+   portion of the message, in buffer, that could be misinterpreted by further
+   use of the connection.
 </t>
 </section>
 
