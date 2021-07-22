@@ -1661,16 +1661,39 @@ Host: www.example.org:8080
                <p>A server <em class="bcp14">MUST NOT</em> send a Transfer-Encoding header field in any response with a status code of <a href="draft-ietf-httpbis-semantics-latest.html#status.1xx" class="smpl">1xx (Informational)</a> or <a href="draft-ietf-httpbis-semantics-latest.html#status.204" class="smpl">204 (No Content)</a>. A server <em class="bcp14">MUST NOT</em> send a Transfer-Encoding header field in any <a href="draft-ietf-httpbis-semantics-latest.html#status.2xx" class="smpl">2xx (Successful)</a> response to a CONNECT request (<a href="draft-ietf-httpbis-semantics-latest.html#CONNECT" title="CONNECT">Section 9.3.6</a> of <a href="#Semantics" id="rfc.xref.Semantics.35"><cite title="HTTP Semantics">[Semantics]</cite></a>).<a class="self" href="#rfc.section.6.1.p.10">¶</a></p>
             </div>
             <div id="rfc.section.6.1.p.11">
+               <p>A server that receives a request message with a transfer coding it does not understand <em class="bcp14">SHOULD</em> respond with <a href="draft-ietf-httpbis-semantics-latest.html#status.501" class="smpl">501 (Not Implemented)</a>.<a class="self" href="#rfc.section.6.1.p.11">¶</a></p>
+            </div>
+            <div id="rfc.section.6.1.p.12">
                <p>Transfer-Encoding was added in HTTP/1.1. It is generally assumed that implementations
                   advertising only HTTP/1.0 support will not understand how to process transfer-encoded
-                  content. A client <em class="bcp14">MUST NOT</em> send a request containing Transfer-Encoding unless it knows the server will handle
+                  content, and that an HTTP/1.0 message received with a Transfer-Encoding is likely
+                  to have been forwarded without proper handling of the chunked encoding in transit.<a class="self" href="#rfc.section.6.1.p.12">¶</a></p>
+            </div>
+            <div id="rfc.section.6.1.p.13">
+               <p>A client <em class="bcp14">MUST NOT</em> send a request containing Transfer-Encoding unless it knows the server will handle
                   HTTP/1.1 requests (or later minor revisions); such knowledge might be in the form
                   of specific user configuration or by remembering the version of a prior received response.
                   A server <em class="bcp14">MUST NOT</em> send a response containing Transfer-Encoding unless the corresponding request indicates
-                  HTTP/1.1 (or later minor revisions).<a class="self" href="#rfc.section.6.1.p.11">¶</a></p>
+                  HTTP/1.1 (or later minor revisions).<a class="self" href="#rfc.section.6.1.p.13">¶</a></p>
             </div>
-            <div id="rfc.section.6.1.p.12">
-               <p>A server that receives a request message with a transfer coding it does not understand <em class="bcp14">SHOULD</em> respond with <a href="draft-ietf-httpbis-semantics-latest.html#status.501" class="smpl">501 (Not Implemented)</a>.<a class="self" href="#rfc.section.6.1.p.12">¶</a></p>
+            <div id="rfc.section.6.1.p.14">
+               <p>Early implementations of Transfer-Encoding would occasionally send both a chunked
+                  encoding for message framing and an estimated Content-Length header field for use
+                  by progress bars. This is why Transfer-Encoding is defined as overriding Content-Length,
+                  as opposed to them being mutually incompatible. Unfortunately, forwarding such a message
+                  can lead to vulnerabilities regarding request smuggling (<a href="#request.smuggling" title="Request Smuggling">Section 11.2</a>) or response splitting (<a href="#response.splitting" title="Response Splitting">Section 11.1</a>) attacks if any downstream recipient fails to parse the message according to this
+                  specification, particularly when a downstream recipient only implements HTTP/1.0.<a class="self" href="#rfc.section.6.1.p.14">¶</a></p>
+            </div>
+            <div id="rfc.section.6.1.p.15">
+               <p>A server <em class="bcp14">MAY</em> reject a request that contains both Content-Length and Transfer-Encoding or process
+                  such a request in accordance with the Transfer-Encoding alone. Regardless, the server <em class="bcp14">MUST</em> close the connection after responding to such a request to avoid the potential attacks.<a class="self" href="#rfc.section.6.1.p.15">¶</a></p>
+            </div>
+            <div id="rfc.section.6.1.p.16">
+               <p>A server or client that receives an HTTP/1.0 message containing a Transfer-Encoding
+                  header field <em class="bcp14">MUST</em> treat the message as if the framing is faulty, even if a Content-Length is present,
+                  and close the connection after processing the message. The message sender might have
+                  retained a portion of the message, in buffer, that could be misinterpreted by further
+                  use of the connection.<a class="self" href="#rfc.section.6.1.p.16">¶</a></p>
             </div>
          </section>
          <section id="body.content-length">
@@ -3337,7 +3360,10 @@ TE: trailers, deflate;q=0.5
          <section id="changes.since.16">
             <h3 id="rfc.section.D.18"><a href="#rfc.section.D.18">D.18.</a>&nbsp;<a href="#changes.since.16">Since draft-ietf-httpbis-messaging-16</a> <a class="self" href="https://tools.ietf.org/html/draft-ietf-httpbis-messaging-16" title="plain text">📄</a></h3>
             <div id="rfc.section.D.18.p.1">
-               <p>None yet.</p>
+               <ul>
+                  <li>In <a href="#field.transfer-encoding" id="rfc.xref.field.transfer-encoding.7" title="Transfer-Encoding">Section 6.1</a>, require recipients to avoid smuggling/splitting attacks when processing an ambiguous
+                     message framing (&lt;<a href="https://github.com/httpwg/http-core/issues/879">https://github.com/httpwg/http-core/issues/879</a>&gt;)</li>
+               </ul>
             </div>
          </section>
       </section>
@@ -3386,7 +3412,7 @@ TE: trailers, deflate;q=0.5
                         <ul>
                            <li>Close&nbsp;&nbsp;<a href="#rfc.iref.f.1"><b>9.6</b></a></li>
                            <li>MIME-Version&nbsp;&nbsp;<a href="#rfc.xref.mime-version.1">12.1</a>, <a href="#rfc.section.B.1"><b>B.1</b></a></li>
-                           <li>Transfer-Encoding&nbsp;&nbsp;<a href="#rfc.xref.field.transfer-encoding.1">6</a>, <a href="#rfc.section.6.1"><b>6.1</b></a>, <a href="#rfc.xref.field.transfer-encoding.2">7</a>, <a href="#rfc.xref.field.transfer-encoding.3">12.1</a>, <a href="#rfc.xref.field.transfer-encoding.4">C.2.3</a>, <a href="#rfc.xref.field.transfer-encoding.5">D.9</a>, <a href="#rfc.xref.field.transfer-encoding.6">D.12</a></li>
+                           <li>Transfer-Encoding&nbsp;&nbsp;<a href="#rfc.xref.field.transfer-encoding.1">6</a>, <a href="#rfc.section.6.1"><b>6.1</b></a>, <a href="#rfc.xref.field.transfer-encoding.2">7</a>, <a href="#rfc.xref.field.transfer-encoding.3">12.1</a>, <a href="#rfc.xref.field.transfer-encoding.4">C.2.3</a>, <a href="#rfc.xref.field.transfer-encoding.5">D.9</a>, <a href="#rfc.xref.field.transfer-encoding.6">D.12</a>, <a href="#rfc.xref.field.transfer-encoding.7">D.18</a></li>
                         </ul>
                      </li>
                   </ul>
@@ -3444,7 +3470,7 @@ TE: trailers, deflate;q=0.5
                      <li>Header Fields&nbsp;&nbsp;
                         <ul>
                            <li>MIME-Version&nbsp;&nbsp;<a href="#rfc.xref.mime-version.1">12.1</a>, <a href="#rfc.section.B.1"><b>B.1</b></a></li>
-                           <li>Transfer-Encoding&nbsp;&nbsp;<a href="#rfc.xref.field.transfer-encoding.1">6</a>, <a href="#rfc.section.6.1"><b>6.1</b></a>, <a href="#rfc.xref.field.transfer-encoding.2">7</a>, <a href="#rfc.xref.field.transfer-encoding.3">12.1</a>, <a href="#rfc.xref.field.transfer-encoding.4">C.2.3</a>, <a href="#rfc.xref.field.transfer-encoding.5">D.9</a>, <a href="#rfc.xref.field.transfer-encoding.6">D.12</a></li>
+                           <li>Transfer-Encoding&nbsp;&nbsp;<a href="#rfc.xref.field.transfer-encoding.1">6</a>, <a href="#rfc.section.6.1"><b>6.1</b></a>, <a href="#rfc.xref.field.transfer-encoding.2">7</a>, <a href="#rfc.xref.field.transfer-encoding.3">12.1</a>, <a href="#rfc.xref.field.transfer-encoding.4">C.2.3</a>, <a href="#rfc.xref.field.transfer-encoding.5">D.9</a>, <a href="#rfc.xref.field.transfer-encoding.6">D.12</a>, <a href="#rfc.xref.field.transfer-encoding.7">D.18</a></li>
                         </ul>
                      </li>
                      <li>header line&nbsp;&nbsp;<a href="#rfc.section.2.1">2.1</a></li>
@@ -3579,7 +3605,7 @@ TE: trailers, deflate;q=0.5
                   </ul>
                </li>
                <li><a id="rfc.index.T" href="#rfc.index.T"><b>T</b></a><ul>
-                     <li>Transfer-Encoding header field&nbsp;&nbsp;<a href="#rfc.xref.field.transfer-encoding.1">6</a>, <a href="#rfc.section.6.1"><b>6.1</b></a>, <a href="#rfc.xref.field.transfer-encoding.2">7</a>, <a href="#rfc.xref.field.transfer-encoding.3">12.1</a>, <a href="#rfc.xref.field.transfer-encoding.4">C.2.3</a>, <a href="#rfc.xref.field.transfer-encoding.5">D.9</a>, <a href="#rfc.xref.field.transfer-encoding.6">D.12</a></li>
+                     <li>Transfer-Encoding header field&nbsp;&nbsp;<a href="#rfc.xref.field.transfer-encoding.1">6</a>, <a href="#rfc.section.6.1"><b>6.1</b></a>, <a href="#rfc.xref.field.transfer-encoding.2">7</a>, <a href="#rfc.xref.field.transfer-encoding.3">12.1</a>, <a href="#rfc.xref.field.transfer-encoding.4">C.2.3</a>, <a href="#rfc.xref.field.transfer-encoding.5">D.9</a>, <a href="#rfc.xref.field.transfer-encoding.6">D.12</a>, <a href="#rfc.xref.field.transfer-encoding.7">D.18</a></li>
                   </ul>
                </li>
                <li><a id="rfc.index.U" href="#rfc.index.U"><b>U</b></a><ul>
