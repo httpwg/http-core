@@ -15,16 +15,14 @@ do
   $bap/bap -i $bap/core.abnf -L 2 -X rfc7405 -n "$i" 
 done | \
 	fgrep -v ", defined in [Part" | \
-	fgrep -v ", defined in [HTTP11" | \
-	fgrep -v ", defined in [SEMANTICS" | \
+	fgrep -v ", defined in [HTTP" | \
 	fgrep -v ", defined in [CONDTNL" | \
 	fgrep -v ", defined in [RANGERQ" | \
 	fgrep -v ", defined in [CACHING" | \
 	fgrep -v ", defined in [AUTHFRM" | \
 	fgrep -v ", defined in [RFC723" | \
 	fgrep -v ", see [RFC723" | \
-	fgrep -v ", see [HTTP11" | \
-	fgrep -v ", see [SEMANTICS" | \
+	fgrep -v ", see [HTTP" | \
 	fgrep -v ", see [CONDTNL" | \
 	fgrep -v ", see [RANGERQ" | \
 	fgrep -v ", see [CACHING" | \
