@@ -19,7 +19,7 @@
   <xsl:variable name="generated"><section title="Collected ABNF" anchor="collected.abnf">
     <t>
       <xsl:choose>
-        <xsl:when test="not(starts-with(/rfc/@docName,'draft-ietf-httpbis-semantics'))">In the collected ABNF below, list rules are expanded as per <xref target='Semantics' x:rel='#abnf.extension.sender'/>.</xsl:when>
+        <xsl:when test="not(starts-with(/rfc/@docName,'draft-ietf-httpbis-semantics'))">In the collected ABNF below, list rules are expanded as per <xref target='HTTP' x:rel='#abnf.extension.sender'/>.</xsl:when>
         <xsl:otherwise>In the collected ABNF below, list rules are expanded as per <xref target="abnf.extension.sender"/>.</xsl:otherwise>
       </xsl:choose>
     </t>
