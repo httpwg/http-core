@@ -2098,7 +2098,13 @@
 </xsl:template>
   
 <xsl:template name="li-ul-to-v2">
-  <list style="symbols">
+  <xsl:variable name="style">
+    <xsl:choose>
+      <xsl:when test="@empty='true'">empty</xsl:when>
+      <xsl:otherwise>symbols</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  <list style="{$style}">
     <xsl:apply-templates mode="cleanup"/>
   </list>
   <xsl:if test="position()!=last()">

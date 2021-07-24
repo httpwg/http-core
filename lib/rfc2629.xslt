@@ -4037,6 +4037,20 @@
     </xsl:choose>
   </xsl:variable>
 
+  <xsl:variable name="before-dot">
+    <xsl:choose>
+      <xsl:when test="contains($sec,'.')">
+        <xsl:value-of select="substring-before($sec,'.')"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="$sec"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  <xsl:variable name="after-dot" select="substring-after($sec,'.')"/>
+  <xsl:variable name="is-section" select="translate($sec,'.0123456789','')=''"/>
+  <xsl:variable name="is-appendix" select="not($is-section) and translate($before-dot,$ucase,'')='' and translate($after-dot,'.0123456789','')=''"/>
+
   <xsl:choose>
     <xsl:when test="$ref and $bib/x:source/@href and $bib/x:source/@basename and $ref/@x:rel">
       <xsl:variable name="extdoc" select="document($bib/x:source/@href)"/>
@@ -4083,11 +4097,17 @@
       </xsl:call-template>
       <xsl:if test="$ref and $sec!='' and $rfcUrlFragSection and $rfcUrlFragAppendix">
         <xsl:choose>
-          <xsl:when test="translate(substring($sec,1,1),$ucase,'')=''">
+          <xsl:when test="$is-section">
+            <xsl:value-of select="concat('#',$rfcUrlFragSection,$sec)"/>
+          </xsl:when>
+          <xsl:when test="$is-appendix">
             <xsl:value-of select="concat('#',$rfcUrlFragAppendix,$sec)"/>
           </xsl:when>
           <xsl:otherwise>
-            <xsl:value-of select="concat('#',$rfcUrlFragSection,$sec)"/>
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg" select="concat('cannot compute anchor for ',$sec,' of ',$bib/@anchor)"/>
+              <xsl:with-param name="inline" select="'no'"/>
+            </xsl:call-template>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:if>
@@ -4102,11 +4122,17 @@
         </xsl:call-template>
         <xsl:if test="$ref and $sec!='' and $internetDraftUrlFragSection and $internetDraftUrlFragAppendix">
           <xsl:choose>
-            <xsl:when test="translate(substring($sec,1,1),$ucase,'')=''">
+            <xsl:when test="$is-section">
+              <xsl:value-of select="concat('#',$internetDraftUrlFragSection,$sec)"/>
+            </xsl:when>
+            <xsl:when test="$is-appendix">
               <xsl:value-of select="concat('#',$internetDraftUrlFragAppendix,$sec)"/>
             </xsl:when>
             <xsl:otherwise>
-              <xsl:value-of select="concat('#',$internetDraftUrlFragSection,$sec)"/>
+              <xsl:call-template name="error">
+                <xsl:with-param name="msg" select="concat('cannot compute anchor for ',$sec,' of ',$bib/@anchor)"/>
+                <xsl:with-param name="inline" select="'no'"/>
+              </xsl:call-template>
             </xsl:otherwise>
           </xsl:choose>
         </xsl:if>
@@ -4118,11 +4144,17 @@
       </xsl:call-template>
       <xsl:if test="$ref and $sec!='' and $rfcUrlFragSection and $rfcUrlFragAppendix">
         <xsl:choose>
-          <xsl:when test="translate(substring($sec,1,1),$ucase,'')=''">
+          <xsl:when test="$is-section">
+            <xsl:value-of select="concat('#',$rfcUrlFragSection,$sec)"/>
+          </xsl:when>
+          <xsl:when test="$is-appendix">
             <xsl:value-of select="concat('#',$rfcUrlFragAppendix,$sec)"/>
           </xsl:when>
           <xsl:otherwise>
-            <xsl:value-of select="concat('#',$rfcUrlFragSection,$sec)"/>
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg" select="concat('cannot compute anchor for ',$sec,' of ',$bib/@anchor)"/>
+              <xsl:with-param name="inline" select="'no'"/>
+          </xsl:call-template>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:if>
@@ -4137,11 +4169,17 @@
         </xsl:call-template>
         <xsl:if test="$ref and $sec!='' and $internetDraftUrlFragSection and $internetDraftUrlFragAppendix">
           <xsl:choose>
-            <xsl:when test="translate(substring($sec,1,1),$ucase,'')=''">
+            <xsl:when test="$is-section">
+              <xsl:value-of select="concat('#',$internetDraftUrlFragSection,$sec)"/>
+            </xsl:when>
+            <xsl:when test="$is-appendix">
               <xsl:value-of select="concat('#',$internetDraftUrlFragAppendix,$sec)"/>
             </xsl:when>
             <xsl:otherwise>
-              <xsl:value-of select="concat('#',$internetDraftUrlFragSection,$sec)"/>
+              <xsl:call-template name="error">
+                <xsl:with-param name="msg" select="concat('cannot compute anchor for ',$sec,' of ',$bib/@anchor)"/>
+                <xsl:with-param name="inline" select="'no'"/>
+              </xsl:call-template>
             </xsl:otherwise>
           </xsl:choose>
         </xsl:if>
@@ -6538,10 +6576,21 @@
   </xsl:variable>
 
   <xsl:variable name="secterm">
+    <xsl:variable name="before-dot">
+      <xsl:choose>
+        <xsl:when test="contains($sec,'.')">
+          <xsl:value-of select="substring-before($sec,'.')"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="$sec"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <xsl:variable name="after-dot" select="substring-after($sec,'.')"/>
     <xsl:choose>
-      <!-- starts with letter or unnumbered? -->
-      <xsl:when test="translate(substring($sec,1,1),$ucase,'')='' or starts-with($tsec,'A@')">Appendix</xsl:when>
-      <xsl:otherwise>Section</xsl:otherwise>
+      <xsl:when test="translate($sec,'.0123456789','')='' or starts-with($tsec,'S@')">Section</xsl:when>
+      <xsl:when test="(translate($before-dot,$ucase,'')='' and translate($after-dot,'.0123456789','')='') or starts-with($tsec,'A@')">Appendix</xsl:when>
+      <xsl:otherwise>Part</xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
 
@@ -10325,7 +10374,7 @@ dd, li, p {
       <li>
         <xsl:text>Figures</xsl:text>
         <ul>
-          <xsl:for-each select="//figure[@title!='' or @anchor!='' or name]">
+          <xsl:for-each select="//figure">
             <xsl:variable name="n"><xsl:call-template name="get-figure-number"/></xsl:variable>
             <xsl:variable name="title">
               <xsl:if test="not(starts-with($n,'u'))">
@@ -12193,11 +12242,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1398 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1398 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1401 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1401 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2021/06/06 09:33:18 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/06/06 09:33:18 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2021/07/01 14:23:57 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/07/01 14:23:57 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">
