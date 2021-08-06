@@ -2560,6 +2560,101 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
 </t>
 </section>
 </section>
+
+<section title="Message Metadata" anchor="message.metadata">
+<t>
+   Fields that describe the message itself, such as when and how the
+   message has been generated, can appear in both requests and responses.
+</t>
+
+<section title="Date" anchor="field.date">
+  <x:anchor-alias value="header.date"/>
+  <iref primary="true" item="Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Date header field" x:for-anchor=""/>
+  <x:anchor-alias value="Date"/>
+<t>
+   The "Date" header field represents the date and time at which
+   the message was originated, having the same semantics as the Origination
+   Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
+   The field value is an HTTP-date, as defined in <xref target="http.date"/>.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Date"/>
+  <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
+</sourcecode>
+<t>
+   An example is
+</t>
+<sourcecode type="http-message">
+Date: Tue, 15 Nov 1994 08:12:31 GMT
+</sourcecode>
+<t>
+   A sender that generates a Date header field &SHOULD; generate its
+   field value as the best available approximation of the date and time of
+   message generation. In theory, the date ought to represent the moment just
+   before generating the message content. In practice, a sender can generate
+   the date value at any time during message origination.
+</t>
+<t>
+   An origin server &MUST-NOT; send a Date header field if it does not have a
+   clock capable of providing a reasonable approximation of the current
+   instant in Coordinated Universal Time.
+   An origin server &MAY; send a Date header field if the response is in the
+   <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
+   class of status codes.
+   An origin server &MUST; send a Date header field in all other cases.
+</t>
+<t>
+   A recipient with a clock that receives a response message without a Date
+   header field &MUST; record the time it was received and append a
+   corresponding Date header field to the message's header section if it is
+   cached or forwarded downstream.
+</t>
+<t>
+   A recipient with a clock that receives a response with an invalid Date
+   header field value &MAY; replace that value with the time that
+   response was received.
+</t>
+<t>
+   A user agent &MAY; send a Date header field in a request, though generally
+   will not do so unless it is believed to convey useful information to the
+   server. For example, custom applications of HTTP might convey a Date if
+   the server is expected to adjust its interpretation of the user's request
+   based on differences between the user agent and server clocks.
+</t>
+</section>
+
+<section title="Trailer" anchor="field.trailer">
+  <x:anchor-alias value="header.trailer"/>
+  <iref primary="true" item="Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Trailer header field" x:for-anchor=""/>
+  <x:anchor-alias value="Trailer"/>
+<t>
+   The "Trailer" header field provides a list of field names that the sender
+   anticipates sending as trailer fields within that message. This allows a
+   recipient to prepare for receipt of the indicated metadata before it starts
+   processing the content.
+</t>
+<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
+  <x:ref>Trailer</x:ref> = #<x:ref>field-name</x:ref>
+</sourcecode>
+<t>
+   For example, a sender might indicate that a signature will
+   be computed as the content is being streamed and provide the final
+   signature as a trailer field. This allows a recipient to perform the same
+   check on the fly as it receives the content.
+</t>
+<t>
+   A sender that intends to generate one or more trailer fields in a message
+   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
+   section of that message to indicate which fields might be present in the
+   trailers.
+</t>
+<t>
+   If an intermediary discards the trailer section in transit, the
+   <x:ref>Trailer</x:ref> field could provide a hint of what metadata
+   was lost, though there is no guarantee that a sender of Trailer
+   will always follow through by sending the named fields.
+</t>
+</section>
+</section>
 </section>
 
 <section title="Routing HTTP Messages" anchor="routing">
@@ -5476,39 +5571,6 @@ Referer: http://www.example.org/hypertext/Overview.html
 </t>
 </section>
 
-<section title="Trailer" anchor="field.trailer">
-  <x:anchor-alias value="header.trailer"/>
-  <iref primary="true" item="Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Trailer" x:for-anchor=""/><iref primary="true" item="Trailer header field" x:for-anchor=""/>
-  <x:anchor-alias value="Trailer"/>
-<t>
-   The "Trailer" header field provides a list of field names that the sender
-   anticipates sending as trailer fields within that message. This allows a
-   recipient to prepare for receipt of the indicated metadata before it starts
-   processing the content.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Trailer"/><iref primary="false" item="Grammar" subitem="field-name"/>
-  <x:ref>Trailer</x:ref> = #<x:ref>field-name</x:ref>
-</sourcecode>
-<t>
-   For example, a sender might indicate that a signature will
-   be computed as the content is being streamed and provide the final
-   signature as a trailer field. This allows a recipient to perform the same
-   check on the fly as it receives the content.
-</t>
-<t>
-   A sender that intends to generate one or more trailer fields in a message
-   &SHOULD; generate a <x:ref>Trailer</x:ref> header field in the header
-   section of that message to indicate which fields might be present in the
-   trailers.
-</t>
-<t>
-   If an intermediary discards the trailer section in transit, the
-   <x:ref>Trailer</x:ref> field could provide a hint of what metadata
-   was lost, though there is no guarantee that a sender of Trailer
-   will always follow through by sending the named fields.
-</t>
-</section>
-
 <section title="User-Agent" anchor="field.user-agent">
   <x:anchor-alias value="header.user-agent"/>
   <iref primary="true" item="Fields" subitem="User-Agent" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="User-Agent" x:for-anchor=""/><iref primary="true" item="User-Agent header field" x:for-anchor=""/>
@@ -5612,61 +5674,6 @@ Allow: GET, HEAD, PUT
    A proxy &MUST-NOT; modify the Allow header field &mdash; it does not need
    to understand all of the indicated methods in order to handle them
    according to the generic message handling rules.
-</t>
-</section>
-
-<section title="Date" anchor="field.date">
-  <x:anchor-alias value="header.date"/>
-  <iref primary="true" item="Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Header Fields" subitem="Date" x:for-anchor=""/><iref primary="true" item="Date header field" x:for-anchor=""/>
-  <x:anchor-alias value="Date"/>
-<t>
-   The "Date" header field represents the date and time at which
-   the message was originated, having the same semantics as the Origination
-   Date Field (orig-date) defined in <xref target="RFC5322" x:fmt="of" x:sec="3.6.1"/>.
-   The field value is an HTTP-date, as defined in <xref target="http.date"/>.
-</t>
-<sourcecode type="abnf7230"><iref primary="true" item="Grammar" subitem="Date"/>
-  <x:ref>Date</x:ref> = <x:ref>HTTP-date</x:ref>
-</sourcecode>
-<t>
-   An example is
-</t>
-<sourcecode type="http-message">
-Date: Tue, 15 Nov 1994 08:12:31 GMT
-</sourcecode>
-<t>
-   A sender that generates a Date header field &SHOULD; generate its
-   field value as the best available approximation of the date and time of
-   message generation. In theory, the date ought to represent the moment just
-   before generating the message content. In practice, a sender can generate
-   the date value at any time during message origination.
-</t>
-<t>
-   An origin server &MUST-NOT; send a Date header field if it does not have a
-   clock capable of providing a reasonable approximation of the current
-   instant in Coordinated Universal Time.
-   An origin server &MAY; send a Date header field if the response is in the
-   <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
-   class of status codes.
-   An origin server &MUST; send a Date header field in all other cases.
-</t>
-<t>
-   A recipient with a clock that receives a response message without a Date
-   header field &MUST; record the time it was received and append a
-   corresponding Date header field to the message's header section if it is
-   cached or forwarded downstream.
-</t>
-<t>
-   A recipient with a clock that receives a response with an invalid Date
-   header field value &MAY; replace that value with the time that
-   response was received.
-</t>
-<t>
-   A user agent &MAY; send a Date header field in a request, though generally
-   will not do so unless it is believed to convey useful information to the
-   server. For example, custom applications of HTTP might convey a Date if
-   the server is expected to adjust its interpretation of the user's request
-   based on differences between the user agent and server clocks.
 </t>
 </section>
 
