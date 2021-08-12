@@ -2719,12 +2719,26 @@
         </xsl:choose>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:if test="*[not(self::postalLine)]">
+        <xsl:if test="*[not(self::postalLine or self::country)]">
           <xsl:call-template name="error">
-            <xsl:with-param name="msg">It is not allowed to mix postalLine with other elements; these will be ignored.</xsl:with-param>
+            <xsl:with-param name="msg">It is not allowed to mix postalLine with other elements except country; these will be ignored.</xsl:with-param>
           </xsl:call-template>
         </xsl:if>
         <xsl:for-each select="postalLine">
+          <xsl:call-template name="emit-postal-line">
+            <xsl:with-param name="value">
+              <xsl:call-template name="extract-normalized">
+                <xsl:with-param name="ascii" select="$ascii"/>
+              </xsl:call-template>
+            </xsl:with-param>
+          </xsl:call-template>
+        </xsl:for-each>
+        <xsl:for-each select="country">
+          <xsl:if test="following-sibling::postalLine">
+            <xsl:call-template name="error">
+              <xsl:with-param name="msg">When combined with postalLine, country needs to be last.</xsl:with-param>
+            </xsl:call-template>
+          </xsl:if>
           <xsl:call-template name="emit-postal-line">
             <xsl:with-param name="value">
               <xsl:call-template name="extract-normalized">
@@ -12242,11 +12256,11 @@ dd, li, p {
   <xsl:variable name="gen">
     <xsl:text>http://greenbytes.de/tech/webdav/rfc2629.xslt, </xsl:text>
     <!-- when RCS keyword substitution in place, add version info -->
-    <xsl:if test="contains('$Revision: 1.1401 $',':')">
-      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1401 $', 'Revision: '),'$','')),', ')" />
+    <xsl:if test="contains('$Revision: 1.1402 $',':')">
+      <xsl:value-of select="concat('Revision ',normalize-space(translate(substring-after('$Revision: 1.1402 $', 'Revision: '),'$','')),', ')" />
     </xsl:if>
-    <xsl:if test="contains('$Date: 2021/07/01 14:23:57 $',':')">
-      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/07/01 14:23:57 $', 'Date: '),'$','')),', ')" />
+    <xsl:if test="contains('$Date: 2021/08/11 13:47:23 $',':')">
+      <xsl:value-of select="concat(normalize-space(translate(substring-after('$Date: 2021/08/11 13:47:23 $', 'Date: '),'$','')),', ')" />
     </xsl:if>
     <xsl:variable name="product" select="normalize-space(concat(system-property('xsl:product-name'),' ',system-property('xsl:product-version')))"/>
     <xsl:if test="$product!=''">

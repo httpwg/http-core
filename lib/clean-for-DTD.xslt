@@ -314,6 +314,20 @@
   </xsl:choose>
 </xsl:template>
 
+<!-- workaround until xml2rfc understands postalLine and country combined -->
+<xsl:template match="country[../postalLine]" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <postalLine>
+        <xsl:apply-templates mode="cleanup"/>
+      </postalLine>
+    </xsl:when>
+    <xsl:otherwise>
+      <country><xsl:value-of select="."/></country>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <xsl:template match="x:ref" mode="cleanup">
   <xsl:variable name="val" select="normalize-space(.)"/>
   <xsl:variable name="target" select="//*[@anchor and (@anchor=$val or x:anchor-alias/@value=$val)][not(ancestor::ed:del)] | //reference/x:source[x:defines=$val]"/>
