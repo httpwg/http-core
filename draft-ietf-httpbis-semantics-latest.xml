@@ -2016,6 +2016,8 @@ Example-Dates: "Sat, 04 May 1996", "Wed, 14 Sep 2005"
 
 <section title="Date/Time Formats" anchor="http.date">
   <x:anchor-alias value="HTTP-date"/>
+  <x:anchor-alias value="clock"/>
+  <iref primary="true" item="clock"/>
 <t>
    Prior to 1995, there were three different formats commonly used by servers
    to communicate timestamps.  For compatibility with old implementations, all
@@ -2046,13 +2048,17 @@ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
    the sender &MUST; generate those timestamps in the IMF-fixdate format.
 </t>
 <t>
-   An HTTP-date value represents time as an instance of Coordinated Universal
-   Time (UTC). The first two formats indicate UTC by the three-letter
-   abbreviation for Greenwich Mean Time, "GMT", a predecessor of the UTC name;
-   values in the asctime format are assumed to be in UTC.
+   An HTTP-date value represents time as an instance of Coordinated
+   Universal Time (UTC). The first two formats indicate UTC by the
+   three-letter abbreviation for Greenwich Mean Time, "GMT", a predecessor
+   of the UTC name; values in the asctime format are assumed to be in UTC.
+</t>
+<t>
+   A <x:dfn>clock</x:dfn> is an implementation capable of providing a
+   reasonable approximation of the current instant in UTC.
    A sender that generates HTTP-date values from a local clock ought to use
-   NTP (<xref target="RFC5905"/>) or some similar protocol to synchronize its
-   clock to UTC.
+   NTP (<xref target="RFC5905"/>) or some similar protocol to synchronize
+   its clock to UTC.
 </t>
 <t anchor="preferred.date.format">
   <x:anchor-alias value="IMF-fixdate"/>
@@ -2590,13 +2596,16 @@ Date: Tue, 15 Nov 1994 08:12:31 GMT
    the date value at any time during message origination.
 </t>
 <t>
-   An origin server &MUST-NOT; send a Date header field if it does not have a
-   clock capable of providing a reasonable approximation of the current
-   instant in Coordinated Universal Time.
-   An origin server &MAY; send a Date header field if the response is in the
-   <x:ref>1xx (Informational)</x:ref> or <x:ref>5xx (Server Error)</x:ref>
-   class of status codes.
-   An origin server &MUST; send a Date header field in all other cases.
+   An origin server with a clock (as defined in
+   <xref target="http.date"/>) &MUST; generate a Date header field in
+   all <x:ref>2xx (Successful)</x:ref>, <x:ref>3xx (Redirection)</x:ref>,
+   and <x:ref>4xx (Client Error)</x:ref> responses,
+   and &MAY; generate a Date header field in
+   <x:ref>1xx (Informational)</x:ref> and
+   <x:ref>5xx (Server Error)</x:ref> responses.
+</t>
+<t>
+   An origin server without a clock &MUST-NOT; generate a Date header field.
 </t>
 <t>
    A recipient with a clock that receives a response message without a Date
@@ -3998,17 +4007,20 @@ Content-Length: 3495
    distinguish those representations.
 </t>
 <t>
-   In contrast, a <x:dfn>weak validator</x:dfn> is representation metadata that
-   might not change for every change to the representation data.  This
-   weakness might be due to limitations in how the value is calculated, such
-   as clock resolution, an inability to ensure uniqueness for all possible
-   representations of the resource, or a desire of the resource owner
-   to group representations by some self-determined set of equivalency
-   rather than unique sequences of data.  An origin server &SHOULD; change a
-   weak entity-tag whenever it considers prior representations to be
-   unacceptable as a substitute for the current representation. In other words,
-   a weak entity-tag ought to change whenever the origin server wants caches to
-   invalidate old responses.
+   In contrast, a <x:dfn>weak validator</x:dfn> is representation metadata
+   that might not change for every change to the representation data. This
+   weakness might be due to limitations in how the value is calculated
+   (e.g., clock resolution), an inability to ensure uniqueness for all
+   possible representations of the resource, or a desire of the resource
+   owner to group representations by some self-determined set of
+   equivalency rather than unique sequences of data.
+</t>
+<t>
+   An origin server &SHOULD; change a weak entity-tag whenever it
+   considers prior representations to be unacceptable as a substitute for
+   the current representation. In other words, a weak entity-tag ought to
+   change whenever the origin server wants caches to invalidate old
+   responses.
 </t>
 <t>
    For example, the representation of a weather report that changes in
@@ -4087,8 +4099,10 @@ Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
    response is generated.
 </t>
 <t>
-   An origin server with a clock &MUST-NOT; send a Last-Modified date
-   that is later than the server's time of message origination (<x:ref>Date</x:ref>, <xref target="field.date"/>).
+   An origin server with a clock (as defined in <xref target="http.date"/>)
+   &MUST-NOT; generate a Last-Modified date that is later than the
+   server's time of message origination
+   (<x:ref>Date</x:ref>, <xref target="field.date"/>).
    If the last modification time is derived from implementation-specific
    metadata that evaluates to some time in the future, according to the
    origin server's clock, then the origin server &MUST; replace that
@@ -4096,9 +4110,9 @@ Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT
    modification date from having an adverse impact on cache validation.
 </t>
 <t>
-   An origin server without a clock &MUST-NOT; assign Last-Modified
-   values to a response unless these values were associated
-   with the resource by some other system or user with a reliable clock.
+   An origin server without a clock &MUST-NOT; generate a Last-Modified
+   date for a response unless that date value was assigned to the resource
+   by some other system (presumably one with a clock).
 </t>
 </section>
 
