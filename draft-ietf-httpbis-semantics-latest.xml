@@ -3936,11 +3936,17 @@ Content-Length: 3495
    <iref primary="true" item="validator"/>
    <iref item="selected representation"/>
 <t>
-   Validator fields convey metadata about the
-   <x:ref>selected representation</x:ref> (<xref target="representations"/>).
+   Resource metadata is referred to as a <x:dfn>validator</x:dfn> if it
+   can be used within a precondition (<xref target="preconditions"/>) to
+   make a conditional request (<xref target="conditional.requests"/>).
+   Validator fields convey a current validator for the
+   <x:ref>selected representation</x:ref>
+   (<xref target="representations"/>).
+</t>
+<t>
    In responses to safe requests, validator fields describe the selected
    representation chosen by the origin server while handling the response.
-   Note that, depending on the status code semantics, the
+   Note that, depending on the method and status code semantics, the
    <x:ref>selected representation</x:ref> for a given response is not
    necessarily the same as the representation enclosed as response content.
 </t>
@@ -3951,20 +3957,20 @@ Content-Length: 3495
    request.
 </t>
 <t>
-   For example, an ETag field in a <x:ref>201 (Created)</x:ref> response communicates the
-   entity-tag of the newly created resource's representation, so that it can
-   be used in later conditional requests to prevent the "lost update"
-   problem (<xref target="preconditions"/>).
+   For example, an ETag field in a <x:ref>201 (Created)</x:ref> response
+   communicates the entity-tag of the newly created resource's
+   representation, so that the entity-tag can be used as a validator in
+   later conditional requests to prevent the "lost update" problem.
 </t>
 <t>
    This specification defines two forms of metadata that are commonly used
    to observe resource state and test for preconditions: modification dates
    (<xref target="field.last-modified"/>) and opaque entity tags
-   (<xref target="field.etag"/>).  Additional metadata that reflects resource state
+   (<xref target="field.etag"/>).
+   Additional metadata that reflects resource state
    has been defined by various extensions of HTTP, such as Web Distributed
-   Authoring and Versioning <xref target="WEBDAV"/>, that are beyond the scope of this specification.
-   A resource metadata value is referred to as a <x:dfn>validator</x:dfn>
-   when it is used within a precondition.
+   Authoring and Versioning <xref target="WEBDAV"/>, that are beyond the
+   scope of this specification.
 </t>
 
 <section title="Weak versus Strong" anchor="weak.and.strong.validators">
@@ -4401,46 +4407,6 @@ Content-Encoding: gzip
   </t>
 </aside>
 </section>
-</section>
-
-<section title="When to Use Entity-Tags and Last-Modified Dates" anchor="when.to.use.entity.tags.and.last-modified.dates">
-<t>
-   In <x:ref>200 (OK)</x:ref> responses to GET or HEAD, an origin server:
-</t>
-<ul>
-   <li>&SHOULD; send an entity-tag validator unless it is not feasible to
-       generate one.</li>
-   <li>&MAY; send a weak entity-tag instead of a strong entity-tag, if
-       performance considerations support the use of weak entity-tags,
-       or if it is unfeasible to send a strong entity-tag.</li>
-   <li>&SHOULD; send a <x:ref>Last-Modified</x:ref> value if it is feasible to
-       send one.</li>
-</ul>
-<t>
-   In other words, the preferred behavior for an origin server
-   is to send both a strong entity-tag and a <x:ref>Last-Modified</x:ref>
-   value in successful responses to a retrieval request.
-</t>
-<t>
-   A client:
-</t>
-<ul>
-   <li>&MUST; send that entity-tag in any cache validation request (using
-       <x:ref>If-Match</x:ref> or <x:ref>If-None-Match</x:ref>) if an
-       entity-tag has been provided by the origin server.</li>
-   <li>&SHOULD; send the <x:ref>Last-Modified</x:ref> value in non-subrange
-       cache validation requests (using <x:ref>If-Modified-Since</x:ref>)
-       if only a Last-Modified value has been provided by the origin server.</li>
-   <li>&MAY; send the <x:ref>Last-Modified</x:ref> value in subrange
-       cache validation requests (using <x:ref>If-Unmodified-Since</x:ref>)
-       if only a Last-Modified value has been provided by an HTTP/1.0 origin
-       server. The user agent &SHOULD; provide a way to disable this, in case
-       of difficulty.</li>
-   <li>&SHOULD; send both validators in cache validation requests if both an
-       entity-tag and a <x:ref>Last-Modified</x:ref> value have been provided
-       by the origin server. This allows both HTTP/1.0 and HTTP/1.1 caches to
-       respond appropriately.</li>
-</ul>
 </section>
 </section>
 </section>
@@ -8522,6 +8488,20 @@ Content-Range: exampleunit 11.2-14.3/25
    A 200 response is heuristically cacheable; i.e., unless otherwise indicated by
    the method definition or explicit cache controls (see <xref target="heuristic.freshness"/>).
 </t>
+<t>
+   In 200 responses to GET or HEAD, an origin server &SHOULD; send any
+   available validator fields (<xref target="response.validator"/>) for the
+   <x:ref>selected representation</x:ref>, with both a strong entity-tag and
+   a <x:ref>Last-Modified</x:ref> date being preferred.
+</t>
+<t>
+   In 200 responses to state-changing methods, any validator fields
+   (<xref target="response.validator"/>) sent in the response convey the
+   current validators for the new representation formed as a result of
+   successfully applying the request semantics. Note that the PUT method
+   (<xref target="PUT"/>) has additional requirements that might preclude
+   sending such validators.
+</t>
 </section>
 
 <section title="201 Created" anchor="status.201">
@@ -8536,9 +8516,11 @@ Content-Range: exampleunit 11.2-14.3/25
 </t>
 <t>
    The 201 response content typically describes and links to the resource(s)
-   created. See <xref target="response.validator"/> for a discussion of the
-   meaning and purpose of validator fields, such as
-   <x:ref>ETag</x:ref> and <x:ref>Last-Modified</x:ref>, in a 201 response.
+   created. Any validator fields (<xref target="response.validator"/>)
+   sent in the response convey the current validators for a new
+   representation created by the request. Note that the PUT method
+   (<xref target="PUT"/>) has additional requirements that might preclude
+   sending such validators.
 </t>
 </section>
 
@@ -13795,6 +13777,7 @@ Content-Type: text/plain
   <li>In <xref target="field.accept-encoding"/>, clarify that the examples contains multiple values; also remove obsolete HTTP/1.0 note about qvalues (<eref target="https://github.com/httpwg/http-core/issues/914"/>)</li>
   <li>In <xref target="status.3xx"/>, remove incorrect mention of Etag as request field (<eref target="https://github.com/httpwg/http-core/issues/914"/>)</li>
   <li>In <xref target="message.transformations"/>, properly refer to text that has moved to <xref target="HTTP11"/> (<eref target="https://github.com/httpwg/http-core/issues/930"/>)</li>
+  <li>Rewrite description of validators and move cache-related aspects into <xref target="CACHING"/> (<eref target="https://github.com/httpwg/http-core/issues/933"/>)</li>
   <li>In <xref target="field.vary"/>, rephrase description to be more explanatory (<eref target="https://github.com/httpwg/http-core/issues/938"/>)</li>
   <li>In <xref target="precedence"/>, clarify that a false If-Range means ignore the Range (<eref target="https://github.com/httpwg/http-core/issues/940"/>)</li>
   <li>In <xref target="field.if-modified-since"/> and <xref target="field.if-unmodified-since"/>, restore text about missing modification date (<eref target="https://github.com/httpwg/http-core/issues/942"/>)</li>
