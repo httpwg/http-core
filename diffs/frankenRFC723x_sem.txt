@@ -1760,6 +1760,65 @@ Table of Contents
 
    [new]
 
+6.6.  Message Metadata
+
+   [new]
+
+6.6.1.  Date
+
+   The "Date" header field represents the date and time at which the
+   message was originated, having the same semantics as the Origination
+   Date Field (orig-date) defined in Section 3.6.1 of [RFC5322].  The
+   field value is an HTTP-date, as defined in Section 7.1.1.1.
+
+     Date = HTTP-date
+
+   An example is
+
+     Date: Tue, 15 Nov 1994 08:12:31 GMT
+
+   When a Date header field is generated, the sender SHOULD generate its
+   field value as the best available approximation of the date and time
+   of message generation.  In theory, the date ought to represent the
+   moment just before the payload is generated.  In practice, the date
+   can be generated at any time during message origination.
+
+   An origin server MUST NOT send a Date header field if it does not
+   have a clock capable of providing a reasonable approximation of the
+   current instance in Coordinated Universal Time.  An origin server MAY
+   send a Date header field if the response is in the 1xx
+   (Informational) or 5xx (Server Error) class of status codes.  An
+   origin server MUST send a Date header field in all other cases.
+
+   A recipient with a clock that receives a response message without a
+   Date header field MUST record the time it was received and append a
+   corresponding Date header field to the message's header section if it
+   is cached or forwarded downstream.
+
+   A user agent MAY send a Date header field in a request, though
+   generally will not do so unless it is believed to convey useful
+   information to the server.  For example, custom applications of HTTP
+   might convey a Date if the server is expected to adjust its
+   interpretation of the user's request based on differences between the
+   user agent and server clocks.
+
+6.6.2.  Trailer
+
+   This allows the recipient to prepare for receipt of that
+   metadata before it starts processing the body, which is useful
+   if the message is being streamed and the recipient wishes to
+   confirm an integrity check on the fly.
+
+     Trailer = 1#field-name
+
+   [new]
+
+   When a message includes a message body encoded with the chunked
+   transfer coding and the sender desires to send metadata in the form
+   of trailer fields at the end of the message, the sender SHOULD
+   generate a Trailer header field before the message body to indicate
+   which fields will be present in the trailers.
+   
 7.  Routing HTTP Messages
 
    HTTP request message routing is determined by each client based on
@@ -3086,43 +3145,6 @@ Table of Contents
       apply only during message transfer and do not result in distinct
       entity-tags.
 
-8.8.4.  When to Use Entity-Tags and Last-Modified Dates
-
-   In 200 (OK) responses to GET or HEAD, an origin server:
-
-   o  SHOULD send an entity-tag validator unless it is not feasible to
-      generate one.
-
-   o  MAY send a weak entity-tag instead of a strong entity-tag, if
-      performance considerations support the use of weak entity-tags, or
-      if it is unfeasible to send a strong entity-tag.
-
-   o  SHOULD send a Last-Modified value if it is feasible to send one.
-
-   In other words, the preferred behavior for an origin server is to
-   send both a strong entity-tag and a Last-Modified value in successful
-   responses to a retrieval request.
-
-   A client:
-
-   o  MUST send that entity-tag in any cache validation request (using
-      If-Match or If-None-Match) if an entity-tag has been provided by
-      the origin server.
-
-   o  SHOULD send the Last-Modified value in non-subrange cache
-      validation requests (using If-Modified-Since) if only a
-      Last-Modified value has been provided by the origin server.
-
-   o  MAY send the Last-Modified value in subrange cache validation
-      requests (using If-Unmodified-Since) if only a Last-Modified value
-      has been provided by an HTTP/1.0 origin server.  The user agent
-      SHOULD provide a way to disable this, in case of difficulty.
-
-   o  SHOULD send both validators in cache validation requests if both
-      an entity-tag and a Last-Modified value have been provided by the
-      origin server.  This allows both HTTP/1.0 and HTTP/1.1 caches to
-      respond appropriately.
-
 9.  Methods
 
 9.1.  Overview
@@ -3965,23 +3987,6 @@ Table of Contents
      rank      = ( "0" [ "." 0*3DIGIT ] )
                 / ( "1" [ "." 0*3("0") ] )
 
-10.1.5.  Trailer
-
-   This allows the recipient to prepare for receipt of that
-   metadata before it starts processing the body, which is useful
-   if the message is being streamed and the recipient wishes to
-   confirm an integrity check on the fly.
-
-     Trailer = 1#field-name
-
-   [new]
-
-   When a message includes a message body encoded with the chunked
-   transfer coding and the sender desires to send metadata in the form
-   of trailer fields at the end of the message, the sender SHOULD
-   generate a Trailer header field before the message body to indicate
-   which fields will be present in the trailers.
-   
 10.1.6.  User-Agent
 
    The "User-Agent" header field contains information about the user
@@ -4073,44 +4078,6 @@ Table of Contents
    A proxy MUST NOT modify the Allow header field -- it does not need to
    understand all of the indicated methods in order to handle them
    according to the generic message handling rules.
-
-10.2.2.  Date
-
-   The "Date" header field represents the date and time at which the
-   message was originated, having the same semantics as the Origination
-   Date Field (orig-date) defined in Section 3.6.1 of [RFC5322].  The
-   field value is an HTTP-date, as defined in Section 7.1.1.1.
-
-     Date = HTTP-date
-
-   An example is
-
-     Date: Tue, 15 Nov 1994 08:12:31 GMT
-
-   When a Date header field is generated, the sender SHOULD generate its
-   field value as the best available approximation of the date and time
-   of message generation.  In theory, the date ought to represent the
-   moment just before the payload is generated.  In practice, the date
-   can be generated at any time during message origination.
-
-   An origin server MUST NOT send a Date header field if it does not
-   have a clock capable of providing a reasonable approximation of the
-   current instance in Coordinated Universal Time.  An origin server MAY
-   send a Date header field if the response is in the 1xx
-   (Informational) or 5xx (Server Error) class of status codes.  An
-   origin server MUST send a Date header field in all other cases.
-
-   A recipient with a clock that receives a response message without a
-   Date header field MUST record the time it was received and append a
-   corresponding Date header field to the message's header section if it
-   is cached or forwarded downstream.
-
-   A user agent MAY send a Date header field in a request, though
-   generally will not do so unless it is believed to convey useful
-   information to the server.  For example, custom applications of HTTP
-   might convey a Date if the server is expected to adjust its
-   interpretation of the user's request based on differences between the
-   user agent and server clocks.
 
 10.2.3.  Location
 
@@ -6152,6 +6119,21 @@ Table of Contents
    indicated by the method definition or explicit cache controls (see
    Section 4.2.2 of [RFC7234]).
 
+   In 200 (OK) responses to GET or HEAD, an origin server:
+
+   o  SHOULD send an entity-tag validator unless it is not feasible to
+      generate one.
+
+   o  MAY send a weak entity-tag instead of a strong entity-tag, if
+      performance considerations support the use of weak entity-tags, or
+      if it is unfeasible to send a strong entity-tag.
+
+   o  SHOULD send a Last-Modified value if it is feasible to send one.
+
+   In other words, the preferred behavior for an origin server is to
+   send both a strong entity-tag and a Last-Modified value in successful
+   responses to a retrieval request.
+
 15.3.2.  201 Created
 
    The 201 (Created) status code indicates that the request has been
@@ -6431,6 +6413,21 @@ Table of Contents
    4.  Redirection to a previously cached result, as in the 304 (Not
        Modified) status code.
 
+      Note: In HTTP/1.0, the status codes 301 (Moved Permanently) and
+      302 (Found) were defined for the first type of redirect
+      ([RFC1945], Section 9.3).  Early user agents split on whether the
+      method applied to the redirect target would be the same as the
+      original request or would be rewritten as GET.  Although HTTP
+      originally defined the former semantics for 301 and 302 (to match
+      its original implementation at CERN), and defined 303 (See Other)
+      to match the latter semantics, prevailing practice gradually
+      converged on the latter semantics for 301 and 302 as well.  The
+      first revision of HTTP/1.1 added 307 (Temporary Redirect) to
+      indicate the former semantics without being impacted by divergent
+      practice.  Over 10 years later, most user agents still do method
+      rewriting for 301 and 302; therefore, this specification makes
+      that behavior conformant when the original request is POST.
+
    If a Location header field (Section 7.1.2) is provided, the user
    agent MAY automatically redirect its request to the URI
    referenced by the Location field value, even if the specific status
@@ -6459,21 +6456,6 @@ Table of Contents
    [new]
 
    [new]
-
-      Note: In HTTP/1.0, the status codes 301 (Moved Permanently) and
-      302 (Found) were defined for the first type of redirect
-      ([RFC1945], Section 9.3).  Early user agents split on whether the
-      method applied to the redirect target would be the same as the
-      original request or would be rewritten as GET.  Although HTTP
-      originally defined the former semantics for 301 and 302 (to match
-      its original implementation at CERN), and defined 303 (See Other)
-      to match the latter semantics, prevailing practice gradually
-      converged on the latter semantics for 301 and 302 as well.  The
-      first revision of HTTP/1.1 added 307 (Temporary Redirect) to
-      indicate the former semantics without being impacted by divergent
-      practice.  Over 10 years later, most user agents still do method
-      rewriting for 301 and 302; therefore, this specification makes
-      that behavior conformant when the original request is POST.
 
    A client SHOULD detect and intervene in cyclical redirections (i.e.,
    "infinite" redirection loops).
@@ -8556,7 +8538,10 @@ C.17.  Since draft-ietf-httpbis-semantics-15
 C.18.  Since draft-ietf-httpbis-semantics-16
 
 
-Acknowledgments
+C.19.  Since draft-ietf-httpbis-semantics-17
+
+
+Acknowledgements
 
    See Section 10 of [RFC7230].
 
