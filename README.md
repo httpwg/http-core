@@ -8,8 +8,6 @@ Pull requests and issues are welcome. See [our contribution guidelines](CONTRIBU
 
 **Be aware that all contributions to our work fall under the "NOTE WELL" terms therein.**
 
-[Editors' Drafts Combined ToC](https://httpwg.org/http-core/outlineALL.html)
-
 [RFC723* Errata Status](https://httpwg.org/http-core/httpbis-errata-status.html)
 
 ### HTTP Semantics
