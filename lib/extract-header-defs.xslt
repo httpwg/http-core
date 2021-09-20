@@ -91,7 +91,7 @@
   <xsl:variable name="status" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
     <xsl:choose>
       <xsl:when test="rdf:Description/p2:status"><xsl:value-of select="rdf:Description/p2:status"/></xsl:when>
-      <xsl:otherwise>standard</xsl:otherwise>
+      <xsl:otherwise>permanent</xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
   <xsl:variable name="comments" xmlns:p2="urn:ietf:id:draft-ietf-httpbis-p2-semantics#">
