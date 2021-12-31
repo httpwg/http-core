@@ -1239,6 +1239,17 @@
 
 <xsl:template match="artwork/@anchor" mode="cleanup"/>
 
+<xsl:template match="artwork/@type" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and .='drawing'">
+      <xsl:attribute name="type">ascii-art</xsl:attribute>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:copy-of select="."/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <xsl:template name="handle-artwork">
   <xsl:choose>
     <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and svg:svg">
