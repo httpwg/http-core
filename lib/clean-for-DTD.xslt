@@ -96,6 +96,21 @@
 
 <xsl:template match="text()" mode="cleanup"><xsl:copy/></xsl:template>
 
+<xsl:template match="text()[not(ancestor::artwork or ancestor::sourcecode)][contains(.,'&#8212;')]" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <xsl:call-template name="replace-substring">
+        <xsl:with-param name="string" select="."/>
+        <xsl:with-param name="replace">&#8212;</xsl:with-param>
+        <xsl:with-param name="by">--</xsl:with-param>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:copy/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <xsl:template match="/" mode="cleanup">
 	<xsl:copy><xsl:apply-templates select="node()" mode="cleanup" /></xsl:copy>
 </xsl:template>
