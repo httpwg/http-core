@@ -2318,12 +2318,23 @@
 </xsl:template>
 
 <!-- Source Code -->
+<xsl:template match="sourcecode/@type" mode="cleanup">
+  <xsl:choose>
+    <xsl:when test=".='abnf7230'">
+      <xsl:attribute name="type">abnf9110</xsl:attribute>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:copy-of select="."/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <xsl:template match="sourcecode" mode="cleanup">
   <xsl:choose>
     <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
       <xsl:apply-templates select=".//iref" mode="cleanup"/>
       <sourcecode>
-        <xsl:copy-of select="@*"/>
+        <xsl:apply-templates select="@*" mode="cleanup"/>
         <xsl:call-template name="get-content-of-artwork"/>
       </sourcecode>
     </xsl:when>
