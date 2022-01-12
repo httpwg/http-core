@@ -1,4 +1,4 @@
---- draft-ietf-httpbis-messaging-latest.txt	2022-01-12 13:09:25.426279300 +0100
+--- draft-ietf-httpbis-messaging-latest.txt	2022-01-12 13:36:08.702457100 +0100
 +++ rfc9112-to-be.txt	2022-01-12 11:47:24.483406100 +0100
 @@ -2,17 +2,16 @@
  
@@ -169,15 +169,6 @@
  
  3.2.  Request Target
  
-@@ -642,7 +623,7 @@
-    "https"), the server can reject the request or determine whether a
-    configured default applies that is consistent with the incoming
-    connection's context.  Context might include connection details like
--   address and port, what security has been applied, and locally-defined
-+   address and port, what security has been applied, and locally defined
-    information specific to that server's configuration.  An empty
-    authority is replaced with the configured default before further
-    processing of the request.
 @@ -664,9 +645,8 @@
  4.  Status Line
  
@@ -190,26 +181,45 @@
  
       status-line = HTTP-version SP status-code SP [ reason-phrase ]
  
-@@ -707,8 +687,8 @@
-    reliable channel for information (it might be translated for a given
-    locale, overwritten by intermediaries, or discarded when the message
-    is forwarded via other versions of HTTP).  A server MUST send the
--   space that separates status-code from the reason-phrase even when the
--   reason-phrase is absent (i.e., the status-line would end with the
-+   space that separates the status-code from the reason-phrase even when
-+   the reason-phrase is absent (i.e., the status-line would end with the
-    three octets SP CR LF).
- 
- 5.  Field Syntax
 @@ -753,7 +733,7 @@
     Historically, HTTP/1.x field values could be extended over multiple
     lines by preceding each extra line with at least one space or
     horizontal tab (obs-fold).  This specification deprecates such line
--   folding except within the message/http media type (Section 10.1).
+-   folding except within "the message/http" media type (Section 10.1).
 +   folding except within the "message/http" media type (Section 10.1).
  
       obs-fold     = OWS CRLF RWS
                    ; obsolete line folding
+@@ -761,17 +741,17 @@
+    A sender MUST NOT generate a message that includes line folding
+    (i.e., that has any field line value that contains a match to the
+    obs-fold rule) unless the message is intended for packaging within
+-   the "message/http" media type.
++   the message/http media type.
+ 
+    A server that receives an obs-fold in a request message that is not
+-   within a "message/http" container MUST either reject the message by
++   within a message/http container MUST either reject the message by
+    sending a 400 (Bad Request), preferably with a representation
+    explaining that obsolete line folding is unacceptable, or replace
+    each received obs-fold with one or more SP octets prior to
+    interpreting the field value or forwarding the message downstream.
+ 
+    A proxy or gateway that receives an obs-fold in a response message
+-   that is not within a "message/http" container MUST either discard the
++   that is not within a message/http container MUST either discard the
+    message and replace it with a 502 (Bad Gateway) response, preferably
+    with a representation explaining that unacceptable line folding was
+    received, or replace each received obs-fold with one or more SP
+@@ -779,7 +759,7 @@
+    message downstream.
+ 
+    A user agent that receives an obs-fold in a response message that is
+-   not within a "message/http" container MUST replace each received
++   not within a message/http container MUST replace each received
+    obs-fold with one or more SP octets prior to interpreting the field
+    value.
+ 
 @@ -799,10 +779,11 @@
     Content-Length or Transfer-Encoding header field.  Request message
     framing is independent of method semantics.
@@ -330,34 +340,7 @@
  
  9.3.  Persistence
  
-@@ -1362,7 +1345,7 @@
-    (Section 7.6.1 of [HTTP]) in the most recently received message, if
-    any:
- 
--   *  If the close connection option is present (Section 9.6), the
-+   *  If the "close" connection option is present (Section 9.6), the
-       connection will not persist after the current response; else,
- 
-    *  If the received protocol is HTTP/1.1 (or later), the connection
-@@ -1377,21 +1360,21 @@
-    *  The connection will close after the current response.
- 
-    A client that does not support persistent connections MUST send the
--   close connection option in every request message.
-+   "close" connection option in every request message.
- 
-    A server that does not support persistent connections MUST send the
--   close connection option in every response message that does not have
--   a 1xx (Informational) status code.
-+   "close" connection option in every response message that does not
-+   have a 1xx (Informational) status code.
- 
-    A client MAY send additional requests on a persistent connection
--   until it sends or receives a close connection option or receives an
-+   until it sends or receives a "close" connection option or receives an
-    HTTP/1.0 response without a "keep-alive" connection option.
- 
-    In order to remain persistent, all messages on a connection need to
+@@ -1391,7 +1374,7 @@
     have a self-defined message length (i.e., one not defined by closure
     of the connection), as described in Section 6.  A server MUST read
     the entire request message body or close the connection after sending
@@ -366,54 +349,19 @@
     connection would be misinterpreted as the next request.  Likewise, a
     client MUST read the entire response message body if it intends to
     reuse the same connection for a subsequent request.
-@@ -1518,7 +1501,7 @@
-    The "close" connection option is defined as a signal that the sender
-    will close this connection after completion of the response.  A
-    sender SHOULD send a Connection header field (Section 7.6.1 of
--   [HTTP]) containing the close connection option when it intends to
-+   [HTTP]) containing the "close" connection option when it intends to
-    close a connection.  For example,
+@@ -1532,9 +1515,9 @@
+    as a header field might conflict with the "close" connection option.
  
-    Connection: close
-@@ -1529,28 +1512,28 @@
-    connection after the response message is complete.
+    A client that sends a "close" connection option MUST NOT send further
+-   requests on that connection (after the one containing the "close")
+-   and MUST close the connection after reading the final response
+-   message corresponding to this request.
++   requests on that connection (after the one containing the close) and
++   MUST close the connection after reading the final response message
++   corresponding to this request.
  
-    Note that the field name "Close" is reserved, since using that name
--   as a header field might conflict with the close connection option.
-+   as a header field might conflict with the "close" connection option.
- 
--   A client that sends a close connection option MUST NOT send further
-+   A client that sends a "close" connection option MUST NOT send further
-    requests on that connection (after the one containing the close) and
-    MUST close the connection after reading the final response message
-    corresponding to this request.
- 
--   A server that receives a close connection option MUST initiate
-+   A server that receives a "close" connection option MUST initiate
+    A server that receives a "close" connection option MUST initiate
     closure of the connection (see below) after it sends the final
--   response to the request that contained the close connection option.
--   The server SHOULD send a close connection option in its final
-+   response to the request that contained the "close" connection option.
-+   The server SHOULD send a "close" connection option in its final
-    response on that connection.  The server MUST NOT process any further
-    requests received on that connection.
- 
--   A server that sends a close connection option MUST initiate closure
-+   A server that sends a "close" connection option MUST initiate closure
-    of the connection (see below) after it sends the response containing
--   the close connection option.  The server MUST NOT process any further
--   requests received on that connection.
-+   the "close" connection option.  The server MUST NOT process any
-+   further requests received on that connection.
- 
--   A client that receives a close connection option MUST cease sending
-+   A client that receives a "close" connection option MUST cease sending
-    requests on that connection and close the connection after reading
--   the response message containing the close connection option; if
-+   the response message containing the "close" connection option; if
-    additional pipelined requests had been sent on the connection, the
-    client SHOULD NOT assume that they will be processed by the server.
- 
 @@ -1612,7 +1595,7 @@
     data already received, but it could indicate that subsequent data
     might have been truncated.  As TLS is not directly aware of HTTP
@@ -423,15 +371,24 @@
     messages is defined in Section 8.
  
     When encountering an incomplete close, a client SHOULD treat as
-@@ -1647,7 +1630,7 @@
-    The message/http media type can be used to enclose a single HTTP
+@@ -1644,13 +1627,13 @@
+ 
+ 10.1.  Media Type message/http
+ 
+-   The "message/http" media type can be used to enclose a single HTTP
++   The message/http media type can be used to enclose a single HTTP
     request or response message, provided that it obeys the MIME
     restrictions for all "message" types regarding line length and
 -   encodings.  Because of the line length limitations, field values
+-   within "message/http" are allowed to use line folding (obs-fold), as
 +   encodings.  Because of the line-length limitations, field values
-    within message/http are allowed to use line folding (obs-fold), as
++   within message/http are allowed to use line folding (obs-fold), as
     described in Section 5.2, to convey the field value over multiple
-    lines.  A recipient of message/http data MUST replace any obsolete
+-   lines.  A recipient of "message/http" data MUST replace any obsolete
++   lines.  A recipient of message/http data MUST replace any obsolete
+    line folding with one or more SP characters when the message is
+    consumed.
+ 
 @@ -1691,8 +1674,8 @@
  
                              Macintosh file type code(s):  N/A
@@ -442,17 +399,6 @@
 +      See Authors' Addresses section.
  
     Intended usage:  COMMON
- 
-@@ -1704,8 +1687,8 @@
- 
- 10.2.  Media Type application/http
- 
--   The application/http media type can be used to enclose a pipeline of
--   one or more HTTP request or response messages (not intermixed).
-+   The "application/http" media type can be used to enclose a pipeline
-+   of one or more HTTP request or response messages (not intermixed).
- 
-    Type name:  application
  
 @@ -1745,8 +1728,8 @@
  
