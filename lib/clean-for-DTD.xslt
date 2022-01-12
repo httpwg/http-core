@@ -1,7 +1,7 @@
 <!--
     Strip rfc2629.xslt extensions, generating XML input for "official" xml2rfc
 
-    Copyright (c) 2006-2021, Julian Reschke (julian.reschke@greenbytes.de)
+    Copyright (c) 2006-2022, Julian Reschke (julian.reschke@greenbytes.de)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -2504,9 +2504,9 @@
 <!-- Display names for references -->
 <xsl:template match="displayreference" mode="cleanup">
   <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3">
-    <xsl:copy>
+    <displayreference>
       <xsl:apply-templates select="@*|node()" mode="cleanup"/>
-    </xsl:copy>
+    </displayreference>
   </xsl:if>
 </xsl:template>
 
