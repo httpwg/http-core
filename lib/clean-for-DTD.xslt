@@ -1657,30 +1657,39 @@
 <xsl:template match="reference/front/abstract" mode="cleanup"/>
 
 <xsl:template match="referencegroup" mode="cleanup">
-  <reference anchor="{@anchor}">
-    <xsl:copy-of select="@target"/>
-    <xsl:if test="$xml2rfc-ext-xml2rfc-backend >= 201706">
-      <xsl:attribute name="quote-title">false</xsl:attribute>
-    </xsl:if>
-    <xsl:comment>...expanded &lt;referencegroup>...</xsl:comment>
-    <front>
-      <title>
-        <xsl:text>Consisting of: </xsl:text>
-        <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rfc2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/*[self::reference or self::referencegroup]"/>
-        <xsl:for-each select="reference|$included">
-          <xsl:value-of select="concat('[',@anchor,']')"/>
-          <xsl:choose>
-            <xsl:when test="position() &lt; last() - 1">, </xsl:when>
-            <xsl:when test="position() = last() - 1">, and </xsl:when>
-            <xsl:otherwise/>
-          </xsl:choose>
-        </xsl:for-each>
-      </title>
-      <author/>
-      <date/>
-    </front>
-  </reference>
-  <xsl:apply-templates mode="cleanup"/>
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <referencegroup>
+        <xsl:apply-templates select="@*|*" mode="cleanup"/>
+      </referencegroup>
+    </xsl:when>
+    <xsl:otherwise>
+      <reference anchor="{@anchor}">
+        <xsl:copy-of select="@target"/>
+        <xsl:if test="$xml2rfc-ext-xml2rfc-backend >= 201706">
+          <xsl:attribute name="quote-title">false</xsl:attribute>
+        </xsl:if>
+        <xsl:comment>...expanded &lt;referencegroup>...</xsl:comment>
+        <front>
+          <title>
+            <xsl:text>Consisting of: </xsl:text>
+            <xsl:variable xmlns:myns="mailto:julian.reschke@greenbytes.de?subject=rfc2629.xslt" name="included" select="exslt:node-set($includeDirectives)/myns:include[@in=generate-id(current())]/*[self::reference or self::referencegroup]"/>
+            <xsl:for-each select="reference|$included">
+              <xsl:value-of select="concat('[',@anchor,']')"/>
+              <xsl:choose>
+                <xsl:when test="position() &lt; last() - 1">, </xsl:when>
+                <xsl:when test="position() = last() - 1">, and </xsl:when>
+                <xsl:otherwise/>
+              </xsl:choose>
+            </xsl:for-each>
+          </title>
+          <author/>
+          <date/>
+        </front>
+      </reference>
+      <xsl:apply-templates mode="cleanup"/>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <xsl:template match="reference" mode="cleanup">
