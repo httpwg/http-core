@@ -1,5 +1,5 @@
 --- draft-ietf-httpbis-messaging-latest.txt	2022-01-17 20:12:49.571223100 +0100
-+++ rfc9112-to-be.txt	2022-01-17 19:42:56.906230800 +0100
++++ rfc9112-to-be.txt	2022-01-19 07:27:24.785431700 +0100
 @@ -2,17 +2,16 @@
  
  
@@ -145,16 +145,14 @@
  
  2.2.  Message Parsing
  
-@@ -389,9 +370,9 @@
- 
+@@ -390,8 +371,8 @@
  3.  Request Line
  
--   A request-line begins with a method token, followed by a single space
+    A request-line begins with a method token, followed by a single space
 -   (SP), the request-target, another single space (SP), and ends with
 -   the protocol version.
-+   A request-line begins with a method token, followed by a single SP,
-+   the request-target, and another single SP, and ends with the protocol
-+   version.
++   (SP), the request-target, and another single space (SP), and ends
++   with the protocol version.
  
       request-line   = method SP request-target SP HTTP-version
  
@@ -169,17 +167,39 @@
  
  3.2.  Request Target
  
-@@ -664,9 +645,8 @@
+@@ -457,7 +438,7 @@
+    HTTP/1.1 request messages.  If the target URI includes an authority
+    component, then a client MUST send a field value for Host that is
+    identical to that authority component, excluding any userinfo
+-   subcomponent and its "@" delimiter (Section 4.2.1 of [HTTP]).  If the
++   subcomponent and its "@" delimiter (Section 4.2 of [HTTP]).  If the
+    authority component is missing or undefined for the target URI, then
+    a client MUST send a Host header field with an empty field value.
+ 
+@@ -664,8 +645,8 @@
  4.  Status Line
  
     The first line of a response message is the status-line, consisting
 -   of the protocol version, a space (SP), the status code, another
 -   space, and ending with an OPTIONAL textual phrase describing the
--   status code.
-+   of the protocol version, an SP, the status code, and another SP and
-+   ending with an OPTIONAL textual phrase describing the status code.
++   of the protocol version, a space (SP), the status code, and another
++   space and ending with an OPTIONAL textual phrase describing the
+    status code.
  
       status-line = HTTP-version SP status-code SP [ reason-phrase ]
+@@ -719,10 +700,9 @@
+ 
+      field-line   = field-name ":" OWS field-value OWS
+ 
+-   Most HTTP field names and the rules for parsing within field values
+-   are defined in Section 6.3 of [HTTP].  This section covers the
+-   generic syntax for header field inclusion within, and extraction
+-   from, HTTP/1.1 messages.
++   Rules for parsing within field values are defined in Section 5.5 of
++   [HTTP].  This section covers the generic syntax for header field
++   inclusion within, and extraction from, HTTP/1.1 messages.
+ 
+ 5.1.  Field Line Parsing
  
 @@ -979,7 +959,7 @@
         error, unless the field value can be successfully parsed as a
@@ -190,6 +210,15 @@
         Content-Length field value).  If the unrecoverable error is in a
         request message, the server MUST respond with a 400 (Bad Request)
         status code and then close the connection.  If it is in a
+@@ -1026,7 +1006,7 @@
+    existing services respond to chunked with a 411 (Length Required)
+    status code even though they understand the chunked transfer coding.
+    This is typically because such services are implemented via a gateway
+-   that requires a content-length in advance of being called, and the
++   that requires a content length in advance of being called, and the
+    server is unable or unwilling to buffer the entire request before
+    processing.
+ 
 @@ -1056,10 +1036,11 @@
     that is being transferred.
  
@@ -226,7 +255,16 @@
  
     The TE header field (Section 10.1.4 of [HTTP]) uses a pseudo-
     parameter named "q" as the rank value when multiple transfer codings
-@@ -1393,7 +1374,7 @@
+@@ -1278,7 +1259,7 @@
+    occur when a connection is closed prematurely or when decoding a
+    supposedly chunked transfer coding fails, MUST record the message as
+    incomplete.  Cache requirements for incomplete responses are defined
+-   in Section 3 of [CACHING].
++   in Section 3.3 of [CACHING].
+ 
+    If a response terminates in the middle of the header section (before
+    the empty line is received) and the status code might rely on header
+@@ -1393,15 +1374,15 @@
     have a self-defined message length (i.e., one not defined by closure
     of the connection), as described in Section 6.  A server MUST read
     the entire request message body or close the connection after sending
@@ -235,6 +273,17 @@
     connection would be misinterpreted as the next request.  Likewise, a
     client MUST read the entire response message body if it intends to
     reuse the same connection for a subsequent request.
+ 
+    A proxy server MUST NOT maintain a persistent connection with an
+-   HTTP/1.0 client (see Section 19.7.1 of [RFC2068] for information and
+-   discussion of the problems with the Keep-Alive header field
+-   implemented by many HTTP/1.0 clients).
++   HTTP/1.0 client (see Appendix C.2.2 for information and discussion of
++   the problems with the Keep-Alive header field implemented by many
++   HTTP/1.0 clients).
+ 
+    See Appendix C.2.2 for more information on backwards compatibility
+    with HTTP/1.0 clients.
 @@ -1534,9 +1515,9 @@
     as a header field might conflict with the "close" connection option.
  
@@ -248,7 +297,7 @@
  
     A server that receives a "close" connection option MUST initiate
     closure of the connection (see below) after it sends the final
-@@ -1614,7 +1595,7 @@
+@@ -1614,16 +1595,16 @@
     data already received, but it could indicate that subsequent data
     might have been truncated.  As TLS is not directly aware of HTTP
     message framing, it is necessary to examine the HTTP data itself to
@@ -257,6 +306,32 @@
     messages is defined in Section 8.
  
     When encountering an incomplete close, a client SHOULD treat as
+-   completed all requests for which it has received as much data as
+-   specified in the Content-Length header or, when a Transfer-Encoding
+-   of chunked is used, for which the terminal zero-length chunk has been
+-   received.  A response that has neither chunked transfer coding nor
+-   Content-Length is complete only if a valid closure alert has been
+-   received.  Treating an incomplete message as complete could expose
++   completed a request for which it has received either 1) as much data
++   as specified in the Content-Length header field or 2) the terminal
++   zero-length chunk when a Transfer-Encoding of chunked is used.  A
++   response that has neither chunked transfer coding nor Content-Length
++   is complete only if a valid closure alert has been received.
++   Treating an incomplete message as complete could expose
+    implementations to attack.
+ 
+    A client detecting an incomplete close SHOULD recover gracefully.
+@@ -1634,8 +1615,8 @@
+    thus generating an incomplete close on the server side.
+ 
+    Servers SHOULD be prepared to receive an incomplete close from the
+-   client, since the client can often determine when the end of server
+-   data is.
++   client because the client can often determine the end of server data
++   stream.
+ 
+    Servers MUST attempt to initiate an exchange of closure alerts with
+    the client before closing the connection.  Servers MAY close the
 @@ -1649,7 +1630,7 @@
     The "message/http" media type can be used to enclose a single HTTP
     request or response message, provided that it obeys the MIME
