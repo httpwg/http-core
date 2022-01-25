@@ -1,5 +1,5 @@
 --- draft-ietf-httpbis-cache-latest.txt	2022-01-22 17:17:33.510536700 +0100
-+++ rfc9111-to-be.txt	2022-01-24 13:51:31.811756400 +0100
++++ rfc9111-to-be.txt	2022-01-25 11:29:27.521324800 +0100
 @@ -2,17 +2,16 @@
  
  
@@ -114,37 +114,46 @@
     capitals, as shown here.
  
     Section 2 of [HTTP] defines conformance criteria and contains
-@@ -272,7 +253,8 @@
-    used to retrieve the stored response; the method determines under
-    which circumstances that response can be used to satisfy a subsequent
-    request.  However, many HTTP caches in common use today only cache
--   GET responses and therefore only use the URI as the cache key.
-+   GET responses and therefore only use the URI as the cache key,
-+   forwarding other methods.
+@@ -306,11 +287,11 @@
  
-    A cache might store multiple responses for a request target that is
-    subject to content negotiation.  Caches differentiate these responses
-@@ -479,8 +461,8 @@
-    directive for that response.
+    *  the response status code is final (see Section 15 of [HTTP]);
  
-    In this specification, the following response directives have such an
--   effect: must-revalidate (Section 5.2.2.2), public (Section 5.2.2.9),
--   and s-maxage (Section 5.2.2.10).
-+   effect: "must-revalidate" (Section 5.2.2.2), public
-+   (Section 5.2.2.9), and s-maxage (Section 5.2.2.10).
+-   *  if the response status code is 206 or 304, or the "must-
+-      understand" cache directive (see Section 5.2.2.3) is present: the
+-      cache understands the response status code;
++   *  if the response status code is 206 or 304, or the must-understand
++      cache directive (see Section 5.2.2.3) is present: the cache
++      understands the response status code;
  
- 4.  Constructing Responses from Caches
+-   *  the "no-store" cache directive is not present in the response (see
++   *  the no-store cache directive is not present in the response (see
+       Section 5.2.2.5);
  
-@@ -642,7 +624,7 @@
-    freshness_lifetime is defined in Section 4.2.1; current_age is
-    defined in Section 4.2.3.
+    *  if the cache is shared: the "private" response directive is either
+@@ -331,9 +312,9 @@
  
--   Clients can send the max-age or min-fresh request directives
-+   Clients can send the max-age or "min-fresh" request directives
-    (Section 5.2.1) to suggest limits on the freshness calculations for
-    the corresponding response.  However, caches are not required to
-    honor them.
-@@ -717,7 +699,7 @@
+       -  an Expires header field (see Section 5.3);
+ 
+-      -  a "max-age" response directive (see Section 5.2.2.1);
++      -  a max-age response directive (see Section 5.2.2.1);
+ 
+-      -  if the cache is shared: an "s-maxage" response directive (see
++      -  if the cache is shared: an s-maxage response directive (see
+          Section 5.2.2.10);
+ 
+       -  a cache extension that allows it to be cached (see
+@@ -370,8 +351,8 @@
+       forwarding the message, and this MAY be implemented by doing so
+       before storage; see Section 7.6.1 of [HTTP] for some examples.
+ 
+-   *  The "no-cache" (Section 5.2.2.4) and private (Section 5.2.2.7)
+-      cache directives can have arguments that prevent storage of header
++   *  The no-cache (Section 5.2.2.4) and private (Section 5.2.2.7) cache
++      directives can have arguments that prevent storage of header
+       fields by all caches and shared caches, respectively.
+ 
+    *  Header fields that are specific to the proxy that a cache uses
+@@ -717,7 +698,7 @@
     responses without explicit freshness whose status codes are defined
     as _heuristically cacheable_ (e.g., see Section 15.1 of [HTTP]) and
     on responses without explicit freshness that have been marked as
@@ -153,75 +162,171 @@
  
     Note that in previous specifications, heuristically cacheable
     response status codes were called "cacheable by default".
-@@ -807,16 +789,16 @@
+@@ -807,10 +788,9 @@
     according to the calculations in Section 4.2.
  
     A cache MUST NOT generate a stale response if it is prohibited by an
 -   explicit in-protocol directive (e.g., by a "no-cache" response
 -   directive, a "must-revalidate" response directive, or an applicable
 -   "s-maxage" or "proxy-revalidate" response directive; see
+-   Section 5.2.2).
 +   explicit in-protocol directive (e.g., by a no-cache response
 +   directive, a must-revalidate response directive, or an applicable
-+   s-maxage or "proxy-revalidate" response directive; see
-    Section 5.2.2).
++   s-maxage or proxy-revalidate response directive; see Section 5.2.2).
  
     A cache MUST NOT generate a stale response unless it is disconnected
     or doing so is explicitly permitted by the client or origin server
--   (e.g., by the max-stale request directive in Section 5.2.1, extension
--   directives such as those defined in [RFC5861], or configuration in
--   accordance with an out-of-band contract).
-+   (e.g., by the "max-stale" request directive in Section 5.2.1,
-+   extension directives such as those defined in [RFC5861], or
-+   configuration in accordance with an out-of-band contract).
- 
- 4.3.  Validation
- 
-@@ -1137,7 +1119,7 @@
+@@ -1137,9 +1117,9 @@
  
     Argument syntax:
  
 -      delta-seconds (see Section 1.2.2)
 +         delta-seconds (see Section 1.2.2)
  
-    The "max-age" request directive indicates that the client prefers a
+-   The "max-age" request directive indicates that the client prefers a
++   The max-age request directive indicates that the client prefers a
     response whose age is less than or equal to the specified number of
-@@ -1152,7 +1134,7 @@
+    seconds.  Unless the max-stale request directive is also present, the
+    client does not wish to receive a stale response.
+@@ -1152,14 +1132,14 @@
  
     Argument syntax:
  
 -      delta-seconds (see Section 1.2.2)
 +         delta-seconds (see Section 1.2.2)
  
-    The "max-stale" request directive indicates that the client will
-    accept a response that has exceeded its freshness lifetime.  If a
-@@ -1169,7 +1151,7 @@
+-   The "max-stale" request directive indicates that the client will
+-   accept a response that has exceeded its freshness lifetime.  If a
+-   value is present, then the client is willing to accept a response
+-   that has exceeded its freshness lifetime by no more than the
+-   specified number of seconds.  If no value is assigned to max-stale,
+-   then the client will accept a stale response of any age.
++   The max-stale request directive indicates that the client will accept
++   a response that has exceeded its freshness lifetime.  If a value is
++   present, then the client is willing to accept a response that has
++   exceeded its freshness lifetime by no more than the specified number
++   of seconds.  If no value is assigned to max-stale, then the client
++   will accept a stale response of any age.
+ 
+    This directive uses the token form of the argument syntax: e.g.,
+    'max-stale=10' not 'max-stale="10"'.  A sender MUST NOT generate the
+@@ -1169,9 +1149,9 @@
  
     Argument syntax:
  
 -      delta-seconds (see Section 1.2.2)
 +         delta-seconds (see Section 1.2.2)
  
-    The "min-fresh" request directive indicates that the client prefers a
+-   The "min-fresh" request directive indicates that the client prefers a
++   The min-fresh request directive indicates that the client prefers a
     response whose freshness lifetime is no less than its current age
-@@ -1229,7 +1211,7 @@
+    plus the specified time in seconds.  That is, the client wants a
+    response that will still be fresh for at least the specified number
+@@ -1183,14 +1163,14 @@
+ 
+ 5.2.1.4.  no-cache
+ 
+-   The "no-cache" request directive indicates that the client prefers a
++   The no-cache request directive indicates that the client prefers a
+    stored response not be used to satisfy the request without successful
+    validation on the origin server.
+ 
+ 5.2.1.5.  no-store
+ 
+-   The "no-store" request directive indicates that a cache MUST NOT
+-   store any part of either this request or any response to it.  This
++   The no-store request directive indicates that a cache MUST NOT store
++   any part of either this request or any response to it.  This
+    directive applies to both private and shared caches.  "MUST NOT
+    store" in this context means that the cache MUST NOT intentionally
+    store the information in non-volatile storage and MUST make a best-
+@@ -1208,13 +1188,13 @@
+ 
+ 5.2.1.6.  no-transform
+ 
+-   The "no-transform" request directive indicates that the client is
++   The no-transform request directive indicates that the client is
+    asking for intermediaries to avoid transforming the content, as
+    defined in Section 7.7 of [HTTP].
+ 
+ 5.2.1.7.  only-if-cached
+ 
+-   The "only-if-cached" request directive indicates that the client only
++   The only-if-cached request directive indicates that the client only
+    wishes to obtain a stored response.  Caches that honor this request
+    directive SHOULD, upon receiving it, respond with either a stored
+    response consistent with the other constraints of the request or a
+@@ -1229,9 +1209,9 @@
  
     Argument syntax:
  
 -      delta-seconds (see Section 1.2.2)
 +         delta-seconds (see Section 1.2.2)
  
-    The "max-age" response directive indicates that the response is to be
+-   The "max-age" response directive indicates that the response is to be
++   The max-age response directive indicates that the response is to be
     considered stale after its age is greater than the specified number
-@@ -1279,7 +1261,7 @@
+    of seconds.
+ 
+@@ -1241,7 +1221,7 @@
+ 
+ 5.2.2.2.  must-revalidate
+ 
+-   The "must-revalidate" response directive indicates that once the
++   The must-revalidate response directive indicates that once the
+    response has become stale, a cache MUST NOT reuse that response to
+    satisfy another request until it has been successfully validated by
+    the origin, as defined by Section 4.3.
+@@ -1265,9 +1245,9 @@
+ 
+ 5.2.2.3.  must-understand
+ 
+-   The "must-understand" response directive limits caching of the
+-   response to a cache that understands and conforms to the requirements
+-   for that response's status code.
++   The must-understand response directive limits caching of the response
++   to a cache that understands and conforms to the requirements for that
++   response's status code.
+ 
+    A response that contains the must-understand directive SHOULD also
+    contain the no-store directive.  When a cache that implements the
+@@ -1279,10 +1259,10 @@
  
     Argument syntax:
  
 -      #field-name
 +         #field-name
  
-    The "no-cache" response directive, in its unqualified form (without
-    an argument), indicates that the response MUST NOT be used to satisfy
-@@ -1342,7 +1324,7 @@
+-   The "no-cache" response directive, in its unqualified form (without
+-   an argument), indicates that the response MUST NOT be used to satisfy
++   The no-cache response directive, in its unqualified form (without an
++   argument), indicates that the response MUST NOT be used to satisfy
+    any other request without forwarding it for validation and receiving
+    a successful response; see Section 4.3.
+ 
+@@ -1314,9 +1294,9 @@
+ 
+ 5.2.2.5.  no-store
+ 
+-   The "no-store" response directive indicates that a cache MUST NOT
+-   store any part of either the immediate request or the response and
+-   MUST NOT use the response to satisfy any other request.
++   The no-store response directive indicates that a cache MUST NOT store
++   any part of either the immediate request or the response and MUST NOT
++   use the response to satisfy any other request.
+ 
+    This directive applies to both private and shared caches.  "MUST NOT
+    store" in this context means that the cache MUST NOT intentionally
+@@ -1334,7 +1314,7 @@
+ 
+ 5.2.2.6.  no-transform
+ 
+-   The "no-transform" response directive indicates that an intermediary
++   The no-transform response directive indicates that an intermediary
+    (regardless of whether it implements a cache) MUST NOT transform the
+    content, as defined in Section 7.7 of [HTTP].
+ 
+@@ -1342,7 +1322,7 @@
  
     Argument syntax:
  
@@ -230,14 +335,24 @@
  
     The unqualified "private" response directive indicates that a shared
     cache MUST NOT store the response (i.e., the response is intended for
-@@ -1405,19 +1387,19 @@
+@@ -1374,7 +1354,7 @@
+ 
+ 5.2.2.8.  proxy-revalidate
+ 
+-   The "proxy-revalidate" response directive indicates that once the
++   The proxy-revalidate response directive indicates that once the
+    response has become stale, a shared cache MUST NOT reuse that
+    response to satisfy another request until it has been successfully
+    validated by the origin, as defined by Section 4.3.  This is
+@@ -1405,19 +1385,19 @@
  
     Argument syntax:
  
 -      delta-seconds (see Section 1.2.2)
 +         delta-seconds (see Section 1.2.2)
  
-    The "s-maxage" response directive indicates that, for a shared cache,
+-   The "s-maxage" response directive indicates that, for a shared cache,
++   The s-maxage response directive indicates that, for a shared cache,
     the maximum age specified by this directive overrides the maximum age
     specified by either the max-age directive or the Expires header
     field.
@@ -257,7 +372,7 @@
     Authorization header field, subject to the above requirements on
     maximum age and revalidation (Section 3.5).
  
-@@ -1733,10 +1715,8 @@
+@@ -1733,10 +1713,8 @@
  9.1.  Normative References
  
     [HTTP]     Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
@@ -270,7 +385,7 @@
  
     [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
                Requirement Levels", BCP 14, RFC 2119,
-@@ -1763,10 +1743,8 @@
+@@ -1763,10 +1741,8 @@
                <https://www.rfc-editor.org/info/rfc6265>.
  
     [HTTP/1.1] Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
@@ -283,7 +398,7 @@
  
     [RFC2616]  Fielding, R., Gettys, J., Mogul, J., Frystyk, H.,
                Masinter, L., Leach, P., and T. Berners-Lee, "Hypertext
-@@ -1790,7 +1768,7 @@
+@@ -1790,7 +1766,7 @@
  
  Appendix A.  Collected ABNF
  
@@ -292,7 +407,7 @@
     Section 5.6.1 of [HTTP].
  
     Age = delta-seconds
-@@ -1836,11 +1814,10 @@
+@@ -1836,11 +1812,10 @@
     accept both token and quoted-string forms, but they still need to
     parse them properly for unknown extensions.  (Section 5.2)
  
@@ -307,7 +422,7 @@
     longer required to understand the semantics of new response status
     codes unless it is present.  (Section 5.2.2.3)
  
-@@ -1850,20 +1827,6 @@
+@@ -1850,20 +1825,6 @@
     entirely advisory.  In practice, Warning was not added by caches or
     intermediaries.  (Section 5.5)
  
