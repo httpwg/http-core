@@ -1,5 +1,5 @@
---- draft-ietf-httpbis-cache-latest.txt	2022-01-22 17:17:33.510536700 +0100
-+++ rfc9111-to-be.txt	2022-01-26 11:12:36.315349700 +0100
+--- draft-ietf-httpbis-cache-latest.txt	2022-01-28 07:20:41.862350200 +0100
++++ rfc9111-to-be.txt	2022-01-28 07:20:37.838317400 +0100
 @@ -2,17 +2,16 @@
  
  
@@ -8,9 +8,9 @@
 -Internet-Draft                                                     Adobe
 -Obsoletes: 7234 (if approved)                         M. Nottingham, Ed.
 -Intended status: Standards Track                                  Fastly
--Expires: 26 July 2022                                    J. Reschke, Ed.
+-Expires: 1 August 2022                                   J. Reschke, Ed.
 -                                                              greenbytes
--                                                         22 January 2022
+-                                                         28 January 2022
 +Internet Engineering Task Force (IETF)                  R. Fielding, Ed.
 +Request for Comments: 9111                                         Adobe
 +STD: 97                                               M. Nottingham, Ed.
@@ -59,7 +59,7 @@
 -   material or to cite them other than as "work in progress."
 +   This is an Internet Standards Track document.
  
--   This Internet-Draft will expire on 26 July 2022.
+-   This Internet-Draft will expire on 1 August 2022.
 +   This document is a product of the Internet Engineering Task Force
 +   (IETF).  It represents the consensus of the IETF community.  It has
 +   received public review and has been approved for publication by the
@@ -103,6 +103,31 @@
     Acknowledgements
     Index
     Authors' Addresses
+@@ -166,16 +147,16 @@
+    performance.  This document defines aspects of HTTP related to
+    caching and reusing response messages.
+ 
+-   An HTTP cache is a local store of response messages and the subsystem
+-   that controls storage, retrieval, and deletion of messages in it.  A
+-   cache stores cacheable responses to reduce the response time and
+-   network bandwidth consumption on future equivalent requests.  Any
+-   client or server MAY use a cache, though not when acting as a tunnel
+-   (Section 3.7 of [HTTP]).
++   An HTTP _cache_ is a local store of response messages and the
++   subsystem that controls storage, retrieval, and deletion of messages
++   in it.  A cache stores cacheable responses to reduce the response
++   time and network bandwidth consumption on future equivalent requests.
++   Any client or server MAY use a cache, though not when acting as a
++   tunnel (Section 3.7 of [HTTP]).
+ 
+-   A shared cache is a cache that stores responses for reuse by more
++   A _shared cache_ is a cache that stores responses for reuse by more
+    than one user; shared caches are usually (but not always) deployed as
+-   a part of an intermediary.  A private cache, in contrast, is
++   a part of an intermediary.  A _private cache_, in contrast, is
+    dedicated to a single user; often, they are deployed as a component
+    of a user agent.
+ 
 @@ -196,8 +177,8 @@
  
     The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
@@ -114,6 +139,24 @@
     capitals, as shown here.
  
     Section 2 of [HTTP] defines conformance criteria and contains
+@@ -267,7 +248,7 @@
+    response or reusing a stored response inappropriately, rather than
+    mandating that caches always store and reuse particular responses.
+ 
+-   The cache key is the information a cache uses to choose a response
++   The _cache key_ is the information a cache uses to choose a response
+    and is composed from, at a minimum, the request method and target URI
+    used to retrieve the stored response; the method determines under
+    which circumstances that response can be used to satisfy a subsequent
+@@ -294,7 +275,7 @@
+    definition allows such caching and defines something suitable for use
+    as a cache key.
+ 
+-   A cache is disconnected when it cannot contact the origin server or
++   A cache is _disconnected_ when it cannot contact the origin server or
+    otherwise find a forward path for a request.  A disconnected cache
+    can serve stale responses in some circumstances (Section 4.2.4).
+ 
 @@ -306,11 +287,11 @@
  
     *  the response status code is final (see Section 15 of [HTTP]);
@@ -153,16 +196,92 @@
        fields by all caches and shared caches, respectively.
  
     *  Header fields that are specific to the proxy that a cache uses
-@@ -717,7 +698,7 @@
+@@ -526,8 +507,8 @@
+ 
+    A cache can use a response that is stored or storable to satisfy
+    multiple requests, provided that it is allowed to reuse that response
+-   for the requests in question.  This enables a cache to collapse
+-   requests -- or combine multiple incoming requests into a single
++   for the requests in question.  This enables a cache to _collapse
++   requests_ -- or combine multiple incoming requests into a single
+    forward request upon a cache miss -- thereby reducing load on the
+    origin server and network.  Note, however, that if the cache cannot
+    use the returned response for some or all of the collapsed requests,
+@@ -599,17 +580,18 @@
+ 
+ 4.2.  Freshness
+ 
+-   A fresh response is one whose age has not yet exceeded its freshness
+-   lifetime.  Conversely, a stale response is one where it has.
++   A _fresh_ response is one whose age has not yet exceeded its
++   freshness lifetime.  Conversely, a _stale_ response is one where it
++   has.
++
++   A response's _freshness lifetime_ is the length of time between its
++   generation by the origin server and its expiration time.  An
++   _explicit expiration time_ is the time at which the origin server
++   intends that a stored response can no longer be used by a cache
++   without further validation, whereas a _heuristic expiration time_ is
++   assigned by a cache when no explicit expiration time is available.
+ 
+-   A response's freshness lifetime is the length of time between its
+-   generation by the origin server and its expiration time.  An explicit
+-   expiration time is the time at which the origin server intends that a
+-   stored response can no longer be used by a cache without further
+-   validation, whereas a heuristic expiration time is assigned by a
+-   cache when no explicit expiration time is available.
+-
+-   A response's age is the time that has passed since it was generated
++   A response's _age_ is the time that has passed since it was generated
+    by, or successfully validated with, the origin server.
+ 
+    When a response is fresh, it can be used to satisfy subsequent
+@@ -714,9 +696,9 @@
+    explicit expiration time is present in the stored response.  Because
+    of the requirements in Section 3, heuristics can only be used on
     responses without explicit freshness whose status codes are defined
-    as _heuristically cacheable_ (e.g., see Section 15.1 of [HTTP]) and
-    on responses without explicit freshness that have been marked as
+-   as heuristically cacheable (e.g., see Section 15.1 of [HTTP]) and on
+-   responses without explicit freshness that have been marked as
 -   explicitly cacheable (e.g., with a "public" response directive).
++   as _heuristically cacheable_ (e.g., see Section 15.1 of [HTTP]) and
++   on responses without explicit freshness that have been marked as
 +   explicitly cacheable (e.g., with a public response directive).
  
     Note that in previous specifications, heuristically cacheable
     response status codes were called "cacheable by default".
-@@ -807,10 +788,9 @@
+@@ -746,26 +728,26 @@
+ 
+    Age calculation uses the following data:
+ 
+-   age_value
++   _age_value_
+       The term "age_value" denotes the value of the Age header field
+       (Section 5.1), in a form appropriate for arithmetic operation; or
+       0, if not available.
+ 
+-   date_value
++   _date_value_
+       The term "date_value" denotes the value of the Date header field,
+       in a form appropriate for arithmetic operations.  See
+       Section 6.6.1 of [HTTP] for the definition of the Date header
+       field and for requirements regarding responses without it.
+ 
+-   now
++   _now_
+       The term "now" means the current value of this implementation's
+       clock (Section 5.6.7 of [HTTP]).
+ 
+-   request_time
++   _request_time_
+       The value of the clock at the time of the request that resulted in
+       the stored response.
+ 
+-   response_time
++   _response_time_
+       The value of the clock at the time the response was received.
+ 
+    A response's age can be calculated in two entirely independent ways:
+@@ -806,10 +788,9 @@
     according to the calculations in Section 4.2.
  
     A cache MUST NOT generate a stale response if it is prohibited by an
@@ -176,7 +295,43 @@
  
     A cache MUST NOT generate a stale response unless it is disconnected
     or doing so is explicitly permitted by the client or origin server
-@@ -1137,9 +1117,9 @@
+@@ -826,7 +807,7 @@
+    give the next inbound server an opportunity to choose a valid stored
+    response to use, updating the stored metadata in the process, or to
+    replace the stored response(s) with a new response.  This process is
+-   known as validating or revalidating the stored response.
++   known as _validating_ or _revalidating_ the stored response.
+ 
+ 4.3.1.  Sending a Validation Request
+ 
+@@ -981,7 +962,7 @@
+    Then, that initial set of stored responses is further filtered by the
+    first match of:
+ 
+-   *  If the new response contains one or more strong validators (see
++   *  If the new response contains one or more _strong validators_ (see
+       Section 8.8.1 of [HTTP]), then each of those strong validators
+       identifies a selected representation for update.  All the stored
+       responses in the initial set with one of those same strong
+@@ -991,7 +972,7 @@
+       responses.
+ 
+    *  If the new response contains no strong validators but does contain
+-      one or more weak validators, and those validators correspond to
++      one or more _weak validators_, and those validators correspond to
+       one of the initial set's stored responses, then the most recent of
+       those matching stored responses is identified for update.
+ 
+@@ -1055,7 +1036,7 @@
+    URI (Section 7.1 of [HTTP]).  This helps prevent denial-of-service
+    attacks.
+ 
+-   Invalidate means that the cache will either remove all stored
++   _Invalidate_ means that the cache will either remove all stored
+    responses whose target URI matches the given URI or mark them as
+    "invalid" and in need of a mandatory validation before they can be
+    sent in response to a subsequent request.
+@@ -1136,9 +1117,9 @@
  
     Argument syntax:
  
@@ -188,7 +343,7 @@
     response whose age is less than or equal to the specified number of
     seconds.  Unless the max-stale request directive is also present, the
     client does not wish to receive a stale response.
-@@ -1152,14 +1132,14 @@
+@@ -1151,14 +1132,14 @@
  
     Argument syntax:
  
@@ -210,7 +365,7 @@
  
     This directive uses the token form of the argument syntax: e.g.,
     'max-stale=10' not 'max-stale="10"'.  A sender MUST NOT generate the
-@@ -1169,9 +1149,9 @@
+@@ -1168,9 +1149,9 @@
  
     Argument syntax:
  
@@ -222,7 +377,7 @@
     response whose freshness lifetime is no less than its current age
     plus the specified time in seconds.  That is, the client wants a
     response that will still be fresh for at least the specified number
-@@ -1183,14 +1163,14 @@
+@@ -1182,24 +1163,24 @@
  
  5.2.1.4.  no-cache
  
@@ -240,7 +395,21 @@
     directive applies to both private and shared caches.  "MUST NOT
     store" in this context means that the cache MUST NOT intentionally
     store the information in non-volatile storage and MUST make a best-
-@@ -1208,13 +1188,13 @@
+    effort attempt to remove the information from volatile storage as
+    promptly as possible after forwarding it.
+ 
+-   This directive is not a reliable or sufficient mechanism for ensuring
+-   privacy.  In particular, malicious or compromised caches might not
+-   recognize or obey this directive, and communications networks might
+-   be vulnerable to eavesdropping.
++   This directive is _not_ a reliable or sufficient mechanism for
++   ensuring privacy.  In particular, malicious or compromised caches
++   might not recognize or obey this directive, and communications
++   networks might be vulnerable to eavesdropping.
+ 
+    Note that if a request containing this directive is satisfied from a
+    cache, the no-store request directive does not apply to the already
+@@ -1207,13 +1188,13 @@
  
  5.2.1.6.  no-transform
  
@@ -256,7 +425,7 @@
     wishes to obtain a stored response.  Caches that honor this request
     directive SHOULD, upon receiving it, respond with either a stored
     response consistent with the other constraints of the request or a
-@@ -1229,9 +1209,9 @@
+@@ -1228,9 +1209,9 @@
  
     Argument syntax:
  
@@ -268,7 +437,7 @@
     considered stale after its age is greater than the specified number
     of seconds.
  
-@@ -1241,7 +1221,7 @@
+@@ -1240,7 +1221,7 @@
  
  5.2.2.2.  must-revalidate
  
@@ -277,7 +446,7 @@
     response has become stale, a cache MUST NOT reuse that response to
     satisfy another request until it has been successfully validated by
     the origin, as defined by Section 4.3.
-@@ -1265,9 +1245,9 @@
+@@ -1264,9 +1245,9 @@
  
  5.2.2.3.  must-understand
  
@@ -290,7 +459,7 @@
  
     A response that contains the must-understand directive SHOULD also
     contain the no-store directive.  When a cache that implements the
-@@ -1279,10 +1259,10 @@
+@@ -1278,10 +1259,10 @@
  
     Argument syntax:
  
@@ -304,7 +473,7 @@
     any other request without forwarding it for validation and receiving
     a successful response; see Section 4.3.
  
-@@ -1314,9 +1294,9 @@
+@@ -1313,9 +1294,9 @@
  
  5.2.2.5.  no-store
  
@@ -317,7 +486,21 @@
  
     This directive applies to both private and shared caches.  "MUST NOT
     store" in this context means that the cache MUST NOT intentionally
-@@ -1334,7 +1314,7 @@
+@@ -1323,17 +1304,17 @@
+    effort attempt to remove the information from volatile storage as
+    promptly as possible after forwarding it.
+ 
+-   This directive is not a reliable or sufficient mechanism for ensuring
+-   privacy.  In particular, malicious or compromised caches might not
+-   recognize or obey this directive, and communications networks might
+-   be vulnerable to eavesdropping.
++   This directive is _not_ a reliable or sufficient mechanism for
++   ensuring privacy.  In particular, malicious or compromised caches
++   might not recognize or obey this directive, and communications
++   networks might be vulnerable to eavesdropping.
+ 
+    Note that the must-understand cache directive overrides no-store in
+    certain circumstances; see Section 5.2.2.3.
  
  5.2.2.6.  no-transform
  
@@ -326,7 +509,7 @@
     (regardless of whether it implements a cache) MUST NOT transform the
     content, as defined in Section 7.7 of [HTTP].
  
-@@ -1342,7 +1322,7 @@
+@@ -1341,7 +1322,7 @@
  
     Argument syntax:
  
@@ -335,7 +518,7 @@
  
     The unqualified "private" response directive indicates that a shared
     cache MUST NOT store the response (i.e., the response is intended for
-@@ -1374,7 +1354,7 @@
+@@ -1373,7 +1354,7 @@
  
  5.2.2.8.  proxy-revalidate
  
@@ -344,7 +527,7 @@
     response has become stale, a shared cache MUST NOT reuse that
     response to satisfy another request until it has been successfully
     validated by the origin, as defined by Section 4.3.  This is
-@@ -1405,19 +1385,19 @@
+@@ -1404,19 +1385,19 @@
  
     Argument syntax:
  
@@ -372,7 +555,7 @@
     Authorization header field, subject to the above requirements on
     maximum age and revalidation (Section 3.5).
  
-@@ -1733,10 +1713,8 @@
+@@ -1732,10 +1713,8 @@
  9.1.  Normative References
  
     [HTTP]     Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
@@ -385,7 +568,7 @@
  
     [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
                Requirement Levels", BCP 14, RFC 2119,
-@@ -1763,10 +1741,8 @@
+@@ -1762,10 +1741,8 @@
                <https://www.rfc-editor.org/info/rfc6265>.
  
     [HTTP/1.1] Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
@@ -398,7 +581,7 @@
  
     [RFC2616]  Fielding, R., Gettys, J., Mogul, J., Frystyk, H.,
                Masinter, L., Leach, P., and T. Berners-Lee, "Hypertext
-@@ -1790,7 +1766,7 @@
+@@ -1789,7 +1766,7 @@
  
  Appendix A.  Collected ABNF
  
@@ -407,7 +590,7 @@
     Section 5.6.1 of [HTTP].
  
     Age = delta-seconds
-@@ -1836,11 +1812,10 @@
+@@ -1835,11 +1812,10 @@
     accept both token and quoted-string forms, but they still need to
     parse them properly for unknown extensions.  (Section 5.2)
  
@@ -422,7 +605,7 @@
     longer required to understand the semantics of new response status
     codes unless it is present.  (Section 5.2.2.3)
  
-@@ -1850,20 +1825,6 @@
+@@ -1849,20 +1825,6 @@
     entirely advisory.  In practice, Warning was not added by caches or
     intermediaries.  (Section 5.5)
  
