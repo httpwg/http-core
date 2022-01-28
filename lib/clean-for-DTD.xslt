@@ -540,7 +540,7 @@
   </xsl:if>-->
     <xsl:choose>
       <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
-        <em><xsl:apply-templates mode="cleanup"/></em>
+        <xsl:apply-templates mode="cleanup"/>
       </xsl:when>
       <xsl:when test="@ascii!=''">
         <xsl:value-of select="@ascii"/>
