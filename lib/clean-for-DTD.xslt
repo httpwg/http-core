@@ -539,7 +539,7 @@
     <xsl:processing-instruction name="rfc">needLines="4"</xsl:processing-instruction>
   </xsl:if>-->
     <xsl:choose>
-      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-ext-map-dfn='em'">
         <em><xsl:apply-templates mode="cleanup"/></em>
       </xsl:when>
       <xsl:when test="@ascii!=''">
