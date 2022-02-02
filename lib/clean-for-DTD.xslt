@@ -533,22 +533,16 @@
 </xsl:template>
 
 <xsl:template match="x:dfn" mode="cleanup">
-  <!-- help xml2rfc to keep dfn and following text on the same page -->
-  <!-- removed for now because it broke httpbis-p2 (def of 200 OK in -25)
-  <xsl:if test="not(preceding-sibling::x:dfn) and count(following-sibling::list)=1 and normalize-space(../text()='')">
-    <xsl:processing-instruction name="rfc">needLines="4"</xsl:processing-instruction>
-  </xsl:if>-->
-    <xsl:choose>
-      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-ext-map-dfn='em'">
-        <em><xsl:apply-templates mode="cleanup"/></em>
-      </xsl:when>
-      <xsl:when test="@ascii!=''">
-        <xsl:value-of select="@ascii"/>
-      </xsl:when>
-      <xsl:otherwise>
-        <xsl:apply-templates mode="cleanup"/>
-      </xsl:otherwise>
-    </xsl:choose>
+  <xsl:choose>
+    <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-ext-map-dfn='em'">
+      <em><xsl:apply-templates mode="cleanup"/></em>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:text>"</xsl:text>
+      <xsl:apply-templates mode="cleanup"/>
+      <xsl:text>"</xsl:text>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <xsl:template match="x:sup|sup" mode="cleanup">
