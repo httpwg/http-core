@@ -1519,11 +1519,13 @@
 <xsl:template match="rfc/@ipr" mode="cleanup"/>
 
 <xsl:template match="rfc" mode="cleanup">
-  <xsl:if test="@sortRefs='true'">
-    <xsl:processing-instruction name="rfc">sortrefs="yes"</xsl:processing-instruction>
-  </xsl:if>
-  <xsl:if test="@symRefs='false'">
-    <xsl:processing-instruction name="rfc">symrefs="no"</xsl:processing-instruction>
+  <xsl:if test="$xml2rfc-ext-xml2rfc-voc &lt; 3">
+    <xsl:if test="@sortRefs='true'">
+      <xsl:processing-instruction name="rfc">sortrefs="yes"</xsl:processing-instruction>
+    </xsl:if>
+    <xsl:if test="@symRefs='false'">
+      <xsl:processing-instruction name="rfc">symrefs="no"</xsl:processing-instruction>
+    </xsl:if>
   </xsl:if>
   <xsl:if test="$parsedTocDepth!=3 and $xml2rfc-ext-xml2rfc-voc &lt; 3">
     <xsl:processing-instruction name="rfc">tocdepth="<xsl:value-of select="$parsedTocDepth"/>"</xsl:processing-instruction>
@@ -1544,8 +1546,13 @@
     <xsl:if test="not(@indexInclude) and $xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-ext-include-index='no'">
       <xsl:attribute name="indexInclude">false</xsl:attribute>
     </xsl:if>
-    <xsl:if test="not(@sortRefs) and $xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-sortrefs='yes'">
-      <xsl:attribute name="sortRefs">true</xsl:attribute>
+    <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <xsl:if test="$xml2rfc-sortrefs='yes'">
+        <xsl:attribute name="sortRefs">true</xsl:attribute>
+      </xsl:if>
+      <xsl:if test="$xml2rfc-symrefs='false'">
+        <xsl:attribute name="symRefs">false</xsl:attribute>
+      </xsl:if>
     </xsl:if>
     <xsl:choose>
       <xsl:when test="@consensus='yes' and $xml2rfc-ext-xml2rfc-voc >= 3"><xsl:attribute name="consensus">true</xsl:attribute></xsl:when>
