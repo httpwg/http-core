@@ -85,7 +85,91 @@
   <xsl:apply-templates select="/" mode="cleanup"/>
 </xsl:template>
 
-<!-- rules for identity transformations -->
+<xsl:template name="process-pi">
+  <xsl:param name="str"><xsl:value-of select="."/></xsl:param>
+
+  <xsl:variable name="str2">
+    <xsl:call-template name="eat-leading-whitespace">
+      <xsl:with-param name="str" select="$str"/>
+    </xsl:call-template>
+  </xsl:variable>
+
+  <xsl:choose>
+    <xsl:when test="$str2=''">
+      <!-- done -->
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:variable name="attrname" select="substring-before($str2,'=')"/>
+
+      <xsl:choose>
+        <xsl:when test="$attrname=''">
+          <xsl:call-template name="warning">
+            <xsl:with-param name="msg">bad PI syntax: <xsl:value-of select="$str2"/></xsl:with-param>
+          </xsl:call-template>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:variable name="remainder" select="substring($str2,2+string-length($attrname))"/>
+          <xsl:choose>
+            <xsl:when test="string-length($remainder) &lt; 2">
+              <xsl:call-template name="warning">
+                <xsl:with-param name="msg">bad PI value syntax: <xsl:value-of select="$remainder"/></xsl:with-param>
+              </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:variable name="rem">
+                <xsl:call-template name="eat-leading-whitespace">
+                  <xsl:with-param name="str" select="$remainder"/>
+                </xsl:call-template>
+              </xsl:variable>
+              <xsl:variable name="qchars">&apos;&quot;</xsl:variable>
+              <xsl:variable name="qchar" select="substring($rem,1,1)"/>
+              <xsl:variable name="rem2" select="substring($rem,2)"/>
+              <xsl:choose>
+                <xsl:when test="not(contains($qchars,$qchar))">
+                  <xsl:call-template name="warning">
+                    <xsl:with-param name="msg">pseudo-attribute value needs to be quoted: <xsl:value-of select="$rem"/></xsl:with-param>
+                  </xsl:call-template>
+                </xsl:when>
+                <xsl:when test="not(contains($rem2,$qchar))">
+                  <xsl:call-template name="warning">
+                    <xsl:with-param name="msg">unmatched quote in: <xsl:value-of select="$rem2"/></xsl:with-param>
+                  </xsl:call-template>
+                </xsl:when>
+                <xsl:otherwise>
+                  <xsl:variable name="value" select="substring-before($rem2,$qchar)"/>
+                  <xsl:choose>
+                    <xsl:when test="name()='rfc' and $attrname='include'">
+                      <xsl:text>&#10;</xsl:text>
+                      <xsl:variable name="content">
+                        <xsl:call-template name="obtain-reference-for-include-PI">
+                          <xsl:with-param name="uri" select="$value"/>
+                        </xsl:call-template>
+                      </xsl:variable>  
+                      <xsl:apply-templates select="exslt:node-set($content)//reference" mode="cleanup"/>
+                    </xsl:when>
+                    <!-- processed elsewhere -->
+                    <xsl:when test="name()='rfc' and $attrname='sortrefs'"/>
+                    <xsl:when test="name()='rfc' and $attrname='symrefs'"/>
+                    <xsl:when test="name()='rfc' and $attrname='toc'"/>
+                    <xsl:when test="name()='rfc' and $attrname='tocdepth'"/>
+                    <!-- copy -->
+                    <xsl:otherwise>
+                      <xsl:text>&#10;</xsl:text>
+                      <xsl:processing-instruction name="{name()}"><xsl:value-of select="concat($attrname,'=',$qchar,$value,$qchar)"/></xsl:processing-instruction>
+                    </xsl:otherwise>
+                  </xsl:choose>
+                  <xsl:call-template name="process-pi">
+                    <xsl:with-param name="str" select="substring($rem2, 2 + string-length($value))"/>
+                  </xsl:call-template>
+                </xsl:otherwise>
+              </xsl:choose>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
 
 <xsl:template match="processing-instruction()" mode="cleanup">
   <xsl:text>&#10;</xsl:text>
@@ -130,28 +214,8 @@
 
 <!-- process include PI -->
 <xsl:template match="processing-instruction('rfc')" mode="cleanup">
-  <xsl:variable name="include">
-    <xsl:call-template name="parse-pis">
-      <xsl:with-param name="nodes" select="."/>
-      <xsl:with-param name="attr" select="'include'"/>
-    </xsl:call-template>
-  </xsl:variable>
-  <xsl:choose>
-    <xsl:when test="$include=''">
-      <xsl:text>&#10;</xsl:text>
-      <xsl:copy/>
-    </xsl:when>
-    <xsl:otherwise>
-      <xsl:variable name="content">
-        <xsl:call-template name="obtain-reference-for-include-PI">
-          <xsl:with-param name="uri" select="$include"/>
-        </xsl:call-template>
-      </xsl:variable>  
-      <xsl:apply-templates select="exslt:node-set($content)//reference" mode="cleanup"/>
-    </xsl:otherwise>
-  </xsl:choose>
+  <xsl:call-template name="process-pi"/>
 </xsl:template>
-
 
 <!-- add issues appendix -->
 
@@ -1508,6 +1572,7 @@
 </xsl:template>
 
 <!-- v3 features -->
+<xsl:template match="rfc/@indexInclude" mode="cleanup"/>
 <xsl:template match="rfc/@sortRefs" mode="cleanup"/>
 <xsl:template match="rfc/@symRefs" mode="cleanup"/>
 <xsl:template match="rfc/@tocInclude" mode="cleanup"/>
@@ -1520,38 +1585,42 @@
 
 <xsl:template match="rfc" mode="cleanup">
   <xsl:if test="$xml2rfc-ext-xml2rfc-voc &lt; 3">
-    <xsl:if test="@sortRefs='true'">
+    <xsl:if test="$xml2rfc-sortrefs='yes'">
+      <xsl:text>&#10;</xsl:text>
       <xsl:processing-instruction name="rfc">sortrefs="yes"</xsl:processing-instruction>
     </xsl:if>
-    <xsl:if test="@symRefs='false'">
+    <xsl:if test="$xml2rfc-symrefs='no'">
+      <xsl:text>&#10;</xsl:text>
       <xsl:processing-instruction name="rfc">symrefs="no"</xsl:processing-instruction>
     </xsl:if>
-  </xsl:if>
-  <xsl:if test="$parsedTocDepth!=3 and $xml2rfc-ext-xml2rfc-voc &lt; 3">
-    <xsl:processing-instruction name="rfc">tocdepth="<xsl:value-of select="$parsedTocDepth"/>"</xsl:processing-instruction>
-  </xsl:if>
-  <xsl:if test="@version and (not(@tocInclude) or @tocInclude='true')">
-    <xsl:processing-instruction name="rfc">toc="yes"</xsl:processing-instruction>
+    <xsl:if test="$xml2rfc-toc='yes'">
+      <xsl:text>&#10;</xsl:text>
+      <xsl:processing-instruction name="rfc">toc="yes"</xsl:processing-instruction>
+    </xsl:if>
+    <xsl:if test="$parsedTocDepth!=3">
+      <xsl:text>&#10;</xsl:text>
+      <xsl:processing-instruction name="rfc">tocdepth="<xsl:value-of select="$parsedTocDepth"/>"</xsl:processing-instruction>
+    </xsl:if>
   </xsl:if>
   <rfc>
     <xsl:if test="not(@version) and $xml2rfc-ext-xml2rfc-voc >= 3">
       <xsl:attribute name="version"><xsl:value-of select="$xml2rfc-ext-xml2rfc-voc"/></xsl:attribute>
     </xsl:if>
-    <xsl:if test="not(@tocDepth) and $xml2rfc-ext-xml2rfc-voc >= 3 and $parsedTocDepth!=3">
-      <xsl:attribute name="tocDepth"><xsl:value-of select="$parsedTocDepth"/></xsl:attribute>
-    </xsl:if>
-    <xsl:if test="@tocDepth and $xml2rfc-ext-xml2rfc-voc >= 3">
-      <xsl:attribute name="tocDepth"><xsl:value-of select="@tocDepth"/></xsl:attribute>
-    </xsl:if>
-    <xsl:if test="not(@indexInclude) and $xml2rfc-ext-xml2rfc-voc >= 3 and $xml2rfc-ext-include-index='no'">
-      <xsl:attribute name="indexInclude">false</xsl:attribute>
-    </xsl:if>
     <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3">
+      <xsl:if test="$xml2rfc-ext-include-index='no'">
+        <xsl:attribute name="indexInclude">false</xsl:attribute>
+      </xsl:if>
       <xsl:if test="$xml2rfc-sortrefs='yes'">
         <xsl:attribute name="sortRefs">true</xsl:attribute>
       </xsl:if>
       <xsl:if test="$xml2rfc-symrefs='false'">
         <xsl:attribute name="symRefs">false</xsl:attribute>
+      </xsl:if>
+      <xsl:if test="$parsedTocDepth!=3">
+        <xsl:attribute name="tocDepth"><xsl:value-of select="$parsedTocDepth"/></xsl:attribute>
+      </xsl:if>
+      <xsl:if test="$xml2rfc-toc='no'">
+        <xsl:attribute name="tocInclude">false</xsl:attribute>
       </xsl:if>
     </xsl:if>
     <xsl:choose>
