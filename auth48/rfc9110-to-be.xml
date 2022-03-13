@@ -7541,6 +7541,8 @@ If-None-Match: *
    <xref target="range.unit.extensibility"/>.
 </t>
             <section anchor="range.specifiers" title="Range Specifiers">
+               <iref primary="true" item="satisfiable range"/>
+               <iref primary="true" item="unsatisfiable range"/>
                <t>
    Ranges are expressed in terms of a range unit paired with a set of range
    specifiers. The range unit name determines what kinds of range-spec
@@ -7610,6 +7612,18 @@ If-None-Match: *
                <sourcecode type="abnf9110"><![CDATA[  other-range   = 1*( %x21-2B / %x2D-7E )
                 ; 1*(VCHAR excluding comma)
 ]]></sourcecode>
+               <t>
+   A <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> is invalid if it contains any
+   <xref target="rule.ranges-specifier" format="none">range-spec</xref> that is invalid or undefined for the indicated
+   <xref target="range.units" format="none">range-unit</xref>.
+</t>
+               <t anchor="satisfiable">
+   A valid <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> is "satisfiable"
+   if it contains at least one <xref target="rule.ranges-specifier" format="none">range-spec</xref> that is
+   satisfiable, as defined by the indicated <xref target="range.units" format="none">range-unit</xref>.
+   Otherwise, the <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> is
+   "unsatisfiable".
+</t>
             </section>
             <section anchor="byte.ranges" title="Byte Ranges">
                <t>
@@ -7659,7 +7673,7 @@ If-None-Match: *
    is one less than the current length of the selected representation).
 </t>
                <t>
-   A client can request the last N bytes (N &gt; 0) of the selected
+   A client can refer to the last N bytes (N &gt; 0) of the selected
    representation using a <xref target="rule.suffix-range" format="none">suffix-range</xref>.
    If the selected representation is shorter than the specified
    <xref target="rule.suffix-range" format="none">suffix-length</xref>, the entire representation is used.
@@ -7700,17 +7714,21 @@ If-None-Match: *
                   </li>
                </ul>
                <t>
-   If a valid bytes <xref target="rule.ranges-specifier" format="none">range-set</xref> includes at least one
-   <xref target="rule.ranges-specifier" format="none">range-spec</xref> with a <xref target="rule.int-range" format="none">first-pos</xref> that is
-   less than the current length of the representation, or at least one
-   <xref target="rule.suffix-range" format="none">suffix-range</xref> with a non-zero <xref target="rule.suffix-range" format="none">suffix-length</xref>,
-   then the bytes <xref target="rule.ranges-specifier" format="none">range-set</xref> is satisfiable. Otherwise,
-   the bytes <xref target="rule.ranges-specifier" format="none">range-set</xref> is unsatisfiable.
+   For a <xref target="GET" format="none">GET</xref> request, a valid bytes <xref target="rule.ranges-specifier" format="none">range-spec</xref>
+   is <xref target="satisfiable" format="none">satisfiable</xref> if it is either:
 </t>
+               <ul>
+                  <li>an <xref target="rule.int-range" format="none">int-range</xref> with a <xref target="rule.int-range" format="none">first-pos</xref> that
+       is less than the current length of the selected representation;
+       or,</li>
+                  <li>a <xref target="rule.suffix-range" format="none">suffix-range</xref> with a non-zero
+       <xref target="rule.suffix-range" format="none">suffix-length</xref>.</li>
+               </ul>
                <t>
-   If the selected representation has zero length, the only satisfiable form of
-   <xref target="rule.ranges-specifier" format="none">range-spec</xref> is a <xref target="rule.suffix-range" format="none">suffix-range</xref> with a non-zero
-   <xref target="rule.suffix-range" format="none">suffix-length</xref>.
+   When a selected representation has zero length, the only
+   <xref target="satisfiable" format="none">satisfiable</xref> form of <xref target="rule.ranges-specifier" format="none">range-spec</xref> in a
+   <xref target="GET" format="none">GET</xref> request is a <xref target="rule.suffix-range" format="none">suffix-range</xref> with a
+   non-zero <xref target="rule.suffix-range" format="none">suffix-length</xref>.
 </t>
                <t>
    In the byte-range syntax, <xref target="rule.int-range" format="none">first-pos</xref>,
@@ -7754,10 +7772,12 @@ If-None-Match: *
 </t>
             <t>
    A server that supports range requests <bcp14>MAY</bcp14> ignore or reject a
-   <xref target="field.range" format="none">Range</xref> header field that consists of more than two
-   overlapping ranges, or a set of many small ranges that are not listed
-   in ascending order, since both are indications of either a broken client or
-   a deliberate denial-of-service attack (<xref target="overlapping.ranges"/>).
+   <xref target="field.range" format="none">Range</xref> header field that contains an invalid
+   <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> (<xref target="range.specifiers"/>),
+   a <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> with more than two overlapping ranges,
+   or a set of many small ranges that are not listed in ascending order,
+   since these are indications of either a broken client or a deliberate
+   denial-of-service attack (<xref target="overlapping.ranges"/>).
    A client <bcp14>SHOULD NOT</bcp14> request multiple ranges that are inherently less
    efficient to process and transfer than a single range that encompasses the
    same data.
@@ -7789,11 +7809,14 @@ If-None-Match: *
 </t>
             <t>
    If all of the preconditions are true, the server supports the Range header
-   field for the target resource, and the specified range(s) are valid and
-   satisfiable (as defined in <xref target="byte.ranges"/>), the
-   server <bcp14>SHOULD</bcp14> send a <xref target="status.206" format="none">206 (Partial Content)</xref> response with a
-   content containing one or more partial representations that correspond to
-   the satisfiable ranges requested.
+   field for the target resource, the received Range field-value contains a
+   valid <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> with a <xref target="range.units" format="none">range-unit</xref>
+   supported for that target resource, and that
+   <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> is <xref target="satisfiable" format="none">satisfiable</xref> with respect
+   to the selected representation,
+   the server <bcp14>SHOULD</bcp14> send a <xref target="status.206" format="none">206 (Partial Content)</xref> response
+   with content containing one or more partial representations
+   that correspond to the satisfiable <xref target="rule.ranges-specifier" format="none">range-spec</xref>(s) requested.
 </t>
             <t>
    The above does not imply that a server will send all requested ranges.
@@ -7804,8 +7827,11 @@ If-None-Match: *
 </t>
             <t>
    If all of the preconditions are true, the server supports the Range header
-   field for the target resource, and the specified range(s) are invalid or
-   unsatisfiable, the server <bcp14>SHOULD</bcp14> send a
+   field for the target resource, the received Range field-value contains a
+   valid <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref>, and either the
+   <xref target="range.units" format="none">range-unit</xref> is not supported for that target resource or
+   the <xref target="rule.ranges-specifier" format="none">ranges-specifier</xref> is unsatisfiable with respect to
+   the selected representation, the server <bcp14>SHOULD</bcp14> send a
    <xref target="status.416" format="none">416 (Range Not Satisfiable)</xref> response.
 </t>
          </section>
