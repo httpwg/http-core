@@ -7731,6 +7731,8 @@ If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT
 </t>
 
 <section title="Range Specifiers" anchor="range.specifiers">
+  <iref primary="true" item="satisfiable range"/>
+  <iref primary="true" item="unsatisfiable range"/>
 <t>
    Ranges are expressed in terms of a range unit paired with a set of range
    specifiers. The range unit name determines what kinds of range-spec
@@ -7795,6 +7797,18 @@ If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT
   <x:ref>other-range</x:ref>   = 1*( %x21-2B / %x2D-7E )
                 ; 1*(VCHAR excluding comma)
 </sourcecode>
+<t>
+   A <x:ref>ranges-specifier</x:ref> is invalid if it contains any
+   <x:ref>range-spec</x:ref> that is invalid or undefined for the indicated
+   <x:ref>range-unit</x:ref>.
+</t>
+<t anchor="satisfiable">
+   A valid <x:ref>ranges-specifier</x:ref> is <x:dfn>satisfiable</x:dfn>
+   if it contains at least one <x:ref>range-spec</x:ref> that is
+   satisfiable, as defined by the indicated <x:ref>range-unit</x:ref>.
+   Otherwise, the <x:ref>ranges-specifier</x:ref> is
+   <x:dfn>unsatisfiable</x:dfn>.
+</t>
 </section>
 
 <section title="Byte Ranges" anchor="byte.ranges">
@@ -7844,7 +7858,7 @@ bytes=500-999
    is one less than the current length of the selected representation).
 </t>
 <t>
-   A client can request the last N bytes (N &gt; 0) of the selected
+   A client can refer to the last N bytes (N &gt; 0) of the selected
    representation using a <x:ref>suffix-range</x:ref>.
    If the selected representation is shorter than the specified
    <x:ref>suffix-length</x:ref>, the entire representation is used.
@@ -7881,17 +7895,21 @@ bytes=500-700,601-999
    </li>
 </ul>
 <t>
-   If a valid bytes <x:ref>range-set</x:ref> includes at least one
-   <x:ref>range-spec</x:ref> with a <x:ref>first-pos</x:ref> that is
-   less than the current length of the representation, or at least one
-   <x:ref>suffix-range</x:ref> with a non-zero <x:ref>suffix-length</x:ref>,
-   then the bytes <x:ref>range-set</x:ref> is satisfiable. Otherwise,
-   the bytes <x:ref>range-set</x:ref> is unsatisfiable.
+   For a <x:ref>GET</x:ref> request, a valid bytes <x:ref>range-spec</x:ref>
+   is <x:ref>satisfiable</x:ref> if it is either:
 </t>
+<ul>
+   <li>an <x:ref>int-range</x:ref> with a <x:ref>first-pos</x:ref> that
+       is less than the current length of the selected representation;
+       or,</li>
+   <li>a <x:ref>suffix-range</x:ref> with a non-zero
+       <x:ref>suffix-length</x:ref>.</li>
+</ul>
 <t>
-   If the selected representation has zero length, the only satisfiable form of
-   <x:ref>range-spec</x:ref> is a <x:ref>suffix-range</x:ref> with a non-zero
-   <x:ref>suffix-length</x:ref>.
+   When a selected representation has zero length, the only
+   <x:ref>satisfiable</x:ref> form of <x:ref>range-spec</x:ref> in a
+   <x:ref>GET</x:ref> request is a <x:ref>suffix-range</x:ref> with a
+   non-zero <x:ref>suffix-length</x:ref>.
 </t>
 <t>
    In the byte-range syntax, <x:ref>first-pos</x:ref>,
@@ -7936,10 +7954,12 @@ bytes=500-700,601-999
 </t>
 <t>
    A server that supports range requests &MAY; ignore or reject a
-   <x:ref>Range</x:ref> header field that consists of more than two
-   overlapping ranges, or a set of many small ranges that are not listed
-   in ascending order, since both are indications of either a broken client or
-   a deliberate denial-of-service attack (<xref target="overlapping.ranges"/>).
+   <x:ref>Range</x:ref> header field that contains an invalid
+   <x:ref>ranges-specifier</x:ref> (<xref target="range.specifiers"/>),
+   a <x:ref>ranges-specifier</x:ref> with more than two overlapping ranges,
+   or a set of many small ranges that are not listed in ascending order,
+   since these are indications of either a broken client or a deliberate
+   denial-of-service attack (<xref target="overlapping.ranges"/>).
    A client &SHOULD-NOT; request multiple ranges that are inherently less
    efficient to process and transfer than a single range that encompasses the
    same data.
@@ -7971,11 +7991,14 @@ bytes=500-700,601-999
 </t>
 <t>
    If all of the preconditions are true, the server supports the Range header
-   field for the target resource, and the specified range(s) are valid and
-   satisfiable (as defined in <xref target="byte.ranges"/>), the
-   server &SHOULD; send a <x:ref>206 (Partial Content)</x:ref> response with a
-   content containing one or more partial representations that correspond to
-   the satisfiable ranges requested.
+   field for the target resource, the received Range field-value contains a
+   valid <x:ref>ranges-specifier</x:ref> with a <x:ref>range-unit</x:ref>
+   supported for that target resource, and that
+   <x:ref>ranges-specifier</x:ref> is <x:ref>satisfiable</x:ref> with respect
+   to the selected representation,
+   the server &SHOULD; send a <x:ref>206 (Partial Content)</x:ref> response
+   with content containing one or more partial representations
+   that correspond to the satisfiable <x:ref>range-spec</x:ref>(s) requested.
 </t>
 <t>
    The above does not imply that a server will send all requested ranges.
@@ -7986,8 +8009,11 @@ bytes=500-700,601-999
 </t>
 <t>
    If all of the preconditions are true, the server supports the Range header
-   field for the target resource, and the specified range(s) are invalid or
-   unsatisfiable, the server &SHOULD; send a
+   field for the target resource, the received Range field-value contains a
+   valid <x:ref>ranges-specifier</x:ref>, and either the
+   <x:ref>range-unit</x:ref> is not supported for that target resource or
+   the <x:ref>ranges-specifier</x:ref> is unsatisfiable with respect to
+   the selected representation, the server &SHOULD; send a
    <x:ref>416 (Range Not Satisfiable)</x:ref> response.
 </t>
 </section>
