@@ -1446,8 +1446,11 @@
       <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and not(@brackets)">
         <xsl:attribute name="brackets">angle</xsl:attribute>
       </xsl:when>
-      <xsl:otherwise>
+      <xsl:when test="$xml2rfc-ext-xml2rfc-voc >= 3 and @brackets">
         <xsl:copy-of select="@brackets"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <!-- drop -->
       </xsl:otherwise>
     </xsl:choose>
   </eref>
@@ -1899,8 +1902,19 @@
   </xsl:if>
   <front>
     <xsl:apply-templates select="title" mode="cleanup"/>
-    <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3 and seriesInfo">
+    <xsl:if test="$xml2rfc-ext-xml2rfc-voc >= 3">
       <xsl:apply-templates select="seriesInfo" mode="cleanup"/>
+      <xsl:if test="parent::rfc">
+        <xsl:if test="not(seriesInfo[@name='RFC']) and /rfc/@number">
+          <seriesInfo name="RFC" value="{/rfc/@number}"/>
+        </xsl:if>
+        <xsl:if test="not(seriesInfo[@name='STD']) and /rfc/@category='std' and /rfc/@seriesNo">
+          <seriesInfo name="STD" value="{/rfc/@seriesNo}"/>
+        </xsl:if>
+        <xsl:if test="not(seriesInfo[@name='BCP']) and /rfc/@category='bcp' and /rfc/@seriesNo">
+          <seriesInfo name="BCP" value="{/rfc/@seriesNo}"/>
+        </xsl:if>
+      </xsl:if>
     </xsl:if>
     <xsl:apply-templates select="author" mode="cleanup"/>
     <xsl:apply-templates select="date" mode="cleanup"/>
