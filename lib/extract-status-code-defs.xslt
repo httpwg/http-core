@@ -14,7 +14,7 @@
         <tr>
           <th>Value</th>
           <th>Description</th>
-          <th>Ref.</th>
+          <th>Section</th>
         </tr>
       </thead>
       <tbody>

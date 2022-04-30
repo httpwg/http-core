@@ -18,7 +18,7 @@
         <tr>
           <th>Field Name</th>
           <th>Status</th>
-          <th>Ref.</th>
+          <th>Section</th>
           <th>Comments</th>
         </tr>
       </thead>

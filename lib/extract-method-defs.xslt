@@ -19,7 +19,7 @@
           <th>Method</th>
           <th>Safe</th>
           <th>Idempotent</th>
-          <th>Ref.</th>
+          <th>Section</th>
         </tr>
       </thead>
       <tbody>
