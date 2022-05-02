@@ -13,7 +13,7 @@
       <thead>
         <tr>
           <th>Cache Directive</th>
-          <th>Reference</th>
+          <th>Section</th>
         </tr>
       </thead>
       <xsl:text>&#10;</xsl:text>
@@ -93,7 +93,7 @@
           <xsl:if test="position()!=1">
             <xsl:text>, </xsl:text>
           </xsl:if>
-          <xref target="{ancestor-or-self::*[@anchor][1]/@anchor}"/>
+          <xref target="{ancestor-or-self::*[@anchor][1]/@anchor}" format="counter"/>
         </xsl:for-each>
       </td>
     </tr>
