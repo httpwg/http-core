@@ -23,7 +23,7 @@
         <xsl:otherwise>In the collected ABNF below, list rules are expanded per <xref target="abnf.extension"/>.</xsl:otherwise>
       </xsl:choose>
     </t>
-    <sourcecode type="abnf" name="{x:basename($abnf)}">
+    <sourcecode type="abnf" name="{x:rfcno(x:basename($abnf))}">
       <xsl:for-each select="$lines[substring(.,1,2)!='; ']">
       
         <!-- Group by start character -->
@@ -164,6 +164,17 @@
   </xsl:choose>
 </xsl:function>
   
+<xsl:function name="x:rfcno">
+  <xsl:param name="s"/>
+
+  <xsl:choose>
+    <xsl:when test="contains($s,'semantics')">rfc9110.parsed-abnf</xsl:when>
+    <xsl:when test="contains($s,'cache')">rfc9111.parsed-abnf</xsl:when>
+    <xsl:when test="contains($s,'messaging')">rfc9112.parsed-abnf</xsl:when>
+    <xsl:otherwise>???</xsl:otherwise>
+  </xsl:choose>
+</xsl:function>
+
 <xsl:function name="x:basename">
   <xsl:param name="s"/>
 
