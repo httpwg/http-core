@@ -20,7 +20,8 @@ SEMANTICS   = $(draftname)-semantics-latest
 
 TARGETS_XML = $(MESSAGING).xml \
               $(SEMANTICS).xml \
-              $(CACHE).xml 
+              $(CACHE).xml \
+              rfc9110.xml rfc9111.xml rfc9112.xml
 
 TARGETS_TXT= $(TARGETS_XML:.xml=.txt)
 TARGETS_HTML= $(TARGETS_XML:.xml=.html)
