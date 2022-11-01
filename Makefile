@@ -123,7 +123,7 @@ httpbis.abnf: $(TARGETS_ABNF)
 	lib/common-abnf.sh $^ > $@
 
 saxonjar:
-	[ -f lib/saxon.jar ] || curl https://repo1.maven.org/maven2/net/sf/saxon/Saxon-HE/10.6/Saxon-HE-10.6.jar -o lib/saxon.jar
+	[ -f lib/saxon.jar ] || curl https://repo1.maven.org/maven2/net/sf/saxon/Saxon-HE/10.8/Saxon-HE-10.8.jar -o lib/saxon.jar
 
 consistency.txt: $(TARGETS_XML)
 	rm -f $@
